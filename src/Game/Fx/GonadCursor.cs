@@ -8,7 +8,7 @@ namespace OctoShoots.Game.Fx;
 /// </summary>
 public static class GonadCursor
 {
-    static ImageTexture? _texture;
+    static ImageTexture? _texture, _gold;
 
     /// <summary>The crosshair for the arrow and the pointing hand (the menus' buttons) alike.</summary>
     public static void Use()
@@ -33,15 +33,27 @@ public static class GonadCursor
     public static ImageTexture Texture()
     {
         if (_texture is not null) return _texture;
-        const int size = 32;
+        var image = Draw(32, new Color(1f, 0.58f, 0.18f));
+        // Verification: --dbg-crosshair=path saves it.
+        foreach (string arg in OS.GetCmdlineUserArgs())
+            if (arg.StartsWith("--dbg-crosshair=")) image.SavePng(arg["--dbg-crosshair=".Length..]);
+        return _texture = ImageTexture.CreateFromImage(image);
+    }
+
+    /// <summary>The same emblem large and in gold: the shop's top-up of health.</summary>
+    public static ImageTexture Gold() => _gold ??= ImageTexture.CreateFromImage(Draw(128, new Color(1f, 0.8f, 0.3f)));
+
+    /// <summary>The emblem at this size (drawn on a 32-unit square, scaled to it).</summary>
+    static Image Draw(int size, Color orange)
+    {
         var image = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
-        var orange = new Color(1f, 0.58f, 0.18f);
+        float unit = 32f / size;
         var edge = new Color(0.12f, 0.05f, 0.02f, 0.85f);
         var c = new Vector2(size * 0.5f, size * 0.5f);
         for (int y = 0; y < size; y++)
             for (int x = 0; x < size; x++)
             {
-                var q = new Vector2(x + 0.5f, y + 0.5f) - c;
+                var q = (new Vector2(x + 0.5f, y + 0.5f) - c) * unit;
                 float ink = 0f, line = 0f;
                 for (int k = 0; k < 4; k++)
                 {
@@ -62,9 +74,6 @@ public static class GonadCursor
                 var col = edge.Lerp(orange, line);
                 image.SetPixel(x, y, col with { A = Mathf.Max(edge.A * ink, line) });
             }
-        // Verification: --dbg-crosshair=path saves it.
-        foreach (string arg in OS.GetCmdlineUserArgs())
-            if (arg.StartsWith("--dbg-crosshair=")) image.SavePng(arg["--dbg-crosshair=".Length..]);
-        return _texture = ImageTexture.CreateFromImage(image);
+        return image;
     }
 }

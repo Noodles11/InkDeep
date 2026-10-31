@@ -107,7 +107,7 @@ public partial class DrippusRig : BossRig
         float grow = 1f;
         if (pose.Stage == BossStage.Drop)
         {
-            float k = Mathf.Clamp(boss.StageTime / DrippusTuning.Rise, 0f, 1f);
+            float k = Mathf.Clamp(boss.StageTime / boss.Rise, 0f, 1f);
             grow = Mathf.SmoothStep(0f, 1f, Mathf.Clamp((k - DrippusTuning.RiseSolid) / (1f - DrippusTuning.RiseSolid), 0f, 1f));
         }
         else if (pose.Stage == BossStage.Waiting || pose.Stage == BossStage.Banner) grow = 0f;
@@ -119,7 +119,7 @@ public partial class DrippusRig : BossRig
             for (int i = 0; i < Lobes; i++) _v[i] += (Mathf.Sin(i * 2.3f + pose.Time * 7f)) * 2.2f;
             _lastMass = boss.Mass;
         }
-        _size = Mathf.MoveToward(_size, boss.Size, dt * (1f - boss.Size + 0.1f) / 0.4f);
+        _size = pose.Stage == BossStage.Drop ? boss.Size : Mathf.MoveToward(_size, boss.Size, dt * (Mathf.Abs(boss.Bulk - boss.Size) + 0.1f) / 0.4f);
 
         // The warning, by its attack.
         float warn = pose.Act == BossAct.Telegraph ? pose.Warn : 0f;

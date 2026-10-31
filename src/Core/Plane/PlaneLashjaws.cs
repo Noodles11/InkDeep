@@ -30,7 +30,7 @@ public static class LashTuning
     /// <summary>A fish caught is reeled in at FishReel m/s and swallowed; it chews it Chew seconds.</summary>
     public const float FishReel = 8f;
     /// <summary>Its meter: Meter (+20% per Menace), regrowing Regen/s after Delay without a hit. Emptied the first time it is stunned Stun seconds.</summary>
-    public const float Meter = 50f, MeterPerMenace = 1.2f, Regen = 15f, Delay = 1.5f, Stun = 3f;
+    public const float Meter = 50f, MeterPerMenace = 1.2f, Stun = 3f;
     /// <summary>Freed: it leaves ShellsMin–Max shells, and its light washes Burst metres.</summary>
     public const int ShellsMin = 3, ShellsMax = 4;
     public const float Burst = 3f;
@@ -53,7 +53,7 @@ public sealed class Lashjaw
     /// <summary>1 until its meter is first emptied, 2 after (emptied again, it is freed).</summary>
     public int Phase = 1;
     public bool Alive = true;
-    public CorruptionMeter Corruption = new(LashTuning.Meter, LashTuning.Regen, LashTuning.Delay);
+    public CorruptionMeter Corruption = new(LashTuning.Meter);
     /// <summary>Its jaws (where she is bitten): at its head.</summary>
     public Vector2 Mouth => Position + Facing * 0.3f;
     /// <summary>Whether its tongue is out (from its mouth to its tip).</summary>
@@ -104,7 +104,6 @@ public sealed partial class PlaneWorld
             var l = new Lashjaw { Position = at, Facing = f, Seed = _blightRng.Range(0f, 100f), Timer = _blightRng.Range(0f, 1f) };
             l.Tip = l.Mouth;
             l.Corruption.Max = l.Corruption.Value = LashMeter;
-            l.Corruption.Regen *= 1f + 0.5f * Menace;
             Lashjaws.Add(l);
         }
     }

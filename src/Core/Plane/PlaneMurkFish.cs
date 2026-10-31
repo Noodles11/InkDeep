@@ -124,7 +124,6 @@ public sealed partial class PlaneWorld
             Swarm = f.Kind == ReefFishKind.Chromis ? f.Host : -1, Seed = _blightRng.Range(0f, 100f),
             ThrowTimer = BlightTuning.ThrowEvery * _blightRng.Range(0.5f, 1f),
         };
-        m.Corruption.Regen *= 1f + 0.5f * Menace;
         m.Corruption.Max = m.Corruption.Value = meter * (1f + BlightTuning.MeterPerMenace * Menace);
         Murklings.Add(m);
         Events.Add(new PlaneEvent(PlaneEventType.FishTurned, f.Position, Vector2.Zero, radius, DamageSource.None));

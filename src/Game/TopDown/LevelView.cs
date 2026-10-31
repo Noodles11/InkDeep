@@ -20,6 +20,8 @@ public sealed class LevelShape
     public List<Surface> Ground { get; } = new();
     /// <summary>Per cave, its roof (null where the roof is flush with the ground).</summary>
     public List<Surface?> Lids { get; } = new();
+    /// <summary>Per secret cave, by its index, its roof once its wall is down: its way in open, as any cave's.</summary>
+    public Dictionary<int, Surface> OpenLids { get; } = new();
     /// <summary>Per roofed corridor (a shortcut tunnel), by its index, its roof.</summary>
     public Dictionary<int, Surface> TunnelRoofs { get; } = new();
     public List<FloraItem> Flora { get; } = new();
@@ -42,6 +44,8 @@ public sealed class LevelShape
         foreach (var sx in spans)
             if (!sx.Inside || !sy.Inside) shape.Ground.Add(LevelView.SkirtSurface(map, sx.A, sy.A, sx.B, sy.B)!);
         foreach (var cave in map.Caves) shape.Lids.Add(LevelView.LidSurface(map, cave));
+        foreach (var rock in map.WeakRocks)
+            if (rock.Kind == SealKind.Secret && rock.Cave >= 0 && LevelView.LidSurface(map, map.Caves[rock.Cave], opened: true) is { } open) shape.OpenLids[rock.Cave] = open;
         for (int c = 0; c < map.Corridors.Count; c++)
             if (map.Corridors[c].Roofed && LevelView.TunnelRoofSurface(map, map.Corridors[c]) is { } roof) shape.TunnelRoofs[c] = roof;
         if (!OS.GetCmdlineUserArgs().Contains("--dbg-nodecor")) LevelView.DecorItems(map, shape.Flora, shape.Rocks, shape.Glows);
@@ -89,6 +93,8 @@ public partial class LevelView : Node3D
     /// </summary>
     readonly HashSet<int> _sealedCaves = new();
     readonly Dictionary<int, List<ShaderMaterial>> _keptWhole = new();
+    /// <summary>Per sealed secret cave, its roof over the way in (shown till the wall comes down) and the one that leaves it open.</summary>
+    readonly Dictionary<int, (List<MeshInstance3D> Sealed, List<MeshInstance3D> Open)> _lidSwaps = new();
     readonly Dictionary<int, ShaderMaterial> _tunnelRoofs = new();
     Shader _rock = null!;
 
@@ -142,6 +148,12 @@ public partial class LevelView : Node3D
             _sealedCaves.Remove(cave);
             _keptWhole.Remove(cave);
             _seeThrough = default;
+            // The rock over its way in goes with the wall: the passage to the chamber lies open.
+            if (_lidSwaps.Remove(cave, out var swap))
+            {
+                foreach (var m in swap.Sealed) m.Visible = false;
+                foreach (var m in swap.Open) m.Visible = true;
+            }
         }
         var (_, wall, remains, height) = _seals[i];
         if (remains is not null) remains.Visible = true;
@@ -190,6 +202,7 @@ public partial class LevelView : Node3D
         _lids.Clear();
         _sealedCaves.Clear();
         _keptWhole.Clear();
+        _lidSwaps.Clear();
         foreach (var rock in map.WeakRocks)
             if (rock.Kind == SealKind.Secret && rock.Cave >= 0) _sealedCaves.Add(rock.Cave);
         for (int i = 0; i < map.Caves.Count; i++)
@@ -202,9 +215,8 @@ public partial class LevelView : Node3D
                 // The roof casts no sunlight shadow of its own (a single sheet over the hollow, it shaded itself: a dark
                 // pit over every cave, giving the chamber away); a copy a little under it, seen only by the sun, keeps
                 // the chamber in shade.
-                var mesh = ToMesh(surface);
-                AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = lid, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
-                AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = lid, CastShadow = GeometryInstance3D.ShadowCastingSetting.ShadowsOnly, Position = new Vector3(0f, -LidShadowDrop, 0f) });
+                var sealedLid = AddLid(ToMesh(surface), lid, true);
+                if (shape.OpenLids.TryGetValue(i, out var opened)) _lidSwaps[i] = (sealedLid, AddLid(ToMesh(opened), lid, false));
             }
         }
         _tunnelRoofs.Clear();
@@ -242,14 +254,24 @@ public partial class LevelView : Node3D
             _seals.Add((rock.Center, wall, remains, SealDrop(map, rock)));
         }
         ShowDecor(shape);
-        _cover = null;
+        _cover = _rift = null;
+        _riftMat = null;
         _sandFall = null;
         _crackOpen = 0f;
         _crackFade = 1f;
         if (map.HasBoss) ShowCover(map);
-        foreach (var m in _materials) m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("crack_mask"), below ? 0f : 1f);
         if (!below) ShowCrack(map);
         if (OS.GetCmdlineUserArgs().Contains("--dbg-nocanopy")) foreach (var c in _canopies) c.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("fade"), 0f);
+    }
+
+    /// <summary>A cave's roof, and its copy under it that only the sun sees.</summary>
+    List<MeshInstance3D> AddLid(ArrayMesh mesh, ShaderMaterial lid, bool visible)
+    {
+        var top = new MeshInstance3D { Mesh = mesh, MaterialOverride = lid, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = visible };
+        var shade = new MeshInstance3D { Mesh = mesh, MaterialOverride = lid, CastShadow = GeometryInstance3D.ShadowCastingSetting.ShadowsOnly, Position = new Vector3(0f, -LidShadowDrop, 0f), Visible = visible };
+        AddChild(top);
+        AddChild(shade);
+        return new List<MeshInstance3D> { top, shade };
     }
 
     void Track(ShaderMaterial m)
@@ -353,7 +375,6 @@ public partial class LevelView : Node3D
         _below = false;
         Place(Vector3.Zero, origin);
         SetPortal(Vector2.Zero, 0f, 0);
-        foreach (var m in _materials) m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("crack_mask"), 1f);
         ShowCrack(_map);
     }
 
@@ -517,11 +538,16 @@ public partial class LevelView : Node3D
 
     /// <summary>
     /// A chunk of the ground. The shaft has no floor: through it, the level below shows. (An abyss reef's dropped floor is
-    /// drawn all the way down, so the water's murk takes it smoothly rather than at a cut edge.)
+    /// drawn all the way down, so the water's murk takes it smoothly rather than at a cut edge.) No ground at all is drawn
+    /// inside the Crack: the sand over it and the rift that replaces it lie across the hole.
     /// </summary>
     internal static LevelShape.Surface? ChunkSurface(LevelMap map, int x0, int y0, int x1, int y1) =>
         SurfaceMesh((x, y) => SmoothHeight(map, x, y), x0, y0, x1, y1,
-            (x, y) => SmoothHeight(map, x, y) > LevelMap.ShaftBottom + 0.3f || map.Abyss && !map.Shaft.Contains(new System.Numerics.Vector2(x, y), 3f));
+            (x, y) => !(map.HasBoss && map.Shaft.Contains(new System.Numerics.Vector2(x, y), RiftGround))
+                && (SmoothHeight(map, x, y) > LevelMap.ShaftBottom + 0.3f || map.Abyss && !map.Shaft.Contains(new System.Numerics.Vector2(x, y), 3f)));
+
+    /// <summary>How far past the Crack's rim the ground stops being drawn (under the rift's solid part).</summary>
+    const float RiftGround = 0.2f;
 
     /// <summary>How far (metres) the reef is drawn past the square on every side: wider than the view reaches.</summary>
     internal const int Skirt = 32;
@@ -549,12 +575,13 @@ public partial class LevelView : Node3D
     /// height is the mountain as it stood before the cave was hollowed out, raised wherever the rock round it stands
     /// higher (a smooth surface spanned between the heights at its edge), so it never sinks into a basin that gives the
     /// chamber away. A secret room's roof runs on over its way in to the middle of its sealed wall, meeting the wall's
-    /// top, so nothing shows a passage behind it. It fades like any canopy while Clementine is inside.
+    /// top, so nothing shows a passage behind it (<paramref name="opened"/>: its wall is down, and its way in lies open as
+    /// any cave's). It fades like any canopy while Clementine is inside.
     /// </summary>
-    internal static LevelShape.Surface? LidSurface(LevelMap map, CaveSite cave)
+    internal static LevelShape.Surface? LidSurface(LevelMap map, CaveSite cave, bool opened = false)
     {
         int index = map.Caves.IndexOf(cave);
-        WeakRock? seal = map.WeakRocks.Where(r => r.Kind == SealKind.Secret && r.Cave == index).Select(r => (WeakRock?)r).FirstOrDefault();
+        WeakRock? seal = opened ? null : map.WeakRocks.Where(r => r.Kind == SealKind.Secret && r.Cave == index).Select(r => (WeakRock?)r).FirstOrDefault();
         var spur = map.Corridors.FirstOrDefault(c => c.Poi == cave.Poi);
         float spurHalf = (spur?.HalfWidth ?? 2f) + 4f;
         // How far along its way in the roof runs: a secret's to the middle of its wall, a shop's to its gateway's face.
@@ -693,6 +720,9 @@ public partial class LevelView : Node3D
 
     // ───────────────────────── canopy ─────────────────────────
 
+    /// <summary>A shop is never roofed over: its room shows from outside, so it is plain where it lies and how to get in.</summary>
+    bool ShopRoof(Canopy c) => _map is { } map && c.Kind == CanopyKind.CaveRoof && CaveOf(c) is int cave and >= 0 && map.Pois[map.Caves[cave].Poi].Kind == PoiKind.Shop;
+
     void AddCanopy(Canopy c)
     {
         // A cave's roof is the mountain itself (its lid mesh), not a separate piece; a tunnel's, the rock over it.
@@ -799,9 +829,7 @@ public partial class LevelView : Node3D
                 Top = spring + half + GateThick,
             };
             _canopies.Add((gate, material, 1f));
-            // The sign is on the rock's face, not the arch: it goes with the cave's roof (as she swims inside), not the arch.
-            var roof = map.Canopies.FirstOrDefault(c => c.Kind == CanopyKind.CaveRoof && cave.Chambers.Any(ch => ch.Center == c.Center)) ?? gate;
-            _gates.Add((roof, inlay));
+            _gates.Add((gate, inlay));
         }
     }
 
@@ -992,7 +1020,7 @@ public partial class LevelView : Node3D
             // A sealed secret's roof stays: she cannot be in there, and it must not show there is a chamber under it.
             if (c.Kind == CanopyKind.CaveRoof && _sealedCaves.Contains(CaveOf(c))) continue;
             var (lo, hi) = _spans.TryGetValue(c, out var span) ? span : (c.Bottom, c.Top);
-            if (!Blocks(c, lo, hi, her, sight)) continue;
+            if (!Blocks(c, lo, hi, her, sight) && !ShopRoof(c)) continue;
             hide[i] = true;
             if (c.Kind == CanopyKind.CaveRoof && CaveOf(c) is int cave and >= 0) hiddenCaves.Add(cave);
             if (c.Kind == CanopyKind.TunnelRoof) hiddenTunnels.Add(c.Corridor);
@@ -1052,22 +1080,21 @@ public partial class LevelView : Node3D
     // ───────────────────────── the Crack ─────────────────────────
 
     /// <summary>
-    /// The Crack in the rift's arena (THEME-BIBLE §4.1, §6.3: the Crack orange): its fissure glows from inside (the
-    /// reef shader, through reef_crack), warm light spills up over the arena floor, and bubbles rise out of it in a slow
-    /// updraft — a doorway, not a wound.
+    /// The Crack in the rift's arena: a flat rift flush with the floor, holding the next depth's water (crack_rift.gdshader),
+    /// that water's light spilling over the arena floor, and bubbles rising out of it in a slow updraft — a doorway, not a
+    /// wound.
     /// </summary>
     void ShowCrack(LevelMap map)
     {
-        // A blue hole is plain water; only a boss level's exit is the Crack (and it glows only once it is open).
-        RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_crack"), map.HasBoss ? new Vector4(map.Exit.Position.X, map.Exit.Position.Y, 10f, CrackGlow) : Vector4.Zero);
+        // A blue hole is plain water; only a boss level's exit is the Crack.
         if (!map.HasBoss) return;
         var rift = map.Exit.Position;
         var floor = new Vector3(rift.X, -6f, rift.Y);
         AddChild(_crackLight = new OmniLight3D
         {
             Position = floor + Vector3.Up * 2.5f,
-            LightColor = new Color(1f, 0.5f, 0.18f),
-            LightEnergy = 2.2f,
+            LightColor = ReefLook.For(map.Depth + 1).WaterDeep,
+            LightEnergy = CrackLight,
             OmniRange = 13f,
             OmniAttenuation = 1.6f,
             // Shadowed, so the fissure's lips and whatever stands at the Crack throw shadows up the arena.
@@ -1100,17 +1127,20 @@ public partial class LevelView : Node3D
 
     OmniLight3D? _crackLight;
     CpuParticles3D? _crackBubbles;
-    MeshInstance3D? _cover;
-    ShaderMaterial? _coverMat;
+    MeshInstance3D? _cover, _rift;
+    ShaderMaterial? _coverMat, _riftMat;
+    /// <summary>The light the open Crack's water spills.</summary>
+    const float CrackLight = 1.4f;
+    const float RiftLift = 0.25f;
     CpuParticles3D? _sandFall;
     /// <summary>How far the Crack has opened (0 sealed under sand → 1 open), and the dive's fade of it (1 → 0).</summary>
     float _crackOpen, _crackFade = 1f;
 
-    /// <summary>The Crack's glow, light and bubbles: they come up as the last of the sand drains away.</summary>
+    /// <summary>The Crack's water, light and bubbles: they come up as the last of the sand drains away.</summary>
     float CrackGlow => Mathf.SmoothStep(0.45f, 1f, _crackOpen) * _crackFade;
 
     /// <summary>
-    /// The dive through the Crack: its glow, its warm light and its rising bubbles fade together (1 full, 0 gone), so
+    /// The dive through the Crack: its water, its light and its rising bubbles fade together (1 full, 0 gone), so
     /// nothing of it is switched off when this level is let go.
     /// </summary>
     public void FadeCrack(float k)
@@ -1121,7 +1151,7 @@ public partial class LevelView : Node3D
 
     /// <summary>
     /// The Crack opening (0 sealed → 1 open): the sand over it sags, turns and drains down into it, grains pouring
-    /// off its rim, and then the Crack's glow, light and bubbles come up from below.
+    /// off its rim, and then the Crack's water, light and bubbles come up from below.
     /// </summary>
     public void SetCrackOpen(float t)
     {
@@ -1133,8 +1163,9 @@ public partial class LevelView : Node3D
     {
         if (_map is null || !_map.HasBoss) return;
         float k = CrackGlow;
-        if (!_below) RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_crack"), new Vector4(_map.Exit.Position.X, _map.Exit.Position.Y, 10f, k));
-        if (_crackLight is not null) _crackLight.LightEnergy = 2.2f * k;
+        _riftMat?.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("open"), k);
+        if (_rift is not null) _rift.Visible = k > 0f;
+        if (_crackLight is not null) _crackLight.LightEnergy = CrackLight * k;
         if (_crackBubbles is not null)
         {
             _crackBubbles.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("fade"), k);
@@ -1147,7 +1178,8 @@ public partial class LevelView : Node3D
 
     /// <summary>
     /// The sand sealing a boss level's Crack: a cap over the shaft (a little past its rim), each rim point at the
-    /// ground's own height there and the middle at their average, so it meets the arena floor without a seam.
+    /// ground's own height there and the middle at their average, so it meets the arena floor without a seam. The open
+    /// rift is the same sheet: it lies flush with the floor over the shaft, hiding the drop.
     /// </summary>
     void ShowCover(LevelMap map)
     {
@@ -1201,7 +1233,13 @@ public partial class LevelView : Node3D
         _coverMat.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("cover_center"), new Vector2(sh.Center.X, sh.Center.Y));
         _coverMat.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("drop"), mean - LevelMap.ShaftBottom + 1f);
         Track(_coverMat);
-        AddChild(_cover = new MeshInstance3D { Mesh = st.Commit(), MaterialOverride = _coverMat });
+        var sheet = st.Commit();
+        AddChild(_cover = new MeshInstance3D { Mesh = sheet, MaterialOverride = _coverMat });
+        _riftMat = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/crack_rift.gdshader") };
+        _riftMat.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("water"), ReefLook.For(map.Depth + 1).WaterDeep);
+        Track(_riftMat);
+        // A little over the floor, so its soft edge melts over the ground rather than being cut by it.
+        AddChild(_rift = new MeshInstance3D { Mesh = sheet, MaterialOverride = _riftMat, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = false, Position = Vector3.Up * RiftLift });
 
         // Grains pouring off the cover's rim into the dark as it drains.
         var grain = new StandardMaterial3D

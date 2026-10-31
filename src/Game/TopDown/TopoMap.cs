@@ -55,6 +55,8 @@ public partial class TopoMap : Control
     public FogOfWar? Seen;
     /// <summary>Light springs (docs/CORRUPTION.md), and whether she is bathing in one.</summary>
     public readonly List<(System.Numerics.Vector2 At, bool Bathing)> Springs = new();
+    /// <summary>The main current's course while it runs: a faint line to the way down.</summary>
+    public IReadOnlyList<System.Numerics.Vector2>? Current;
     /// <summary>The places' emblems' size (the Tab map draws them larger than the minimap).</summary>
     public float EmblemScale = 1f;
     /// <summary>Clementine's arrow: size and fill.</summary>
@@ -273,6 +275,13 @@ public partial class TopoMap : Control
         }
 
         // A light spring, once seen: a pool of clear aqua with a gold heart (brighter while she bathes).
+        if (Current is { Count: >= 2 } course)
+        {
+            var line = new Vector2[course.Count];
+            for (int i = 0; i < line.Length; i++) line[i] = P(course[i]);
+            DrawPolyline(line, new Color(0f, 0f, 0f, 0.4f), 4f, true);
+            DrawPolyline(line, new Color(0.8f, 0.97f, 0.93f, 0.8f), 2f, true);
+        }
         foreach (var (at, bathing) in Springs)
         {
             if (Fog is not null && Fog.At(at) < 0.5f) continue;

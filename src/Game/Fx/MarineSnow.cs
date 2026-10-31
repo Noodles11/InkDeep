@@ -4,9 +4,10 @@ using Godot;
 namespace OctoShoots.Game.Fx;
 
 /// <summary>
-/// Drifting specks in a box that wraps around a point (the camera, or what it looks at): gives the water parallax so
-/// movement reads, and the specks glitter where they cross a sunbeam (THEME-BIBLE §6.9: marine snow between camera
-/// and level).
+/// The water's plankton, in a box that wraps around a point (what the camera looks at): tiny plain dots with no glow, that
+/// give the water parallax so movement reads (THEME-BIBLE §6.9: marine snow between camera and level). They sink slowly and
+/// sway, move aside as she passes (<see cref="Her"/>), and are shoved by her dash and her waves (<see cref="Stir"/>).
+/// Cosmetic only.
 /// </summary>
 public partial class MarineSnow : Node3D
 {
@@ -14,39 +15,39 @@ public partial class MarineSnow : Node3D
     readonly Vector3 Half;
     readonly float _size;
 
+    /// <summary>How fast a dot sinks (m/s), and the water's drag on anything pushed, a second.</summary>
+    const float Sink = 0.05f, Drag = 2.5f;
+    /// <summary>She moves plankton this near her, this far off her plane.</summary>
+    const float Wake = 1.7f, WakeHeight = 3f;
+
     readonly Vector3[] _positions;
+    readonly Vector3[] _push;
     readonly float[] _phase;
+    readonly float[] _scale;
+    readonly Random _random = new(77);
 
     public MarineSnow() : this(700, new Vector3(9f, 9f, 9f), 0.035f) { }
 
     /// <param name="half">Half the box's size on each axis.</param>
-    /// <param name="size">A speck's size (metres).</param>
+    /// <param name="size">A dot's size (metres).</param>
     public MarineSnow(int count, Vector3 half, float size)
     {
         Count = count;
         Half = half;
         _size = size;
         _positions = new Vector3[count];
+        _push = new Vector3[count];
         _phase = new float[count];
+        _scale = new float[count];
     }
     MultiMesh _multimesh = null!;
     float _time;
 
+    float Roll(float a, float b) => a + (b - a) * (float)_random.NextDouble();
+
     public override void _Ready()
     {
-        var random = new Random(77);
-        for (int i = 0; i < Count; i++)
-        {
-            _positions[i] = new Vector3(
-                ((float)random.NextDouble() * 2f - 1f) * Half.X,
-                ((float)random.NextDouble() * 2f - 1f) * Half.Y,
-                ((float)random.NextDouble() * 2f - 1f) * Half.Z);
-            _phase[i] = (float)random.NextDouble() * 10f;
-        }
-
-        // Faint in the shade, glittering where a sunbeam catches them (marine_snow.gdshader).
-        var material = _material = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/marine_snow.gdshader") };
-        material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("speck"), FxParticles.SoftCircle());
+        var material = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/marine_snow.gdshader") };
         material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("fade_far"), Mathf.Max(Half.X, Mathf.Max(Half.Y, Half.Z)) * 6f);
         _multimesh = new MultiMesh
         {
@@ -54,6 +55,12 @@ public partial class MarineSnow : Node3D
             Mesh = new QuadMesh { Size = new Vector2(_size, _size), Material = material },
             InstanceCount = Count,
         };
+        for (int i = 0; i < Count; i++)
+        {
+            _positions[i] = new Vector3(Roll(-1f, 1f) * Half.X, Roll(-1f, 1f) * Half.Y, Roll(-1f, 1f) * Half.Z);
+            _phase[i] = Roll(0f, 10f);
+            _scale[i] = Roll(0.4f, 0.75f);
+        }
         AddChild(new MultiMeshInstance3D
         {
             Multimesh = _multimesh,
@@ -62,30 +69,61 @@ public partial class MarineSnow : Node3D
         });
     }
 
+    /// <summary>Where she is now and how she is moving (world, m/s): what is near her moves aside.</summary>
+    public void Her(Vector3 at, Vector3 velocity)
+    {
+        _her = at;
+        _herVelocity = velocity;
+        _hasHer = true;
+    }
+
+    Vector3 _her, _herVelocity;
+    bool _hasHer;
+
+    /// <summary>A shove through the water (her dash, her waves): everything within reach of this point is thrown outward, the nearer the harder.</summary>
+    public void Stir(Vector3 at, float strength, float reach)
+    {
+        for (int i = 0; i < Count; i++)
+        {
+            var off = _positions[i] - at;
+            off.Y = 0f;
+            float d = off.Length();
+            if (d >= reach || d < 1e-3f) continue;
+            _push[i] += off / d * strength * (1f - d / reach);
+        }
+    }
+
     public void Tick(float dt, Transform3D camera) => Tick(dt, camera.Origin, camera.Basis);
 
-    /// <summary>Drifts the specks and wraps them around <paramref name="centre"/>, facing the camera.</summary>
+    /// <summary>Drifts the plankton and wraps it around <paramref name="centre"/>, facing the camera.</summary>
     public void Tick(float dt, Vector3 centre, Basis facing)
     {
         _time += dt;
         Vector3 c = centre;
+        float drag = Mathf.Exp(-Drag * dt);
+        float swim = _herVelocity.Length();
         for (int i = 0; i < Count; i++)
         {
             Vector3 p = _positions[i];
-            p.Y -= 0.04f * dt;
+            if (_hasHer)
+            {
+                var off = p - _her;
+                float dy = off.Y;
+                off.Y = 0f;
+                float d = off.Length();
+                if (Mathf.Abs(dy) < WakeHeight && d < Wake && d > 1e-3f) _push[i] += off / d * (1f - d / Wake) * (2f + swim) * 6f * dt;
+            }
+            _push[i] *= drag;
+            p += _push[i] * dt;
+            p.Y -= Sink * dt;
             p.X += Mathf.Sin(_time * 0.3f + _phase[i]) * 0.03f * dt;
             p = c + Wrap(p - c);
             _positions[i] = p;
-            _multimesh.SetInstanceTransform(i, new Transform3D(facing.Scaled(Vector3.One * (0.6f + 0.8f * Mathf.PosMod(_phase[i] * 0.37f, 1f))), p));
+            _multimesh.SetInstanceTransform(i, new Transform3D(facing.Scaled(Vector3.One * _scale[i]), p));
         }
     }
 
-    ShaderMaterial _material = null!;
-
-    /// <summary>The absolute position of the world's origin (the beams the specks glitter in are drawn from it).</summary>
-    public void SetWorldOrigin(Vector2 origin) => _material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("world_origin"), origin);
-
-    /// <summary>Moves every speck with the world (the dive moves the new level back to the origin).</summary>
+    /// <summary>Moves every dot with the world (the dive moves the new level back to the origin).</summary>
     public void Shift(Vector3 by)
     {
         for (int i = 0; i < Count; i++)

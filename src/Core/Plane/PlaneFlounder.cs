@@ -89,7 +89,7 @@ public sealed class PlaneFlounder
     public bool Struck;
     /// <summary>Until her oral arm may sting it again.</summary>
     public float ArmCooldown;
-    public CorruptionMeter Corruption = new(FlounderTuning.Meter, BlightTuning.MurkRegen, BlightTuning.MurkDelay);
+    public CorruptionMeter Corruption = new(FlounderTuning.Meter);
 
     /// <summary>The sting's tip.</summary>
     public Vector2 Tip => Home + Aim * Reach;
@@ -244,7 +244,6 @@ public sealed partial class PlaneWorld
         f.Turning = 0f;
         f.Corrupted = true;
         f.Corruption.Max = f.Corruption.Value = FlounderTuning.Meter * (1f + BlightTuning.MeterPerMenace * Menace);
-        f.Corruption.Regen *= 1f + 0.5f * Menace;
         Enter(f, FlounderStage.Rest);
         f.Rest = HearthRest();
         Events.Add(new PlaneEvent(PlaneEventType.FishTurned, f.Position, Vector2.Zero, FlounderTuning.Radius, DamageSource.None));

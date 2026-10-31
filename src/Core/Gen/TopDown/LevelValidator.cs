@@ -268,9 +268,12 @@ public static class LevelValidator
     }
 
     /// <summary>A shortest swimming route as cell centres (empty if unreachable).</summary>
-    public static List<Vector2> ShortestPath(LevelMap map, Vector2 from, Vector2 to, float clearance = BodyRadius)
+    public static List<Vector2> ShortestPath(LevelMap map, Vector2 from, Vector2 to, float clearance = BodyRadius) =>
+        Walk(Distances(map, to, clearance), from);
+
+    /// <summary>The route down a field of distances to where it was measured from, as cell centres (empty if unreachable).</summary>
+    public static List<Vector2> Walk(float[] dist, Vector2 from)
     {
-        var dist = Distances(map, to, clearance);
         var path = new List<Vector2>();
         var (x, y) = Cell(from);
         if (float.IsPositiveInfinity(dist[y * N + x])) return path;

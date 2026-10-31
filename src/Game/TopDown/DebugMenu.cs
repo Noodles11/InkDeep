@@ -26,6 +26,8 @@ public partial class DebugMenu : Control
     public event Action? Closed;
     /// <summary>The floor fog switched on (true) or off.</summary>
     public event Action<bool>? FloorFogToggled;
+    /// <summary>The camera-zoom slider moved (for this session only).</summary>
+    public event Action<float>? ZoomChanged;
 
     static readonly Color Ink = new(0.82f, 0.9f, 0.92f);
     static readonly Color Soft = new(0.55f, 0.65f, 0.68f);
@@ -120,6 +122,11 @@ public partial class DebugMenu : Control
         _floorFog.AddThemeColorOverride("font_color", Ink);
         _floorFog.Toggled += on => FloorFogToggled?.Invoke(on);
         box.AddChild(_floorFog);
+        var zoomRow = new HBoxContainer();
+        zoomRow.AddThemeConstantOverride("separation", 16);
+        zoomRow.AddChild(Caption("Camera zoom", 13, Ink));
+        zoomRow.AddChild(OctoShoots.Game.Title.SettingsCard.ZoomSlider(CameraRig.DefaultZoom, v => ZoomChanged?.Invoke(v), Ink));
+        box.AddChild(zoomRow);
 
         // Clementine's colour: her body, and her light (derived from it unless set).
         box.AddChild(new HSeparator());

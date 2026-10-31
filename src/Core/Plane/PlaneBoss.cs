@@ -154,6 +154,16 @@ public sealed class PlaneBoss
     public Vector2 BounceDir = Vector2.UnitY;
     public readonly List<BossTear> Tears = new();
     public InkDraw? Draw;
+    /// <summary>
+    /// How long it takes to rise; in the adventure, the share of the level's water that was inked as it began to gather
+    /// (0..1), and what that made of it: its size and the strength of its blows, as shares of its own. Each dot it is
+    /// drawing in, the nearest first, and how many have come.
+    /// </summary>
+    public float Rise = DrippusTuning.Rise, Ink, Bulk = 1f, Might = 1f;
+    public readonly List<int> Gathering = new();
+    public int Gathered;
+    /// <summary>What its blows do, its ink's strength counted.</summary>
+    public float Damage => Spec.Damage * Might;
     public bool Freed => Stage == BossStage.Freed;
     /// <summary>The pearl can be struck now (by its exposure rule).</summary>
     public bool Open => Stage == BossStage.Fight && Spec.Exposure switch
@@ -255,6 +265,12 @@ public sealed partial class PlaneWorld
                     BossBattle = true;
                     if (boss.Spec.Blockade) BarArena();
                     Events.Add(new PlaneEvent(PlaneEventType.BattleBegan, ArenaCenter, Vector2.Zero));
+                    // The adventure's Drippus Prime wastes no time: it starts drawing the level's ink to it at once.
+                    if (Dots is not null && IsDrippus(boss))
+                    {
+                        boss.Stage = BossStage.Drop;
+                        BeginGather(boss);
+                    }
                 }
                 break;
             case BossStage.Banner:
@@ -267,8 +283,8 @@ public sealed partial class PlaneWorld
                 }
                 break;
             case BossStage.Drop:
-                if (IsDrippus(boss)) StepRise(boss, boss.StageTime / DrippusTuning.Rise);
-                if (boss.StageTime >= (IsDrippus(boss) ? DrippusTuning.Rise : PlaneBossTuning.ShadowSeconds)) Land(boss);
+                if (IsDrippus(boss)) StepRise(boss, boss.StageTime / boss.Rise);
+                if (boss.StageTime >= (IsDrippus(boss) ? boss.Rise : PlaneBossTuning.ShadowSeconds)) Land(boss);
                 break;
             case BossStage.Fight:
                 StepFight(boss);
@@ -307,7 +323,7 @@ public sealed partial class PlaneWorld
                 if (vInto < 0f) p.Velocity -= n * vInto;
                 // Touching it while it fights hurts and bounces her off.
                 if (boss.Stage == BossStage.Fight && boss.StageTime > Dt
-                    && HurtPlayer(boss.Spec.Damage * PlaneBossTuning.ContactFactor, n, DamageSource.BossContact))
+                    && HurtPlayer(boss.Damage * PlaneBossTuning.ContactFactor, n, DamageSource.BossContact))
                     p.Velocity += n * PlaneBossTuning.ContactKnockback;
             }
         }
@@ -326,6 +342,7 @@ public sealed partial class PlaneWorld
         // Risen, Drippus Prime has drunk all its ink.
         if (boss.Draw is { } draw && Corruption is { } ground) ground.Drink(draw, 1f);
         boss.Draw = null;
+        if (boss.Gathering.Count > 0) EndGather();
         boss.Stage = BossStage.Fight;
         boss.StageTime = 0f;
         boss.Act = BossAct.Rest;
@@ -344,11 +361,11 @@ public sealed partial class PlaneWorld
     {
         BossBattle = false;
         if (boss.Spec.Blockade) UnbarArena();
-        // The Crack opens once the arena is cleansed enough too (StepCondensation); in the adventure, once enough vents are
-        // sealed too (SealVent).
+        // The Crack opens once the arena is cleansed enough too (StepCondensation); in the adventure, once enough leaks are
+        // sealed too (SealLeak).
         if (Options.Adventure)
         {
-            ExitOpen = VentsLeft == 0;
+            ExitOpen = LeaksLeft == 0;
             if (ExitOpen) Events.Add(new PlaneEvent(PlaneEventType.ExitOpened, Map.Exit.Position, Vector2.Zero));
         }
         else
@@ -516,7 +533,7 @@ public sealed partial class PlaneWorld
             {
                 Events.Add(new PlaneEvent(PlaneEventType.BossSnap, boss.Position, boss.Facing));
                 if (Vector2.Distance(p.Position, boss.Position) < boss.Radius + PlaneBossTuning.SnapReach)
-                    HurtPlayer(spec.Damage * PlaneBossTuning.SnapFactor, SafeNormalize(p.Position - boss.Position), DamageSource.BossSnap);
+                    HurtPlayer(boss.Damage * PlaneBossTuning.SnapFactor, SafeNormalize(p.Position - boss.Position), DamageSource.BossSnap);
             }
         }
     }
@@ -719,7 +736,7 @@ public sealed partial class PlaneWorld
             if (!ring.Hit && !p.IsDashing && MathF.Abs(her - (r0 + ring.Radius) * 0.5f) <= PlaneBossTuning.RingBand * 0.5f + Radius + (ring.Radius - r0) * 0.5f)
             {
                 ring.Hit = true;
-                HurtPlayer(boss.Spec.Damage, SafeNormalize(p.Position - boss.Position), DamageSource.BossPearl);
+                HurtPlayer(boss.Damage, SafeNormalize(p.Position - boss.Position), DamageSource.BossPearl);
             }
             foreach (var shot in Shots)
             {
@@ -742,7 +759,7 @@ public sealed partial class PlaneWorld
         Position = boss.Position + dir * (boss.Radius * 0.8f),
         Velocity = dir * speed,
         Life = (royal ? PlaneBossTuning.RoyalLife : PlaneBossTuning.PearlLife) * (Corruption is null ? 1f : Reach(boss)),
-        Damage = boss.Spec.Damage * (royal ? PlaneBossTuning.RoyalFactor : 1f),
+        Damage = boss.Damage * (royal ? PlaneBossTuning.RoyalFactor : 1f),
         Radius = royal ? PlaneBossTuning.RoyalRadius : PlaneBossTuning.PearlRadius,
         BossPearl = true,
         Royal = royal,

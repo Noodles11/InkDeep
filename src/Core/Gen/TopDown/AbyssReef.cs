@@ -42,6 +42,8 @@ public static class AbyssReef
     /// </summary>
     public const float ShelfRadius = 3f, ShelfDepth = -1.2f, ShelfOut = 1.6f, ShelfFall = 2.5f, ShelfSpacing = 12f, ShelfClear = 20f;
     const int MaxShelves = 40;
+    /// <summary>How far round the Crack the ground is kept down to the arena's floor (metres).</summary>
+    const float RiftClear = 3.5f;
 
     public static LevelMap Apply(LevelMap map)
     {
@@ -58,7 +60,7 @@ public static class AbyssReef
         foreach (var corridor in map.Corridors)
             if (corridor.Roofed)
                 foreach (var p in corridor.Points) Mark(keep, p, corridor.HalfWidth + 1f);
-        // A light spring (only by her luck, here) keeps the seabed it wells up from.
+        // A light spring keeps the seabed it wells up from.
         map.Abyss = true;
         foreach (var spring in OctoShoots.Core.Plane.LightSprings.Of(map)) Mark(keep, spring, OctoShoots.Core.Plane.SpringTuning.Radius + 3f);
         Dilate(keep, KeepMargin);
@@ -140,6 +142,8 @@ public static class AbyssReef
             map.Heights[i] = floor;
         }
 
+        if (map.HasBoss) LevelRound(map);
+
         bool Kept(Vector2 p)
         {
             int x = Math.Clamp((int)MathF.Round(p.X), 0, n - 1), y = Math.Clamp((int)MathF.Round(p.Y), 0, n - 1);
@@ -150,6 +154,36 @@ public static class AbyssReef
         map.Coins.RemoveAll(c => !Kept(c.Position));
         map.Abyss = true;
         return map;
+    }
+
+    /// <summary>
+    /// The Crack lies flush with the arena's floor: nothing round it stands above that floor (the floor as it runs just past
+    /// RiftClear of the rift), so no rim is left to make a crater of it. It only ever lowers the ground.
+    /// </summary>
+    static void LevelRound(LevelMap map)
+    {
+        var sh = map.Shaft;
+        var across = new Vector2(-sh.Axis.Y, sh.Axis.X);
+        float sum = 0f;
+        int count = 0;
+        for (int k = 0; k < 48; k++)
+        {
+            float a = k * MathF.Tau / 48f;
+            var p = sh.Center + sh.Axis * (MathF.Cos(a) * (sh.HalfLength + RiftClear + 1f)) + across * (MathF.Sin(a) * (sh.HalfWidth + RiftClear + 1f));
+            float h = map.HeightAt(p);
+            if (h > LevelMap.BlockHeight) continue;
+            sum += h;
+            count++;
+        }
+        if (count == 0) return;
+        float floor = sum / count;
+        int reach = (int)MathF.Ceiling(sh.HalfLength + RiftClear) + 1, cx = (int)sh.Center.X, cy = (int)sh.Center.Y;
+        for (int y = Math.Max(cy - reach, 0); y <= Math.Min(cy + reach, LevelMap.Size); y++)
+        for (int x = Math.Max(cx - reach, 0); x <= Math.Min(cx + reach, LevelMap.Size); x++)
+        {
+            int i = y * LevelMap.Samples + x;
+            if (sh.Contains(new Vector2(x, y), RiftClear) && map.Heights[i] <= LevelMap.BlockHeight) map.Heights[i] = MathF.Min(map.Heights[i], floor);
+        }
     }
 
     /// <summary>

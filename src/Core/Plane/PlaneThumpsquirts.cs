@@ -20,7 +20,7 @@ public static class ThumpTuning
     /// <summary>Waking with the level: this far from her start, and apart.</summary>
     public const float FromStart = 20f, Spacing = 18f;
     /// <summary>Its corruption meter: 90 (+20% per Menace); it regrows at Regen once Delay passes without a hit.</summary>
-    public const float Meter = 90f, MeterPerMenace = 1.2f, Regen = 20f, Delay = 1f;
+    public const float Meter = 90f, MeterPerMenace = 1.2f;
 
     /// <summary>
     /// A leap: it contracts for Windup (the telegraph), locks onto where she is then (at most Range away), flies
@@ -72,7 +72,7 @@ public sealed class Thumpsquirt
     public int RingId;
     public bool Alive = true;
     public float Seed;
-    public CorruptionMeter Corruption = new(ThumpTuning.Meter, ThumpTuning.Regen, ThumpTuning.Delay);
+    public CorruptionMeter Corruption = new(ThumpTuning.Meter);
     /// <summary>In the air: it cannot be harmed.</summary>
     public bool Airborne => State == ThumpState.Flight;
     /// <summary>How far through its leap it is (0..1).</summary>
@@ -110,7 +110,6 @@ public sealed partial class PlaneWorld
     {
         var t = new Thumpsquirt { Position = at, Seed = _blightRng.Range(0f, 100f), Timer = _blightRng.Range(0f, 2f) };
         t.Corruption.Max = t.Corruption.Value = ThumpTuning.Meter * (1f + ThumpTuning.MeterPerMenace * Menace);
-        t.Corruption.Regen *= 1f + 0.5f * Menace;
         Thumpsquirts.Add(t);
         return t;
     }

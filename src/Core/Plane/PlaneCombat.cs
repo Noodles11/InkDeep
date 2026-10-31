@@ -213,8 +213,8 @@ public sealed class PlaneShot
     public object? Struck;
     /// <summary>It has struck a secret's seal (a bubble that bounces off counts once).</summary>
     public bool SealStruck;
-    /// <summary>It has struck a vent's mouth already (once a bubble).</summary>
-    public bool VentStruck;
+    /// <summary>It has struck a leak's mouth already (once a bubble).</summary>
+    public bool LeakStruck;
     /// <summary>A pufferling's needle: fast, and it pops any bubble it meets (flying on).</summary>
     public bool Needle;
     public int PearlHp;
@@ -458,6 +458,17 @@ public sealed partial class PlaneWorld
             if (shot.FromPlayer)
             {
                 if (BubbleHitsBoss(shot)) continue;
+                // A leak takes her light where it floats.
+                if (!shot.LeakStruck)
+                    foreach (var v in Leaks)
+                    {
+                        if (v.Sealed || !Reaches(shot, v.Position, AdventureTuning.LeakRadius)) continue;
+                        shot.LeakStruck = true;
+                        StrikeLeak(v, ShotLight(shot));
+                        if (!shot.Pierce && !shot.Boomerang) Pop(shot, v.Position - shot.Position);
+                        break;
+                    }
+                if (shot.Life <= 0f) continue;
                 // Queen Clam's pearls are corruption: her light cannot clear them, and passes through.
                 foreach (var mob in Mobs)
                 {
@@ -674,7 +685,7 @@ public sealed partial class PlaneWorld
     /// <summary>How much harder what hurts her is at this level's Menace.</summary>
     float HurtScale => 1f + PlaneCombatTuning.HurtPerMenace * Menace;
 
-    /// <summary>How much of a plain shot's light this shot carries (at most all of it): what a vent or a seal counts.</summary>
+    /// <summary>How much of a plain shot's light this shot carries (at most all of it): what a leak or a seal counts.</summary>
     float ShotLight(PlaneShot shot) => MathF.Min(shot.Damage / (PlaneCombatTuning.ShotDamage * DamageScale), 1f);
 
     /// <summary>Her damage stat as a factor on a bubble's damage (1 with no pearls; Shark Tooth and Coral Crown raise it).</summary>
@@ -1065,8 +1076,6 @@ public sealed partial class PlaneWorld
                 shot.SealStruck = true;
                 StrikeSeal(next, ShotLight(shot));
             }
-            // ...and a vent's mouth adds its light to the vent.
-            if (shot.FromPlayer && !shot.VentStruck && Vents.Count > 0 && StrikeVent(next, ShotLight(shot))) shot.VentStruck = true;
             // A returning boomerang passes back over what it cleared.
             if (!(shot.Boomerang && shot.Returning))
             {

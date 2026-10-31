@@ -73,9 +73,12 @@ public partial class TitleMain : Node3D
     Vector2 RingCentre => PageSize * 0.5f + new Vector2(0f, -8f);
     /// <summary>The last pointer she followed: the mouse, or (with the controller or the keys) the item in focus.</summary>
     bool _byPad;
-    /// <summary>The left stick's crosshair round her (page units out from her middle), and how much of it shows.</summary>
+    /// <summary>
+    /// The left stick's crosshair round her (page units out from her middle), and how much of it shows: the mouse's own, at
+    /// its own size (not scaled with the menu); the mouse pointer hides while the controller is in use, so only one shows.
+    /// </summary>
     TextureRect _padCross = null!;
-    const float PadCrossOut = 120f, PadCrossSize = 44f, PadPush = 0.4f;
+    const float PadCrossOut = 120f, PadPush = 0.4f;
     float _padCrossShown;
     MenuShots _shots = null!;
     Control? _inline;
@@ -347,6 +350,7 @@ public partial class TitleMain : Node3D
             _camera.Track(Focus(alpha), dt, look: new Vector3(_lead, 0f, 0f));
             _shoals.Step(new Vector2(_bell.GlobalPosition.X, _bell.GlobalPosition.Z), dt);
             _camera.SetDeepFish(_shoals);
+            _snow.Her(_bell.GlobalPosition, new Vector3(_world.Player.Velocity.X, 0f, _world.Player.Velocity.Y));
             _snow.Tick(dt, Focus(alpha) + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
             _level.UpdateCanopy(_world.Player.Position, dt, _camera.Camera.GlobalPosition);
         }
@@ -421,18 +425,6 @@ public partial class TitleMain : Node3D
 
         _ui.AddChild(_shots);
 
-        // The left stick's crosshair: her own, standing round her the way the stick is pushed.
-        _padCross = new TextureRect
-        {
-            Texture = OctoShoots.Game.Fx.GonadCursor.Texture(),
-            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-            StretchMode = TextureRect.StretchModeEnum.Scale,
-            Size = Vector2.One * PadCrossSize,
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-            Modulate = new Color(1f, 1f, 1f, 0f),
-        };
-        _ui.AddChild(_padCross);
-
         _fade = new ColorRect { Color = new Color(0f, 0f, 0f, 1f), MouseFilter = Control.MouseFilterEnum.Ignore };
         _fade.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         _ui.AddChild(_fade);
@@ -444,6 +436,14 @@ public partial class TitleMain : Node3D
         pageLayer.AddChild(_splash);
         _bootLoader = new GonadLoader();
         pageLayer.AddChild(_bootLoader);
+        // The left stick's crosshair: her own, standing round her the way the stick is pushed.
+        _padCross = new TextureRect
+        {
+            Texture = OctoShoots.Game.Fx.GonadCursor.Texture(),
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            Modulate = new Color(1f, 1f, 1f, 0f),
+        };
+        pageLayer.AddChild(_padCross);
 
         // After the first layout pass, so the motions start from where the containers put things.
         GetTree().CreateTimer(0.05).Timeout += Intro;
@@ -578,7 +578,7 @@ public partial class TitleMain : Node3D
             InputSetup.UsingPad = true;
             var her = HerOnPage();
             var dir = stick.Normalized();
-            _padCross.Position = her + dir * PadCrossOut - _padCross.Size * 0.5f;
+            _padCross.Position = (her + dir * PadCrossOut) * UiScale - _padCross.Size * 0.5f;
             Button? best = null;
             float bestDot = -2f;
             foreach (var (button, _, _) in _items)
@@ -597,6 +597,7 @@ public partial class TitleMain : Node3D
         }
         _padCrossShown = Mathf.MoveToward(_padCrossShown, pushed ? 1f : 0f, dt * (pushed ? 10f : 2.5f));
         _padCross.Modulate = new Color(1f, 1f, 1f, _padCrossShown);
+        Input.MouseMode = _launching || InputSetup.UsingPad ? Input.MouseModeEnum.Hidden : Input.MouseModeEnum.Visible;
     }
 
     (Button Button, Label Detail, string Id) Item(string id) => _items.First(it => it.Id == id);

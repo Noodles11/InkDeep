@@ -199,6 +199,8 @@ public partial class MinimapView : Control
         // A spent spring is gone from the maps too.
         foreach (var sp in world.Springs)
             if (!sp.Spent) map.Springs.Add((sp.Position, sp.Bathing));
+        // The main current shows once it runs (Sea Chart Nautilus remembers every current).
+        map.Current = world.Currents.Find(c => c.Strength > 0f)?.Course;
     }
 
     public void SetVisited(IReadOnlySet<int> visited) => _map.Visited = visited;

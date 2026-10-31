@@ -18,7 +18,7 @@ public static class BlightTuning
     /// Its corruption meter (shot by her light): about ten default shots empty it; it re-corrupts quickly, RootRegen a
     /// second (more with Menace) once RootDelay has passed without a hit. Empty, it bursts.
     /// </summary>
-    public const float RootCorruption = 125f, RootRegen = 30f, RootDelay = 0.5f;
+    public const float RootCorruption = 125f;
     /// <summary>The ink sac: where her light strikes it.</summary>
     public const float SacRadius = 0.9f;
     /// <summary>Its burst sends a wave of cleansing through its whole reach in this long.</summary>
@@ -54,7 +54,7 @@ public static class BlightTuning
     /// Its corruption meter: four default shots in a row empty it (a pause lets it regrow, MurkRegen a second, more
     /// with Menace, once MurkDelay has passed without a hit). One strong enough shot empties it at once.
     /// </summary>
-    public const float MurkCorruption = 36f, MurkRegen = 14f, MurkDelay = 0.8f;
+    public const float MurkCorruption = 36f;
     public const float BudSeconds = 0.8f, BudInterval = 15f, BudDensity = 0.6f, BudClearance = 5f;
     /// <summary>
     /// A murkling is made of ink: budding, it drinks Ink (density × m², about a 1.2 m disc of thick ink) from anywhere
@@ -121,21 +121,16 @@ public static class BlightTuning
 
 /// <summary>
 /// A corrupted creature's corruption meter (docs/CORRUPTION.md): full at first; each shot of her light takes its damage
-/// (illuminance) off; after Delay without a hit it regrows at Regen a second. Emptied, the creature is cleansed. It is
+/// (illuminance) off, and it never regrows (only a leak heals). Emptied, the creature is cleansed. It is
 /// shown (a ring round the creature) only while partly emptied: not when full, not once empty.
 /// </summary>
 public sealed class CorruptionMeter
 {
-    public float Max, Value, Regen, Delay, Since;
+    public float Max, Value, Since;
     /// <summary>What the last hit took off (for the view's after-image of the chunk).</summary>
     public float LastHit;
 
-    public CorruptionMeter(float max, float regen, float delay)
-    {
-        Max = Value = max;
-        Regen = regen;
-        Delay = delay;
-    }
+    public CorruptionMeter(float max) => Max = Value = max;
 
     public float Fraction => Max <= 0f ? 0f : Value / Max;
     public bool Shown => Value > 0f && Value < Max;
@@ -151,12 +146,8 @@ public sealed class CorruptionMeter
         return Empty;
     }
 
-    public void Step(float dt)
-    {
-        if (Empty) return;
-        Since += dt;
-        if (Since >= Delay) Value = MathF.Min(Max, Value + Regen * dt);
-    }
+    /// <summary>The clock since its last hit.</summary>
+    public void Step(float dt) => Since += dt;
 }
 
 /// <summary>A Blightroot: a blackened stump crowned with a pulsing ink sac.</summary>
@@ -167,7 +158,7 @@ public sealed class Blightroot
     /// <summary>Its area (index into Areas): the cells of its reach.</summary>
     public int Area;
     /// <summary>Its corruption meter: her shots empty it; empty, it bursts.</summary>
-    public CorruptionMeter Corruption = new(BlightTuning.RootCorruption, BlightTuning.RootRegen, BlightTuning.RootDelay);
+    public CorruptionMeter Corruption = new(BlightTuning.RootCorruption);
     /// <summary>Distance of each of its area's cells from it (same order as the area's cells).</summary>
     public float[] CellDistance = Array.Empty<float>();
     public float PulseTimer;
@@ -205,6 +196,8 @@ public sealed class Murkling
     public bool Lesser => Fish is not null;
     /// <summary>A lesser murkling's swarm (the school it was turned from), -1 for none: a swarm keeps together.</summary>
     public int Swarm = -1;
+    /// <summary>A shoal murkling's own place in its school's ring round her (-1: none yet). It keeps it until it is freed.</summary>
+    public int ShoalSlot = -1;
     /// <summary>Its body's radius (a lesser one's follows the fish it was), and what it drains a second while clinging.</summary>
     public float Radius = BlightTuning.MurkRadius, ClingDrain = BlightTuning.ClingDrain;
     /// <summary>The body it moves as (a prime collides smaller than it looks, so it can squeeze through the passes).</summary>
@@ -246,7 +239,7 @@ public sealed class Murkling
     /// <summary>Thrown off her by a dash (counting down): it tumbles away and cannot cling or chase until it recovers.</summary>
     public float Shaken;
     /// <summary>Its corruption meter: her shots empty it; empty, it bursts.</summary>
-    public CorruptionMeter Corruption = new(BlightTuning.MurkCorruption, BlightTuning.MurkRegen, BlightTuning.MurkDelay);
+    public CorruptionMeter Corruption = new(BlightTuning.MurkCorruption);
     /// <summary>Drifting toward this light (her, or a hanging bubble of hers).</summary>
     public Vector2 Target;
     public bool Budding => Bud > 0f;
@@ -386,7 +379,6 @@ public sealed partial class PlaneWorld
         var area = new CorruptArea { Center = at, Radius = BlightTuning.Reach, Cells = field.CellsWithin(at, BlightTuning.Reach) };
         root.Area = Areas.Count;
         Areas.Add(area);
-        root.Corruption.Regen *= 1f + 0.5f * Menace;
         root.Corruption.Max = root.Corruption.Value = BlightTuning.RootCorruption * (1f + BlightTuning.MeterPerMenace * Menace);
         root.CellDistance = area.Cells.Select(i => Vector2.Distance(CorruptionField.CellCentre(i % CorruptionField.N, i / CorruptionField.N), at)).ToArray();
         Blightroots.Add(root);
@@ -894,8 +886,7 @@ public sealed partial class PlaneWorld
                 if (s.Fall >= BlightTuning.ThrowFallSeconds)
                 {
                     s.Life = 0f;
-                    if (Dots is { } dots) dots.Add(InkDots.CellOf(s.Position));
-                    else Corruption?.Spread(s.Position, s.Stain, BlightTuning.ThrowStainInk, 1f);
+                    if (Dots is null) Corruption?.Spread(s.Position, s.Stain, BlightTuning.ThrowStainInk, 1f);
                     Events.Add(new PlaneEvent(PlaneEventType.MurkShotLanded, s.Position, Vector2.Zero, s.Stain));
                 }
                 continue;
@@ -1017,7 +1008,6 @@ public sealed partial class PlaneWorld
             if (draught is null) return null;
         }
         var m = new Murkling { Position = at, Area = area, Seed = _blightRng.Range(0f, 100f), ThrowTimer = BlightTuning.ThrowEvery * _blightRng.Range(0.5f, 1f) };
-        m.Corruption.Regen *= 1f + 0.5f * Menace;
         m.Corruption.Max = m.Corruption.Value = BlightTuning.MurkCorruption * (1f + BlightTuning.MeterPerMenace * Menace) * (prime ? BlightTuning.PrimeMeter : 1f);
         if (prime)
         {

@@ -30,7 +30,7 @@ public static class PlaneEconomyTuning
     /// <summary>How often a secret room holds a pearl instead of its shells.</summary>
     public const float SecretPearl = 0.1f;
     /// <summary>The shop: at most one pearl (offered this often), and always a heart (a health top-up).</summary>
-    public const int PearlPrice = 30, HealthPrice = 5;
+    public const int PearlPrice = 100, HealthPrice = 15;
     public const float HealthAmount = 25f;
     public const float PearlOffered = 0.5f;
     /// <summary>The shop's stand slots, left to right: the pearl, the heart, and a third kept for wares to come.</summary>

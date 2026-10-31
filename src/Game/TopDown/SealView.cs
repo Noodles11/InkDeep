@@ -68,6 +68,8 @@ public partial class SealView : Node3D
         {
             var seal = world.Seals[i];
             _emblems.Add(Carve(world.Map, seal, seal.Facing, shader, seal.Open ? 0f : 1f, level));
+            // Opened before a saved moment: it is down again.
+            if (seal.Open) level.Slide(seal.Rock.Center);
             // A barred arena's ways in carry the sword on their inner face as well, seen only while the fight holds them shut.
             if (barred && seal.Kind == SealKind.Boss) _inner[i] = Carve(world.Map, seal, -seal.Facing, shader, 0f, level);
         }

@@ -327,6 +327,8 @@ public sealed class LevelMap
     public List<Poi> Pois = new();
     public List<Corridor> Corridors = new();
     public List<Plaza> Plazas = new();
+    /// <summary>The main current's course, once worked out (MainCurrent.Course).</summary>
+    internal List<Vector2>? MainCourse;
     /// <summary>The cave's open chambers, with their roles (the level templates' anchors read them).</summary>
     public List<CaveChamber> Chambers = new();
     /// <summary>The chambers off the main route, each with its place or its den.</summary>

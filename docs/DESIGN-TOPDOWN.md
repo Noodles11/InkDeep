@@ -32,7 +32,7 @@
 | Occlusion | Canopy layer (arch bodies, cave roofs, tunnel roofs, overhangs) **fades** while it stands over Clementine or between her and the camera: she is always seen (§3, §4.5). |
 | Lighting | **The core visual pillar.** Atmospheric, volumetric, per-depth darkening (§5). |
 | Engine | **Godot 4 / C# retained** — plane-locked rework of the existing stack (§11). |
-| Adventure | **Vents, ink dots, fish that turn** (the game's default): the reef is poisoned from vents in its walls; the ink spreads as dots through the water and turns the fish; sealing every vent opens the way down; no seabed outside caves (docs/ADVENTURE.md). |
+| Adventure | **Leaks, ink, fish that turn** (the game's default): the reef is poisoned from leaks floating in its chambers; the ink spreads as dots through the water and turns the fish; sealing every leak opens the way down; no seabed outside caves (docs/ADVENTURE.md). |
 | Story | **"Ink Deep" lore inherited** (DESIGN-2D §1): the Leak, the Crack, corrupted-not-killed creatures, the Tank, The Hand. Clementine, the one-of-her-kind absorbent jellyfish, dives after her bloom (§1). |
 
 ---
@@ -86,12 +86,7 @@ What changes is the protagonist's skin:
   (their lengths about her arm's: 3.2 m, 0.2 m more for every skill point she
   spends, at most 6 m — always longer than the fibres), twisting freely, nearly see-through, their ruffled
   margins glowing, a faint current down their middles with a brighter impulse
-  now and then, and along one edge of each a thin glowing line, one arm's red, one
-  green, one blue. Where two lines cross (as the eye sees them) they strike tiny
-  sparks of their colours added together, red and green yellow, red and blue
-  magenta, green and blue cyan, all three white: stardust on her tail as she swims,
-  and hardly any at rest, for a crossing sparks again only once it has moved 0.1 m
-  or 0.35 s have passed (`BellView.ShedStardust`). And eight long **fibre tentacles** (1.8–2.6 m) from the margin,
+  now and then; and eight long **fibre tentacles** (1.8–2.6 m) from the margin,
   hair-thin like optical fibres, beads of light running down them to a tip
   twinkling in random colours, as an optical fibre's. All on **verlet chains** with a fixed 120 Hz step:
   they stream behind her in travelling S-waves while she swims, swing through
@@ -101,7 +96,7 @@ What changes is the protagonist's skin:
   Presentation only — but in the adventure the sim keeps her oral arm too, as a
   line along the way she swam, and it stings the corrupted creatures it brushes
   (docs/ADVENTURE.md §6).
-- **Bioluminescence**: a searchlight from her bell (§5.3) and a faint glow
+- **Bioluminescence**: a soft round light from her bell, as a bulb's (§5.3), and a faint glow
   round the bell itself; the player's light is the primary light source in dark
   depths (inherited rule: *Clementine is
   always the warm light in the scene*).
@@ -302,8 +297,9 @@ of the corrupted (`PlaneExperience.cs`, `PlaneRun`).
   Below's "map feeling" without flatness.
 - Gentle scroll smoothing; **no camera rotation** (north is always up; the
   minimap and world agree).
-- Screen-space dressing: marine snow drifting *between camera and level*
-  (parallax speed reference), faint refraction wobble, vignette that deepens
+- Screen-space dressing: plankton drifting *between camera and level* (parallax speed reference; `MarineSnow`,
+  `marine_snow.gdshader`): tiny plain dots, one dull grey at every depth, with no glow, glitter or twinkle, sinking
+  slowly and swaying. It moves aside as she passes, and her dash and Tide Pulse shove it outward. Also a faint refraction wobble, a vignette that deepens
   with depth, subtle chromatic aberration on hurt.
 - **A slight fisheye** (`Fisheye`, `fisheye.gdshader`): over the finished 3D view (Clementine and her light included),
   under the HUD, the picture bends toward the screen's edges as through a dome port — barely in the middle, more toward
@@ -431,12 +427,7 @@ its own.
   seabed in its middle, where the chamber is widest. She can dive only there,
   within 3 m of the middle; on the depth's boss level the **boss arena**, a round level
   chamber ~34 m across with **the Crack** across its middle, a fissure
-  14–18 m long. Once it is open, a small soft chevron in her light's colour
-  floats just inside the screen's edge while it is out of sight, pointing from
-  her toward it (`ExitPointer`): it glides along the edge as she swims, bobs
-  toward the way, and fades as the way comes into view. It is there with or
-  without the maps (Sea Chart Nautilus), and hides while the game is held (the
-  pause menu, the boss's intro, a dive).
+  14–18 m long. Nothing on the screen points the way: the **main current** (§4.7) leads there.
 - The cave's records: its tunnels are the level's corridors (main, side, and
   each room's spur), its chambers the plazas.
 
@@ -499,7 +490,8 @@ its own.
   to its doorway: see the shop under §12.2's shells). **A secret cave stays hidden until its wall opens:** its roof runs on over its way in to
   the middle of its sealed wall (as wide as the passage and 4 m more each side), meeting the wall's top, so the whole
   of it reads as solid reef; it never fades and, with its wall, is never carved away round her (`LevelView`'s
-  kept-whole materials); once the wall slides down it fades and carves like any cave.
+  kept-whole materials). As its wall slides down, the roof over its way in goes with it: the passage lies open, plain to
+  see, up to the chamber's roof, as any cave's, and that roof fades and carves as they do.
 - **Passes — the shortcuts, every one a tunnel (2–4 sought, about one a level
   where the rock is thick enough):** tunnels (3–5 m) worn through the rock
   between two parts of the cave 10–36 m apart as the fish swims — tunnels and
@@ -537,7 +529,7 @@ its own.
   every swimmer stirs (she, the creatures, the fish, her shots: they drag the
   water along behind them and push it out to their sides, the faster the
   wider), her swells (a push out from where she set off, turned or dashed) and
-  a current surge through its canyon. Only beds within 24 m of her move.
+  the currents passing over it (§4.7). Only beds within 24 m of her move.
 - **The seabed is flat:** once the reef is raised, every floor deeper than
   **−1.2** is lifted to it, so no hollows or rolling
   floor draw the eye; only the walls' feet slope. The shaft and the rift's
@@ -592,8 +584,8 @@ Running after the checks, it never changes what she can reach.
     a level's template seals (its `pathSeals` rule);
   - **a sword**, on **every way into the boss's arena** (each opening in its rim found by rays out from its middle, a
     wall across it from the rock on one side to the rock on the other), its crimson smouldering faintly in the groove.
-    It takes no light until 3 of the level's vents are sealed (`SealRefused`): her shots knock dully on it, and she is
-    told how many more to seal. No vent lies behind it.
+    It takes no light until 3 of the level's leaks are sealed (`SealRefused`): her shots knock dully on it, and she is
+    told how many more to seal. No leak lies behind it.
   Each of her shots that strikes the wall within 2.2 m of its carving fills it with her light (a sixth of an X, an
   eighth of the sword; damage does not matter, a merged or bouncing bubble counts once), from its heart outward (the
   X's crossing, the sword's guard), with a flash and a chime rising as it fills. **The hits must come one after
@@ -622,7 +614,7 @@ Running after the checks, it never changes what she can reach.
     away, soft at the edge, only rock above her plane and on the camera's side of her, so a leg running across the
     screen never hides the way her light shows.
   - **The end always rewards her** (rolled per level): **20%** a **pearl** (from any pool), else the **shell fountain**,
-    a small vent of rock with a pale glow in its throat, spouting a shell a second whenever the last one has been
+    a small leak of rock with a pale glow in its throat, spouting a shell a second whenever the last one has been
     taken, for as long as she stays in the den's dark.
   - **Reaching the end springs the curse:** a hollow laugh with no one behind it echoes down the tunnel, and the dark
     closes over the whole way back. A dense black fog round her: only the water within about 1.35–3.9 m of Clementine
@@ -637,7 +629,7 @@ Running after the checks, it never changes what she can reach.
   - No creatures live in it. Nothing teleports her.
 - **Landmark light language** inherited: gold (clam rooms), green (shop),
   red (curse), violet (secret, **no beacon** — found, not advertised),
-  orange (the Crack); and white (the start), teal (the shell cache). In dark depths these lights are the level's signage —
+  the Crack in the next depth's own water colour; and white (the start), teal (the shell cache). In dark depths these lights are the level's signage —
   Below's campfire principle.
 - **Sealed pockets** (2–4/level) and **buried coins** (4–7/level, scratched
   X marks) inherited (DESIGN-2D §26, DESIGN-3D §6.3) — bomb the floor, loot
@@ -662,7 +654,7 @@ Running after the checks, it never changes what she can reach.
     part of a hit.
   - **The creatures keep up:** every corrupted creature's meter is its own × (1 + 1.2 × Menace), a boss's × (1 + 1.5 ×
     Menace), and all that hurts her is × (1 + 0.75 × Menace), but the curse den's dark. Menace is 0 at Depth 1, 1 at Depth 6.
-- **Fish far below** (`DeepShoals`, `topdown_post.gdshader`): vague shadows of fish swim under her plane, on the title
+- **Fish far below** (`DeepShoals`, `topdown_post.gdshader`), **off for now** (`DeepShoals.Enabled`): vague shadows of fish swim under her plane, on the title
   screen too: two great loners (5–8 m long, 11–16 m down), two middling ones (2–4 m) and two small schools (of 5 and 7,
   about 1 m each, 4–8 m down), all one soft shape, a long body bending as it swims and a fanned tail beating behind it,
   softer the deeper it is. Each keeps its own slow course round her and comes back from out of sight once it is 20 m off.
@@ -740,7 +732,7 @@ levels: ~4–5 min rushed, ~25 min explored.
   in. The level's life stays behind: its creatures, pickups, shots, damage
   numbers and currents (and Queen Clam) fade out as the iris's dissolving edge
   passes over them, the rest with the descent, casting no shadow once fading;
-  the Crack's glow, light and rising bubbles fade as she sinks through it.
+  the Crack's water, light and rising bubbles fade as she sinks through it.
   The minimap zooms in on her and fades to dark over the first 0.9 s; once she
   is down, the new level's map fades in over 0.8 s, settling from a little
   closer. Nothing is switched off in one frame. If the level below is not made yet,
@@ -849,38 +841,38 @@ Clementine is near or not. At level build it draws a schedule from the run's
 20 minutes ahead; the sim pops events as the level's clock reaches them.
 Deterministic and cheap: the same level always schedules the same events.
 
-- **Current surges** (the first event kind). The first comes 20–40 s into the
-  level, each next one 25–50 s after the last has ended (never two at once).
-  A surge runs through one canyon (a main route or a side passage; never a
-  spur), one way along its course, for **20 s**: it begins slow and
-  accelerates (eased over 5 s), holds its force, and decelerates over the last
-  5 s. At full strength the flow is 3–4.5 m/s (her cruise is 6: she can swim
-  against it, slowly). It changes a fight's geometry mid-encounter.
-  - **Felt in the canyon:** inside the canyon's channel the flow pushes at full
-    strength, fading to nothing 2 m past its walls. It carries everything not
-    fixed to the reef — Clementine, pufferlings (mobs and healthy ones), the
-    reef fish (§12.2), every shot (her bubbles, needles, Queen Clam's pearls), shells, hearts, loose
-    pearls, ink clouds — the swimmers sliding along rock as they go. Shop stands
-    and Queen Clam hold fast.
-  - **Seen beyond it:** the moving water shimmers like the air over a hot road
-    seen from afar (`CurrentView`). One soft band of it lies along the canyon at
-    her plane, spilling up to 5 m past its walls (only seen there, not felt, and
-    fainter): the picture under it wavers, bent by eddies that roll down the
-    canyon with the flow and boil as they go, fine shivers riding slow swirls,
-    patchy, with no lines or edges, fading out at its sides and ends. It wakes
-    as the surge builds (the warning), rolls fastest and shimmers hardest at
-    full strength, and stills as it eases off.
 - **Bubble geysers** (`PlaneGeysers.cs`, `GeyserView`): each level has 2–4 small vents in the seabed (on open floor,
   18 m from the start, clear of the way down, the places and the light spring, 14 m apart), seeded. Each sprays on its
-  own clock (from its own `geysers` stream, so the surges' schedule is untouched): the first spray 6–25 s into the
+  own clock (from its own `geysers` stream): the first spray 6–25 s into the
   level, each next 14–35 s after the vent's last. A spray begins with **1.5 s of fizzing** (a stream of small
   bubbles: the warning, no push), then sprays for **5–10 s**: a froth bursts from the vent, a ring runs out over the
   floor, and a column of bubbles rises all the way to the surface, leaving fast, wobbling, swelling as they climb.
   An idle vent trickles a bubble now and then.
   - **The push:** while it sprays, the water within 5 m is pushed straight out from the vent like a wave — 4 m/s at
     the vent, plus a burst of 10 m/s at the start that dies away (to a third in half a second), fading to nothing at
-    the edge — through the same flow as the surges, so it moves her, the creatures, the fish, her shots, shells and
+    the edge — so it moves her, the creatures, the fish, her shots, shells and
     loose pearls alike, and may topple a pot. A deep bubbling pop marks it, with a jolt when she is near.
+
+**The currents** (`PlaneCurrents.cs`, `CurrentView`) are the level's own water, not events; none is on a timer.
+
+- **The main current** is the level's highway: it runs from her start to the way down, on the shortest route that keeps
+  to the middle of the water (never through a secret room's seal; on a boss level through the boss's walls, to the edge of
+  the arena, so it does not blow through the fight). It lies still until she has sealed the third leak, then wakes over
+  3 s with a low bell and a long swell in the controller, and from then on it always runs. 3.5 m/s (her cruise is 6) in
+  a band 4 m either side of its course, fading 2 m past that and over its last 5 m, with a gentle pull back to its middle
+  so that it holds a rider round a bend: left to itself, it carries her all the way. Sealing the leaks heals the reef's
+  water, and this is what that looks like. It replaces any pointer to the way down, no light spring lies on it, and once it runs Sea Chart Nautilus
+  draws it on both maps.
+- **The leaks' push** (docs/ADVENTURE.md §1): each open leak pushes outward lightly, within 6 m.
+- **What they carry:** Clementine (sliding along rock), every shot and ink clouds. The creatures live in this water and
+  hold their ground in it, and shells, hearts and pearls stay where they lie: a current that never stops would sweep
+  them all to the way down.
+- **Seen** as the moving water shimmering like the air over a hot road seen from afar, with no
+  colour and no change to the water's brightness: `CurrentView` bakes the level's currents into a map over her plane and
+  the post pass bends the finished picture by it, so one soft band lies along the course, spilling 5 m past the channel
+  (only seen there, not felt, and fainter), eddies rolling down it with the flow and boiling as they go, fine shivers
+  riding slow swirls, patchy, with no lines or edges, fading out at its sides and ends. Kelp leans with it. A leak's push
+  (not the main current) hums in the controller while it shoves her.
 
 ## 5. Lighting & Atmosphere — the core pillar
 
@@ -940,20 +932,13 @@ stream only — never touches gameplay physics. Quality presets inherited.
 Every light that matters reaches only where it can: the reef is a heightfield, so visibility is worked out on it
 exactly and cheaply, and the water glows where light passes through it.
 
-- **Her lantern** (BellView): a **searchlight**, as a helicopter's: a shadowed spot light from her bell (soft shadows
-  from a light the size of her heart; her own bell and strands cast none), a focused beam (17° half-angle) she casts
-  from inside her bell out of its opening — always the way the inside of her bell points: down at rest, and streaming
-  out behind her as she swims, tipped apex first — toned down, a soft warm beam rather than a floodlight. A faint short glow round the bell (3 m) keeps what swims right beside her from going black. Its
-  strength follows the depth's **Lantern** (`ReefLook.Lantern`, §5.1): 1 in the Shallows, 1.1 Kelp, 1.35 Galleon,
-  1.5 Carnival, 1.85 Trench, 2 Abyss, 0.6 Tank; the beam is 2.38 × Lantern^1.8 strong (`BellView.BeamEnergy`), reaches 26 m × √Lantern (× Lantern
-  Pearl's glow, so it gets down into an abyss reef) and falls off more gently the deeper she is. The light-field
-  shaders share its cone (`her_spot`: its direction and the cosine of its half-angle): her glow in the water keeps
-  inside it (a little glow round the bell aside), and the water's veil clears only as much as the beam's light
-  actually lands, falling off to its rim as the light does (`her_clear`), so no darker disc shows round the spot or
-  round the bell over a near floor. Her warm pool on the floor is her own glow all round her, shaded by the reef but
-  not cut by the cone. The **beam** itself glows down through the water along
-  every view ray that crosses it (14 samples evenly along the ray, cut by what shades it), and the **spot** it throws
-  on the reef is lit through the murk however deep it lies.
+- **Her lantern** (BellView): a **bulb**: a smooth round light from her bell's heart, shining all round her with no beam,
+  no streaks and no filaments, its soft shadows from a light the size of her heart (her own bell and strands cast none). A
+  faint short glow round the bell (3 m) keeps what swims right beside her from going black. Its strength follows the
+  depth's **Lantern** (`ReefLook.Lantern`, §5.1): 1 in the Shallows, 1.1 Kelp, 1.35 Galleon, 1.5 Carnival, 1.85 Trench, 2
+  Abyss, 0.6 Tank; it is 0.7 × Lantern^1.8 strong (`BellView.BulbEnergy`), reaches 9 m × √(Lantern × Lantern Pearl's glow; the pearl makes it no stronger)
+  and falls off more gently the deeper she is. Her glow in the water is even all round her and nothing cuts it, and the
+  warm pool it leaves on the floor below is centred on her as the eye sees her, not straight under her.
 - **Where her light reaches — the horizon map** (`HorizonMap.cs`): round her light, for 256 directions × 32 distances
   (out to its reach), the running steepest slope of the terrain (its height over the light ÷ the distance). A point is
   lit exactly when its own slope from the light clears that; one texture lookup (`her_vis`), soft at the edge. Close
@@ -962,8 +947,7 @@ exactly and cheaply, and the water glows where light passes through it.
   false shadow round her. Redone when she moves (a quarter of a millisecond).
 - **The water she pushes** (`WaterSwells`, the post pass's swells): when she sets off from near still, turns
   sharply at speed (over about 57° from the way she was holding; long curves never count) or dashes, the water
-  shifts for a moment — a small underwater ripple, no surface ripple: a ring of the currents' moving water
-  (`CurrentView`'s shimmer) at her plane spreading about 2.6 m from where she pushed off over 0.7 s, the picture under
+  shifts for a moment — a small underwater ripple, no surface ripple: a ring of moving water at her plane spreading about 2.6 m from where she pushed off over 0.7 s, the picture under
   it wavering with eddies of denser water and shoved outward along its crest (a sharp leading edge, a softer wake),
   strongest behind her, the water a shade thicker where it passes. A dash pushes hardest (1), setting off less (0.5), a
   turn least (0.4). Heavy blows add even rings of their own (a Blightroot's head coming down; Tide Pulse's three
@@ -1157,8 +1141,8 @@ The FP staging ("look up through the surface") is replaced:
 - **Progressive dives** inherited (§5.1 spirit adapted to open floors): early
   runs end at Depth 1; each first boss kill deepens the Crack's reach. Admiral's
   Chart / unlock table inherited.
-- **The Crack**: glowing fissure in the boss arena floor; boss guards it; on
-  her freeing it splits open with updraft bubbles + light (inherited §5.2).
+- **The Crack**: a rift in the boss arena floor; boss guards it; on her freeing it
+  opens, flush with the floor, the next depth's water lying in it, with updraft bubbles + light (inherited §5.2).
   Diving into it (§4.6) leads to the next depth's first level, which starts on
   the arena's level floor.
 - **Endings:** per level, exactly two — dive down the way out, or perish
@@ -1248,7 +1232,7 @@ The FP staging ("look up through the surface") is replaced:
   rebindable) or the mouse: **Level up** (§2.6), **Stats**, **Pearls** (those she has absorbed, in their colours and
   engravings) and **Achievements** (earned ones with their line and the pearl they unlocked; unearned ones as a dark
   pearl silhouette, the title and how to earn it). It opens on Level up while a point waits, else on Stats. Under the
-  tabs: resume, restart, save & quit, camera zoom. On a controller something always holds the focus (the first modifier
+  tabs: resume, restart, save & quit. On a controller something always holds the focus (the first modifier
   on Level up with a point to spend, else Resume), the D-pad and left stick move it, A presses, B resumes, and the right
   stick scrolls the list.
 - **Minimap**: circular, top-right, rotates so forward is up (inherited); fog of
@@ -1472,7 +1456,7 @@ at mist distance (inherited fade rule).
     step, smoothly, for 90% of her shots' damage per second (her damage, fire rate and Sardine Run's spin all count),
     so a creature's meter drains steadily for as long as it is held in the light; its hit numbers and flashes come
     summed four times a second (a creature it frees shows at once). A pot breaks once 18 of it has landed. Held on rock
-    it counts as one of her shots every shot's time, on a vent's mouth or a sealed wall's carving. It has no
+    it counts as one of her shots every shot's time, on a leak's mouth or a sealed wall's carving. It has no
     knockback and sends no surge back to her. Its tip and every impact steadily clear the ground's corruption round
     them (1 m plus its width, 2.25 density a second); the rest of its line does not. A ribbon of
     white-hot light in her glow, pulses racing outward along it, laid like paint (its edge wandering and tearing,
@@ -1516,8 +1500,8 @@ at mist distance (inherited fade rule).
   - **A plain bubble is not enough:** it rocks the pot on its foot, and pops on the bump (40%) or bounces off, as on
     rock. **What breaks one:** a bubble with an impact of 18 or more (merged, grown by Starfish Arm, or with the
     damage stats), a Pearl Diver throw charged half way or more, any bubble with Captain's Hook's knockback, an Ink
-    Sac blast that reaches it, her ink dash into it — and, if she is lucky, a current: in a surging canyon a standing
-    pot may topple and break (4% a second at full flow, less in a gentler one; about one in three over a surge).
+    Sac blast that reaches it, her ink dash into it — and, if she is lucky, a geyser: beside a spraying one a standing
+    pot may topple and break (4% a second at 4.5 m/s of push, less in a gentler one).
   - **Broken,** it shatters: shards burst out along the blow, tumble down through the water and lie on the sand a
     while before fading, and a puff of silt rises. It leaves **2–3 shells** (50%), **a heart** (20%) or nothing.
 - **Shells (the currency, first pass, `PlaneEconomy.cs`):** small shells lie in caches at the shell cache (6–9),
@@ -1525,8 +1509,8 @@ at mist distance (inherited fade rule).
   of a non-unique one, from its own roll); they drift to her from 2.5 m. A freed mob leaves a **heart** (6%: it heals 20 HP; she
   takes it only when hurt, otherwise it waits where it fell, a small red heart), else **shells** (30%: one, or two
   a quarter of the time), else nothing — about one heart and six shells a level from mobs. The shop
-  has three stand slots: a pearl she does not have on half the visits (30 shells), always a heart (a health top-up:
-  +25 HP, 5 shells, only when hurt), and a third slot kept empty for wares to come. The
+  has three stand slots: a pearl she does not have on half the visits (100 shells), always her gonad emblem in gold (a health top-up:
+  +25 HP, 15 shells, only when hurt), and a third slot kept empty for wares to come. The
   goods float on their own (pearls as in a clam room, the top-up as a red heart), each with a small price tag on a
   string (the price and a shell), shown only while she is inside the shop; she buys by touching one. **The shop's way
   in shows** (`LevelView.AddShopGates`): its roof runs on over its passage as solid rock (`LidSurface`, as a secret's
@@ -1591,6 +1575,8 @@ at mist distance (inherited fade rule).
   leads to the next (§4.6). She keeps her pearls, shells and HP through it; a new seed starts a fresh run. A new run
   starts on a random seed unless she types one on the title screen.
 - **Title screen** (docs/TITLE-MENU-PROPOSAL.md has the full layout and motion):
+  - **One crosshair.** With the controller the left stick's crosshair is the mouse's own, at its own size whatever the
+    window (not scaled with the menu), and the mouse pointer hides until the mouse is used again.
   - **The backdrop.** The game boots into a menu over the live sea. Clementine swims slowly back and forth along the
     west end of the longest straight channel of a fixed seed's reef (KELP 7Q2Z), the camera keeping her in the middle
     of the screen; the sea is dimmed a little, more toward the edges. The logo sits at the top left.
@@ -1673,8 +1659,9 @@ at mist distance (inherited fade rule).
   grass meadows and bommies, and cosmetic ground cover of seagrass meadows, a few sponge-like coral heads at the
   feet of walls and lone ones out on the floor; no rubble, boulders or glowing anemones. It is deterministic from
   the seed and touches no play. Flora is repainted in the depth's palette, and soft things sway.
-- **The Crack** glows orange from inside its fissure, through the murk; warm light spills over the arena floor and
-  bubbles rise from it.
+- **The Crack**, open, lies flush with the arena floor, a flat rift filled with the next depth's own water colour
+  (`crack_rift.gdshader`, on the same sheet as the sand that sealed it); that water's light spills over the floor and
+  bubbles rise from it. The ground round it is kept down to the arena's floor (`AbyssReef.LevelRound`), so no rim stands round it.
 - **Depth focus** (the look, after Below):
   - **The focal plane** is the swim level. Within about 0.6 m below and 1.6 m above stays sharp.
   - **Below** that, the world blurs and sinks into the depth's water: clear turquoise in the Shallows, murk further

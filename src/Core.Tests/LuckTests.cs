@@ -68,22 +68,23 @@ public class LuckTests
     }
 
     [Fact]
-    public void An_abyss_reef_has_a_light_spring_only_by_luck_and_keeps_its_seabed()
+    public void An_abyss_reef_always_has_a_light_spring_more_by_luck_and_keeps_its_seabed()
     {
-        int with = 0;
-        foreach (var id in Levels.Where(id => !LevelPlan.For(TestLevels.Seed, id).HasBoss).Take(12))
+        int plainly = 0, luckily = 0;
+        foreach (var id in Levels.Take(16))
         {
             var plain = AbyssReef.Apply(TopDownGenerator.Generate(new RunStreams(TestLevels.Seed), id));
-            Assert.Empty(LightSprings.Of(plain));
+            Assert.NotEmpty(LightSprings.Of(plain));
+            plainly += LightSprings.Of(plain).Count;
             var lucky = AbyssReef.Apply(TopDownGenerator.Generate(new RunStreams(TestLevels.Seed), id, luck: 6f));
             foreach (var at in LightSprings.Of(lucky))
             {
-                with++;
+                luckily++;
                 // Its seabed is kept: it wells up from the ground, not over the abyss.
                 Assert.True(lucky.HeightAt(at) > -6f, $"a spring over the abyss at {at} ({lucky.HeightAt(at):0.0} m)");
             }
         }
-        Assert.True(with > 0, "luck should bring some light springs");
+        Assert.True(luckily > plainly, "luck should bring more light springs");
     }
 
     [Fact]

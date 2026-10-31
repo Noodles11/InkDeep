@@ -66,13 +66,6 @@ public partial class SettingsCard : PanelContainer
         });
         box.AddChild(Row("Light shadows", "Clementine's light and the reef's lights cast shadows. Off is lighter on the GPU.", shadows));
 
-        var zoom = ZoomSlider(_view.CameraZoom, v =>
-        {
-            _view.CameraZoom = v;
-            Save();
-        });
-        box.AddChild(Row("Camera zoom", "How close the camera follows Clementine. Also in the pause menu.", zoom));
-
         var clock = Toggle(_view.ShowClock, on =>
         {
             _view.ShowClock = on;
@@ -146,7 +139,7 @@ public partial class SettingsCard : PanelContainer
         return row;
     }
 
-    /// <summary>The camera-zoom slider with its percentage; shared with the pause menu.</summary>
+    /// <summary>The camera-zoom slider with its percentage (the debug menu's).</summary>
     public static Control ZoomSlider(float value, Action<float> changed, Color? text = null)
     {
         var row = new HBoxContainer();

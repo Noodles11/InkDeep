@@ -38,6 +38,10 @@ public partial class ClamRoomView : Node3D
     public const float RestHeight = LevelMap.SwimBand + 0.02f;
     /// <summary>The clam: half its width (three times the pearl's), and how far its upper valve stands open (degrees).</summary>
     const float ClamHalf = 1.26f, OpenDeg = 62f;
+    /// <summary>How far from the camera's way (south) the clam's mouth may turn: past side-on its upper valve would stand between the camera and the pearl.</summary>
+    const float MouthTurn = Mathf.Pi * 0.5f;
+    /// <summary>Over the pearl, where its hint floats (metres).</summary>
+    const float HintOver = 1.5f;
     /// <summary>The pearl's radius as drawn (CombatView), for where the lower valve's lip lies under it.</summary>
     const float PearlRadius = 0.42f;
 
@@ -94,9 +98,10 @@ public partial class ClamRoomView : Node3D
         float chamber = cave.Chambers[0].Radius;
         var facing = new Vector3(cave.Facing.X, 0f, cave.Facing.Y).Normalized();
 
-        // The clam: its mouth to the entrance (its local +X), the hinge behind; the lower valve a bowl under the pearl,
-        // the upper standing open on the hinge.
-        var clam = new Node3D { Position = new Vector3(at.X, 0f, at.Y), Rotation = new Vector3(0f, -Mathf.Atan2(facing.Z, facing.X), 0f) };
+        // The clam: its mouth to the entrance (its local +X) as far as the camera can still see the pearl in it, the hinge
+        // behind; the lower valve a bowl under the pearl, the upper standing open on the hinge.
+        float turn = Mathf.Clamp(Mathf.Atan2(facing.X, facing.Z), -MouthTurn, MouthTurn);
+        var clam = new Node3D { Position = new Vector3(at.X, 0f, at.Y), Rotation = new Vector3(0f, -Mathf.Atan2(Mathf.Cos(turn), Mathf.Sin(turn)), 0f) };
         root.AddChild(clam);
         var shell = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/clam_shell.gdshader") };
         shell.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ribs"), 8f);
@@ -174,6 +179,18 @@ public partial class ClamRoomView : Node3D
                 st.AddIndex(b); st.AddIndex(c); st.AddIndex(d);
             }
         return st.Commit();
+    }
+
+    /// <summary>The pearl waiting in a clam room she is near, and the point over it its hint floats at (world), if any.</summary>
+    public (string Id, Vector3 Over)? Near(PlaneWorld world, float reach)
+    {
+        foreach (var room in _rooms)
+        {
+            if (System.Numerics.Vector2.Distance(world.Player.Position, room.At) > reach) continue;
+            var pearl = world.Pearls.Find(p => p.Position == room.At && !p.Taken && !p.Absorbing);
+            if (pearl is not null) return (pearl.ItemId, room.Root.ToGlobal(new Vector3(room.At.X, RestHeight + HintOver, room.At.Y)));
+        }
+        return null;
     }
 
     public void Sync(PlaneWorld world, float dt)

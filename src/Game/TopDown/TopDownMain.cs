@@ -44,6 +44,7 @@ public partial class TopDownMain : Node3D
     AchievementCatalog? _achievementData;
     PlaneAchievements _achievements = null!;
     PearlBanner _pearlBanner = null!;
+    PearlHint _pearlHint = null!;
     AchievementBanner _achievementBanner = null!;
     string? _debugAward;
     string? _debugSay;
@@ -87,17 +88,19 @@ public partial class TopDownMain : Node3D
     int _dbgGoTo;
     /// <summary>The boss's anime cut-in, played once as its battle begins (the game held meanwhile).</summary>
     BossIntro _intro = null!;
+    /// <summary>Whether a boss's title screen plays as its battle begins.</summary>
+    const bool BossTitles = false;
     readonly BellView[] _prismBells = { new() { Part = 0 }, new() { Part = 1 } };
     bool _introShown;
     float? _bossHp;
     /// <summary>Verification: fire at the nearest mob; start the run with these pearls.</summary>
     /// <summary>Verification (the adventure): a blue tang, a clownfish and a school brought round her, full of ink, so all three murklings show.</summary>
     bool _dbgTurn;
-    /// <summary>Verification (the adventure): the vent nearest her seals two seconds in.</summary>
-    bool _dbgSealVent;
+    /// <summary>Verification (the adventure): the leak nearest her seals two seconds in.</summary>
+    bool _dbgSealLeak;
     /// <summary>Verification (the adventure): every Inkwarden is struck two seconds in (it rouses and fires its spikes).</summary>
     bool _dbgRouse;
-    bool _autoFire, _autoActive, _dbgPop, _dbgSurge, _startPaused, _dbgBossLevel, _dbgGeyser, _dbgShells, _dbgMurkFish, _dbgThrow;
+    bool _autoFire, _autoActive, _dbgPop, _startPaused, _dbgBossLevel, _dbgGeyser, _dbgShells, _dbgMurkFish, _dbgThrow;
     /// <summary>Verification: `--boss=<Concept>` (or `queen`, or `drippus`) names the boss to meet; `--boss-level` starts on the depth's boss level.</summary>
     string? _dbgBoss;
     float? _startHp, _dbgLuck;
@@ -123,8 +126,6 @@ public partial class TopDownMain : Node3D
     CameraRig _camera = null!;
     DebugMapOverlay _debugMap = null!;
     MinimapView _minimap = null!;
-    /// <summary>The way down, once open: an arrow at the screen's edge while the shaft is out of sight.</summary>
-    readonly ExitPointer _exitPointer = new();
     TopoMap _fullMap = null!;
     readonly HashSet<int> _visited = new();
     readonly FogOfWar _fog = new();
@@ -198,23 +199,6 @@ public partial class TopDownMain : Node3D
     /// </summary>
     float HudScale => Mathf.Clamp(Mathf.Pow(GetViewport().GetVisibleRect().Size.Y / 1080f, 0.6f), 0.7f, 2f);
 
-    /// <summary>
-    /// The way down, once it is open, pointed out from the screen's edge while the shaft is out of sight (not while the
-    /// game is held: the pause menu, the boss's intro, a dive, between levels).
-    /// </summary>
-    void SyncExitPointer(float dt)
-    {
-        _exitPointer.Size = _hudRoot.Size;
-        bool open = _world.ExitOpen && _transition == Transition.None && !_deathSplash && !_diving && !Paused && !_intro.Playing;
-        var cam = _camera.Camera;
-        var view = GetViewport().GetVisibleRect().Size;
-        Vector2 Shown(Vector3 at) => OctoShoots.Game.Fx.Fisheye.Shown(cam.UnprojectPosition(at), view) / HudScale;
-        var shaft = _map.Shaft.Center;
-        var her = _bell.GlobalPosition;
-        Vector2? target = open ? Shown(new Vector3(shaft.X, LevelMap.SwimBand, shaft.Y)) : null;
-        _exitPointer.Step(dt, target, Shown(new Vector3(her.X, LevelMap.SwimBand, her.Z)));
-    }
-
     /// <summary>Lays the HUD out for the window's size this frame.</summary>
     void FitHud()
     {
@@ -243,6 +227,10 @@ public partial class TopDownMain : Node3D
     string? _startAt;
     /// <summary>Verification: bud a murkling ("murk") or a prime ("prime") on the densest ink near her at the start.</summary>
     string? _dbgBud;
+    /// <summary>Verification (--dbg-leak-hits=n): the first leak held at this many hits.</summary>
+    int _dbgLeakHits;
+    /// <summary>Verification (--dbg-leaks=n): this many leaks sealed from the start.</summary>
+    int _dbgLeaks;
     /// <summary>Verification (--dbg-exit): the way down is open from the start.</summary>
     bool _dbgExit;
     /// <summary>Verification: murklings bud round an Inkwarden (the first, or a turned pufferfish set 6 m ahead of her), so its tethers show.</summary>
@@ -328,7 +316,6 @@ public partial class TopDownMain : Node3D
         _snow = new MarineSnow(900, new Vector3(22f, 7f, 17f), 0.11f);
         AddChild(_snow);
         _camera.ShakeEnabled = view.CameraShake;
-        _camera.ZoomSetting = view.CameraZoom;
         _damage = new DamageNumbers();
         AddChild(_damage);
         _sfx = new Sfx();
@@ -370,13 +357,14 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--boss-hp=") && float.TryParse(Value("--boss-hp="), NumberStyles.Float, CultureInfo.InvariantCulture, out float bhp)) _bossHp = bhp;
             else if (arg == "--fire") _autoFire = true;
             else if (arg == "--use-active") _autoActive = true;
-            else if (arg == "--dbg-surge") _dbgSurge = true;
+            else if (arg.StartsWith("--dbg-leaks=")) _dbgLeaks = int.Parse(Value("--dbg-leaks="));
+            else if (arg.StartsWith("--dbg-leak-hits=")) _dbgLeakHits = int.Parse(Value("--dbg-leak-hits="));
             else if (arg == "--dbg-pop") _dbgPop = true;
             else if (arg == "--dbg-geyser") _dbgGeyser = true;
             else if (arg == "--dbg-shells") _dbgShells = true;
             else if (arg == "--dbg-murkfish") _dbgMurkFish = true;
             else if (arg == "--dbg-turn") _dbgTurn = true;
-            else if (arg == "--dbg-sealvent") _dbgSealVent = true;
+            else if (arg == "--dbg-sealvent") _dbgSealLeak = true;
             else if (arg == "--dbg-rouse") _dbgRouse = true;
             else if (arg == "--dbg-throw") _dbgThrow = true;
             else if (arg.StartsWith("--dbg-seal=") && int.TryParse(Value("--dbg-seal="), out int sealHits)) _dbgSeal = sealHits;
@@ -735,7 +723,6 @@ public partial class TopDownMain : Node3D
         _hudRoot = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
         layer.AddChild(_hudRoot);
         // (Under the rest of the HUD.)
-        _hudRoot.AddChild(_exitPointer);
         _hudRoot.AddChild(_hud);
         _minimap = new MinimapView();
         _hudRoot.AddChild(_minimap);
@@ -754,7 +741,6 @@ public partial class TopDownMain : Node3D
             var arrow = OctoShoots.Game.Fx.HerColor.Light.Lerp(OctoShoots.Game.Fx.HerColor.Body, 0.35f);
             _minimap.ArrowColor = arrow;
             _fullMap.ArrowColor = arrow;
-            _exitPointer.Tint = OctoShoots.Game.Fx.HerColor.Light;
         }
         Arrows();
         OctoShoots.Game.Fx.HerColor.Changed += Arrows;
@@ -783,21 +769,17 @@ public partial class TopDownMain : Node3D
         // The pearl she is absorbing, as the pause menu lists it.
         _pearlBanner = new PearlBanner();
         bannerLayer.AddChild(_pearlBanner);
+        _pearlHint = new PearlHint();
+        bannerLayer.AddChild(_pearlHint);
         // Its sounds come from the game's Sfx (made in _Ready, before or after this).
         if (_sfx is not null) _achievementBanner.Sound = _sfx;
         // ESC: pause, restart the run, see the pearls she has absorbed. Drawn above the rest of the HUD.
         var pauseLayer = new CanvasLayer { Layer = 5 };
         AddChild(pauseLayer);
-        _pause = new PauseMenu { Zoom = _view.CameraZoom };
+        _pause = new PauseMenu();
         pauseLayer.AddChild(_pause);
         _pause.ResumePressed += Resume;
         _pause.SkillChosen += ChooseSkill;
-        _pause.ZoomChanged += zoom =>
-        {
-            _view.CameraZoom = zoom;
-            _camera.ZoomSetting = zoom;
-            SettingsStore.Save(SettingsStore.LoadTuning(), _view);
-        };
         _splash = new LoadingSplash();
         pauseLayer.AddChild(_splash);
         _pause.RestartPressed += () =>
@@ -816,6 +798,7 @@ public partial class TopDownMain : Node3D
         _debug.Closed += CloseDebug;
         _debug.GoTo += DebugGoTo;
         _debug.FloorFogToggled += SetFloorFog;
+        _debug.ZoomChanged += zoom => _camera.ZoomSetting = zoom;
         _debug.PearlToggled += (id, on) =>
         {
             MarkDebugRun();
@@ -934,7 +917,6 @@ public partial class TopDownMain : Node3D
         DropBelow();
         _origin = Vector2.Zero;
         _camera.SetWorldOrigin(_origin);
-        _snow.SetWorldOrigin(_origin);
         _level.Show(shape);
         _level.Place(Vector3.Zero, _origin);
         EnterLevel(shape.Map, keepRun, ms);
@@ -1108,7 +1090,7 @@ public partial class TopDownMain : Node3D
         {
             _world.Mobs.Clear();
         }
-        if (_dbgSurge) InjectSurge();
+        for (int i = 0; i < _dbgLeaks; i++) _world.DebugSealLeak();
         // Verification: the level's first geyser sprays a second from now (8 s).
         if (_dbgGeyser && _world.Director.Geysers.Count > 0)
             _world.Director.Inject(new ReefEvent { Kind = ReefEventKind.GeyserSpray, Start = _world.Time + 1f, Duration = GeyserTuning.Warn + 8f, Geyser = 0 });
@@ -1131,7 +1113,7 @@ public partial class TopDownMain : Node3D
         if (moment is null) SaveRun();
         if (_dbgMoment > 0f && _dbgMomentStart is null) _dbgMomentStart = RunRecord();
         _combat.Show(_world, _catalog, fresh);
-        _currents.Clear();
+        _currents.Clear(_camera);
         _swells.Clear();
         _kelp.Build(map, ReefLook.For(map.Id.Depth));
         _abyss.Build(map, ReefLook.For(map.Id.Depth));
@@ -1189,7 +1171,7 @@ public partial class TopDownMain : Node3D
         // The Tab map's title: the level's template (else what the arrival card calls it), and where it is.
         _fullMap.Title = title;
         _fullMap.Subtitle = _id.ToString();
-        GD.Print($"Top-down level {_seed} {_id}: attempt {_map.Attempt + 1}, {ms} ms, {_map.Pois.Count} POIs{(_map.HasBoss ? ", boss" : "")}, {_map.Canopies.Count} canopy pieces, {_map.Decor.Count} decor{(_world.Options.Adventure ? $", {_world.Vents.Count} vents, {_world.ReefFish.Count} fish" : "")}");
+        GD.Print($"Top-down level {_seed} {_id}: attempt {_map.Attempt + 1}, {ms} ms, {_map.Pois.Count} POIs{(_map.HasBoss ? ", boss" : "")}, {_map.Canopies.Count} canopy pieces, {_map.Decor.Count} decor{(_world.Options.Adventure ? $", {_world.Leaks.Count} leaks, {_world.ReefFish.Count} fish" : "")}");
         _belowTask = Shape(LevelPlan.NextOf(_seed, _id), background: true);
     }
 
@@ -1291,7 +1273,12 @@ public partial class TopDownMain : Node3D
         _lastHp = hp;
         _vapour.Tick(dt, _camera.Camera);
         _blight.Sync(_world, dt, _camera.Camera);
-        _adventure.Sync(_world, dt, _camera.Camera);
+        _adventure.Sync(_world, dt, _camera);
+        if (_dbgLeakHits > 0 && _world.Leaks.Count > 0)
+        {
+            _world.Leaks[0].Hits = _dbgLeakHits;
+            _world.Leaks[0].Since = 0f;
+        }
         _springs.Sync(dt, _camera.Camera, Focus(alpha) with { Y = LevelMap.SwimBand });
         _cleanse.Track(_world, dt);
         MinimapView.FillSprings(_fullMap, _world);
@@ -1343,7 +1330,7 @@ public partial class TopDownMain : Node3D
             // it behind her).
             "gate" => _world.Seals.Where(x => x.Kind == SealKind.Boss).Select(x =>
             {
-                while (_world.VentsOpen > 0) _world.DebugSealVent();
+                while (_world.LeaksOpen > 0) _world.DebugSealLeak();
                 while (!x.Open) _world.DebugStrikeSeal(x);
                 _level.Slide(x.Rock.Center);
                 foreach (var e in _world.Events) _seals.OnEvent(_world, e);
@@ -1381,8 +1368,8 @@ public partial class TopDownMain : Node3D
             "den" => _world.Dens.OrderByDescending(d => d.Heart != DenHeart.None).Select(d => (System.Numerics.Vector2?)(d.At + new System.Numerics.Vector2(0f, d.Radius + 3f))).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
             // A few metres south of the level's first Blotter.
             "blotter" => _world.Blotters.Select(b => (System.Numerics.Vector2?)(b.Position + new System.Numerics.Vector2(0f, 3.4f))).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
-            // A few metres out before the level's first vent, facing it.
-            "vent" => _world.Vents.Select(v => (System.Numerics.Vector2?)(v.Position + v.Facing * 4f)).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
+            // A few metres out before the level's first leak, facing it.
+            "leak" => _world.Leaks.Select(v => (System.Numerics.Vector2?)(v.Position + new System.Numerics.Vector2(0f, 4f))).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
             "cache" => _map.Pois.Where(p => p.Kind == PoiKind.ShellCache).Select(p => (System.Numerics.Vector2?)p.Position).FirstOrDefault(),
             // A few metres from the first shell cache, its shells still lying there (captures of them).
             "cache-near" => _map.Pois.Where(p => p.Kind == PoiKind.ShellCache)
@@ -1481,9 +1468,6 @@ public partial class TopDownMain : Node3D
         float range = _bell.LightRange;
         _lantern.Update(_map, at, range);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_light_at"), new Vector4(at.X, at.Y, at.Z, range));
-        // Her searchlight's beam: which way, how wide.
-        var beam = _bell.BeamDirection;
-        RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_spot"), new Vector4(beam.X, beam.Y, beam.Z, _bell.BeamCos));
         float murk = 0.5f + ReefLook.For(_id.Depth).Fog;
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_scatter"), OS.GetCmdlineUserArgs().Contains("--dbg-noscatter") ? 0f : 0.016f * _bell.LightEnergy / Mathf.Pow(_bell.Lantern, 1.3f) * murk * (1f - _bell.DiveTurn));
     }
@@ -1595,6 +1579,11 @@ public partial class TopDownMain : Node3D
             ItemDef? absorbing = null;
             if (_world?.Pearls.Find(q => q.Absorbing) is { } ritual && _catalog is not null && _catalog.TryGet(ritual.ItemId, out var item)) absorbing = item;
             _pearlBanner.Step(dt, absorbing, _achievementBanner.Busy);
+            // A clam room's pearl near her: what it does, floating over its shell.
+            var waiting = _clamRooms.Near(_world, PearlHint.Reach);
+            ItemDef? told = null;
+            if (waiting is { } near) _catalog?.TryGet(near.Id, out told);
+            _pearlHint.Step(dt, told, waiting is { } over ? _camera.Camera.UnprojectPosition(over.Over) : default);
         }
         if (_debugSay is { } said && _levelTime > 1f)
         {
@@ -1796,6 +1785,7 @@ public partial class TopDownMain : Node3D
                 }
                 else if (e.Type == PlaneEventType.DashStarted)
                 {
+                    _snow.Stir(_bell.GlobalPosition, 3.5f, 3f);
                     _combat.DashBurst(e.Position);
                     _haptics.Pulse(0.35f, 0.3f, 0.14f);
                 }
@@ -1842,7 +1832,7 @@ public partial class TopDownMain : Node3D
                     if (_levelTime - _sealToldAt > 4f)
                     {
                         _sealToldAt = _levelTime;
-                        Say(e.Size == 1f ? "It will not open: seal one more vent" : $"It will not open: seal {(int)e.Size} more vents");
+                        Say(e.Size == 1f ? "It will not open: seal one more leak" : $"It will not open: seal {(int)e.Size} more leaks");
                     }
                 }
                 else if (e.Type == PlaneEventType.PushWave)
@@ -1852,6 +1842,7 @@ public partial class TopDownMain : Node3D
                     int k = Math.Clamp((int)e.Size, 0, PushTuning.At.Length - 1);
                     var pl = _world.Player;
                     float grow = PushTuning.FrontShare * pl.PushLength;
+                    _snow.Stir(_bell.GlobalPosition, 5f + 2f * k, PushTuning.Reach[k] * pl.PushRadius + 1f);
                     _swells.AddRing(new Vector2(_bell.GlobalPosition.X, _bell.GlobalPosition.Z), 1.1f + 0.3f * k,
                         PushTuning.Reach[k] * pl.PushRadius / 2.6f, grow + 0.35f, snap: 6f);
                     _sfx.PlayPitched("spout", 0.75f + 0.12f * k, -6f + 2f * k);
@@ -1916,7 +1907,6 @@ public partial class TopDownMain : Node3D
         _minimap.SetHealth(health);
         _minimap.SetExperience(_world.Run.Xp / (float)Math.Max(_world.Run.XpNeeded, 1), _world.Run.XpLevel, _world.Run.Points > 0);
         _lowHealth.Sync(health, dt);
-        SyncExitPointer(dt);
         // Each view on its own: one that fails is reported (once) and the rest carry on.
         Guard("bell", () => _bell.Sync(_world, alpha, dt));
         Guard("prism", () =>
@@ -1949,7 +1939,7 @@ public partial class TopDownMain : Node3D
         Guard("kelp", () => _kelp.Sync(_world, dt, _bell.GlobalPosition, _swells, _camera.Camera));
         // Behind a blade, she wears a thin outline.
         _bell.Covered = _kelp.Covers(_bell.GlobalPosition, _camera.Camera) || _blight.Covers(_bell.GlobalPosition, _camera.Camera);
-        Guard("currents", () => _currents.Sync(_world, dt));
+        Guard("currents", () => _currents.Sync(_world, dt, _camera));
         Guard("abyss", () => _abyss.Sync(_world, dt));
         Guard("vases", () => _vases.Sync(dt));
         Guard("pufferlings", () => _puffers.Sync(_world, dt));
@@ -1968,12 +1958,12 @@ public partial class TopDownMain : Node3D
             _dbgRouse = false;
             foreach (var w in _world.Inkwardens) w.Corruption.Hit(0.5f);
         }
-        if (_dbgSealVent && _world.Time >= 2f)
+        if (_dbgSealLeak && _world.Time >= 2f)
         {
-            _dbgSealVent = false;
+            _dbgSealLeak = false;
             int from = _world.Events.Count;
             var her = _world.Player.Position;
-            _world.DebugSealVent(_world.Vents.Where(v => !v.Sealed).OrderBy(v => System.Numerics.Vector2.Distance(v.Position, her)).FirstOrDefault());
+            _world.DebugSealLeak(_world.Leaks.Where(v => !v.Sealed).OrderBy(v => System.Numerics.Vector2.Distance(v.Position, her)).FirstOrDefault());
             for (int i = from; i < _world.Events.Count; i++)
             {
                 _adventure.OnEvent(_world, _world.Events[i]);
@@ -1992,11 +1982,11 @@ public partial class TopDownMain : Node3D
             _dbgSeal = 0;
         }
         _camera.SetClamGlows(_clamRooms.Glows, _clamRooms.GlowColors);
-        // The battle begun: the boss's cut-in plays (once), the game held under it.
+        // The battle begun: the boss's cut-in plays (once), the game held under it. (Off for now: BossTitles.)
         if (_world.Boss is { Stage: BossStage.Banner } introBoss && !_introShown)
         {
             _introShown = true;
-            if (!OS.GetCmdlineUserArgs().Contains("--dbg-nobanner")) _intro.Play(introBoss.Spec, _id.ShownDepth, _view.ReducedMotion);
+            if (BossTitles && !OS.GetCmdlineUserArgs().Contains("--dbg-nobanner")) _intro.Play(introBoss.Spec, _id.ShownDepth, _view.ReducedMotion);
         }
         // The pause menu's close framing: nearer, and looking past her so she sits at the screen's left.
         float framing = _menuBlend * _menuBlend * (3f - 2f * _menuBlend);
@@ -2011,6 +2001,7 @@ public partial class TopDownMain : Node3D
         // In the curse den's dark her own light is dimmed too, to about half.
         _bell.Dim = 1f - 0.475f * _dark.Amount;
         _minimap.Blackout = _dark.Amount;
+        _snow.Her(_bell.GlobalPosition, new Vector3(_world.Player.Velocity.X, 0f, _world.Player.Velocity.Y));
         _snow.Tick(dt, Focus(alpha) + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
         _level.UpdateCanopy(_world.Player.Position, dt, _camera.Camera.GlobalPosition);
         // The Crack opens: the sand over it sags, turns and drains away into the dark, and its glow comes up.
@@ -2159,7 +2150,6 @@ public partial class TopDownMain : Node3D
         _level.Promote(_origin);
         _camera.Shift(shift);
         _camera.SetWorldOrigin(_origin);
-        _snow.SetWorldOrigin(_origin);
         _camera.SetSwimLevel(0f);
         _camera.Zoom = 1f;
         _snow.Shift(shift);
@@ -2443,10 +2433,10 @@ public partial class TopDownMain : Node3D
     }
 
     /// <summary>The corruption war's moments: shakes, sounds and words (the sights are BlightView's).</summary>
-    /// <summary>How lit the vent at this mouth is (0..1).</summary>
-    float VentGlowAt(System.Numerics.Vector2 mouth)
+    /// <summary>How lit the leak at this mouth is (0..1).</summary>
+    float LeakGlowAt(System.Numerics.Vector2 mouth)
     {
-        foreach (var v in _world.Vents)
+        foreach (var v in _world.Leaks)
             if (v.Position == mouth) return v.Glow;
         return 0f;
     }
@@ -2455,21 +2445,35 @@ public partial class TopDownMain : Node3D
     {
         switch (e.Type)
         {
-            case PlaneEventType.VentLit:
-                // The vent takes her light: a chime rising as it fills.
-                _sfx.PlayPitched("bell_ring", 1.1f + 0.7f * VentGlowAt(e.Position), -13f);
+            case PlaneEventType.LeakLit:
+                // The leak takes her light: a chime rising as it fills.
+                _sfx.PlayPitched("bell_ring", 1.1f + 0.7f * LeakGlowAt(e.Position), -13f);
                 break;
-            case PlaneEventType.VentSealed:
-                // It grinds shut: a shudder, felt; the count of those left.
+            case PlaneEventType.LeakTied:
+                // A tie pulled tight: a clear note, rising with each.
+                _haptics.Pulse(0.3f, 0.2f, 0.15f);
+                _sfx.PlayPitched("bell_ring", 1f + 0.15f * e.Size, -8f);
+                break;
+            case PlaneEventType.LeakUntied:
+                _sfx.PlayPitched("pop", 0.6f, -8f);
+                break;
+            case PlaneEventType.LeakSealed:
+                // It pulls shut: a shudder, felt; the count of those left.
                 _camera.Shake(0.4f);
                 _haptics.Pulse(0.7f, 0.5f, 0.4f);
                 _sfx.PlayPitched("pop", 0.35f, -2f);
                 _sfx.PlayPitched("bell_ring", 0.85f, -6f);
-                Say(e.Size > 0 ? $"Vent sealed · {(int)e.Size} to go" : _world.VentsOpen == 0 ? "Every vent sealed" : "Vent sealed");
+                Say(e.Size > 0 ? $"Leak sealed · {(int)e.Size} to go" : _world.LeaksOpen == 0 ? "Every leak sealed" : "Leak sealed");
                 break;
             case PlaneEventType.ExitOpened:
                 _sfx.PlayPitched("bell_ring", 0.6f, -4f);
                 Say("The way down is open");
+                break;
+            case PlaneEventType.MainCurrentWoke:
+                // The water remembers its way: a long swell, felt, as the healthy current starts up again.
+                _haptics.Pulse(0.3f, 0.2f, 0.8f);
+                _sfx.PlayPitched("bell_ring", 0.5f, -5f);
+                if (!_world.ExitOpen) Say("The main current runs again");
                 break;
             case PlaneEventType.AnemoneTurned:
                 _sfx.PlayPitched("curse_enter", 1.6f, -12f);
@@ -2797,21 +2801,6 @@ public partial class TopDownMain : Node3D
         if (!OS.GetCmdlineUserArgs().Contains("--map")) _fullMap.Visible = Input.IsActionPressed(InputSetup.Review) && !typing && HasMap;
     }
 
-    /// <summary>Verification (`--dbg-surge`): a full-strength surge through the canyon she is in, a second into the level.</summary>
-    void InjectSurge()
-    {
-        int best = -1;
-        float bestDist = float.MaxValue;
-        for (int i = 0; i < _map.Corridors.Count; i++)
-        {
-            if (_map.Corridors[i].Kind is not (CorridorKind.Main or CorridorKind.Side)) continue;
-            ReefDirector.Nearest(_map.Corridors[i], _world.Player.Position, out float d, out _);
-            if (d < bestDist) (best, bestDist) = (i, d);
-        }
-        if (best >= 0)
-            _world.Director.Inject(new ReefEvent { Kind = ReefEventKind.CurrentSurge, Start = 1f, Duration = ReefDirectorTuning.SurgeSeconds, Corridor = best, Speed = ReefDirectorTuning.SurgeSpeedMax });
-    }
-
     /// <summary>
     /// How far out from its middle the outline of the body a hit struck runs: the body nearest the hit's place (the event
     /// carries its middle as it was struck; it may have moved on a little within the step).
@@ -3052,16 +3041,17 @@ public partial class TopDownMain : Node3D
     }
 
     /// <summary>
-    /// The controller's buzz this frame: the pulses the sim's moments asked for, and a hum while a current carries her
-    /// (stronger the faster it runs). Only while she plays with a controller and vibration is on.
+    /// The controller's buzz this frame: the pulses the sim's moments asked for, and a hum while a geyser or a corrupted
+    /// current shoves her (stronger the harder it pushes; the main current carries her quietly). Only while she plays with
+    /// a controller and vibration is on.
     /// </summary>
     void SyncHaptics(float dt)
     {
         bool playing = _world is not null && !Paused && !_deathSplash && !_diving && _transition == Transition.None;
         if (playing)
         {
-            var flow = _world!.Director.FlowAt(_world.Player.Position, _world.Time);
-            float k = Mathf.Clamp(flow.Length() / ReefDirectorTuning.SurgeSpeedMax, 0f, 1f);
+            var flow = _world!.Director.FlowAt(_world.Player.Position, _world.Time) + _world.CurrentAt(_world.Player.Position, main: false);
+            float k = Mathf.Clamp(flow.Length() / VaseTuning.FullFlow, 0f, 1f);
             if (k > 0.05f) _haptics.Hold(0.1f + 0.12f * k, 0.18f * k);
             // Firefly Squid's surge: a faint steady hum while it pours out, firmer as it grows stronger.
             if (_world.LightSurge is { } surge) _haptics.Hold(0.05f + 0.05f * surge.Power, 0.02f * surge.Power);
@@ -3155,9 +3145,9 @@ public partial class TopDownMain : Node3D
                   .Concat(_world.Lashjaws.Where(l => l.Alive).Select(l => l.Position))
                   .Where(q => System.Numerics.Vector2.Distance(q, from) < 14f)
                   .OrderBy(q => System.Numerics.Vector2.Distance(q, from)).Select(q => (System.Numerics.Vector2?)q).FirstOrDefault()
-              // With no creature to shoot, the nearest open vent near her (the adventure's), else the nearest standing pot.
-              ?? _world.Vents.Where(v => !v.Sealed && System.Numerics.Vector2.Distance(v.Wall, from) < 14f)
-                  .OrderBy(v => System.Numerics.Vector2.Distance(v.Wall, from)).Select(v => (System.Numerics.Vector2?)v.Wall).FirstOrDefault()
+              // With no creature to shoot, the nearest open leak near her (the adventure's), else the nearest standing pot.
+              ?? _world.Leaks.Where(v => !v.Sealed && System.Numerics.Vector2.Distance(v.Position, from) < 14f)
+                  .OrderBy(v => System.Numerics.Vector2.Distance(v.Position, from)).Select(v => (System.Numerics.Vector2?)v.Position).FirstOrDefault()
               ?? _world.Vases.Where(v => !v.Broken).OrderBy(v => System.Numerics.Vector2.Distance(v.Position, from)).Select(v => (System.Numerics.Vector2?)v.Position).FirstOrDefault();
         // Nothing to shoot at: straight ahead, the way she faces.
         input.Aim = target is { } at && System.Numerics.Vector2.DistanceSquared(at, from) > 1e-4f ? System.Numerics.Vector2.Normalize(at - from) : _world.Player.Aim;

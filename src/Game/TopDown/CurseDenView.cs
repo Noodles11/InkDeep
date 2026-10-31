@@ -6,7 +6,7 @@ namespace OctoShoots.Game.TopDown;
 
 /// <summary>
 /// The curse den in the reef (DESIGN-TOPDOWN §4.2): black fog seeping out of its tunnel's mouth (the sign of what is
-/// inside, seen from the canyon), and, when its end holds one, the shell fountain — a little vent of rock with a pale
+/// inside, seen from the canyon), and, when its end holds one, the shell fountain — a little leak of rock with a pale
 /// glow in its throat and bubbles streaming up, from which the shells spout.
 /// </summary>
 public partial class CurseDenView : Node3D
@@ -95,7 +95,7 @@ public partial class CurseDenView : Node3D
         };
     }
 
-    /// <summary>The shell fountain: a squat vent of dark rock, a pale glow in its throat, bubbles streaming up.</summary>
+    /// <summary>The shell fountain: a squat leak of dark rock, a pale glow in its throat, bubbles streaming up.</summary>
     static Node3D Fountain(Vector3 at)
     {
         var root = new Node3D { Position = at };

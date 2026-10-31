@@ -83,9 +83,8 @@ away.
   at its anchors (by a place it guards, in dead ends…), or none; and every corrupted kind below likewise.
 - **Regrowth:** it restores its 9 m reach toward the starting density at 0.1/s, strongest at the octopus.
 - **Shot down:** its corruption meter (see "Corruption meters" below) is 125 × (1 + 1.2 × Menace), so it takes 13
-  default shots on its 0.9 m mantle in the Shallows, more deeper down. It re-corrupts quickly: 30/s (more with
-  Menace) once 0.5 s pass without a hit. Emptied, it is freed (above; its ink pops, see evaporation below). A wave of
-  cleansing runs through its whole reach in 0.7 s. Cleansing the ground round it no longer harms it.
+  default shots on its 0.9 m mantle in the Shallows, more deeper down. Nothing regrows it (only a leak heals). Emptied, it is freed (above; its ink pops, see evaporation below), its cleansing
+  running through its whole reach in 0.7 s. Cleansing the ground round it no longer harms it.
 - **A boxing pole** (`BlightView.Octopus`): its foot held fast in the sand, its pole leans on a spring and rings back
   upright. Her hits push it back, away from the shot, each as hard as it struck (a push of 1.4 + 6 × the hit's share
   of its meter); a run of them pushes it further, never past 0.45 rad.
@@ -120,8 +119,7 @@ Hermit crabs the corruption took over: a small crab under a huge shell of ink, s
   in sight 4–20 m off, the nearer the better, avoiding safe places and the arena. It re-picks a target on arrival,
   after 10 s, when stuck for 2.5 s, or once its target has been corrupted.
 - **Spreading:** it smears ink over a 2.6 m disc beneath it, toward density 0.9.
-- **Tough:** its corruption meter is 100 (+120% per Menace), about ten default shots in the Shallows. It regrows
-  slowly (5/s) after 2 s without a hit. Each shot bursts on it. Emptied, its shell pops (see evaporation below) and it
+- **Tough:** its corruption meter is 100 (+120% per Menace), about ten default shots in the Shallows. Nothing regrows it (only a leak heals). Each shot bursts on it. Emptied, its shell pops (see evaporation below) and it
   cleanses a 5 m disc.
 - **Body:** one round shell, 1.9 m in radius (`BlotterTuning.ShellRadius`, `Blotter.Touches`), takes her hits and hurts
   on contact; the crab under it is too small to matter. Against rock its footprint is 1.4 m.
@@ -182,7 +180,7 @@ it guards, always (nothing marks its reach itself).
   Menace more roam the level (far from her start, 12 m apart, never in the arena), at most 6 in all. A roamer drifts
   at 0.6 m/s toward where most of its kin gather within 25 m (looked for every 2 s) and settles beside them.
 - **The ward:** every corrupted creature within 8 m of an Inkwarden — murklings (lesser ones and primes too), Blotters,
-  Blightroots, Thumpsquirts, Lashjaws, Hearthguards — and every open vent (docs/ADVENTURE.md §1) takes no harm from anything: her shots, pops, bursts, the Firefly Squid's surge, a dash's
+  Blightroots, Thumpsquirts, Lashjaws, Hearthguards — and every open leak (docs/ADVENTURE.md §1) takes no harm from anything: her shots, pops, bursts, the Firefly Squid's surge, a dash's
   burst (a clinging murkling is still thrown off). Each hit turned aside swells the tether from every warden guarding the
   creature bold and dark, held while the hits come and settling back over 0.6 s; the creature shimmers
   violet, the hit counts 0 and a dull knock sounds. Inkwardens never guard each other and bosses are never guarded, so
@@ -212,7 +210,7 @@ poking out of the rock at her height; it never moves.
 - **The bite:** reeled all the way in (within a metre of its jaws), she is bitten for 25 and thrown clear; it chews for
   4 s and cannot lash.
 - **Breaking free:** only her light on its head counts (the tongue cannot be harmed). Its meter is 50 × (1 + 0.2 ×
-  Menace) (about 5 default shots), regrowing 15/s after 1.5 s without a hit. Emptied the first time, it lets go of her
+  Menace) (about 5 default shots). Emptied the first time, it lets go of her
   (or its fish) and is stunned for 3 s (jaw slack, eye dim), its meter full again; emptied the second time, it is
   freed. Until then it hunts on. An Inkwarden can ward it like any kin.
 - **Fish:** with her out of its fan (or held by another), it lashes the nearest reef fish in it, reels it in and
@@ -291,8 +289,7 @@ it `PlaneHeart`. She takes one only when corrupted at all; otherwise it waits.
   (9 m/s), losing one default shot's worth (10) of its meter, and is dazed for 0.7 s. Then it chases her again. One
   already worn down bursts. The dash shows as a small light burst, not an ink cloud.
 - **Killed by light:** its corruption meter is 36 × (1 + 1.2 × Menace), so four default shots in a row burst it in
-  the Shallows. It regrows at 14/s (more
-  with Menace) after 0.8 s without a hit, and one strong (merged) shot empties it at once. Each shot bursts on it, and
+  the Shallows. Nothing regrows it (only a leak heals).8 s without a hit, and one strong (merged) shot empties it at once. Each shot bursts on it, and
   a piercing one flies on. Passing through a throw halves a shot's light. A murkling burst over cleansed ground drops
   its ember, which blooms a 2.6 m patch of colour.
 
@@ -426,7 +423,7 @@ every boss's do (DESIGN-TOPDOWN §12.2). Tests: `DrippusTests`.
   into white light where it sat, the arena's corruption is cleared, and out of the burst swim the reef fish it took
   into itself, 14 chromis and 6 blue tangs in their own colours: they scatter, then swim slowly off, away from her,
   sliding along the rock, never hunted, and are gone once 22 m from her (or after 40 s). The sword walls sink, and its
-  cleansed pearl waits where it sat. The way down opens as it does for every boss (in the adventure, once every vent
+  cleansed pearl waits where it sat. The way down opens as it does for every boss (in the adventure, once every leak
   is sealed too).
 - **The intro** (DESIGN-TOPDOWN §6.4): it jiggles in like a water balloon; a drop plips off its flank and wriggles
   into a tiny murkling, which it pats proudly with a little arm of ink.

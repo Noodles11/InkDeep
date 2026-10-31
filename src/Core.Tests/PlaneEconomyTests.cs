@@ -134,7 +134,7 @@ public class PlaneEconomyTests
         .First(w => w.Stands.Any(s => s.Kind == StandKind.Pearl));
 
     [Fact]
-    public void EveryShopHasOneHeartAndAtMostOnePearlAt30()
+    public void EveryShopHasOneHeartAndAtMostOnePearlAtItsPrice()
     {
         int shops = 0;
         foreach (var id in TestLevels.All(p => p.Shops > 0 && !p.HasBoss).Take(8))
@@ -144,7 +144,7 @@ public class PlaneEconomyTests
             Assert.Single(w.Stands, s => s.Kind == StandKind.Health);
             var pearls = w.Stands.Where(s => s.Kind == StandKind.Pearl).ToList();
             Assert.InRange(pearls.Count, 0, 1);
-            Assert.All(pearls, s => Assert.Equal(30, s.Price));
+            Assert.All(pearls, s => Assert.Equal(PlaneEconomyTuning.PearlPrice, s.Price));
         }
         Assert.True(shops > 0);
     }

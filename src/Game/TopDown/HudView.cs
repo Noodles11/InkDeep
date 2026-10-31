@@ -26,7 +26,7 @@ namespace OctoShoots.Game.TopDown;
 /// she holds one — and her four oral arms hanging under it, one stat each, left to right by urgency: health, inner
 /// light, the active pearl's charge, experience. Each arm is as long as its stat is full, over a faint track of its
 /// whole length, with a small sign at its foot; a hit frays the lost piece off health's arm. Her shells beside the
-/// bell (once she has any; the counter moves there). Top centre, a dot per vent: dark while it pours, gold once sealed.
+/// bell (once she has any; the counter moves there). Top centre, a dot per leak: dark while it pours, gold once sealed.
 /// </para>
 /// </summary>
 public partial class HudView : Control
@@ -73,8 +73,8 @@ public partial class HudView : Control
     bool _xpFull, _shellsSeen;
     int _xpLevel = 1;
     ItemDef? _active;
-    /// <summary>The level's vents: sealed or not, in order.</summary>
-    readonly List<bool> _vents = new();
+    /// <summary>The level's leaks: sealed or not, in order.</summary>
+    readonly List<bool> _leaks = new();
     float _time;
     /// <summary>Her bell on the HUD (hud_bell.gdshader): its middle and radius; her arms' roots under it, their spacing,
     /// length and width (root → tip); the shell counter's size beside the bell.</summary>
@@ -166,7 +166,7 @@ public partial class HudView : Control
         var ts = font.GetStringSize(_banner, HorizontalAlignment.Left, -1, fs);
         var size = new Vector2(ts.X + 56f, 36f);
         // It drops in a short way to its place (never across the title or the boss's bar).
-        float rest = Margin + (_bossShown > 0.01f ? 50f : _titleShown > 0.01f ? 76f : 6f) + (_adventure && _vents.Count > 0 ? 20f : 0f), hidden = rest - 22f;
+        float rest = Margin + (_bossShown > 0.01f ? 50f : _titleShown > 0.01f ? 76f : 6f) + (_adventure && _leaks.Count > 0 ? 20f : 0f), hidden = rest - 22f;
         float stay = _banners.Count > 0 ? BannerStayQueued : BannerStay;
         float y, a;
         if (_bannerAge < BannerIn)
@@ -226,7 +226,7 @@ public partial class HudView : Control
     {
         if (_titleShown <= 0.01f) return;
         float a = _titleShown;
-        float drift = (1f - a) * -6f + (_adventure && _vents.Count > 0 ? 18f : 0f);
+        float drift = (1f - a) * -6f + (_adventure && _leaks.Count > 0 ? 18f : 0f);
         var ss = font.GetStringSize(_subtitle, HorizontalAlignment.Left, -1, 17);
         Outlined(font, new Vector2((Size.X - ss.X) * 0.5f, Margin + 20f + drift), _subtitle, 17, new Color(1f, 0.9f, 0.75f, 0.85f * a), a);
         var ts = font.GetStringSize(_title, HorizontalAlignment.Left, -1, 34);
@@ -306,9 +306,9 @@ public partial class HudView : Control
             }
             SyncBell();
             if (_shells > 0) _shellsSeen = true;
-            _vents.Clear();
-            int ventsSealed = world.Vents.Count - world.VentsOpen;
-            for (int i = 0; i < world.Vents.Count; i++) _vents.Add(i < ventsSealed);
+            _leaks.Clear();
+            int leaksSealed = world.Leaks.Count - world.LeaksOpen;
+            for (int i = 0; i < world.Leaks.Count; i++) _leaks.Add(i < leaksSealed);
         }
         _titleAge += dt;
         _titleShown = _titleAge < TitleIn ? _titleAge / TitleIn : _titleAge < TitleIn + TitleStay ? 1f : Mathf.Max(0f, 1f - (_titleAge - TitleIn - TitleStay) / TitleOut);
@@ -550,20 +550,20 @@ public partial class HudView : Control
     }
 
     /// <summary>
-    /// The vents, top centre: a dot each, dark with a violet glint while it pours, gold once sealed, filling from the left.
+    /// The leaks, top centre: a dot each, dark with a violet glint while it pours, gold once sealed, filling from the left.
     /// The ones she must seal to go on are full size, the ones she may leave smaller.
     /// </summary>
-    void DrawVents()
+    void DrawLeaks()
     {
-        if (_vents.Count == 0) return;
+        if (_leaks.Count == 0) return;
         const float gap = 22f, big = 6.5f, small = 4.5f;
-        float x0 = Size.X * 0.5f - (_vents.Count - 1) * gap * 0.5f;
-        for (int i = 0; i < _vents.Count; i++)
+        float x0 = Size.X * 0.5f - (_leaks.Count - 1) * gap * 0.5f;
+        for (int i = 0; i < _leaks.Count; i++)
         {
             var at = new Vector2(x0 + i * gap, Margin + 6f);
-            float r = i < OctoShoots.Core.Plane.AdventureTuning.VentsToClear ? big : small;
+            float r = i < OctoShoots.Core.Plane.AdventureTuning.LeaksToClear ? big : small;
             DrawCircle(at, r + 2.5f, new Color(0f, 0f, 0f, 0.5f));
-            if (_vents[i])
+            if (_leaks[i])
             {
                 DrawCircle(at, r, new Color(1f, 0.82f, 0.42f));
                 DrawCircle(at + new Vector2(-1.5f, -1.5f), r * 0.35f, new Color(1f, 1f, 0.9f, 0.9f));
@@ -587,7 +587,7 @@ public partial class HudView : Control
         DrawTitle(font);
         // The run's clock, with its setting on: small and faint, top left.
         if (ShowClock) Outlined(font, _adventure ? new Vector2(Margin, BellAt.Y + ArmTop + ArmLength + 46f) : new Vector2(Margin, Margin + 16f), Clock(Elapsed), 16, new Color(1f, 1f, 1f, 0.7f));
-        if (_adventure) DrawVents();
+        if (_adventure) DrawLeaks();
 
         // The boss's health, top centre.
         if (_bossShown > 0.01f)

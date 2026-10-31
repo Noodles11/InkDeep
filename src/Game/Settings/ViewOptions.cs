@@ -13,8 +13,6 @@ public sealed class ViewOptions
     [Tune("View", 0f, 1f)] public float ShakeAmount = 0.5f;
     /// <summary>Controller vibration: hits she lands, hits she takes, dashes and water currents.</summary>
     [Tune("View")] public bool Vibration = true;
-    /// <summary>Camera zoom: 1.5 by default; above it closer, below it farther (CameraRig.MinZoom..MaxZoom, 1–2).</summary>
-    [Tune("View", 1f, 2f)] public float CameraZoom = 1.5f;
     [Tune("View", 10f, 80f)] public float MinimapRange = 32f;
     /// <summary>The run's clock on the HUD (top left); off, it shows in the pause menu and on the Tab map only.</summary>
     [Tune("View")] public bool ShowClock = false;

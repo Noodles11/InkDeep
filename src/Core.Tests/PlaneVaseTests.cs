@@ -132,19 +132,11 @@ public class PlaneVaseTests
     [Fact]
     public void AStrongCurrentCanTopplePots()
     {
-        // A pot in a canyon, and a full-strength surge running through it for a long while: sooner or later it breaks.
+        // A pot beside a geyser spraying for a long while: sooner or later it breaks.
         var w = World();
         var vase = w.Vases[0];
-        int canyon = -1;
-        float best = float.MaxValue;
-        for (int i = 0; i < w.Map.Corridors.Count; i++)
-        {
-            ReefDirector.Nearest(w.Map.Corridors[i], vase.Position, out float d, out _);
-            if (d - w.Map.Corridors[i].HalfWidth < best) (best, canyon) = (d - w.Map.Corridors[i].HalfWidth, i);
-        }
-        // Moved into the canyon's channel for the test.
-        vase.Position = w.Map.Corridors[canyon].Points[w.Map.Corridors[canyon].Points.Count / 2];
-        w.Director.Inject(new ReefEvent { Kind = ReefEventKind.CurrentSurge, Start = 0f, Duration = 200f, Corridor = canyon, Speed = ReefDirectorTuning.SurgeSpeedMax });
+        vase.Position = w.Director.Geysers[0] + new Vector2(1f, 0f);
+        w.Director.Inject(new ReefEvent { Kind = ReefEventKind.GeyserSpray, Start = 0f, Duration = 200f, Geyser = 0 });
         for (int i = 0; i < 160 * PlaneWorld.TickRate && !vase.Broken; i++)
         {
             w.Player.Hp = w.Run.MaxHp;

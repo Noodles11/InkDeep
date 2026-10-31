@@ -7,7 +7,7 @@ namespace OctoShoots.Core.Plane;
 
 /// <summary>
 /// The Inkwarden (docs/CORRUPTION.md): a corrupted sea anemone that shelters its kin as an anemone shelters clownfish.
-/// Passive: it never attacks. Every corrupted creature (and, in the adventure, every open vent) within its reach takes
+/// Passive: it never attacks. Every corrupted creature (and, in the adventure, every open leak) within its reach takes
 /// no harm while it stands; a blocked hit shows as an ink tether from each warden guarding it. Wardens cannot guard
 /// each other, so they are always the way in.
 /// From Depth 2 (the Sunken Galleon) one sits beside each Blightroot; deeper, more roam toward wherever its kin gather.
@@ -26,7 +26,7 @@ public static class WardenTuning
     /// <summary>Waking with the level (roamers): this far from her start, and apart.</summary>
     public const float FromStart = 20f, Spacing = 12f;
     /// <summary>Its corruption meter: 60 (+20% per Menace), regrowing at Regen once Delay passes without a hit.</summary>
-    public const float Meter = 60f, MeterPerMenace = 1.2f, Regen = 10f, Delay = 1f;
+    public const float Meter = 60f, MeterPerMenace = 1.2f;
     /// <summary>Freed: its light washes this wide, and it leaves ShellsMin–Max shells.</summary>
     public const float BurstRadius = 3f;
     public const int ShellsMin = 1, ShellsMax = 2;
@@ -73,7 +73,7 @@ public sealed class Inkwarden
     /// <summary>Until her oral arm may sting it again (the adventure).</summary>
     public float ArmCooldown;
     public float Seed, LookTimer;
-    public CorruptionMeter Corruption = new(WardenTuning.Meter, WardenTuning.Regen, WardenTuning.Delay);
+    public CorruptionMeter Corruption = new(WardenTuning.Meter);
 }
 
 public sealed partial class PlaneWorld
@@ -162,7 +162,6 @@ public sealed partial class PlaneWorld
     {
         var w = new Inkwarden { Position = at, Target = at, Roams = roams, Seed = _blightRng.Range(0f, 100f), LookTimer = _blightRng.Range(0f, WardenTuning.Look) };
         w.Corruption.Max = w.Corruption.Value = WardenTuning.Meter * (1f + WardenTuning.MeterPerMenace * Menace);
-        w.Corruption.Regen *= 1f + 0.5f * Menace;
         return w;
     }
 
@@ -194,7 +193,7 @@ public sealed partial class PlaneWorld
         foreach (var t in Thumpsquirts) if (t.Alive && Near(t.Position)) yield return t.Position;
         foreach (var root in Blightroots) if (root.Alive && Near(root.Position)) yield return root.Position;
         foreach (var f in Flounders) if (f.Corrupted && Near(f.Position)) yield return f.Position;
-        foreach (var v in Vents) if (!v.Sealed && Near(v.Position)) yield return v.Position;
+        foreach (var v in Leaks) if (!v.Sealed && Near(v.Position)) yield return v.Position;
     }
 
     void StepInkwardens()

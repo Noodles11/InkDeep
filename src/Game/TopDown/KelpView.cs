@@ -177,15 +177,6 @@ public partial class KelpView : Node3D
         _time += dt;
         Gather(world, bell);
         var her = new Vector2(world.Player.Position.X, world.Player.Position.Y);
-        // The surge, if one runs: its canyon and its flow now.
-        Corridor? canyon = null;
-        float surgeSpeed = 0f;
-        foreach (var e in world.Director.Active)
-            if (e.Kind == ReefEventKind.CurrentSurge)
-            {
-                canyon = world.Map.Corridors[e.Corridor];
-                surgeSpeed = e.Speed * e.Envelope(world.Time) * (e.Reverse ? -1f : 1f);
-            }
         const int Steps = 2;
         float h = dt / Steps;
         foreach (var bed in _beds)
@@ -195,13 +186,9 @@ public partial class KelpView : Node3D
             _near.Clear();
             foreach (var m in _movers)
                 if (new Vector2(m.At.X, m.At.Z).DistanceTo(bed.Center) < bed.Radius + m.Radius + Stir + StirPerSpeed * m.Velocity.Length() + KelpReachMax) _near.Add(m);
-            Vector3 surge = Vector3.Zero;
-            if (canyon is not null)
-            {
-                ReefDirector.Nearest(canyon, new System.Numerics.Vector2(bed.Center.X, bed.Center.Y), out float d, out var along);
-                float reach = canyon.HalfWidth + ReefDirectorTuning.CosmeticReach;
-                if (d < reach + bed.Radius) surge = new Vector3(along.X, 0f, along.Y) * surgeSpeed * 0.7f * (1f - Mathf.Clamp((d - reach) / bed.Radius, 0f, 1f));
-            }
+            // The currents lean it over as they pass.
+            var flow = world.CurrentAt(new System.Numerics.Vector2(bed.Center.X, bed.Center.Y));
+            var surge = new Vector3(flow.X, 0f, flow.Y) * 0.7f;
             foreach (var st in bed.Strands)
             {
                 // Only what can reach this strand stirs it (most strands, most of the time: nothing).

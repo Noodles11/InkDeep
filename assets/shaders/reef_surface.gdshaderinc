@@ -7,7 +7,6 @@
 //   turf on ledges — one rock all the way up.
 //   Light: sharp moving caustics on everything facing up, fading with depth. Its colour is the same at every height: the
 //   water's own colour is laid over all of it alike (topdown_post).
-//   The Crack: an orange glow breathing up from the deepest fissure (reef_crack: x, z, radius, strength).
 
 #include "res://assets/shaders/sunlight.gdshaderinc"
 #include "res://assets/shaders/level_frame.gdshaderinc"
@@ -26,9 +25,6 @@ global uniform vec3 reef_butter;
 global uniform vec3 reef_sun;
 global uniform float reef_caustics;
 global uniform float reef_menace;
-global uniform vec4 reef_crack;
-/// 0 on a level drawn below the current one: the Crack (a global) belongs to the current level.
-uniform float crack_mask = 1.0;
 // The corruption (docs/CORRUPTION.md): this level's field, R = ink density, G = the gold of corruption dying (set per
 // material by LevelView; off on any level that is not the one she is on or diving into).
 uniform sampler2D corruption_map : filter_linear, repeat_disable;
@@ -173,16 +169,6 @@ ReefSkin reef_surface(vec3 local, vec3 n, float time, float px) {
 	s.caustic = sun_caustics(lit_at, time) * reef_caustics * light_strength * face;
 	s.emission = vec3(0.0);
 
-	// The Crack: an orange glow breathing up out of the deepest fissure (only on the level it belongs to).
-	if (reef_crack.w > 0.0 && crack_mask > 0.0) {
-		float d = distance(local.xz, reef_crack.xy);
-		float inside = (1.0 - smoothstep(reef_crack.z * 0.4, reef_crack.z, d)) * (1.0 - smoothstep(-4.5, -1.6, h));
-		float breathe = 0.72 + 0.28 * sin(time * 1.1 + d * 0.4);
-		float flicker = 0.75 + 0.5 * rs_noise(vec3(w.xz * 0.9, time * 0.35));
-		vec3 ember = mix(vec3(1.0, 0.16, 0.02), vec3(1.0, 0.36, 0.06), smoothstep(-7.0, -3.0, h));
-		s.emission += ember * inside * breathe * flicker * reef_crack.w * crack_mask * 0.9;
-		s.albedo = mix(s.albedo, vec3(0.05, 0.03, 0.03), inside * 0.8);
-	}
 	// The corruption leaves the floor itself as it is (docs/CORRUPTION.md): its mark is the ink dripping up out of it
 	// (corruption_shards.gdshader), and when it is cleansed only those drops light up.
 	return s;

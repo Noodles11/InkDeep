@@ -11,6 +11,8 @@ namespace OctoShoots.Game.Fx;
 /// </summary>
 public sealed class DeepShoals
 {
+    /// <summary>Off for now: none are drawn. True brings them back.</summary>
+    public static readonly bool Enabled = false;
     public const int Max = 16;
     /// <summary>A group leaves past Far metres from her, and comes back in from NearIn–FarIn out, off the screen.</summary>
     const float Far = 20f, NearIn = 15f, FarIn = 19f;
@@ -84,6 +86,7 @@ public sealed class DeepShoals
     /// <summary>A step: they swim on, round where she is now.</summary>
     public void Step(Vector2 around, float dt)
     {
+        if (!Enabled) return;
         if (!_placed)
         {
             _placed = true;

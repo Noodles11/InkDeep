@@ -27,25 +27,29 @@ public static class LightSprings
         var found = new List<Vector2>();
         var rng = new Rng(map.Seed ^ 0x5B21C5UL ^ ((ulong)map.Level << 18) ^ ((ulong)map.Depth << 26) ^ ((ulong)map.Cycle << 34) ^ ((ulong)map.Attempt << 50));
         // As many as the level's template says, else the general chance of one, likelier with her luck. An adventure's
-        // abyss reef has one only by her luck.
+        // abyss reef always has one, and a second by her luck.
         float bonus = OctoShoots.Core.Items.LuckTuning.SpringBonus(map.Luck);
-        int want = map.Abyss ? (rng.NextFloat() < bonus ? 1 : 0)
+        int want = map.Abyss ? Math.Max(map.Template?.Rules.Springs ?? 1, 1) + (rng.NextFloat() < bonus ? 1 : 0)
             : map.Template?.Rules.Springs ?? (rng.NextFloat() < MathF.Min(SpringTuning.Chance + bonus, 0.95f) ? 1 : 0);
         if (want <= 0) return found;
         var candidates = map.Plazas.Select(p => p.Center).ToList();
         foreach (var c in map.Corridors.Where(c => c.Kind is CorridorKind.Main or CorridorKind.Side))
             for (int i = 2; i < c.Points.Count; i += 4) candidates.Add(c.Points[i]);
-        for (int i = candidates.Count - 1; i > 0; i--)
-        {
-            int j = rng.Int(i + 1);
-            (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
-        }
+        Shuffle(candidates, rng);
+        // Failing those, anywhere there is water for it.
+        var anywhere = new List<Vector2>();
+        for (int y = 6; y < LevelMap.Size; y += 3)
+            for (int x = 6; x < LevelMap.Size; x += 3) anywhere.Add(new Vector2(x, y));
+        Shuffle(anywhere, rng);
+        candidates.AddRange(anywhere);
         var places = map.Pois.Where(p => p.Kind is not (PoiKind.Start or PoiKind.Exit)).ToList();
         foreach (var at in candidates)
         {
             if (Vector2.Distance(at, map.Start.Position) < SpringTuning.FromStart) continue;
             if (Vector2.Distance(at, map.Exit.Position) < map.Exit.Radius + SpringTuning.FromExit) continue;
             if (map.Shaft.Contains(at, 4f) || places.Any(p => Vector2.Distance(at, p.Position) < p.Radius + 5f)) continue;
+            // Never on the main current: she would be swept out of it.
+            if (MainCurrent.Touches(map, at, SpringTuning.Radius)) continue;
             bool open = map.IsOpen(at);
             for (int k = 0; k < 8 && open; k++)
             {
@@ -58,6 +62,15 @@ public static class LightSprings
             if (found.Count >= want) break;
         }
         return found;
+    }
+
+    static void Shuffle(List<Vector2> list, Rng rng)
+    {
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = rng.Int(i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
+        }
     }
 }
 

@@ -89,7 +89,7 @@ public class CorruptionTests
     }
 
     [Fact]
-    public void ABlightrootTakesAboutThirteenShotsAndReCorruptsQuickly()
+    public void ABlightrootTakesAboutThirteenShotsAndNeverRecovers()
     {
         var w = Level(p => TestLevels.General(p) && !p.HasBoss && p.Id.Level > 1);
         Quiet(w);
@@ -103,11 +103,12 @@ public class CorruptionTests
         Assert.True(root.Alive);
         Assert.True(root.Corruption.Shown);
         Assert.Equal(root.Corruption.Max - 40f, root.Corruption.Value, 0);
-        // Left alone, it re-corrupts in a few seconds, and the meter hides again.
+        // Left alone, it stays as it was (only a leak heals).
+        float left = root.Corruption.Value;
         for (int i = 0; i < 4 * 60; i++) w.Step(default);
-        Assert.False(root.Corruption.Shown);
+        Assert.Equal(left, root.Corruption.Value);
         // Its meter's worth of default shots in a row (13 in the Shallows) cleanse it: it bursts, cleansing its reach.
-        int shots = (int)MathF.Ceiling(root.Corruption.Max / 10f);
+        int shots = (int)MathF.Ceiling(left / 10f);
         for (int i = 0; i < shots && root.Alive; i++)
         {
             w.Shots.Add(Light(root.Position));

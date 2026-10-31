@@ -14,7 +14,7 @@ namespace OctoShoots.Game.TopDown;
 /// (the modifiers a skill point can go to, each with her value now, what a point adds and how many it holds), her stats
 /// as they stand (PlaneStatSheet: each against her bare base, better in green, worse in red), every pearl she has absorbed
 /// with its name, tagline and exact effects (the item caption lines), and the achievements. Under them resume, restart
-/// the run (a new random seed, level 1, no pearls, full HP), save and quit, and the camera zoom. It opens on the level-up
+/// the run (a new random seed, level 1, no pearls, full HP), save and quit. It opens on the level-up
 /// while a point waits.
 /// </summary>
 public partial class PauseMenu : Control
@@ -22,13 +22,9 @@ public partial class PauseMenu : Control
     public event Action? ResumePressed;
     public event Action? RestartPressed;
     public event Action? QuitPressed;
-    /// <summary>The camera-zoom slider moved (saved with the view options).</summary>
-    public event Action<float>? ZoomChanged;
     /// <summary>A skill point was put on a modifier.</summary>
     public event Action<Stat>? SkillChosen;
 
-    /// <summary>The camera zoom the slider starts at; set before the menu is added.</summary>
-    public float Zoom { get; init; } = CameraRig.DefaultZoom;
 
     const float Width = 640f, SlideSeconds = 0.35f;
     /// <summary>The right stick scrolls the list (pixels a second, pushed all the way).</summary>
@@ -146,14 +142,6 @@ public partial class PauseMenu : Control
         var quit = new Button { Text = "Save & quit to title", CustomMinimumSize = new Vector2(0f, 40f), SizeFlagsHorizontal = SizeFlags.ExpandFill, TooltipText = "You'll resume right where you are." };
         quit.Pressed += () => QuitPressed?.Invoke();
         buttons.AddChild(quit);
-
-        var zoomRow = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
-        zoomRow.AddThemeConstantOverride("separation", 16);
-        var zoomName = new Label { Text = "Camera zoom" };
-        zoomName.AddThemeColorOverride("font_color", Soft);
-        zoomRow.AddChild(zoomName);
-        zoomRow.AddChild(OctoShoots.Game.Title.SettingsCard.ZoomSlider(Zoom, v => ZoomChanged?.Invoke(v), Soft));
-        box.AddChild(zoomRow);
         Place();
     }
 

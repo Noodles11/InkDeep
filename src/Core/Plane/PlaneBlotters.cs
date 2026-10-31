@@ -16,7 +16,7 @@ public static class BlotterTuning
     public const float Start = 2f, PerMenace = 1f;
     public const int Max = 6;
     /// <summary>Its corruption meter: 100 in the Shallows (+25% per Menace); it regrows slowly once Delay passes without a hit.</summary>
-    public const float Meter = 100f, MeterPerMenace = 1.2f, Regen = 5f, Delay = 2f;
+    public const float Meter = 100f, MeterPerMenace = 1.2f;
     /// <summary>Its footprint against rock, its creep (m/s, more with Menace) and how quickly it turns.</summary>
     public const float Radius = 1.4f, Speed = 1.2f, SpeedPerMenace = 0.2f, Turn = 1.6f;
     /// <summary>It smears the ground under it this wide toward Ink, by Smear a second at its middle.</summary>
@@ -74,7 +74,7 @@ public sealed class Blotter
     /// <summary>Where it faces (unit), turning slowly toward its target.</summary>
     public Vector2 Heading = new(1f, 0f);
     public bool Alive = true;
-    public CorruptionMeter Corruption = new(BlotterTuning.Meter, BlotterTuning.Regen, BlotterTuning.Delay);
+    public CorruptionMeter Corruption = new(BlotterTuning.Meter);
     public float Seeking, StuckFor, GuardTimer, Seed, BombTimer, SinceStruck = 99f;
 
     /// <summary>Whether a circle touches its shell.</summary>

@@ -29,7 +29,7 @@ public static class VaseTuning
     /// </summary>
     public const float BreakImpact = 18f, BreakKnockback = 2f, BreakCharge = 0.5f;
     /// <summary>In a surging canyon a pot may topple: this often a second at full flow (SurgeSpeedMax), less in a gentler one.</summary>
-    public const float CurrentBreakPerSecond = 0.04f;
+    public const float CurrentBreakPerSecond = 0.04f, FullFlow = 4.5f;
     /// <summary>What a broken pot leaves: shells (2–3) or a heart, else nothing.</summary>
     public const float ShellChance = 0.5f, HeartChance = 0.2f;
     public const int ShellsMin = 2, ShellsMax = 3;
@@ -205,7 +205,7 @@ public sealed partial class PlaneWorld
         {
             if (v.Broken) continue;
             Vector2 flow = Director.FlowAt(v.Position, Time);
-            float k = flow.Length() / ReefDirectorTuning.SurgeSpeedMax;
+            float k = flow.Length() / VaseTuning.FullFlow;
             if (k > 0.05f && _vaseRng.NextFloat() < VaseTuning.CurrentBreakPerSecond * k * Dt) BreakVase(v, flow);
         }
     }

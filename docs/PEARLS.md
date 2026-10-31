@@ -65,6 +65,10 @@ into the face turned to the camera, wherever the pearl is drawn:
 Taking a pearl is a moment of its own. It plays round Clementine while she swims on, so it never interrupts play
 (`PearlRitual`, `BellView.SyncRitual`, `CombatView`).
 
+- **Seen before it is taken:** the clam's mouth faces the room's entrance as far as it can with the pearl in sight: never
+  past side-on to the camera, where its upper valve would stand in front of it, so the pearl's icon always shows. Within 6
+  m of a clam room's pearl, the absorbing banner's card, 72% of its size, floats up over the shell with what the pearl
+  does (`PearlHint`), and fades as she leaves or begins to absorb it.
 - **The pull:** whenever a pearl is within 6 m, her tentacles and oral arms are drawn toward it like a magnet. The
   nearer it is, the harder the pull.
 - **Touch (0 s):** the ritual begins. One plays at a time. A bought pearl begins its ritual by her too. The pearl
@@ -95,7 +99,7 @@ HP regeneration (her corruption ebbing), luck, glow and knockback. Stat pearls a
 **Luck**, per point (each capped; `LuckTuning`): every freed foe leaves one more shell; a level without a clam room gets
 one with a 10% chance (at most 60%); each shell she picks
 up counts twice with an 8% chance (at most 60%; a second shell flies to her counter); a light spring is 10% likelier (at
-most +60%) — on an adventure level, where there are none otherwise, only by luck — and holds 15% more healing (at most
+most +60%) — on an adventure level, a second one — and holds 15% more healing (at most
 twice as much). A level is planned with her luck as she
 comes to it (the level below is laid out while she plays the one above); a run without luck gets the very same levels.
 

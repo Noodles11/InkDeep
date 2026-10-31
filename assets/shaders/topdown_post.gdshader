@@ -26,7 +26,6 @@ global uniform float reef_menace;
 global uniform float reef_saturation;
 global uniform float reef_vignette;
 global uniform float reef_fog;
-global uniform vec4 reef_crack;
 /// Clementine's bell in world space and her glow pool's radius; how strong her glow on the floor is (BellView).
 global uniform vec4 her_glow;
 global uniform float her_glow_strength;
@@ -89,6 +88,15 @@ uniform int lens_count = 0;
 uniform vec4 swells[8];
 uniform vec4 swell_dirs[8];
 uniform int swell_count = 0;
+// The currents (CurrentView): over her plane, how far along its course each point lies (m), how far off to its side (m),
+// how strongly it shows and which current it is; and each current's roll along its course (m) and strength.
+uniform sampler2D current_map : filter_linear, repeat_disable;
+uniform sampler2D current_ids : filter_nearest, repeat_disable;
+uniform vec2 current_flows[6];
+uniform int current_count = 0;
+// The leaks (AdventureView): where each is on her plane (x, z) and how open (0..1).
+uniform vec3 leaks[8];
+uniform int leak_count = 0;
 // Blasts' marks (CameraRig.AddBlur): where a burst of her light went off, a small round smear of the picture on her
 // plane — a zoom blur drawn in toward its middle — that fades: world x, z, age (0 → 1), radius (m).
 uniform vec4 blurs[4];
@@ -193,7 +201,7 @@ void fragment() {
 	// the currents' shimmer (CurrentView): the picture wavers, bent by eddies of denser water boiling as they go, and is
 	// shoved outward along the ring; the water thickens a shade where it passes. No surface ripple, no lines.
 	float swell_density = 0.0;
-	if (swell_count > 0) {
+	if (swell_count > 0 || current_count > 0 || leak_count > 0) {
 		vec4 vm = INV_PROJECTION_MATRIX * vec4(uv * 2.0 - 1.0, 0.5, 1.0);
 		vec3 ray = normalize((INV_VIEW_MATRIX * vec4(vm.xyz / vm.w, 0.0)).xyz);
 		vec3 cam = INV_VIEW_MATRIX[3].xyz;
@@ -231,6 +239,33 @@ void fragment() {
 		// Metres on her plane to the screen (east is right, south, +z, is down): the framing shows about 25.6 m top to
 		// bottom.
 		suv += bend * 2.5 / 25.6 * vec2(VIEWPORT_SIZE.y / VIEWPORT_SIZE.x, 1.0) * wobble;
+		// The leaks: hot air in the shape of an X, facing the camera (the framing's 60° tilt taken out of its height).
+		for (int i = 0; i < leak_count; i++) {
+			vec2 d = (sp.xz - leaks[i].xy) * vec2(1.0, 0.866);
+			if (dot(d, d) > 4.0) continue;
+			vec2 r = vec2(d.x + d.y, d.x - d.y) * 0.7071;
+			float arm = min(max(abs(r.x) - 0.26, abs(r.y) - 1.3), max(abs(r.y) - 0.26, abs(r.x) - 1.3));
+			float hot = (1.0 - smoothstep(-0.12, 0.34, arm)) * leaks[i].z;
+			suv += (eddy * 0.9 + vec2(0.0, sin(TIME * 5.0 + sp.x * 3.0) * 0.12)) * hot * 0.6 / 25.6 * vec2(VIEWPORT_SIZE.y / VIEWPORT_SIZE.x, 1.0);
+		}
+		// The currents: the picture wavers, like the air over a hot road, bent by eddies of denser water rolling down the
+		// course with the flow and boiling as they go. It only bends: the water stays as bright as it is.
+		if (current_count > 0) {
+			vec2 cuv = sp.xz / 140.0;
+			vec4 cm = texture(current_map, cuv);
+			vec2 flow = current_flows[clamp(int(texture(current_ids, cuv).a + 0.5), 0, 5)];
+			if (cm.b * flow.y > 0.001 && cuv.x > 0.0 && cuv.y > 0.0 && cuv.x < 1.0 && cuv.y < 1.0) {
+				vec2 m = vec2(cm.r - flow.x, cm.g);
+				float t = TIME;
+				float cbig = value_noise(m * vec2(0.32, 0.42) + vec2(0.0, t * 0.22));
+				float ca = value_noise(m * vec2(0.9, 1.25) + vec2(cbig * 1.5, t * 0.55) + 3.7);
+				float cb = value_noise(m * vec2(1.05, 0.85) + vec2(-t * 0.45, cbig * 1.5) + 19.1);
+				float cfine = value_noise(m * vec2(2.6, 3.1) + vec2(t * 0.9, -t * 0.7) + 41.3);
+				vec2 cbend = vec2(ca - 0.5, cb - 0.5) + (cfine - 0.5) * vec2(0.55, -0.55);
+				float cmask = cm.b * flow.y * mix(0.35, 1.0, smoothstep(0.25, 0.7, cbig));
+				suv += cbend * 0.5 * cmask / 25.6 * vec2(VIEWPORT_SIZE.y / VIEWPORT_SIZE.x, 1.0);
+			}
+		}
 	}
 
 	// Painted, the depths below her are stated as flat layers of water (each a step deeper, hazier), barely blurred.
@@ -311,19 +346,14 @@ void fragment() {
 	// pass, so the shadow never darkens her.
 	if (her_glow_strength > 0.0 && !open_deep) {
 		float gap = her_glow.y - world.y;
-		float d = distance(world.xz, her_glow.xz);
+		// Round her as the eye sees her: the point of the floor behind her on the screen (the camera is tilted, so what lies
+		// straight under her shows south of her).
+		float d = distance(world.xz, her_glow.xz - vec2(0.0, 0.577 * gap));
 		float k = her_glow_strength * smoothstep(0.1, 0.5, gap) * (1.0 - smoothstep(5.0, 10.0, gap));
 		// Only where her light reaches: the reef's walls and rises keep it from what lies behind them.
-		// (Her own glow, all round her: the reef shades it, the searchlight's cone does not cut it.)
 		float pool = exp(-pow(d / (her_glow.w * 0.55), 2.0)) * k * her_sight(world);
 		vec3 warm = her_warm;
 		col = mix(col, col * warm * 1.15 + warm * 0.06, pool * 0.65);
-		// Her bell is a lens: the light leaving it is gathered into bright filaments that play over what lies below her,
-		// wider and softer the farther the floor, quickening as she swims.
-		vec2 rel = (world.xz - her_glow.xz) / (0.7 + gap * 0.3);
-		float web = sl_caustic_layer(rel * 0.32 + vec2(0.37, 0.11), TIME * 0.55 + her_glow_strength * 0.8);
-		float lens_pool = exp(-pow(d / (her_glow.w * 0.75), 2.0)) * k * her_sight(world);
-		col += her_warm * pow(web, 1.4) * lens_pool * 0.3 * her_lantern;
 		float shadow = (1.0 - smoothstep(0.1, 0.62, d)) * k * (1.0 - smoothstep(2.0, 5.0, gap));
 		col *= 1.0 - 0.6 * shadow;
 	}
@@ -357,15 +387,6 @@ void fragment() {
 	vec3 cam = CAMERA_POSITION_WORLD;
 	vec3 ray = normalize(world - cam);
 
-	// The Crack shines up through the murk: an orange glow breathing out of the fissure, a doorway in the floor.
-	if (reef_crack.w > 0.0 && !open_deep) {
-		float dc = distance(world.xz, reef_crack.xy);
-		float inside = (1.0 - smoothstep(reef_crack.z * 0.4, reef_crack.z, dc)) * (1.0 - smoothstep(-4.5, -1.8, h));
-		float breathe = 0.7 + 0.3 * sin(TIME * 1.1 + dc * 0.5);
-		vec3 ember = mix(vec3(1.0, 0.42, 0.1), vec3(1.0, 0.2, 0.03), 1.0 - smoothstep(-6.5, -3.0, h));
-		col = mix(col, col * 0.35 + ember * 0.9, min(inside * breathe * reef_crack.w * 1.1, 1.0));
-	}
-
 	// God rays: march the view ray through the water column, from the sea surface down to what it hits, summing the
 	// shaft density (parallel to the sun, drifting with the swell) where the sun reaches. Longer water paths gather more
 	// light; rock that shades the water leaves it dark, so the light falls in beams past the walls and through arches.
@@ -386,15 +407,15 @@ void fragment() {
 	float column = smoothstep(0.0, 26.0, span);
 	col += reef_sun * shafts * column * reef_rays * light_strength * 0.22 * (1.0 - 0.5 * smoothstep(0.0, 8.0, above));
 
-	// Her glow scatters in the water her light passes through, along this pixel's whole view ray (light_field): a
-	// glow round her that the reef's walls and rises cut into shafts of light and shadow.
+	// Her glow scatters in the water her light passes through, along this pixel's whole view ray (light_field): a soft
+	// glow round her.
 	vec3 on_layer = cam + ray * ((player_pos.y - cam.y) / min(ray.y, -1e-3));
 	float ign = fract(52.9829189 * fract(dot(FRAGCOORD.xy, vec2(0.06711056, 0.00583715))));
 	col += her_warm * her_inscatter(cam, ray, t0, open_deep ? t0 + 120.0 : t1, ign);
-	// Her searchlight: its beam down through the water, and the spot it throws where it meets the reef, lit through
+	// Her light: its glow in the water all round her, and where it falls on the reef, lit through
 	// the murk however deep that lies.
-	col += her_warm * her_beam(cam, ray, t0, open_deep ? t0 + 120.0 : t1, ign) * 0.35;
-	if (!open_deep) col += her_warm * her_spot_on(world) * 0.14 * her_lantern;
+	col += her_warm * her_water(cam, ray, t0, open_deep ? t0 + 120.0 : t1, ign) * 0.35;
+	if (!open_deep) col += her_warm * her_light_on(world) * 0.14 * her_lantern;
 	// Her bubbles carry light: each a small halo of its own on the same layer, the same depth-darkness scaling as hers
 	// (subtle in the bright Shallows, glorious in the deep).
 	float bubbles = 0.0;

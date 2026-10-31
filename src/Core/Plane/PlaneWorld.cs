@@ -69,15 +69,15 @@ public sealed class PlaneInk
 
 public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, MobDefeated, MobNoticed, PlayerHit, PlayerDefeated, Dived, PufferSwells, NeedlesFired, PearlCollected, ShellCollected, HeartCollected, Purchased, CannotAfford, ShotPopped, BubbleFull,
     ChargeFull, LightBurst, ShieldBlocked, ActiveUsed, ActiveNotReady, ActiveDenied,
-    SurgeStarted, SurgeEnded, GeyserFizz, GeyserSpray, GeyserEnded, VaseHit, VaseBroken, FullBubbleFreed,
+    GeyserFizz, GeyserSpray, GeyserEnded, VaseHit, VaseBroken, FullBubbleFreed,
     BlightrootDrank, BlightrootInflate, GuardiansWoke, BlightrootPulse, BlightrootBurst, MurklingBud, MurklingEmerged, MurklingBurst, MurklingThrow, MurklingWindup, ThumpWindup, ThumpLeap, ThumpLand, ThumpRoll, ThumpBurst, Warded, WardenFreed, LashWindup, LashOut, LashCatch, LashSwallow, LashBite, LashStun, LashFreed, SealLit, SealOpened, SealClosed, FishStruck, FishTurned, FishFreed,
     MurklingCling, BlightrootSwing, BlightrootSlam, CrackOpened, CrustBroken, PlayerDrained, SpringEntered, SpringCleansed, SpringSpent, BlotterBorn, BlotterBurst, DenCleared, ShotOut, BombThrown, BombSplash, MurkShotLanded, MurkShotBurst, BossLeap, PearlTouched, PearlShattered,
     CurseEndReached, CurseLaugh, CurseCleared, FountainSpout, Cavitation, Necklace, SchoolPoints,
     BattleBegan, BossLanded, BossVolley, BossTelegraph, BossPulse, BossSacBurst, BossExposed, BossMutates, BossClosed, BossHit, BossStagger, BossSnapWarning, BossSnap, BossDefeated, BossFreed,
     /// <summary>Experience: gained (Size: how much), and a level reached (Size: the new level).</summary>
     XpGained, LevelUp,
-    /// <summary>The adventure: an ink dot cleared by her light or eaten by a fish; a vent lit (Size: its glow) or sealed (Size: vents still open); the way down opened; an anemone turned (Size: its scale).</summary>
-    DotCleared, DotEaten, VentLit, VentSealed, ExitOpened, AnemoneTurned,
+    /// <summary>The adventure: an ink dot cleared by her light or eaten by a fish; a leak lit (Size: its glow) or sealed (Size: leaks still open); the way down opened; an anemone turned (Size: its scale).</summary>
+    DotCleared, DotEaten, DotGathered, LeakLit, LeakTied, LeakUntied, LeakSealed, LeakDrunk, MainCurrentWoke, ExitOpened, AnemoneTurned,
     /// <summary>The adventure's Inkwarden: struck, it rouses (rolls its spikes out); it fires a spike (Direction: its way).</summary>
     WardenRoused, WardenSpike,
     /// <summary>Drippus Prime: a murkling born out of it (Direction: its way out); its near side dimpling to bounce her (Direction: toward her); the bounce (at its skin; Direction: the way she is flung).</summary>
@@ -86,11 +86,11 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     PrismSplit, PrismJoined,
     /// <summary>A Hearthguard: it shimmies (Size: how long); its sting draws up at her (Direction: its aim; Size: the wind-up), stabs, and strikes her (at the tip).</summary>
     FlounderShimmy, FlounderWindup, FlounderStrike, FlounderBite,
-    /// <summary>The adventure: an ink dot cut off from every open vent long enough decays and pops on its own.</summary>
+    /// <summary>The adventure: an ink dot cut off from every open leak long enough decays and pops on its own.</summary>
     DotDecayed,
     /// <summary>Tide Pulse: one of its waves leaves her (Size: which, 0–2).</summary>
     PushWave,
-    /// <summary>Her light on the boss's sealed wall while vents stand open: it takes none (at the carving; Size: the vents left).</summary>
+    /// <summary>Her light on the boss's sealed wall while leaks stand open: it takes none (at the carving; Size: the leaks left).</summary>
     SealRefused }
 
 /// <summary>What hurt Clementine (the killing blow names what ended a run; saved by number, so Gloomvine stays though nothing deals it now).</summary>
@@ -289,26 +289,21 @@ public sealed partial class PlaneWorld
     readonly List<ReefEvent> _started = new(), _ended = new();
 
     /// <summary>
-    /// The reef director's turn: events whose time has come start (and finished ones end), and while a surge runs its
-    /// current carries everything not fixed to the reef — Clementine, mobs and fish, every shot, shells, hearts and
-    /// loose pearls, ink clouds — sliding along rock as they swim. Shop stands and Queen Clam hold fast.
+    /// The reef director's turn: events whose time has come start (and finished ones end), and while a geyser sprays its
+    /// push carries everything not fixed to the reef — Clementine, mobs and fish, every shot, shells, hearts and loose
+    /// pearls, ink clouds — sliding along rock as they swim. Shop stands and Queen Clam hold fast.
     /// </summary>
     void StepReef()
     {
+        StepCurrents();
         _started.Clear();
         _ended.Clear();
         Director.Step(Time, _started, _ended);
-        foreach (var e in _started)
-            Events.Add(e.Kind == ReefEventKind.GeyserSpray
-                ? new PlaneEvent(PlaneEventType.GeyserFizz, Director.Geysers[e.Geyser], Vector2.Zero, e.Duration)
-                : new PlaneEvent(PlaneEventType.SurgeStarted, Vector2.Zero, Vector2.Zero, e.Speed));
-        foreach (var e in _ended)
-            Events.Add(e.Kind == ReefEventKind.GeyserSpray
-                ? new PlaneEvent(PlaneEventType.GeyserEnded, Director.Geysers[e.Geyser], Vector2.Zero)
-                : new PlaneEvent(PlaneEventType.SurgeEnded, Vector2.Zero, Vector2.Zero, e.Speed));
+        foreach (var e in _started) Events.Add(new PlaneEvent(PlaneEventType.GeyserFizz, Director.Geysers[e.Geyser], Vector2.Zero, e.Duration));
+        foreach (var e in _ended) Events.Add(new PlaneEvent(PlaneEventType.GeyserEnded, Director.Geysers[e.Geyser], Vector2.Zero));
         // A geyser's fizz turns into its spray.
         foreach (var e in Director.Active)
-            if (e.Kind == ReefEventKind.GeyserSpray && Time - Dt < e.Start + GeyserTuning.Warn && Time >= e.Start + GeyserTuning.Warn)
+            if (Time - Dt < e.Start + GeyserTuning.Warn && Time >= e.Start + GeyserTuning.Warn)
                 Events.Add(new PlaneEvent(PlaneEventType.GeyserSpray, Director.Geysers[e.Geyser], Vector2.Zero, e.Duration - GeyserTuning.Warn));
         if (Director.Active.Count == 0) return;
 

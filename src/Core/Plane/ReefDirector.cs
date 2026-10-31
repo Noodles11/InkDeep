@@ -11,20 +11,9 @@ public static class ReefDirectorTuning
 {
     /// <summary>The schedule is drawn this far ahead when the level is built.</summary>
     public const float Horizon = 20f * 60f;
-    /// <summary>The first surge comes this long into the level; each next one this long after the last has ended.</summary>
-    public const float FirstMin = 20f, FirstMax = 40f, GapMin = 25f, GapMax = 50f;
-    /// <summary>A surge: it builds over Rise, holds, and eases off over Fall, Seconds in all.</summary>
-    public const float SurgeSeconds = 20f, SurgeRise = 5f, SurgeFall = 5f;
-    /// <summary>Its flow at full strength (m/s); her cruise is 6.</summary>
-    public const float SurgeSpeedMin = 3f, SurgeSpeedMax = 4.5f;
-    /// <summary>
-    /// The flow pushes at full strength inside the canyon's channel, fading to nothing this far past its walls; out
-    /// to CosmeticReach past them it is only seen (its shimmer, CurrentView), never felt.
-    /// </summary>
-    public const float ForceFeather = 2f, CosmeticReach = 5f;
 }
 
-public enum ReefEventKind { CurrentSurge, GeyserSpray }
+public enum ReefEventKind { GeyserSpray }
 
 /// <summary>Something the reef does on its own, at a set time in the level.</summary>
 public sealed class ReefEvent
@@ -32,27 +21,10 @@ public sealed class ReefEvent
     public ReefEventKind Kind;
     /// <summary>Level time (s) it starts, and how long it lasts.</summary>
     public float Start, Duration;
-    /// <summary>A surge: the canyon it runs through (an index into the map's corridors), which way, and its full flow (m/s).</summary>
-    public int Corridor;
     /// <summary>A geyser's spray: which vent (an index into the director's geysers).</summary>
     public int Geyser;
-    public bool Reverse;
-    public float Speed;
 
     public float End => Start + Duration;
-
-    /// <summary>
-    /// A surge's strength over its life, 0 → 1 → 0: it begins slow and accelerates (an eased rise), holds, and
-    /// decelerates at the end (an eased fall).
-    /// </summary>
-    public float Envelope(float time)
-    {
-        float t = time - Start;
-        if (t <= 0f || t >= Duration) return 0f;
-        float rise = MathUtil.Clamp01(t / ReefDirectorTuning.SurgeRise);
-        float fall = MathUtil.Clamp01((Duration - t) / ReefDirectorTuning.SurgeFall);
-        return MathUtil.Smoothstep(rise) * MathUtil.Smoothstep(fall);
-    }
 }
 
 /// <summary>
@@ -64,34 +36,12 @@ public sealed class ReefDirector
 {
     readonly PriorityQueue<ReefEvent, float> _queue = new();
     readonly List<ReefEvent> _active = new();
-    readonly List<ReefEvent> _all = new();
 
     public ReefDirector(LevelMap map)
     {
         Map = map;
         var rng = new RunStreams(SeedCode.FromValue(map.Seed)).Events(map.Id);
         ScheduleGeysers(rng.Stream("geysers"));
-        // Canyons a surge can run through: the main routes and the side passages (spurs are short dead ends).
-        var canyons = new List<int>();
-        for (int i = 0; i < map.Corridors.Count; i++)
-            if (map.Corridors[i].Kind is CorridorKind.Main or CorridorKind.Side && map.Corridors[i].Points.Count >= 2) canyons.Add(i);
-        if (canyons.Count == 0) return;
-        float t = rng.Range(ReefDirectorTuning.FirstMin, ReefDirectorTuning.FirstMax);
-        while (t < ReefDirectorTuning.Horizon)
-        {
-            var e = new ReefEvent
-            {
-                Kind = ReefEventKind.CurrentSurge,
-                Start = t,
-                Duration = ReefDirectorTuning.SurgeSeconds,
-                Corridor = canyons[rng.Int(canyons.Count)],
-                Reverse = rng.NextFloat() < 0.5f,
-                Speed = rng.Range(ReefDirectorTuning.SurgeSpeedMin, ReefDirectorTuning.SurgeSpeedMax),
-            };
-            _queue.Enqueue(e, e.Start);
-            _all.Add(e);
-            t = e.End + rng.Range(ReefDirectorTuning.GapMin, ReefDirectorTuning.GapMax);
-        }
     }
 
     public LevelMap Map { get; }
@@ -128,18 +78,11 @@ public sealed class ReefDirector
         _sprays.Sort((a, b) => a.Start.CompareTo(b.Start));
     }
 
-    /// <summary>Every surge scheduled for the level, in order (for tests and debug views).</summary>
-    public IReadOnlyList<ReefEvent> Schedule => _all;
-
     /// <summary>The events running now.</summary>
     public IReadOnlyList<ReefEvent> Active => _active;
 
-    /// <summary>Adds an event to the schedule out of turn (verification: `--dbg-surge`).</summary>
-    public void Inject(ReefEvent e)
-    {
-        _queue.Enqueue(e, e.Start);
-        _all.Add(e);
-    }
+    /// <summary>Adds an event to the schedule out of turn (verification: `--dbg-geyser`).</summary>
+    public void Inject(ReefEvent e) => _queue.Enqueue(e, e.Start);
 
     /// <summary>Advances to level time <paramref name="time"/>: events whose time has come start, finished ones end.</summary>
     public void Step(float time, List<ReefEvent> started, List<ReefEvent> ended)
@@ -158,44 +101,11 @@ public sealed class ReefDirector
         }
     }
 
-    /// <summary>
-    /// The water's flow at p from the surges running now (m/s): along the canyon's course, at the surge's strength,
-    /// full inside the channel and fading out ForceFeather past its walls. Zero where none runs.
-    /// </summary>
+    /// <summary>The water's push at p from the geysers spraying now (m/s).</summary>
     public Vector2 FlowAt(Vector2 p, float time)
     {
         Vector2 flow = Vector2.Zero;
-        foreach (var e in _active)
-        {
-            if (e.Kind == ReefEventKind.GeyserSpray)
-            {
-                flow += Plane.Geysers.PushAt(_geysers[e.Geyser], e, p, time);
-                continue;
-            }
-            if (e.Kind != ReefEventKind.CurrentSurge) continue;
-            float k = e.Envelope(time);
-            if (k <= 0f) continue;
-            var c = Map.Corridors[e.Corridor];
-            Nearest(c, p, out float dist, out Vector2 along);
-            float reach = 1f - MathUtil.Clamp01((dist - c.HalfWidth) / ReefDirectorTuning.ForceFeather);
-            if (reach <= 0f) continue;
-            flow += along * (e.Reverse ? -1f : 1f) * e.Speed * k * reach;
-        }
+        foreach (var e in _active) flow += Plane.Geysers.PushAt(_geysers[e.Geyser], e, p, time);
         return flow;
-    }
-
-    /// <summary>The nearest point of a canyon's course to p: how far it is, and the course's direction there (unit).</summary>
-    public static void Nearest(Corridor c, Vector2 p, out float dist, out Vector2 along)
-    {
-        dist = float.MaxValue;
-        along = Vector2.UnitX;
-        for (int i = 0; i + 1 < c.Points.Count; i++)
-        {
-            Vector2 a = c.Points[i], b = c.Points[i + 1];
-            float d = Geo.SegmentDistance(p, a, b);
-            if (d >= dist) continue;
-            dist = d;
-            along = Geo.Normalize(b - a, along);
-        }
     }
 }

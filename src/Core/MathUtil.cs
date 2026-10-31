@@ -27,6 +27,9 @@ public static class MathUtil
 
     public static Vector3 Right(float yaw) => new(MathF.Cos(yaw), 0f, -MathF.Sin(yaw));
 
+    public static float MoveToward(float from, float to, float maxDelta) =>
+        MathF.Abs(to - from) <= maxDelta ? to : from + MathF.Sign(to - from) * maxDelta;
+
     public static Vector3 MoveToward(Vector3 from, Vector3 to, float maxDelta)
     {
         Vector3 d = to - from;

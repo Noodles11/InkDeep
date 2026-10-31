@@ -24,15 +24,7 @@ public partial class PearlBanner : Control
     {
         MouseFilter = MouseFilterEnum.Ignore;
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        _card = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, Visible = false, CustomMinimumSize = new Vector2(Width, 0f) };
-        _card.AddThemeStyleboxOverride("panel", new StyleBoxFlat
-        {
-            BgColor = new Color(0.02f, 0.05f, 0.08f, 0.82f),
-            BorderColor = new Color(1f, 0.82f, 0.55f, 0.55f),
-            BorderWidthLeft = 2, BorderWidthRight = 2, BorderWidthTop = 2, BorderWidthBottom = 2,
-            CornerRadiusTopLeft = 14, CornerRadiusTopRight = 14, CornerRadiusBottomLeft = 14, CornerRadiusBottomRight = 14,
-            ContentMarginLeft = 20, ContentMarginRight = 20, ContentMarginTop = 12, ContentMarginBottom = 14,
-        });
+        _card = Card(Width);
         AddChild(_card);
         _body = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         _body.AddThemeConstantOverride("separation", 6);
@@ -41,6 +33,21 @@ public partial class PearlBanner : Control
         _eyebrow.AddThemeFontSizeOverride("font_size", 13);
         _eyebrow.AddThemeColorOverride("font_color", new Color(1f, 0.78f, 0.45f));
         _body.AddChild(_eyebrow);
+    }
+
+    /// <summary>The banner's card, hidden, this wide (PearlHint floats a smaller one over a clam).</summary>
+    internal static PanelContainer Card(float width)
+    {
+        var card = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, Visible = false, CustomMinimumSize = new Vector2(width, 0f) };
+        card.AddThemeStyleboxOverride("panel", new StyleBoxFlat
+        {
+            BgColor = new Color(0.02f, 0.05f, 0.08f, 0.82f),
+            BorderColor = new Color(1f, 0.82f, 0.55f, 0.55f),
+            BorderWidthLeft = 2, BorderWidthRight = 2, BorderWidthTop = 2, BorderWidthBottom = 2,
+            CornerRadiusTopLeft = 14, CornerRadiusTopRight = 14, CornerRadiusBottomLeft = 14, CornerRadiusBottomRight = 14,
+            ContentMarginLeft = 20, ContentMarginRight = 20, ContentMarginTop = 12, ContentMarginBottom = 14,
+        });
+        return card;
     }
 
     /// <summary>

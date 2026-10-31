@@ -39,6 +39,12 @@ public static class DrippusTuning
     /// this share of it, it swells up and is solid to her.
     /// </summary>
     public const float Rise = 2.5f, RiseReach = 7f, RiseSolid = 0.35f;
+    /// <summary>
+    /// The adventure: it rises over Gather seconds, every dot left on the level drawn to it over GatherIn of them. For all
+    /// the level's water inked it stands GatherBulk bigger, with GatherHp more health and GatherHit harder blows (in
+    /// proportion for less).
+    /// </summary>
+    public const float Gather = 4f, GatherIn = 0.85f, GatherBulk = 0.6f, GatherHp = 1.5f, GatherHit = 1f;
     /// <summary>Freed, the reef fish it took swim out of it: this many chromis and tangs (gone as any freed fish, ReefFishTuning.LeaveFar).</summary>
     public const int Chromis = 14, Tangs = 6;
 }
@@ -120,7 +126,7 @@ public sealed partial class PlaneWorld
             m.Shaken = 0.4f;
             m.ThrowTimer = BlightTuning.ThrowEvery * _bossRng.Range(0.6f, 1.2f);
             boss.Mass--;
-            boss.Size = MathF.Sqrt(boss.Mass / (float)DrippusTuning.Mass);
+            boss.Size = boss.Bulk * MathF.Sqrt(boss.Mass / (float)DrippusTuning.Mass);
             boss.Hp -= BirthCost(boss);
             Events.Add(new PlaneEvent(PlaneEventType.BossBrood, at, dir));
         }
@@ -191,7 +197,7 @@ public sealed partial class PlaneWorld
         // Out of its reach by now (a dash), she is spared.
         if (gap > DrippusTuning.Reach + 0.3f) return;
         var p = Player;
-        if (!HurtPlayer(boss.Spec.Damage * DrippusTuning.BounceHit, n, DamageSource.BossContact)) return;
+        if (!HurtPlayer(boss.Damage * DrippusTuning.BounceHit, n, DamageSource.BossContact)) return;
         p.Velocity = n * DrippusTuning.Speed;
         p.TumbleTimer = DrippusTuning.Tumble;
         p.TumbleDir = n;
@@ -258,14 +264,54 @@ public sealed partial class PlaneWorld
             radius = draw.Radius;
             ink = draw.Ink;
         }
-        Events.Add(new PlaneEvent(PlaneEventType.MurklingBud, boss.Position, new Vector2(radius, ink), DrippusTuning.Rise));
+        Events.Add(new PlaneEvent(PlaneEventType.MurklingBud, boss.Position, new Vector2(radius, ink), boss.Rise));
     }
 
     /// <summary>Rising (k: 0 → 1 through it): it drinks its ink, and once it has begun to swell up it is solid to her.</summary>
     void StepRise(PlaneBoss boss, float k)
     {
-        if (boss.Draw is { } draw && Corruption is { } field) field.Drink(draw, Dt / DrippusTuning.Rise);
+        if (boss.Draw is { } draw && Corruption is { } field) field.Drink(draw, Dt / boss.Rise);
+        StepGather(boss, k);
         if (k > DrippusTuning.RiseSolid) PushOff(boss, boss.Radius * DrippusTuning.Body * (k - DrippusTuning.RiseSolid) / (1f - DrippusTuning.RiseSolid));
+    }
+
+    /// <summary>
+    /// The adventure's entrance: it takes in all the corruption left on the level. How much that is makes it what it is
+    /// (the more she left, the bigger and harder it comes), the leaks still pouring are drunk dry and shut, and every dot
+    /// starts for it, the nearest first.
+    /// </summary>
+    void BeginGather(PlaneBoss boss)
+    {
+        var dots = Dots!;
+        boss.Ink = MathUtil.Clamp01(dots.Count / (float)Math.Max(dots.Open.Count(open => open), 1));
+        boss.Rise = DrippusTuning.Gather;
+        boss.Bulk = boss.Size = 1f + DrippusTuning.GatherBulk * boss.Ink;
+        boss.Might = 1f + DrippusTuning.GatherHit * boss.Ink;
+        boss.MaxHp = boss.Hp = boss.Hp * (1f + DrippusTuning.GatherHp * boss.Ink);
+        foreach (var v in Leaks)
+            if (!v.Sealed) SealLeak(v, drunk: true);
+        boss.Gathering.AddRange(dots.Live.OrderBy(i => Vector2.DistanceSquared(InkDots.Centre(i), boss.Position)));
+        BeginRise(boss);
+    }
+
+    /// <summary>Its share of the dots left (k: 0 → 1 through the rise) comes to it.</summary>
+    void StepGather(PlaneBoss boss, float k)
+    {
+        if (Dots is not { } dots) return;
+        int due = (int)MathF.Ceiling(boss.Gathering.Count * MathUtil.Clamp01(k / DrippusTuning.GatherIn));
+        for (; boss.Gathered < due; boss.Gathered++)
+        {
+            int i = boss.Gathering[boss.Gathered];
+            if (!dots.Has(i)) continue;
+            dots.Remove(i);
+            Events.Add(new PlaneEvent(PlaneEventType.DotGathered, InkDots.Centre(i), boss.Position));
+        }
+    }
+
+    /// <summary>Risen: not a dot of it is left anywhere.</summary>
+    void EndGather()
+    {
+        foreach (int i in Dots!.Live.ToArray()) Dots.Remove(i);
     }
 
     /// <summary>Its body is solid to her: she is pushed off its skin (this far from its middle).</summary>

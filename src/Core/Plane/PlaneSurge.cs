@@ -193,18 +193,26 @@ public sealed partial class PlaneWorld
     /// </summary>
     /// <summary>
     /// The surge held on rock counts as her shots would: once every shot's time (her fire rate's) it adds its light to a
-    /// vent's mouth or a seal's carving it stands on, one hit however wide the cone.
+    /// leak's mouth or a seal's carving it stands on, one hit however wide the cone.
     /// </summary>
     void StrikeWalls(PlaneSurge surge)
     {
         _surgeWall -= Dt;
         if (_surgeWall > 0f) return;
         foreach (var ray in surge.Rays)
+            for (int i = 0; i + 1 < ray.Points.Count; i++)
+                foreach (var v in Leaks)
+                {
+                    if (v.Sealed || Geo.SegmentDistance(v.Position, ray.Points[i], ray.Points[i + 1]) > AdventureTuning.LeakRadius) continue;
+                    _surgeWall = ShotInterval;
+                    StrikeLeak(v);
+                    return;
+                }
+        foreach (var ray in surge.Rays)
         {
             if (ray.Wall is not { } wall) continue;
             _surgeWall = ShotInterval;
             if (_rocks.Exists(r => r.Contains(wall))) StrikeSeal(wall);
-            if (Vents.Count > 0) StrikeVent(wall);
             return;
         }
     }

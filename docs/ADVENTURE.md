@@ -1,83 +1,55 @@
 # The adventure
 
-How the adventure (branch `m3-adventure`) plays: the reef is being poisoned from **vents** in its walls; the poison
+How the adventure (branch `m3-adventure`) plays: the reef is being poisoned from **leaks** floating in its chambers; the poison
 spreads as ink dots through the water and turns the reef's fish one by one into the creatures she fights; she wins a
-level by **sealing the vents**, and the fish she frees are fish again (freed, not killed: THEME-BIBLE).
+level by **sealing the leaks**, and the fish she frees are fish again (freed, not killed: THEME-BIBLE).
 
 It is on with `PlaneOptions.Adventure` (the game's default). The simulation is in `src/Core/Plane/PlaneAdventure.cs`
 (`AdventureTuning`, `InkDots`, `PlaneVent`, the fish gauges, the three murklings, her oral arm),
 `src/Core/Plane/PlaneFlounder.cs` (flounders and Hearthguards) and
 `src/Core/Gen/TopDown/AbyssReef.cs` (the abyss); the presentation in `src/Game/TopDown/AdventureView.cs` (dots, their
-bracket marks, vents), `BlightView` (the murklings' bodies: `murkling.gdshaderinc` spikes and tadpole tail),
-`BlightView.Flounders` (flounders and Hearthguards), `ReefFishView` (anemone pillars) and `HudView` (the gonad gauge, the vent dots). Tests: `AdventureTests`.
+bracket marks, leaks), `BlightView` (the murklings' bodies: `murkling.gdshaderinc` spikes and tadpole tail),
+`BlightView.Flounders` (flounders and Hearthguards), `ReefFishView` (anemone pillars) and `HudView` (the gonad gauge, the leak dots). Tests: `AdventureTests`.
 
 All numbers are first guesses (`AdventureTuning`).
 
-## 1. Corruption vents
+## 1. Leaks
 
-- **What:** wounds in the reef walls, always 5 a level, at least 30 m apart (closer only if the level has no room) and
-  24 m from her start (nearer only then too), never at safe places or the way down. Each is a gash torn along a wall face at her plane (2.6 m
-  long, pinched at its ends, its edges ragged, each its own), turned up out of the wall's slope so it shows from above,
-  its torn rock lips standing out along both edges. A blister of thick ink goo plugs it, bulging out into the water
-  and swelling more here than there (`vent_goo.gdshader`): an oily, iridescent film (violet, teal and magenta sliding
-  over near-black, marbled like an oil slick, brightest seen edge-on), and through it the reef's inside deep down, a
-  current running along the gash and pushing streaks and specks of corruption toward its middle. It breathes, ripples
-  run along it, a few drips of goo run out of its lower edge down the wall, stretching and drawing back, and its
-  current pushes dark motes of corruption out into the water (while she is within 30 m). A violet light throbs over it.
-- **Open, it floods:** from the level's first second every vent wells out an ink dot (§2) every 1.6 s (faster with
-  Menace: ÷ 1 + 0.5 × Menace) into the nearest empty cell before its mouth, so the stream pushes out into the water.
-- **It has been pouring a while:** the deeper the level, the more ink it starts with. Each vent starts with a puddle of
-  60 × Menace dots round its mouth (`PlacePuddles`: none at Depth 1, 12 at Depth 2, 36 at Depth 4, 60 at Depth 6, more
-  on later loops), grown out of its mouth as the ink spreads — neighbour to neighbour through open water only, the
-  nearest first, its edge ragged — so it lies joined to its vent and spreads from the start.
-- **Sealing it:** her shots striking the wall within 1.6 m of its mouth count once each, as a seal wall's carving
-  does (Firefly Squid's surge held there counts as one shot every shot's time, for a seal's carving too); the hits must come one after another (1.4 s after the last, one drains away every 0.3 s). Each hit dents its
-  goo where her light met it, ringing out over it, splashes goo off it (dark drops in its oily colours, flying out and
-  sinking, glinting) and flings magic particles. Her hits show as thin veins of gold light creeping into the goo from
-  its torn edges, further the more she has struck. Filled (8 hits, + 2 per Menace) the vent **seals**: with a shudder,
-  a puff of magic particles flung out of its mouth and the last of its goo bursting off it, the goo shrinks back into
-  the gash and the gash closes to a scar on a small rounded bump of rock, the glow going out; the stream stops. A
-  sealed vent stays sealed; each is worth 25 XP. An Inkwarden within 8 m of its mouth guards it (§4): her hits on it
-  are turned aside (its tether to the vent swells, a dull knock, no count) until that warden is freed.
-- **Its ring of light:** sealing sends an unseen ring of her light out from its mouth, 6 m in 0.6 s, clearing the
-  ink it crosses (each dot going up in magic particles).
-- **Sealing stops the source, not the ink:** the dots it spread beyond its ring stay until cleared, but no longer
-  spread (§2), unless they still link to another open vent.
-- **Each one sealed** throws 5 shells out of its mouth into the water before it, as well as its experience.
-- **The level's end:** the way down opens once 3 of the 5 vents are sealed ("The way down is open"); the other two may be
-  sealed for their shells and experience, or left pouring. The HUD shows a dot for each vent, gold once sealed, filling
-  from the left: three full-size for the ones she must seal, two smaller. On a boss level the boss's sword walls take no
-  light until the third is sealed: her shots knock dully on them ("It will not open: seal 2 more vents"), and no vent is
-  ever placed behind them.
+- **What:** X-shaped tears floating in the water at her plane, always 5 a level, a little bigger than she is (about 2.6 m
+  across) and always facing the camera. They lie in the middle of chambers; failing that on side routes; failing that in
+  any open water; only as a last resort on the main current. At least 30 m apart if the level allows it and 24 m from her
+  start, never in safe places or at the way down.
+- **Nearly invisible:** hot air in the shape of an X (bending the picture in the post pass), with a purple shimmer running
+  through it every 3 s, twice as often with her within 10 m. Once she has been within 12 m of it, its outline stays
+  faintly there (`leak.gdshader`). The ink thickening round it is how she finds it.
+- **It pushes:** a light push outward, within 6 m: 1.5 m/s + 0.5 × Menace at the middle, fading out, dying with it.
+- **The only thing that heals.** Every other creature's and boss's meter stays where her light leaves it.
+- **Sealing:** 15 hits + 5 × Menace of her light, in five stages. Each of the first four ties one arm with golden thread,
+  stitched from the middle out (a rising note, and it spits a ring of 8 ink drops at 60% of a throw's damage). The
+  last pulls all four tight: the arms close, and tear and thread dissolve together.
+- **Her first hit rouses it:** healthy fish within 14 m turn at once.
+- **If she stops:** after 1.5 s it heals, one tie's worth every 1.2 s. The thread trembles first, and each tie snaps in
+  reverse as the leak goes back past it.
+- **What counts:** a shot's light is its share of a full shot (a volley's small shots are parts of one), once per shot.
+  Firefly Squid's surge counts as one shot every shot's time, while it runs through the leak.
+- **Each one sealed** throws 5 shells out of it, as well as its experience. Sealing 3 opens the way on and wakes the main
+  current (DESIGN-TOPDOWN §4.7). The other two go on leaking until she seals them or the boss swallows them.
+- **Inkwardens** still guard the leaks in their reach (§4).
 
-## 2. Ink dots
+## 2. The ink
 
-- **The look:** the corruption is not a stain on the ground but **ink dots floating at her plane**, on an even grid
-  0.8 m apart, radius 0.135 m. Each dot is drawn as **three marks** 0.17 m across, in a small triangle turned its own way:
-  fine-tip violet strokes with a pale edge, drawn as the bracket marks are, each twitching between a "×" and a "+" on
-  its own uneven beat (4–9 flips a second, jumping a hair aside each time) and bobbing slowly up and down
-  (`ink_dot.gdshader`). A new dot swells in with a little overshoot, and a dot's marks shrink as her light wears it down.
-- **Bracket marks:** while a patch is fed by an open vent (below), violet "(", ")", "[", "]" hop out through it from
-  the vent's mouth to the rim, dot by dot (each hop a little arc onto the next dot one step further out), and pop at
-  the rim — drawn as the magic particles are (fine-tip strokes), their dark counterpart. A patch cut off shows none.
-- **Dividing:** a rim dot of a fed patch winds up before it divides — it swells, straining, over 0.7 s — then snaps
-  back as the new dot slides out of it into the empty cell beside it.
-- **Spreading:** only a patch joined to a working vent spreads: one whose dots link, neighbour to neighbour, to a dot
-  within 2 m of an open vent's mouth. Every 10 s (÷ 1 + 0.3 × Menace) each whole dot of such a patch beside an empty
-  cell divides into it, each dot on its own beat. A patch cut off from every open vent — its vent sealed, or her light
-  cleared a way through it — stops growing; so do trails and fallen throws (never joined to a vent).
-- **Decay:** a dot cut off from every open vent pops on its own, in magic particles as when her light clears it, after
-  10 s (+ 20 s × Menace) and up to 2 s more (its own share, so a patch goes out dot by dot, not all at once). Joined
-  to a working vent again, it starts over. The ink only
-  reaches a neighbour with open water between them: never through rock, never into safe places (the start, shops,
-  treasure caves). At most 9,000 dots a level.
-- **Trails:** every corrupted creature leaves a dot every 2.5 m it swims (into empty cells only); a spiked murkling's
-  throw that falls leaves a dot where it lands.
-- **Clearing:** her light: the light round her as she swims (worn down over a moment, a dot out of her light fills
-  back), her shots — every dot along a shot's whole flight, and round where it pops — a Starburst's burst. Each dot
-  cleared, or eaten by a fish, goes up in magic particles.
-- **Eaten:** a healthy fish that touches a dot eats it; the ink goes into its gauge (§3). A
-  freed fish eats dots harmlessly.
+- **Seen** as tiny plain purple specks like the plankton, with no glow, on all the water's layers, thicker the nearer the
+  leak (`ink_dot.gdshader`). In the sim it is one grid of dots at her plane (`InkDots`).
+- **Every level starts part inked:** 15% + 80% × Menace of the water the ink can reach, at most 95% (15% at Depth 1, 95% at
+  Depth 6; `AdventureTuning.StartInk`). It grows out of every leak at once (`PlaceInk`), through open water and through
+  sealed walls, and each cell belongs to the leak that reached it. The safe places (her start, the rooms, the light
+  springs, the way down) stay clean.
+- **It no longer spreads,** and creatures leave no trail. All the ink there is comes from the leaks.
+- **Clearing is only for the moment.** Her light, her shots and hungry fish clear it, but while its leak is open it
+  comes back after 1 s, one cell further out from the leak every 0.2 s along the way it first came, so cleared water
+  fills from the leak's side. A clearing buys a safe stretch to fight or rescue fish in.
+- **Sealing is what ends it:** a leak's ink dissolves outward from it at 12 m/s, and never returns.
+- **Freed fish** stay freed: they eat the ink harmlessly.
 
 ## 3. Fish that turn
 
@@ -110,17 +82,24 @@ it frees any corrupted creature: a corruption meter each, emptied by her shots.
 |---|---|---|---|---|
 | **Spiked murkling** | blue tang | blue | 0.38 m, short blowfish spikes all over | Keeps 6–9 m from her, circling, at 3.4 m/s; throws ink at her (the slingshot wind-up); never clings. Touching it hurts and knocks her off. |
 | **Tadpole murkling** | clownfish | orange | 0.22 m, a short wiggling tadpole tail | Only chases her (within 16 m), at 1.1 times her cruise; clings on and drains her; never throws. |
-| **Shoal murkling** | chromis | silver | 0.2 m, a whole school | Very fast (9 m/s). Within 14 m it rings her 1.8–2.6 m out, spread evenly all round in three layers, and the ring circles her (1.1 rad/s, each layer a little faster than the one inside it; each school its own way), never tied to her aim — she times her shots through the gaps, and a shot that meets one is spent on it. Harmless otherwise. |
+| **Shoal murkling** | chromis | silver | 0.2 m, a whole school | Very fast (9 m/s). Within 14 m it rings her 1.8–2.6 m out, spread evenly all round in three layers, and the ring circles her (1.1 rad/s, each layer a little faster than the one inside it; each school its own way), never tied to her aim — she times her shots through the gaps, and a shot that meets one is spent on it. Each holds its own place on the ring until it is freed: a freed one leaves a gap, and the rest do not close up. Harmless otherwise. |
 | **Hearthguard** | flounder | sand gold | a plain flat oval of ink (1.1 × 0.8 m) lying on its patch, no head, no fins, the sand gold showing through, ink drops lifting off it | Never leaves its patch and never chases her. It rests 2.5–4 s (÷ 1 + 0.4 × Menace), then shimmies left and right for 1.4 s as if burying itself: ten swings, one flank then the other, each throwing a spray of sand off the flank it swings to and that swing's ink drops of its pattern off that flank, lobbed up from its patch to her plane (3.5 m/s, falling after 2.4 m and leaving a dot where they land, 5 damage). The patterns: a fan of three off four of its swings, one drop at every swing sweeping from its head to its tail, or a burst of five off each side at the height of the shimmy, never the same pattern twice running. Within 2.8 m of it (and in sight), its back draws up into a cone leaning at her over 0.45 s, its ember waking in it (the telegraph); then that cone stabs out as one continuous sting to 3.2 m at her plane in 0.12 s while the oval stays where it lies (rock stops it): 12 damage and a shove along it; it holds a moment, draws back over 0.45 s, and waits 1 s before it can stab again. Meter 26 (+ per Menace as a murkling's). Lying under her plane, it shows south of its place on the plane (0.577 m per metre below), so her shots strike it anywhere from its place to where it shows (`PlaneWorld.FlounderSeen`). Freed, it is a flounder again, lifting off its patch and swimming away. |
-| **Inkwarden** | pufferfish | yellow | an inflated ring of ink, eight spikes folded in toward its hole | Wards the corrupted creatures round it (8 m), and the open vents (§1). Calm, it drifts slowly about its spot (within 5 m), turning lazily. Struck (by her light, her arm or a burst), it rolls its spikes out over its top (0.5 s), spins up (0.6 s) and fires them one by one, one every 0.15 s, each in a random direction (11 m/s, 6 damage, an ink spike: it falls as a throw does and her shots burst it); then it slows and grows them back inward (3 s), calm until struck again. Freed, it is a pufferfish, and swims off. |
+| **Inkwarden** | pufferfish | yellow | an inflated ring of ink, eight spikes folded in toward its hole | Wards the corrupted creatures round it (8 m), and the open leaks (§1). Calm, it drifts slowly about its spot (within 5 m), turning lazily. Struck (by her light, her arm or a burst), it rolls its spikes out over its top (0.5 s), spins up (0.6 s) and fires them one by one, one every 0.15 s, each in a random direction (11 m/s, 6 damage, an ink spike: it falls as a throw does and her shots burst it); then it slows and grows them back inward (3 s), calm until struck again. Freed, it is a pufferfish, and swims off. |
 
 Each depth's boss level holds its boss in its arena, Drippus Prime (docs/CORRUPTION.md); its brood are murklings like
-any other. On a boss level the way down opens once 3 vents are sealed **and** the boss is freed, in either order.
+any other. On a boss level the way down opens once the boss is freed.
+
+**It gathers the level's ink.** No title screen: the moment she is wholly inside the arena, every leak still open is drunk
+dry and shut (a puff, no shells, no experience), and every dot left on the level streams to the middle of the arena over
+3.4 s, the nearest first, those from beyond the room coming in over its rim, where they swell up into its ball of ink
+(4 s in all, `BeginGather`). What it finds there makes it: for each share of the level's water still inked it stands up
+to 60% bigger, with up to 150% more health and up to 100% harder blows. The more she cleared on her way, the less it is.
+Not a dot is left on the level afterwards.
 
 Switched off in the adventure (their code kept, to bring back one by one): pufferlings, Blightroots, Blotters,
-Lashjaws, Thumpsquirts, dens and murkling budding. Light springs
-(docs/CORRUPTION.md: a god ray onto the seabed, a store of healing she may come back to, too bright for any murkling)
-come only by her luck (docs/PEARLS.md, "Luck"); one keeps the seabed under it (§5).
+Lashjaws, Thumpsquirts, dens and murkling budding. Every level has a light spring (docs/CORRUPTION.md: a god ray onto
+the seabed, a store of healing she may come back to, too bright for any murkling), a second by her luck
+(docs/PEARLS.md, "Luck"); each keeps the seabed under it (§5).
 
 ## 5. The abyss reef
 
@@ -172,5 +151,5 @@ come only by her luck (docs/PEARLS.md, "Luck"); one keeps the seabed under it (�
   round it, seen or not (the unseen under fog) — its edges fading softly into a dimming of the game, framed as large as
   it fits; no legend. Over it, the level's
   template name, its depth and level, and the run's clock.
-- **Vent dots:** top centre, one per vent — dark with a violet glint while it pours, gold once sealed. The level's
+- **Vent dots:** top centre, one per leak — dark with a violet glint while it pours, gold once sealed. The level's
   title and the banners sit under them.

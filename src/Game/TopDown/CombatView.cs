@@ -278,8 +278,8 @@ public partial class CombatView : Node3D
         _stands.Clear();
         _prices.Clear();
         _shop = world.Map.Pois.FirstOrDefault(p => p.Kind == PoiKind.Shop);
-        // The shop's goods float on their own (a clam room's pearl hangs still instead): pearls in their colours, the top-up a red
-        // heart. Each hangs a little price tag on a string (its price and a shell), shown only while she is inside the shop.
+        // The shop's goods float on their own (a clam room's pearl hangs still instead): pearls in their colours, the top-up her
+        // gonad emblem in gold. Each hangs a little price tag on a string (its price and a shell), shown only while she is inside the shop.
         foreach (var stand in world.Stands)
         {
             var node = new Node3D { Position = new Vector3(stand.Position.X, LevelMap.SwimBand, stand.Position.Y) };
@@ -300,7 +300,9 @@ public partial class CombatView : Node3D
             }
             else
             {
-                node.AddChild(LightOrb(1.25f));
+                var gold = OctoShoots.Game.Fx.GonadCursor.Gold();
+                node.AddChild(new Sprite3D { Texture = gold, PixelSize = 1.2f / gold.GetWidth(), Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, Shaded = false });
+                node.AddChild(new OmniLight3D { LightColor = new Color(1f, 0.8f, 0.4f), LightEnergy = 0.8f, OmniRange = 3f, ShadowEnabled = false });
             }
             if (stand.Kind == StandKind.Pearl && fresh?.Contains(stand.ItemId) == true) node.AddChild(NewChip());
             var tag = PriceTag(stand.Price);

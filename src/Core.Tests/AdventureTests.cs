@@ -9,7 +9,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>The adventure (docs/ADVENTURE.md): vents, ink dots, fish that turn, the three murklings, her inner light.</summary>
+/// <summary>The adventure (docs/ADVENTURE.md): leaks, ink dots, fish that turn, the three murklings, her inner light.</summary>
 public class AdventureTests
 {
     static readonly Lazy<ItemCatalog> Catalog = new(() =>
@@ -32,15 +32,21 @@ public class AdventureTests
         }
     }
 
-    /// <summary>A world with its fish, anemones and vents taken away (each test brings what it needs).</summary>
+    /// <summary>A world with its fish, anemones, leaks and starting ink taken away (each test brings what it needs).</summary>
     static PlaneWorld Bare()
     {
         var w = World();
         w.ReefFish.Clear();
         w.Anemones.Clear();
         w.Schools.Clear();
-        foreach (var v in w.Vents) v.Sealed = true;
+        foreach (var v in w.Leaks) v.Sealed = true;
+        NoInk(w);
         return w;
+    }
+
+    static void NoInk(PlaneWorld w)
+    {
+        foreach (int i in w.Dots!.Live.ToArray()) w.Dots.Remove(i);
     }
 
     /// <summary>Open water round a point: every cell of a ring of dots there may hold one.</summary>
@@ -61,12 +67,12 @@ public class AdventureTests
     }
 
     [Fact]
-    public void A_level_starts_with_vents_fish_and_no_creatures()
+    public void A_level_starts_with_leaks_fish_and_no_creatures()
     {
         foreach (bool boss in new[] { false, true })
         {
             var w = World(boss);
-            Assert.Equal(AdventureTuning.LevelVents, w.Vents.Count);
+            Assert.Equal(AdventureTuning.LevelLeaks, w.Leaks.Count);
             Assert.False(w.ExitOpen);
             Assert.Empty(w.Murklings);
             Assert.Empty(w.Blightroots);
@@ -77,13 +83,12 @@ public class AdventureTests
             // A boss level holds its boss in its arena (Drippus Prime), and nothing else of the war.
             Assert.Equal(boss, w.Boss is not null);
             Assert.True(w.ReefFish.Count > 60, $"only {w.ReefFish.Count} fish");
-            Assert.Equal(0, w.Dots!.Count);
-            // Every vent's mouth is in open water before a wall, apart from the others.
-            foreach (var v in w.Vents)
+            Assert.True(w.Dots!.Count > 0);
+            // Every leak floats in open water, clear of the others.
+            foreach (var v in w.Leaks)
             {
                 Assert.True(w.Clear(v.Position, 0.3f));
-                Assert.False(w.Map.IsOpen(v.Wall));
-                Assert.True(Vector2.Distance(v.Position, w.Map.Start.Position) >= AdventureTuning.VentFromStart);
+                Assert.True(Vector2.Distance(v.Position, w.Map.Start.Position) >= AdventureTuning.LeakFromStart);
             }
         }
     }
@@ -127,54 +132,102 @@ public class AdventureTests
     }
 
     [Fact]
-    public void Open_vents_pour_ink_and_sealed_ones_stop()
+    public void Ink_cleared_comes_back_from_its_leak_and_sealing_it_dissolves_its_ink()
     {
         var w = World();
         w.ReefFish.Clear();
         w.Anemones.Clear();
+        var dots = w.Dots!;
+        var v = w.Leaks[0];
+        bool Own(int i) => dots.Source[i] == 0;
+        int before = dots.Live.Count(Own);
+        Assert.True(before > 10);
+        foreach (int i in dots.Live.Where(Own).ToArray()) dots.Remove(i);
+        Assert.Equal(0, dots.Live.Count(Own));
+        // Nothing for a moment, then it flows back, nearest the leak first.
+        Run(w, 12);
+        Assert.Equal(0, dots.Live.Count(Own));
+        Run(w, 2 * PlaneWorld.TickRate);
+        var back = dots.Live.Where(Own).ToList();
+        Assert.NotEmpty(back);
+        Assert.All(back, i => Assert.True(dots.Parent[i] < 0 || dots.Has(dots.Parent[i]), "out from the leak"));
+        Run(w, 14 * PlaneWorld.TickRate);
+        Assert.True(dots.Live.Count(Own) >= before * 0.95f, "it all comes back");
+        int others = dots.Count - dots.Live.Count(Own);
+        // Sealed, its ink goes for good; the other leaks' stays.
+        w.DebugSealLeak(v);
         Run(w, 5 * PlaneWorld.TickRate);
-        int poured = w.Dots!.Count;
-        Assert.True(poured >= 3 * w.Vents.Count, $"only {poured} dots after 5 s");
-        // Each lies near a vent, in a cell the ink may hold.
-        foreach (int i in w.Dots.Live)
-        {
-            Assert.True(w.Dots.Open[i]);
-            Assert.Contains(w.Vents, v => Vector2.Distance(v.Position, InkDots.Centre(i)) < 12f);
-        }
-        foreach (var v in w.Vents) w.DebugSealVent(v);
-        Assert.True(w.ExitOpen);
-        // Sealed, they pour no more, and each one's ring of light has cleared the ink at its mouth (the rest stays).
-        w.Player.Position = w.Player.PrevPosition = w.Map.Start.Position;
-        Run(w, (int)(1.5f * PlaneWorld.TickRate));
-        foreach (var v in w.Vents)
-            Assert.DoesNotContain(w.Dots.Live, i => Vector2.Distance(InkDots.Centre(i), v.Position) < 2f);
+        Assert.Equal(0, dots.Live.Count(Own));
+        Assert.True(dots.Count >= others * 0.9f);
+        Run(w, 3 * PlaneWorld.TickRate);
+        Assert.Equal(0, dots.Live.Count(Own));
     }
 
     [Fact]
-    public void Deeper_levels_start_with_puddles_of_ink_round_their_vents()
+    public void Only_a_leak_heals()
+    {
+        var meter = new CorruptionMeter(36f);
+        meter.Hit(10f);
+        for (int i = 0; i < 600; i++) meter.Step(PlaneWorld.Dt);
+        Assert.Equal(26f, meter.Value);
+    }
+
+    [Fact]
+    public void Each_stage_ties_an_arm_the_last_seals_it_and_left_alone_the_ties_snap()
+    {
+        var w = World();
+        w.ReefFish.Clear();
+        var v = w.Leaks[0];
+        int stage = v.Needed / AdventureTuning.Stages;
+        for (int tie = 1; tie < AdventureTuning.Stages; tie++)
+        {
+            for (int i = 0; i < stage; i++) w.DebugStrikeLeak(v);
+            Assert.Equal(tie, v.Ties);
+            Assert.Contains(w.Events, e => e.Type == PlaneEventType.LeakTied);
+            w.Events.Clear();
+        }
+        Assert.False(v.Sealed);
+        // She stops: after a grace, a tie snaps about every LeakDrain seconds.
+        int snapped = 0;
+        for (int i = 0; i < (AdventureTuning.LeakHold + AdventureTuning.LeakDrain * 2.5f) * PlaneWorld.TickRate; i++)
+        {
+            Run(w, 1);
+            snapped += w.Events.Count(e => e.Type == PlaneEventType.LeakUntied);
+        }
+        Assert.InRange(snapped, 2, 3);
+        Assert.True(v.Ties < AdventureTuning.Stages - 1);
+    }
+
+    [Fact]
+    public void Leaks_float_in_the_middle_of_chambers_where_they_can()
+    {
+        var w = World();
+        Assert.Contains(w.Leaks, v => w.Map.Plazas.Any(z => Vector2.Distance(z.Center, v.Position) < 0.01f));
+    }
+
+    [Fact]
+    public void Every_level_starts_part_inked_out_of_its_leaks_the_more_the_deeper()
     {
         PlaneWorld At(int depth) => new(TestLevels.Get(TestLevels.Find(p => p.Id.Depth == depth && !p.HasBoss)), new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), Adventure);
-        // Depth 1 (the first real depth) starts clean; deeper, each vent's puddle grows with Menace.
-        Assert.Equal(0, At(2).Dots!.Count);
-        var mid = At(4);
-        var deep = At(7);
-        Assert.True(deep.Menace > mid.Menace);
-        foreach (var w in new[] { mid, deep })
+        Assert.Equal(0.15f, AdventureTuning.StartInk(0f), 3);
+        Assert.Equal(0.95f, AdventureTuning.StartInk(1f), 3);
+        Assert.Equal(0.95f, AdventureTuning.StartInk(3f), 3);
+        float last = 0f;
+        foreach (int depth in new[] { 2, 4, 7 })
         {
-            int each = (int)MathF.Round(AdventureTuning.PuddlePerMenace * w.Menace);
-            Assert.InRange(w.Dots!.Count, each * w.Vents.Count * 0.8f, each * w.Vents.Count);
-            // Every dot lies in a puddle joined to its vent (fed, so it spreads), close round its mouth.
-            foreach (int i in w.Dots.Live)
-            {
-                Assert.True(w.Dots.Fed[i]);
-                Assert.Contains(w.Vents, v => Vector2.Distance(v.Position, InkDots.Centre(i)) < 12f);
-            }
+            var w = At(depth);
+            float share = w.Dots!.Count / (float)w.Dots.Open.Count(o => o);
+            float want = AdventureTuning.StartInk(w.Menace);
+            Assert.True(share <= want + 0.01f && share >= want - 0.02f, $"depth {depth}: {w.Dots.Count} of {w.Dots.Open.Count(o => o)} water, {share:P0} for {want:P0}");
+            Assert.True(share > last);
+            last = share;
+            // All of it belongs to a leak.
+            Assert.All(w.Dots.Live, i => Assert.True(w.Dots.Source[i] >= 0));
         }
-        Assert.True(deep.Dots!.Count / deep.Vents.Count > mid.Dots!.Count / mid.Vents.Count);
     }
 
     [Fact]
-    public void A_boss_levels_way_down_opens_once_its_vents_are_sealed_and_its_boss_is_freed()
+    public void A_boss_levels_way_down_opens_once_its_boss_is_freed_its_rise_shutting_any_vent_left()
     {
         foreach (bool ventsFirst in new[] { true, false })
         {
@@ -183,49 +236,46 @@ public class AdventureTests
             Assert.Equal(OctoShoots.Core.Bosses.BossConcept.TheBrood, boss.Spec.Concept);
             if (ventsFirst)
             {
-                foreach (var v in w.Vents) w.DebugSealVent(v);
+                foreach (var v in w.Leaks) w.DebugSealLeak(v);
                 Assert.False(w.ExitOpen);
             }
-            // In she goes; it rises out of the ink and fights; it is freed.
+            // In she goes; it rises, drinking the leaks left dry, and fights; it is freed.
             w.Player.Position = w.Player.PrevPosition = w.ArenaCenter + new Vector2(0f, w.ArenaRadius * 0.55f);
             for (int i = 0; i < 6 * PlaneWorld.TickRate && boss.Stage != BossStage.Fight; i++) Run(w, 1);
             Assert.Equal(BossStage.Fight, boss.Stage);
             w.DebugFreeBoss();
             Run(w, PlaneWorld.TickRate);
             Assert.False(w.BossBattle);
-            Assert.Equal(ventsFirst, w.ExitOpen);
-            if (ventsFirst) continue;
-            foreach (var v in w.Vents) w.DebugSealVent(v);
             Assert.True(w.ExitOpen);
         }
     }
 
     [Fact]
-    public void Every_level_has_five_vents_and_three_sealed_open_the_way_on()
+    public void Every_level_has_five_leaks_and_three_sealed_open_the_way_on()
     {
         foreach (var id in TestLevels.All(_ => true))
         {
             var w = new PlaneWorld(TestLevels.Get(id), new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), Adventure);
-            Assert.True(w.Vents.Count == AdventureTuning.LevelVents, $"{id}: {w.Vents.Count} vents");
+            Assert.True(w.Leaks.Count == AdventureTuning.LevelLeaks, $"{id}: {w.Leaks.Count} leaks");
         }
         var plain = World();
-        for (int i = 0; i < AdventureTuning.VentsToClear; i++)
+        for (int i = 0; i < AdventureTuning.LeaksToClear; i++)
         {
             Assert.False(plain.ExitOpen);
-            plain.DebugSealVent();
+            plain.DebugSealLeak();
         }
         Assert.True(plain.ExitOpen);
-        Assert.Equal(AdventureTuning.LevelVents - AdventureTuning.VentsToClear, plain.VentsOpen);
+        Assert.Equal(AdventureTuning.LevelLeaks - AdventureTuning.LeaksToClear, plain.LeaksOpen);
     }
 
     [Fact]
     public void A_vent_counts_a_shots_light_not_the_shots()
     {
         var w = World();
-        var v = w.Vents[0];
-        for (int i = 0; i < 3; i++) w.DebugStrikeVent(v, 0.3f);
+        var v = w.Leaks[0];
+        for (int i = 0; i < 3; i++) w.DebugStrikeLeak(v, 0.3f);
         Assert.Equal(0, v.Hits);
-        w.DebugStrikeVent(v, 0.3f);
+        w.DebugStrikeLeak(v, 0.3f);
         Assert.Equal(1, v.Hits);
     }
 
@@ -241,12 +291,11 @@ public class AdventureTests
     public void Each_vent_sealed_throws_shells_out_of_its_mouth()
     {
         var w = World();
-        foreach (var v in w.Vents.ToList())
+        foreach (var v in w.Leaks.ToList())
         {
             int before = w.Shells.Count;
-            w.DebugSealVent(v);
-            Assert.Equal(before + AdventureTuning.VentShells, w.Shells.Count);
-            Assert.All(w.Shells.Skip(before), s => Assert.True(Vector2.Dot(s.Velocity, v.Facing) > 0f, "out into the water"));
+            w.DebugSealLeak(v);
+            Assert.Equal(before + AdventureTuning.LeakShells, w.Shells.Count);
         }
     }
 
@@ -254,16 +303,16 @@ public class AdventureTests
     public void A_vent_seals_with_hits_in_a_row_and_its_light_drains_if_they_stop()
     {
         var w = World();
-        var v = w.Vents[0];
-        for (int i = 0; i < v.Needed - 2; i++) w.DebugStrikeVent(v);
+        var v = w.Leaks[0];
+        for (int i = 0; i < v.Needed - 2; i++) w.DebugStrikeLeak(v);
         Assert.False(v.Sealed);
         int lit = v.Hits;
         Run(w, 3 * PlaneWorld.TickRate);
         Assert.True(v.Hits < lit, "its light should drain once her hits stop");
-        for (int i = 0; i < v.Needed && !v.Sealed; i++) w.DebugStrikeVent(v);
+        for (int i = 0; i < v.Needed && !v.Sealed; i++) w.DebugStrikeLeak(v);
         Assert.True(v.Sealed);
         Assert.False(w.ExitOpen);
-        foreach (var o in w.Vents.Skip(1)) w.DebugSealVent(o);
+        foreach (var o in w.Leaks.Skip(1)) w.DebugSealLeak(o);
         Assert.True(w.ExitOpen);
     }
 
@@ -272,106 +321,20 @@ public class AdventureTests
     {
         var w = World();
         w.ReefFish.Clear();
-        var v = w.Vents[0];
+        var v = w.Leaks[0];
         // Before it, facing it.
-        var at = v.Position + v.Facing * 2.5f;
-        Assert.True(w.Clear(at, w.Radius), "no room before the vent");
+        var at = new[] { Vector2.UnitX, Vector2.UnitY, -Vector2.UnitX, -Vector2.UnitY }.Select(d => v.Position + d * 3f).First(q => w.Clear(q, w.Radius));
         w.Player.Position = w.Player.PrevPosition = at;
-        var aim = Vector2.Normalize(v.Wall - at);
+        var aim = Vector2.Normalize(v.Position - at);
         int lit = 0;
         for (int i = 0; i < 2 * PlaneWorld.TickRate; i++)
         {
             w.Player.Position = at;
             w.Player.Velocity = Vector2.Zero;
             w.Step(new PlaneInput { Aim = aim, Fire = true });
-            lit += w.Events.Count(e => e.Type == PlaneEventType.VentLit);
+            lit += w.Events.Count(e => e.Type == PlaneEventType.LeakLit);
         }
         Assert.True(lit >= 3, $"only {lit} shots lit it");
-    }
-
-    [Fact]
-    public void Ink_fed_by_a_vent_divides_only_into_open_cells_and_never_through_rock()
-    {
-        var w = World();
-        w.ReefFish.Clear();
-        w.Anemones.Clear();
-        foreach (var v in w.Vents.Skip(1)) v.Sealed = true;
-        Run(w, 40 * PlaneWorld.TickRate);
-        var dots = w.Dots!;
-        // More than the vent alone pours: it has spread.
-        Assert.True(dots.Count > 40 / AdventureTuning.VentEvery + 4, $"only {dots.Count} dots");
-        // The patch is one piece, joined only across links (no hop through rock).
-        var seen = new System.Collections.Generic.HashSet<int> { dots.Live[0] };
-        var todo = new System.Collections.Generic.Stack<int>(seen);
-        while (todo.Count > 0)
-        {
-            int c = todo.Pop();
-            for (int k = 0; k < 4; k++)
-            {
-                int n = dots.Neighbour(c, k);
-                if (n >= 0 && dots.Has(n) && seen.Add(n)) todo.Push(n);
-            }
-        }
-        Assert.Equal(dots.Count, seen.Count);
-        Assert.All(dots.Live, i => Assert.True(dots.Open[i]));
-    }
-
-    [Fact]
-    public void Ink_cut_off_from_every_working_vent_stops_spreading()
-    {
-        // A patch nowhere near a vent never grows.
-        var w = Bare();
-        var at = OpenSpot(w);
-        for (int dy = -1; dy <= 1; dy++)
-        for (int dx = -1; dx <= 1; dx++)
-            w.DebugDot(at + new Vector2(dx, dy) * AdventureTuning.Spacing);
-        // (Short of the decay: a cut-off dot lasts at least DecayMin.)
-        Run(w, 9 * PlaneWorld.TickRate);
-        Assert.Equal(9, w.Dots!.Count);
-
-        // A vent's patch grows while it pours; sealed, what it left behind stops.
-        w = World();
-        w.ReefFish.Clear();
-        w.Anemones.Clear();
-        foreach (var v in w.Vents.Skip(1)) v.Sealed = true;
-        Run(w, 30 * PlaneWorld.TickRate);
-        w.DebugSealVent(w.Vents[0]);
-        Run(w, PlaneWorld.TickRate);
-        int left = w.Dots!.Count;
-        Run(w, 8 * PlaneWorld.TickRate);
-        Assert.Equal(left, w.Dots.Count);
-    }
-
-    [Fact]
-    public void Ink_cut_off_from_every_vent_decays_dot_by_dot_after_a_while_longer_the_higher_the_menace()
-    {
-        Assert.Equal(AdventureTuning.DecayMin, AdventureTuning.DecayAfter(0f));
-        Assert.True(AdventureTuning.DecayAfter(1f) > AdventureTuning.DecayAfter(0.2f));
-
-        var w = Bare();
-        var at = OpenSpot(w);
-        int placed = 0;
-        for (int dy = -2; dy <= 2; dy++)
-        for (int dx = -2; dx <= 2; dx++)
-            if (w.DebugDot(at + new Vector2(dx, dy) * AdventureTuning.Spacing)) placed++;
-        Assert.True(placed >= 9);
-        float after = AdventureTuning.DecayAfter(w.Menace);
-        // None goes before its time.
-        Run(w, (int)((after - 0.3f) * PlaneWorld.TickRate));
-        Assert.Equal(placed, w.Dots!.Count);
-        // Then they pop on their own, each a popping event, not all on the same step, all gone within the jitter.
-        var steps = new System.Collections.Generic.HashSet<long>();
-        int popped = 0;
-        for (int i = 0; i < (int)((AdventureTuning.DecayJitter + 0.6f) * PlaneWorld.TickRate); i++)
-        {
-            w.Step(default);
-            int n = w.Events.Count(e => e.Type == PlaneEventType.DotDecayed);
-            if (n > 0) steps.Add(w.Tick);
-            popped += n;
-        }
-        Assert.Equal(placed, popped);
-        Assert.Equal(0, w.Dots.Count);
-        Assert.True(steps.Count > 1, "every dot popped on the same step");
     }
 
     [Fact]
@@ -425,7 +388,7 @@ public class AdventureTests
             var w = World();
             var fish = w.ReefFish.First(f => f.Kind == kind);
             foreach (var o in w.ReefFish.Where(o => o != fish)) o.Freed = true;
-            foreach (var v in w.Vents) v.Sealed = true;
+            foreach (var v in w.Leaks) v.Sealed = true;
             // Ink all round it, kept up as it eats.
             for (int t = 0; t < 30 * PlaneWorld.TickRate && !fish.Corrupted; t++)
             {
@@ -445,7 +408,8 @@ public class AdventureTests
     public void A_fish_eats_the_dots_it_touches()
     {
         var w = World();
-        foreach (var v in w.Vents) v.Sealed = true;
+        foreach (var v in w.Leaks) v.Sealed = true;
+        NoInk(w);
         var fish = w.ReefFish.First(f => f.Kind == ReefFishKind.BlueTang);
         fish.Freed = true;
         w.Player.Position = w.Map.Start.Position;
@@ -463,7 +427,7 @@ public class AdventureTests
     public void A_school_turns_together_and_its_shoal_circles_her_taking_her_shots()
     {
         var w = World();
-        foreach (var v in w.Vents) v.Sealed = true;
+        foreach (var v in w.Leaks) v.Sealed = true;
         var school = w.ReefFish.First(f => f.Kind == ReefFishKind.Chromis).Host;
         var members = w.ReefFish.Where(f => f.Kind == ReefFishKind.Chromis && f.Host == school).ToList();
         members[0].Ink = 1f;
@@ -509,13 +473,30 @@ public class AdventureTests
             struck += w.Events.Count(e => e.Type is PlaneEventType.MobHit or PlaneEventType.MobDefeated);
         }
         Assert.True(struck > 0, "the shoal should take her shots");
+
+        // Freed one by one, the rest hold their places: a gap is left, and no one moves up.
+        var left = shoal.Where(m => m.Alive).ToList();
+        var pair = left.GroupBy(m => m.ShoalSlot % 3).First(g => g.Count() >= 2).Take(2).ToArray();
+        float Apart() => MathF.IEEERemainder(MathF.Atan2(pair[1].Position.Y - her.Y, pair[1].Position.X - her.X) - MathF.Atan2(pair[0].Position.Y - her.Y, pair[0].Position.X - her.X), MathF.Tau);
+        float was = Apart();
+        var slots = left.ToDictionary(m => m, m => m.ShoalSlot);
+        left.First(m => !pair.Contains(m)).Alive = false;
+        for (int i = 0; i < PlaneWorld.TickRate; i++)
+        {
+            w.Player.Position = her;
+            w.Player.Velocity = Vector2.Zero;
+            w.Player.Hp = 100f;
+            w.Step(new PlaneInput { Aim = Vector2.UnitX });
+        }
+        Assert.All(left, m => Assert.Equal(slots[m], m.ShoalSlot));
+        Assert.InRange(MathF.Abs(MathF.IEEERemainder(Apart() - was, MathF.Tau)), 0f, 0.2f);
     }
 
     [Fact]
     public void The_tadpole_chases_her_faster_than_she_cruises_and_clings()
     {
         var w = World();
-        foreach (var v in w.Vents) v.Sealed = true;
+        foreach (var v in w.Leaks) v.Sealed = true;
         var fish = w.ReefFish.First(f => f.Kind == ReefFishKind.Clownfish);
         fish.Ink = 1f;
         Run(w, PlaneWorld.TickRate);
@@ -535,7 +516,7 @@ public class AdventureTests
     public void A_pufferfish_in_the_ink_becomes_a_spiky_inkwarden_that_fires_back_wards_and_is_freed_a_pufferfish()
     {
         var w = World();
-        foreach (var v in w.Vents) v.Sealed = true;
+        foreach (var v in w.Leaks) v.Sealed = true;
         w.ReefFish.Clear();
         Assert.InRange(w.Fish.Count, AdventureTuning.PufferMin / 2, AdventureTuning.PufferMax);
         var puffer = w.Fish[0];
@@ -620,18 +601,18 @@ public class AdventureTests
     }
 
     [Fact]
-    public void Firefly_squids_surge_held_on_a_vents_mouth_seals_it()
+    public void Firefly_squids_surge_held_on_a_leaks_mouth_seals_it()
     {
         var run = new PlaneRun(Catalog.Value, new Tuning());
         run.Add("firefly_squid");
         var w = new PlaneWorld(TestLevels.Get(TestLevels.Find(p => p.Id.Depth == 2 && !p.HasBoss)), new Tuning(), run, Adventure);
         w.Inkwardens.Clear();
-        var v = w.Vents[0];
-        w.Player.Position = w.Player.PrevPosition = v.Position;
-        var aim = Vector2.Normalize(v.Wall - v.Position);
+        var v = w.Leaks[0];
+        var at = new[] { Vector2.UnitX, Vector2.UnitY, -Vector2.UnitX, -Vector2.UnitY }.Select(d => v.Position + d * 3f).First(q => w.Clear(q, w.Radius));
+        var aim = Vector2.Normalize(v.Position - at);
         for (int i = 0; i < 12 * PlaneWorld.TickRate && !v.Sealed; i++)
         {
-            w.Player.Position = w.Player.PrevPosition = v.Position;
+            w.Player.Position = w.Player.PrevPosition = at;
             w.Player.Hp = 100f;
             w.Step(new PlaneInput { Aim = aim, Fire = true });
         }
@@ -646,20 +627,20 @@ public class AdventureTests
         {
             var w = new PlaneWorld(TestLevels.Get(id), new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), Adventure);
             var seal = w.Seals.FirstOrDefault(s => s.Kind == SealKind.Boss);
-            if (seal is null || w.Vents.Count == 0) continue;
+            if (seal is null || w.Leaks.Count == 0) continue;
             walls++;
             var rocks = w.Seals.Where(s => s.Kind == SealKind.Boss).Select(s => s.Rock).ToList();
             var reach = LevelValidator.Distances(w.Map, w.Map.Start.Position, blocked: q => rocks.Exists(r => r.Contains(q)));
-            Assert.All(w.Vents, v => Assert.False(float.IsPositiveInfinity(LevelValidator.DistanceAt(reach, v.Position))));
+            Assert.All(w.Leaks, v => Assert.False(float.IsPositiveInfinity(LevelValidator.DistanceAt(reach, v.Position))));
             for (int k = 0; k < 60; k++) w.DebugStrikeSeal(seal);
             Assert.False(seal.Open);
             Assert.Equal(0, seal.Hits);
             Assert.Contains(w.Events, e => e.Type == PlaneEventType.SealRefused);
-            for (int k = 0; k < AdventureTuning.VentsToClear; k++) w.DebugSealVent();
+            for (int k = 0; k < AdventureTuning.LeaksToClear; k++) w.DebugSealLeak();
             for (int k = 0; k < 60 && !seal.Open; k++) w.DebugStrikeSeal(seal);
             Assert.True(seal.Open);
         }
-        Assert.True(walls > 0, "no boss level with a wall and vents");
+        Assert.True(walls > 0, "no boss level with a wall and leaks");
     }
 
     [Fact]
@@ -758,17 +739,17 @@ public class AdventureTests
     }
 
     [Fact]
-    public void An_inkwarden_guards_the_vents_in_its_reach()
+    public void An_inkwarden_guards_the_leaks_in_its_reach()
     {
         var w = World();
-        var v = w.Vents[0];
+        var v = w.Leaks[0];
         var puffer = w.Fish[0];
-        puffer.Position = v.Position + v.Facing * 3f;
+        puffer.Position = v.Position + new Vector2(3f, 0f);
         puffer.Ink = 1f;
         Run(w, 1);
         var warden = w.Inkwardens.Single();
         Assert.Contains(w.GuardedBy(warden), at => at == v.Position);
-        for (int i = 0; i < v.Needed + 2; i++) w.DebugStrikeVent(v);
+        for (int i = 0; i < v.Needed + 2; i++) w.DebugStrikeLeak(v);
         Assert.False(v.Sealed);
         Assert.Equal(0, v.Hits);
         Assert.Contains(w.Events, e => e.Type == PlaneEventType.Warded);
@@ -776,7 +757,7 @@ public class AdventureTests
         warden.Corruption.Value = 0.5f;
         w.DebugBurst(warden.Position, 0.5f, 10f);
         Run(w, 1);
-        for (int i = 0; i < v.Needed; i++) w.DebugStrikeVent(v);
+        for (int i = 0; i < v.Needed; i++) w.DebugStrikeLeak(v);
         Assert.True(v.Sealed);
     }
 

@@ -16,14 +16,14 @@ public partial class CameraRig : Node3D
     /// <summary>Distance from the followed point; puts ~22 m of ground top to bottom and ~33 m across at 16:9.</summary>
     public const float Distance = 34f;
     const float Follow = 6f;
-    /// <summary>The zoom setting: 1.5 by default, from 1 (50% farther, more of the reef) to 2 (50% closer).</summary>
-    public const float DefaultZoom = 1.5f, MinZoom = 1f, MaxZoom = 2f;
+    /// <summary>The zoom: fixed for players at 0.8 (42.5 m); the debug menu alone moves it, from 0.5 (farther) to 2 (closer).</summary>
+    public const float DefaultZoom = 0.8f, MinZoom = 0.5f, MaxZoom = 2f;
     /// <summary>Verification: `--dbg-zoom=metres` brings the camera closer (to inspect Clementine); it overrides the setting.</summary>
     readonly float? _dbgDistance = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--dbg-zoom=")) is { } zoom
         && float.TryParse(zoom["--dbg-zoom=".Length..], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float d) ? d : null;
     float _distance = Distance / DefaultZoom;
 
-    /// <summary>The camera-zoom setting (1 is the designed 34 m framing; 1.5 the default). The dive's Zoom multiplies it.</summary>
+    /// <summary>The camera-zoom setting (1 is the 34 m framing). The dive's Zoom multiplies it.</summary>
     public float ZoomSetting
     {
         set => _distance = _dbgDistance ?? Distance / Mathf.Clamp(value, MinZoom, MaxZoom);
@@ -125,6 +125,22 @@ public partial class CameraRig : Node3D
     }
 
     readonly float[] _lenses = new float[CombatView.MaxLenses * 4];
+
+    /// <summary>The leaks' hot air (AdventureView): where each is and how open.</summary>
+    public void SetLeaks(Vector3[] leaks, int count)
+    {
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("leaks"), leaks);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("leak_count"), count);
+    }
+
+    /// <summary>The currents' shimmer (CurrentView): the map of them over her plane, and each one's roll and strength.</summary>
+    public void SetCurrents(Texture2D? map, Vector2[] flows, int count)
+    {
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("current_map"), map);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("current_ids"), map);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("current_flows"), flows);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("current_count"), count);
+    }
 
     /// <summary>The swells in the water round her (WaterSwells): where, how old and strong, and the way she was going.</summary>
     public void SetSwells(OctoShoots.Game.Fx.WaterSwells swells)
