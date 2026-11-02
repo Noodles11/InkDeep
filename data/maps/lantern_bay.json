@@ -1,0 +1,32 @@
+// Lantern Bay (docs/RPG-PROPOSAL.md §2.1): the last clean water, where every session starts.
+// Coordinates on the 140 m square (x east, y south); the rim is the outer 8 m.
+{
+  "name": "lantern_bay",
+  "title": "Lantern Bay",
+  "seed": "LANTERNB",
+  "depth": 1,
+  "menace": 0,
+  "haven": true,
+  "chambers": [
+    // The lantern post, where she wakes.
+    { "id": "post", "x": 70, "y": 106, "r": 10, "role": "Start" },
+    // The lagoon: the bay's heart.
+    { "id": "lagoon", "x": 70, "y": 70, "r": 16, "role": "Main" },
+    // The current station: the way out to the reef.
+    { "id": "station", "x": 70, "y": 28, "r": 10, "role": "Exit" },
+    // The commune, where the freed come home.
+    { "id": "commune", "x": 110, "y": 64, "r": 12, "role": "Branch" },
+    // The market, with the shell shop's cave off it.
+    { "id": "market", "x": 30, "y": 66, "r": 10, "role": "Branch" }
+  ],
+  "tunnels": [
+    { "a": "post", "b": "lagoon", "width": 9 },
+    { "a": "lagoon", "b": "station", "width": 8 },
+    { "a": "lagoon", "b": "commune", "width": 7, "kind": "Side" },
+    { "a": "lagoon", "b": "market", "width": 7, "kind": "Side" },
+    { "a": "commune", "b": "station", "width": 5, "kind": "Side" }
+  ],
+  "rooms": [
+    { "kind": "Shop", "from": "market", "angle": 100, "distance": 14 }
+  ]
+}

@@ -248,6 +248,29 @@ public partial class TopDownMain : Node3D
     /// <summary>Verification: the first seal starts with this many hits less one, and takes the last a second in (0: off).</summary>
     int _dbgSeal;
     bool _autopilot, _autoDive, _calm;
+    /// <summary>
+    /// Where on the open reef she is (docs/RPG-PROPOSAL.md §2): Lantern Bay, a region, or a leak cave behind one of a
+    /// region's mouths; Run is the old run of seeded levels. From the title's Lantern Bay, or `--reef=bay|shallows|cave`.
+    /// </summary>
+    ReefPlace _place = ReefPlace.Run;
+    string _region = OpenReef.FirstRegion;
+    int _mouth = -1, _regionMouths;
+    /// <summary>The jelly she is (the save's, or a verification one that is never saved).</summary>
+    Jelly? _jelly;
+    bool _jellySaved;
+    bool Reef => _place != ReefPlace.Run;
+    PortalView _portals = null!;
+    // The ride on a current (docs/RPG-PROPOSAL.md §3): she is swept off and up as the place dissolves round her, the next
+    // being made meanwhile; then she comes down into it from above and settles in its water.
+    bool _riding, _arriving, _portalsArmed;
+    float _rideTime, _arriveTime;
+    Task<LevelShape>? _rideTask;
+    ReefPlace _rideTo;
+    string _rideRegion = "";
+    int _rideMouth = -1;
+    Func<LevelMap, System.Numerics.Vector2?>? _rideArrive;
+    System.Numerics.Vector2 _rideDir, _rideFrom;
+    const float RideLeast = 2.4f, RideSpeed = 16f, RideLift = 2.5f, ArriveSeconds = 1.4f, ArriveDrift = 6f;
     List<System.Numerics.Vector2> _route = new();
     int _routeProgress;
     string? _captureDir;
@@ -318,6 +341,8 @@ public partial class TopDownMain : Node3D
         AddChild(_adventure);
         _springs = new SpringView();
         AddChild(_springs);
+        _portals = new PortalView();
+        AddChild(_portals);
         _vapour = new InkVapour();
         AddChild(_vapour);
         _blight.Vapour = _vapour;
@@ -363,6 +388,13 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--level=") && int.TryParse(Value("--level="), out int l)) _id = _id with { Level = Math.Clamp(l, 1, 5) };
             else if (arg == "--dive") _autoDive = true;
             else if (arg == "--calm") _calm = true;
+            else if (arg.StartsWith("--reef="))
+                (_place, _mouth) = Value("--reef=") switch
+                {
+                    "cave" => (ReefPlace.Cave, 0),
+                    "bay" => (ReefPlace.Bay, -1),
+                    _ => (ReefPlace.Region, -1),
+                };
             else if (arg.StartsWith("--at=")) _startAt = Value("--at=");
             else if (arg == "--autopilot") _autopilot = true;
             else if (arg.StartsWith("--boss-hp=") && float.TryParse(Value("--boss-hp="), NumberStyles.Float, CultureInfo.InvariantCulture, out float bhp)) _bossHp = bhp;
@@ -426,11 +458,23 @@ public partial class TopDownMain : Node3D
         {
             _customSeed = OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--seed="));
             _recorder = new PlaneProfileRecorder(new Profile());
+            // Verification on the open reef: a jelly of its own, never saved.
+            if (Reef) _jelly = new Jelly { Name = "Clementine", Seed = _seed.ToString() };
             return;
         }
         RunLaunch.Pending = null;
         _persist = true;
         _recorder = new PlaneProfileRecorder(GameSave.Current.Profile);
+        if (mode == LaunchMode.Reef && RunLaunch.Jelly >= 0 && RunLaunch.Jelly < GameSave.Current.Jellies.Count)
+        {
+            _jelly = GameSave.Current.Jellies[RunLaunch.Jelly];
+            _jellySaved = true;
+            _place = ReefPlace.Bay;
+            SeedCode.TryParse(_jelly.Seed, out _seed);
+            _id = BayId;
+            RunLaunch.Jelly = -1;
+            return;
+        }
         if (mode == LaunchMode.Continue && GameSave.Current.Run is { } saved && SeedCode.TryParse(saved.Seed, out var seed))
         {
             _seed = seed;
@@ -466,6 +510,11 @@ public partial class TopDownMain : Node3D
     /// <summary>Saves the run as it stands at the start of this level (continuing puts her back here).</summary>
     void SaveRun()
     {
+        if (Reef)
+        {
+            SaveJelly();
+            return;
+        }
         if (!_persist || _debugRun || _run is null) return;
         GameSave.Current.Run = RunRecord();
         GameSave.Write();
@@ -500,14 +549,52 @@ public partial class TopDownMain : Node3D
 
     void StartFirstLevel()
     {
-        FillFirstSplash(_splash, _seed, _customSeed, _id, _resume, _catalog, _tuning);
+        if (Reef && _jelly is not null) FillBaySplash(_splash, _jelly);
+        else FillFirstSplash(_splash, _seed, _customSeed, _id, _resume, _catalog, _tuning);
         if (RunLaunch.Frame is { } frame) _splash.Over(frame);
         RunLaunch.Frame = null;
         _splash.Modulate = Colors.White;
         _splash.Visible = true;
         // The title has it under way when it started the run.
-        _firstMap = RunLaunch.Shaping is { } made && made.Seed.Equals(_seed) && made.Id == _id && made.Luck == Luck ? made.Shape : Shape(_id);
+        _firstMap = RunLaunch.Shaping is { } made && made.Seed.Equals(_seed) && made.Id == _id && made.Luck == Luck ? made.Shape
+            : Reef ? ShapePlace(_place, _region, _mouth) : Shape(_id);
         RunLaunch.Shaping = null;
+    }
+
+    /// <summary>The loading page as a jelly wakes in Lantern Bay.</summary>
+    public static void FillBaySplash(LoadingSplash splash, Jelly jelly)
+    {
+        var stats = new List<(string, string)>
+        {
+            ("Level", $"{jelly.Level}"),
+            ("Carrying", $"{jelly.Passives.Count} pearls · {jelly.Shells} shells"),
+            ("Leaks sealed", $"{jelly.Sealed.Values.Sum()}"),
+        };
+        splash.Fill(jelly.Name, stats, "Waking at the lantern post, Lantern Bay");
+    }
+
+    /// <summary>Lantern Bay's level id (its map's).</summary>
+    public static LevelId BayId => LoadMap(OpenReef.Bay).Id;
+
+    /// <summary>Lantern Bay, made and readied off the main thread.</summary>
+    public static Task<LevelShape> ShapeBay()
+    {
+        var hand = LoadMap(OpenReef.Bay);
+        return Task.Run(() => LevelShape.Prepare(TopDownGenerator.FromHand(hand)));
+    }
+
+    /// <summary>A place of the open reef, made and readied off the main thread: the bay, a region, or a region mouth's leak cave.</summary>
+    Task<LevelShape> ShapePlace(ReefPlace place, string region, int mouth)
+    {
+        if (place == ReefPlace.Bay) return ShapeBay();
+        var hand = LoadMap(region);
+        if (place == ReefPlace.Region) return Task.Run(() => LevelShape.Prepare(TopDownGenerator.FromHand(hand)));
+        var jelly = _jelly!;
+        int cave = OpenReef.CaveBehind(jelly, region, Math.Max(mouth, 0));
+        int level = OpenReef.CaveLevel(jelly, region, hand.Tier);
+        var id = OpenReef.CaveId(region, hand.Depth, cave);
+        if (!SeedCode.TryParse(jelly.Seed, out var seed)) seed = _seed;
+        return Task.Run(() => LevelShape.Prepare(TopDownGenerator.GenerateCave(seed, id, hand.Menace, level)));
     }
 
     /// <summary>The loading page of a run's first level.</summary>
@@ -551,6 +638,9 @@ public partial class TopDownMain : Node3D
             SaveMoment();
             GameSave.Write();
         }
+        else SaveJelly();
+        // The title's jelly is Clementine again.
+        if (Reef) OctoShoots.Game.Fx.HerColor.Load(force: true);
         GetTree().ChangeSceneToFile(RunLaunch.TitleScene);
     }
 
@@ -571,6 +661,12 @@ public partial class TopDownMain : Node3D
     /// </summary>
     void SaveMoment()
     {
+        // The open reef keeps her jelly, not the moment.
+        if (Reef)
+        {
+            SaveJelly();
+            return;
+        }
         if (!_persist || _debugRun || GameSave.Current.Run is not { } saved) return;
         if (saved.Cycle != _id.Cycle || saved.Depth != _id.Depth || saved.Level != _id.Level) return;
         saved.State = Moment();
@@ -886,6 +982,13 @@ public partial class TopDownMain : Node3D
         if (_persist) GameSave.Write();
     }
 
+    /// <summary>A map drawn by hand (data/maps/&lt;name&gt;.json).</summary>
+    static HandLayout LoadMap(string name)
+    {
+        using var file = FileAccess.Open($"res://data/maps/{name}.json", FileAccess.ModeFlags.Read);
+        return HandLayout.FromJson(file.GetAsText());
+    }
+
     static ItemCatalog? LoadCatalog()
     {
         try
@@ -913,7 +1016,7 @@ public partial class TopDownMain : Node3D
             _seed = parsed;
         }
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        var shape = LevelShape.Prepare(Abyss(TopDownGenerator.Generate(new RunStreams(_seed), _id, luck: Luck)));
+        var shape = Reef ? ShapePlace(_place, _region, _mouth).Result : LevelShape.Prepare(Abyss(TopDownGenerator.Generate(new RunStreams(_seed), _id, luck: Luck)));
         ShowLevel(shape, keepRun, watch.ElapsedMilliseconds);
     }
 
@@ -921,7 +1024,7 @@ public partial class TopDownMain : Node3D
     /// A level shown afresh (a new run, a resumed one, a regenerated one): the world back at the origin, no level below
     /// until it is made.
     /// </summary>
-    void ShowLevel(LevelShape shape, bool keepRun, long ms)
+    void ShowLevel(LevelShape shape, bool keepRun, long ms, System.Numerics.Vector2? arriveAt = null)
     {
         ResetMenu();
         _intro.Stop();
@@ -931,7 +1034,7 @@ public partial class TopDownMain : Node3D
         _camera.SetWorldOrigin(_origin);
         _level.Show(shape);
         _level.Place(Vector3.Zero, _origin);
-        EnterLevel(shape.Map, keepRun, ms);
+        EnterLevel(shape.Map, keepRun, ms, arriveAt);
         // A verification start applies to the first level only (later levels begin at their start).
         PlaceAt(_startAt);
         _startAt = null;
@@ -1049,6 +1152,8 @@ public partial class TopDownMain : Node3D
         ApplyLook();
         // Where the sun reaches into this level's water (its god rays and caustics end at the rock that shades them).
         OctoShoots.Game.Fx.SunMap.Build(map, OctoShoots.Game.Fx.SunLight.Direction);
+        if (Reef) _id = map.Id;
+        if (map.Station) _regionMouths = map.Mouths.Count;
         if (!keepRun || _run is null)
         {
             ResetRunTotals();
@@ -1057,8 +1162,10 @@ public partial class TopDownMain : Node3D
             // Her earned achievements are the run's unlocks (the profile's own set: one earned mid-run applies at once).
             _run.Unlocked = _recorder.Profile.Achievements;
             _achievements = new PlaneAchievements(_recorder.Profile, _customSeed);
+            // The open reef: she is her jelly, with all she keeps.
+            if (Reef && _jelly is { } jelly) LoadJelly(jelly);
             // Every run starts with these (a resumed one brings back what it carried).
-            if (_resume is null)
+            else if (_resume is null)
                 foreach (string id in PlaneRun.StartingPearls)
                     if (_catalog?.Contains(id) == true) _run.Add(id);
             foreach (string id in _startPearls)
@@ -1089,10 +1196,12 @@ public partial class TopDownMain : Node3D
                 _resume = null;
             }
             // The tutorial is not a run of its own: the run is counted when she dives out of it (TutorialPassed).
-            _recorder.StartRun(_seed.ToString(), _customSeed, _run.Items, continuing || _id.IsTutorial);
+            // The open reef has no runs to count.
+            _recorder.StartRun(_seed.ToString(), _customSeed, _run.Items, continuing || _id.IsTutorial || Reef);
         }
         _run.Level = _id;
-        _world = new PlaneWorld(_map, _tuning, _run, DebugBoss());
+        _world = new PlaneWorld(_map, _tuning, _run, Reef ? PlaneOptions.OpenReef : DebugBoss());
+        _portals.Show(map);
         // A flounder's patch is open sand: no coral head of the view's scatter on it.
         _level.KeepClear(_world.Flounders.Select(f => f.Home), 2.2f);
         _anchors = _world.SaveAnchors(_recorder.Profile, _achievements, _recorder);
@@ -1176,16 +1285,188 @@ public partial class TopDownMain : Node3D
         // The level's title, for a moment as she arrives: what the level is about (its template's name, DESIGN-TOPDOWN
         // §4.1; the default template has none), else the depth's name on its first level, else the level; where it is
         // over it (a new depth's first level names the depth too).
-        string where = _id.Level == 1 ? $"{ReefLook.For(_id.Depth).Name} · {_id}" : _id.ToString();
-        string title = _map.Template is { Name.Length: > 0 } template ? template.Name : _id.Level == 1 ? ReefLook.For(_id.Depth).Name : $"Level {_id.Level}";
+        string region = Reef ? LoadMap(_region).Title : "";
+        string where = _map.Haven ? "Safe water" : _map.Station ? "The open reef" : _map.LeakCave ? region : _id.Level == 1 ? $"{ReefLook.For(_id.Depth).Name} · {_id}" : _id.ToString();
+        string title = _map.Station ? _map.Title : _map.LeakCave ? $"Leak cave · level {_map.CaveLevel}" : _map.Template is { Name.Length: > 0 } template ? template.Name : _id.Level == 1 ? ReefLook.For(_id.Depth).Name : $"Level {_id.Level}";
         _hud.ShowTitle(title, where);
         // Heard through deeper water: more muffled.
         _sfx.SetDepth(_id.ShownDepth);
         // The Tab map's title: the level's template (else what the arrival card calls it), and where it is.
         _fullMap.Title = title;
-        _fullMap.Subtitle = _id.ToString();
+        _fullMap.Subtitle = Reef ? where : _id.ToString();
         GD.Print($"Top-down level {_seed} {_id}: attempt {_map.Attempt + 1}, {ms} ms, {_map.Pois.Count} POIs{(_map.HasBoss ? ", boss" : "")}, {_map.Canopies.Count} canopy pieces, {_map.Decor.Count} decor{(_world.Options.Adventure ? $", {_world.Leaks.Count} leaks, {_world.ReefFish.Count} fish" : "")}");
-        _belowTask = Shape(LevelPlan.NextOf(_seed, _id), background: true);
+        if (!Reef) _belowTask = Shape(LevelPlan.NextOf(_seed, _id), background: true);
+    }
+
+    /// <summary>
+    /// She is her jelly: her pearls (a new jelly's first, the run's starting ones), her level, experience and skill
+    /// points, her shells; full of health.
+    /// </summary>
+    void LoadJelly(Jelly jelly)
+    {
+        // Her look: her bell and arms, her glow (her light, her shots), her tentacle tips, her gonads' shape.
+        OctoShoots.Game.Fx.HerColor.SetLook(jelly.Look);
+        bool fresh = jelly.Played.Length == 0 && jelly.Passives.Count == 0 && jelly.Actives.Count == 0;
+        foreach (string id in fresh ? PlaneRun.StartingPearls : jelly.Passives.Concat(jelly.Actives))
+            if (_catalog?.Contains(id) == true && !_run!.Items.Contains(id)) _run.Add(id);
+        _run!.Xp = jelly.Xp;
+        _run.XpLevel = Math.Max(jelly.Level, 1);
+        _run.Points = jelly.Points;
+        foreach (var (name, n) in jelly.Skills)
+            if (Enum.TryParse<OctoShoots.Core.Items.Stat>(name, out var stat) && n > 0) _run.Skills[stat] = n;
+        _run.Refresh();
+        _run.Hp = _run.MaxHp;
+        _run.Shells = jelly.Shells;
+    }
+
+    /// <summary>What she has now is her jelly's: written to the save (a verification jelly only in memory).</summary>
+    void SaveJelly()
+    {
+        if (_jelly is not { } jelly || _run is null) return;
+        bool Active(string id) => _catalog is not null && _catalog.TryGet(id, out var item) && item.Kind == OctoShoots.Core.Items.ItemKind.Active;
+        jelly.Level = _run.XpLevel;
+        jelly.Xp = _run.Xp;
+        jelly.Points = _run.Points;
+        jelly.Skills = _run.Skills.ToDictionary(k => k.Key.ToString(), k => k.Value);
+        jelly.Shells = _run.Shells;
+        jelly.Passives = _run.Items.Where(id => !Active(id)).ToList();
+        foreach (string id in _run.Items.Where(Active))
+            if (!jelly.Actives.Contains(id)) jelly.Actives.Add(id);
+        if (_run.Items.FirstOrDefault(Active) is { } held) jelly.Slots[0] = held;
+        jelly.Played = DateTime.Now.ToString("s", CultureInfo.InvariantCulture);
+        if (_jellySaved && !_debugRun) GameSave.Write();
+    }
+
+    /// <summary>
+    /// Where a way through takes her, if she is in one: a station (the bay's to the first region, a region's home to the
+    /// bay), a region's cave mouth (down into its leak cave), a leak cave's mouth (back out, at that mouth). None until
+    /// she has swum clear of the one she came out of.
+    /// </summary>
+    (ReefPlace To, string Region, int Mouth, Func<LevelMap, System.Numerics.Vector2?> Arrive)? WayThrough()
+    {
+        if (!_portalsArmed)
+        {
+            _portalsArmed = !_world.AtStation && _world.AtMouth() < 0;
+            if (!_portalsArmed) return null;
+        }
+        if (_world.AtStation)
+            return _place == ReefPlace.Bay
+                ? (ReefPlace.Region, OpenReef.FirstRegion, -1, _ => null)
+                : (ReefPlace.Bay, _region, -1, m => m.Exit.Position);
+        if (_place == ReefPlace.Region && _world.AtMouth() is var mouth and >= 0)
+            return (ReefPlace.Cave, _region, mouth, _ => null);
+        if (_place == ReefPlace.Cave && _world.LeavingCave)
+        {
+            int back = _mouth;
+            return (ReefPlace.Region, _region, back, m => back >= 0 && back < m.Mouths.Count ? m.Mouths[back] : null);
+        }
+        return null;
+    }
+
+    /// <summary>She is swept off on the current: the next place starts being made.</summary>
+    void BeginRide(ReefPlace to, string region, int mouth, Func<LevelMap, System.Numerics.Vector2?> arrive)
+    {
+        _accumulator = 0;
+        AddToRun();
+        SaveJelly();
+        _rideTo = to;
+        _rideRegion = region;
+        _rideMouth = mouth;
+        _rideArrive = arrive;
+        _rideTask = ShapePlace(to, region, mouth);
+        _riding = true;
+        _rideTime = 0f;
+        _rideFrom = _world.Player.Position;
+        var way = _world.Player.Velocity;
+        _rideDir = way.LengthSquared() > 0.25f ? System.Numerics.Vector2.Normalize(way) : -System.Numerics.Vector2.UnitY;
+        _bell.Kick();
+        _hud.Diving = true;
+        _sfx.PlayPitched("dash", 0.6f, -6f);
+        if (_captureDir is not null) GD.Print($"Ride to {to} {region} {mouth} begins at frame {_frame}");
+    }
+
+    /// <summary>
+    /// One frame of the ride: she gathers speed with the current and is lifted off the floor; the place dissolves round
+    /// where she was, its life fading with it, until only water and streaming snow are left. Once the next place is made
+    /// (and the ride has run its least), she arrives.
+    /// </summary>
+    void StepRide(float dt)
+    {
+        _rideTime += dt;
+        float t = _rideTime;
+        float speed = RideSpeed * Ease(t / 0.6f);
+        var p = _world.Player;
+        p.PrevPosition = p.Position;
+        p.Position += _rideDir * speed * dt;
+        p.Velocity = _rideDir * speed;
+        float lift = RideLift * Ease(t / 0.8f);
+        _bell.DiveDepth = -lift;
+        _bell.Sync(_world, 1f, dt);
+        SyncLantern();
+        var focus = new Vector3(p.Position.X, LevelMap.SwimBand + lift, p.Position.Y);
+        _camera.Track(focus, dt);
+        _snow.Tick(dt, focus + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
+        var from = new Vector2(_rideFrom.X, _rideFrom.Y);
+        float radius = Mathf.Lerp(-3f, 160f, Mathf.Pow(Ease(t / 1.6f), 1.5f));
+        _level.SetPortal(from, radius, 1);
+        float stay = 1f - Ease(t / 1.2f);
+        FadeLevelLife(from, radius, stay);
+        _portals.Visible = stay > 0.05f;
+        _corruption.Fade(stay);
+        _minimap.DiveOut(Ease(t / 0.9f));
+        _hud.Elapsed = _elapsed;
+        _hud.Track(_world, _catalog, dt);
+        if (t < RideLeast || _rideTask is not { IsCompleted: true } task) return;
+        _rideTask = null;
+        _riding = false;
+        if (task.IsFaulted)
+        {
+            GD.PushError(task.Exception?.ToString());
+            return;
+        }
+        _place = _rideTo;
+        _region = _rideRegion;
+        _mouth = _rideMouth;
+        var shape = task.Result;
+        var at = _rideArrive?.Invoke(shape.Map);
+        _bell.DiveDepth = -LevelMap.LevelDrop;
+        ShowLevel(shape, keepRun: true, (long)(t * 1000f), at);
+        foreach (var view in LevelLife) ResetFade(view);
+        _portals.Visible = true;
+        _minimap.Arrive();
+        _portalsArmed = false;
+        _arriving = true;
+        _arriveTime = 0f;
+        if (_captureDir is not null) GD.Print($"Ride arrives at {_place} at frame {_frame}");
+    }
+
+    /// <summary>
+    /// She comes down into the new place from above, still carried the way the current took her, the place opening out
+    /// round her; then she settles in its water and is hers to swim.
+    /// </summary>
+    void StepArrive(float dt)
+    {
+        _arriveTime += dt;
+        float k = Ease(_arriveTime / ArriveSeconds);
+        _bell.DiveDepth = -LevelMap.LevelDrop * (1f - k);
+        var p = _world.Player;
+        var drift = _rideDir * (ArriveDrift * (1f - k) * dt);
+        p.PrevPosition = p.Position;
+        if (_world.Clear(p.Position + drift, _world.Radius)) p.Position += drift;
+        p.Velocity = _rideDir * ArriveDrift * (1f - k);
+        _bell.Sync(_world, 1f, dt);
+        SyncLantern();
+        _camera.Track(Focus(1f) + Vector3.Up * (LevelMap.LevelDrop * (1f - k) * 0.5f), dt);
+        _snow.Tick(dt, Focus(1f) + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
+        _level.SetPortal(new Vector2(p.Position.X, p.Position.Y), Mathf.Lerp(0f, 160f, Mathf.Pow(Ease(_arriveTime / ArriveSeconds), 1.5f)), 2);
+        _hud.Elapsed = _elapsed;
+        _hud.Track(_world, _catalog, dt);
+        if (_arriveTime < ArriveSeconds) return;
+        _arriving = false;
+        _bell.DiveDepth = 0f;
+        _hud.Diving = false;
+        _level.SetPortal(Vector2.Zero, 0f, 0);
+        p.Velocity = _rideDir * ArriveDrift * 0.5f;
     }
 
     /// <summary>Verification: the autopilot's way to the exit.</summary>
@@ -1319,6 +1600,8 @@ public partial class TopDownMain : Node3D
             "cave" => _map.Caves.Select(c => (System.Numerics.Vector2?)(c.Mouth + c.Facing * 5f)).FirstOrDefault(),
             "exit" => _map.Exit.Position + new System.Numerics.Vector2(0f, _map.Exit.Radius + 3f),
             "hole" => _map.Exit.Position,
+            // Six metres east of a region's first cave mouth (with --dbg-steer=-1,0 she swims into it).
+            "mouth" => _map.Mouths.Count > 0 ? _map.Mouths[0] + new System.Numerics.Vector2(6f, 0f) : null,
             // Just west of the biggest kelp bed (with --dbg-steer=1,0 she swims straight through it).
             "kelp-west" => _map.Kelp.OrderByDescending(k => k.Roots.Count).Select(k => (System.Numerics.Vector2?)(k.Center - new System.Numerics.Vector2(k.Radius + 2f, 0f))).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
             // In the biggest kelp bed, a little in from its edge.
@@ -1647,6 +1930,13 @@ public partial class TopDownMain : Node3D
             Capture();
             return;
         }
+        if (_riding || _arriving)
+        {
+            if (_riding) StepRide(dt);
+            else StepArrive(dt);
+            Capture();
+            return;
+        }
         if (_transition != Transition.None)
         {
             StepTransition(dt);
@@ -1748,6 +2038,12 @@ public partial class TopDownMain : Node3D
                 CorruptionEvent(e);
                 CurseEvent(e);
                 if (e.Type == PlaneEventType.Dived) dived = true;
+                // A leak cave sealed: a fresh one waits behind its mouth, and the region counts it.
+                else if (e.Type == PlaneEventType.LeakSealed && _place == ReefPlace.Cave && _jelly is { } sealer)
+                {
+                    OpenReef.Sealed(sealer, _region, Math.Max(_mouth, 0), _regionMouths);
+                    SaveJelly();
+                }
                 else if (e.Type == PlaneEventType.PlayerDefeated) dived = false;
                 else if (e.Type == PlaneEventType.PearlTouched)
                 {
@@ -1923,6 +2219,12 @@ public partial class TopDownMain : Node3D
         if (_world.Defeated)
         {
             BeginDeath();
+            return;
+        }
+        // The open reef: a way through takes her on the current.
+        if (Reef && WayThrough() is { } way)
+        {
+            BeginRide(way.To, way.Region, way.Mouth, way.Arrive);
             return;
         }
         if (steps == 8) _accumulator = 0;
@@ -2280,7 +2582,7 @@ public partial class TopDownMain : Node3D
         AddToRun();
         _recorder.RunDied(_world, _runTime);
         // The run is over: nothing to continue (a debug run leaves the save as it was).
-        if (_persist && !_debugRun)
+        if (_persist && !_debugRun && !Reef)
         {
             GameSave.Current.Run = null;
             GameSave.Write();
@@ -2296,7 +2598,20 @@ public partial class TopDownMain : Node3D
             ("Seed", _seed.ToString()),
         };
         _deathSplash = true;
-        _splash.Fill("The corruption took Clementine", stats, "Her meter filled with ink. Everything she carried is lost.");
+        if (Reef && _jelly is { } lost)
+        {
+            // Her pearls and the shells on her stay where she fell; her level, her actives and her name are hers.
+            SaveJelly();
+            int pearls = lost.Passives.Count, shells = lost.Shells;
+            lost.Passives.Clear();
+            lost.Shells = 0;
+            if (_jellySaved) GameSave.Write();
+            _splash.Fill($"The Leak dimmed {lost.Name}", new List<(string, string)> { ("Lost", $"{pearls} pearls · {shells} shells"), ("Kept", $"level {lost.Level} · {lost.Actives.Count} active pearls") },
+                "She wakes at the lantern post in Lantern Bay.");
+            _place = ReefPlace.Bay;
+            _mouth = -1;
+        }
+        else _splash.Fill("The corruption took Clementine", stats, "Her meter filled with ink. Everything she carried is lost.");
         OpenSplash();
     }
 
@@ -2323,7 +2638,7 @@ public partial class TopDownMain : Node3D
     void StartLoading()
     {
         DropBelow();
-        _nextMap = Shape(_id);
+        _nextMap = Reef ? ShapePlace(_place, _region, _mouth) : Shape(_id);
         _transition = Transition.Loading;
         _transitionTime = 0f;
     }
@@ -2356,7 +2671,8 @@ public partial class TopDownMain : Node3D
                 if (_deathSplash)
                 {
                     // A new run: straight in.
-                    Say($"New run · seed {_seed}");
+                    if (!Reef) Say($"New run · seed {_seed}");
+                    _deathSplash = false;
                     _transition = Transition.FadingOut;
                 }
                 else
@@ -2377,7 +2693,12 @@ public partial class TopDownMain : Node3D
                 if (!Confirmed()) return;
                 // The click that closes the splash must not fire a shot.
                 _fireBlocked = true;
-                if (_deathSplash)
+                if (_deathSplash && Reef)
+                {
+                    _splash.Working("Waking at the lantern post");
+                    StartLoading();
+                }
+                else if (_deathSplash)
                 {
                     // A clean new game: new seed, the first level, no pearls or shells.
                     _seed = SeedCode.NewRandom();
@@ -3226,3 +3547,6 @@ public partial class TopDownMain : Node3D
         if (_captureFrames.Count == 0) GetTree().Quit();
     }
 }
+
+/// <summary>Where on the open reef she is (docs/RPG-PROPOSAL.md §2); Run: the old run of seeded levels.</summary>
+public enum ReefPlace { Run, Bay, Region, Cave }

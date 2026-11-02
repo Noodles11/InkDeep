@@ -85,9 +85,23 @@ public static class TopDownGenerator
     /// <param name="cosmeticSalt">Test hook: changes only the cosmetic stream (decoration), to prove it never touches gameplay.</param>
     /// <param name="background">Made while she plays (the level below): on one thread, leaving the rest to the game.</param>
     /// <param name="luck">Her luck as she comes to the level (LuckTuning): it may add a clam room, bring a spring.</param>
-    public static LevelMap Generate(RunStreams streams, LevelId id, Action<string>? log = null, string cosmeticSalt = "", bool background = false, float luck = 0f)
+    public static LevelMap Generate(RunStreams streams, LevelId id, Action<string>? log = null, string cosmeticSalt = "", bool background = false, float luck = 0f) =>
+        Generate(streams, LevelPlan.For(streams.Seed, id, luck), log, cosmeticSalt, luck);
+
+    /// <summary>
+    /// A leak cave (docs/RPG-PROPOSAL.md §2.3): a seeded level from its own plan (LevelPlan.ForCave), its leak at the dead
+    /// end of the main path where the way down would be.
+    /// </summary>
+    public static LevelMap GenerateCave(SeedCode seed, LevelId id, float menace, int level)
     {
-        var plan = LevelPlan.For(streams.Seed, id, luck);
+        var map = Generate(new RunStreams(seed), LevelPlan.ForCave(seed, id, menace), null, "", 0f);
+        map.CaveLevel = level;
+        return map;
+    }
+
+    static LevelMap Generate(RunStreams streams, LevelPlan plan, Action<string>? log, string cosmeticSalt, float luck)
+    {
+        var id = plan.Id;
         var reasons = new List<string>();
         for (int attempt = 0; attempt < MaxAttempts; attempt++)
         {
@@ -96,7 +110,7 @@ public static class TopDownGenerator
             {
                 Seed = streams.Seed.Value, Id = id, Attempt = attempt, HasBoss = plan.HasBoss, Rift = plan.Rift, Menace = plan.Menace,
                 EntryStampSeed = plan.EntryStamp, ExitStampSeed = plan.ExitStamp, EntryFromArena = plan.EntryFromArena,
-                Template = plan.Template, Luck = luck,
+                Template = plan.Template, Luck = luck, LeakCave = plan.LeakCave,
             };
             Array.Fill(map.Heights, -PathDepth);
             // The wall tops come from the reef prototype's terrain for this text (the run's first try: the seed itself).
@@ -125,6 +139,54 @@ public static class TopDownGenerator
     }
 
     /// <summary>
+    /// A map drawn by hand (<see cref="HandLayout"/>, docs/RPG-PROPOSAL.md §2): its cave as drawn, then the seeded level's
+    /// own stages on it — the rock, its rooms, arches and passes, the decoration and the kelp — but no seals, pickups or
+    /// spawns. A haven has no shaft. One attempt: a map that cannot be built is a mistake in the map.
+    /// </summary>
+    public static LevelMap FromHand(HandLayout hand)
+    {
+        if (!SeedCode.TryParse(hand.Seed, out var seed)) throw new InvalidOperationException($"The map {hand.Name} has no seed code ({hand.Seed})");
+        var streams = new RunStreams(seed);
+        var id = hand.Id;
+        Rng Stage(string name) => streams.TopDown(id, 0, name);
+        var map = new LevelMap { Seed = seed.Value, Id = id, Menace = hand.Menace, Haven = hand.Haven, Title = hand.Title, Station = true };
+        foreach (var m in hand.Mouths) map.Mouths.Add(new Vector2(m.X, m.Y));
+        Array.Fill(map.Heights, -PathDepth);
+        uint noiseSeed = (uint)(Stage("noise").NextU64() >> 32);
+        var (cave, why) = CaveLayout.FromHand(hand, Stage("cave"), RadiusOf);
+        if (cave is null) throw new InvalidOperationException($"The map {hand.Name} cannot be built: {why}");
+        var spurDirs = new Dictionary<int, Vector2>();
+        RecordCave(map, cave, StartRadius, StartRadius, spurDirs);
+        var strata = new WallStrata(Stage("strata"));
+        var tops = RaiseCaveWalls(map, cave.Open, hand.Seed, Stage("topo"), strata);
+        if (BuildFeatures(map, Stage("features"), spurDirs, strata) is { } problem)
+            throw new InvalidOperationException($"The map {hand.Name} cannot be built: {problem}");
+        FlattenSeabed(map);
+        SoftenSlopes(map, Stage("slopes"), strata);
+        // Its exit is a current station, not a way down.
+        map.Shaft = NoShaft;
+        ClampHeights(map);
+        RoofShortcuts(map);
+        SealWalls(map, tops, strata);
+        Decorate(map, Stage("cosmetic"), noiseSeed, strata);
+        PlaceKelp(map, Stage("kelp"));
+        ClearSeals(map);
+        Mountains.Fill(map);
+        foreach (var bed in map.Kelp)
+            for (int k = bed.Roots.Count - 1; k >= 0; k--)
+                if (map.HeightAt(bed.Roots[k]) > LevelMap.BlockHeight - 0.2f)
+                {
+                    bed.Roots.RemoveAt(k);
+                    bed.Lengths.RemoveAt(k);
+                }
+        map.Kelp.RemoveAll(bed => bed.Roots.Count < KelpLeast);
+        return map;
+    }
+
+    /// <summary>No way down: a shaft off the map, where nothing finds it.</summary>
+    static readonly Shaft NoShaft = new(new Vector2(-100f, -100f), Vector2.UnitX, 0.01f, 0.01f);
+
+    /// <summary>
     /// Runs the stages — POIs on the bare seabed (the start and the exit where their stamps fit), the route canyons
     /// between them out through the stamps' openings, the labyrinth of side canyons, the walls raised around all of it,
     /// the stamps pinned in, caves, passes and arches, the stamps pinned again, the shaft cut, then decoration, loot and
@@ -144,7 +206,9 @@ public static class TopDownGenerator
         if (features is not null) return features;
         FlattenSeabed(map);
         SoftenSlopes(map, Stage("slopes"), strata);
-        CutShaft(map, Stage("shaft"));
+        // A leak cave has no way down: its leak lies where the shaft would be.
+        if (map.LeakCave) map.Shaft = NoShaft;
+        else CutShaft(map, Stage("shaft"));
         ClampHeights(map);
         RoofShortcuts(map);
         PlaceSeals(map, plan, Stage("seals"));
@@ -198,8 +262,15 @@ public static class TopDownGenerator
         var (cave, why) = CaveLayout.Build(rng, plan.HasBoss, plan.EntryFromArena, kinds, RadiusOf, plan.Template?.Layout);
         open = cave?.Open ?? Array.Empty<bool>();
         if (cave is null) return why;
-        map.Pois.Add(new Poi { Kind = PoiKind.Start, Position = cave.Start.At, Radius = plan.EntryFromArena ? ArenaRadius : StartRadius });
-        map.Pois.Add(new Poi { Kind = PoiKind.Exit, Position = cave.Exit.At, Radius = plan.HasBoss ? ArenaRadius : StartRadius });
+        RecordCave(map, cave, plan.EntryFromArena ? ArenaRadius : StartRadius, plan.HasBoss ? ArenaRadius : StartRadius, spurDirs);
+        return null;
+    }
+
+    /// <summary>The cave recorded on the map: the start and the exit, its places, its tunnels as corridors (a room's own as its spur), its chambers as plazas.</summary>
+    static void RecordCave(LevelMap map, CaveLayout cave, float startRadius, float exitRadius, Dictionary<int, Vector2> spurDirs)
+    {
+        map.Pois.Add(new Poi { Kind = PoiKind.Start, Position = cave.Start.At, Radius = startRadius });
+        map.Pois.Add(new Poi { Kind = PoiKind.Exit, Position = cave.Exit.At, Radius = exitRadius });
         var spurOf = new Dictionary<CaveLayout.Tunnel, int>();
         foreach (var place in cave.Places)
         {
@@ -219,7 +290,6 @@ public static class TopDownGenerator
             map.Chambers.Add(new CaveChamber(c.At, c.R, main, c.Role == CaveLayout.Role.Branch && c.Links.Count(l => !l.Room) <= 1));
         }
         AssignNaves(map);
-        return null;
     }
 
     /// <summary>

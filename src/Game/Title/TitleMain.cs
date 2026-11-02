@@ -29,7 +29,9 @@ namespace OctoShoots.Game.Title;
 /// while the first level is shaped. Run with game flags (--seed=, --at=, …) it skips straight to a run.
 /// Review flags: --title-sample (an example profile, never saved), --title-card=stats|pedia|creatures|save|settings|seed,
 /// --title-pick=id (that item focused, then chosen: her shot at it), --dbg-stick=x,y (the left stick held that way),
-/// --title-launch=new|continue (starts that run after a moment; the game then takes --capture), --capture=dir --frames=a,b.
+/// --title-look=glow,arms,tips,gonads (the jelly card's form, e.g. #7FE7FF,#B44FD0,#FF4FA3,star),
+/// --title-launch=new|continue (starts that run after a moment; the game then takes --capture), --title-launch=reef (with
+/// --title-sample: a sample jelly wakes in Lantern Bay), --capture=dir --frames=a,b.
 /// </summary>
 public partial class TitleMain : Node3D
 {
@@ -83,6 +85,13 @@ public partial class TitleMain : Node3D
     MenuShots _shots = null!;
     Control? _inline;
     Control? _card;
+    /// <summary>
+    /// The jelly card open (her look being set): she is drawn close, on the left of the screen, the card on the right, as
+    /// the pause menu frames her in the game. 0 the ring's view → 1 framed.
+    /// </summary>
+    float _dress;
+    bool Dressing => _card is JellyCard;
+    const float DressZoom = 0.33f, DressAt = 0.27f, DressIn = 0.5f, DressOut = 0.35f;
     ColorRect _fade = null!;
     Control _footer = null!;
     LoadingSplash _splash = null!;
@@ -101,6 +110,8 @@ public partial class TitleMain : Node3D
     Vector2? _dbgStick;
     /// <summary>Review: --title-pick=id focuses that item and chooses it a moment in (her shot at it).</summary>
     string? _autoPick;
+    /// <summary>Review: --title-look=glow,arms,tips,gonads sets the jelly card's form (with --title-card=jellies).</summary>
+    JellyLook? _reviewLook;
 
     static readonly string[] TitleOnlyFlags = { "--capture=", "--frames=", "--title", "--no-focus", "--dbg-" };
 
@@ -135,6 +146,8 @@ public partial class TitleMain : Node3D
             else if (arg.StartsWith("--title-card=")) _openCard = Value("--title-card=");
             else if (arg.StartsWith("--title-launch=")) _autoLaunch = Value("--title-launch=");
             else if (arg.StartsWith("--title-pick=")) _autoPick = Value("--title-pick=");
+            else if (arg.StartsWith("--title-look=") && Value("--title-look=").Split(',') is { Length: 4 } look)
+                _reviewLook = new JellyLook { Glow = look[0], Arms = look[1], Tips = look[2], Gonads = look[3] };
             else if (arg.StartsWith("--dbg-stick=") && Value("--dbg-stick=").Split(',') is { Length: 2 } st
                 && float.TryParse(st[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float sx) && float.TryParse(st[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float sy))
                 _dbgStick = new Vector2(sx, sy);
@@ -262,6 +275,8 @@ public partial class TitleMain : Node3D
     System.Numerics.Vector2 SwimInputNow()
     {
         if (_world is null || _route.Count < 3) return default;
+        // Being dressed, she holds still in the water.
+        if (Dressing) return default;
         var pos = _world.Player.Position;
         if (_launching && !Reduced) return pos.X < _channelEnd ? new System.Numerics.Vector2(LaunchSwim, 0f) : default;
         // Advance (or back up) the target once she is near it.
@@ -347,7 +362,10 @@ public partial class TitleMain : Node3D
             _puffers.Sync(_world, dt);
             // Swimming off, the camera eases ahead of her, the water she is going to in the shot.
             if (_launching && !Reduced) _lead = Mathf.Lerp(_lead, LaunchLead(), 1f - Mathf.Exp(-2.8f * dt));
-            _camera.Track(Focus(alpha), dt, look: new Vector3(_lead, 0f, 0f));
+            _dress = Dressing ? Mathf.Min(1f, _dress + dt / DressIn) : Mathf.Max(0f, _dress - dt / DressOut);
+            float framing = Reduced ? (Dressing ? 1f : 0f) : _dress * _dress * (3f - 2f * _dress);
+            _camera.Zoom = Mathf.Lerp(1f, DressZoom, framing);
+            _camera.Track(Focus(alpha), dt, look: new Vector3(_lead + DressShift() * framing, 0f, 0f));
             _shoals.Step(new Vector2(_bell.GlobalPosition.X, _bell.GlobalPosition.Z), dt);
             _camera.SetDeepFish(_shoals);
             _snow.Her(_bell.GlobalPosition, new Vector3(_world.Player.Velocity.X, 0f, _world.Player.Velocity.Y));
@@ -406,6 +424,7 @@ public partial class TitleMain : Node3D
         _shots = new MenuShots();
         _shots.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 
+        AddItem("reef", "Lantern Bay", () => OpenCard("jellies"));
         AddItem("continue", "Continue", () => Launch(LaunchMode.Continue, default));
         AddItem("new", "New run", NewRun);
         AddItem("seeded", "Seeded run", ToggleSeedBox);
@@ -460,7 +479,14 @@ public partial class TitleMain : Node3D
             TitleStyle.Bloom(button.GetParent<Control>(), 0.55f + 0.06f * i++, Reduced);
         }
         _items.First(it => it.Button.GetParent<Control>().Visible).Button.GrabFocus();
-        if (_autoLaunch is { } launch)
+        if (_autoLaunch == "reef" && GameSave.ReadOnly)
+        {
+            // Review: a jelly of the sample save (never written) wakes in the bay.
+            if (GameSave.Current.Jellies.Count == 0)
+                GameSave.Current.Jellies.Add(new Jelly { Name = "Mira", Seed = SeedCode.NewRandom().ToString(), Look = new JellyLook { Glow = "#7FE7FF" } });
+            GetTree().CreateTimer(1.2).Timeout += () => PlayJelly(0);
+        }
+        else if (_autoLaunch is { } launch)
             GetTree().CreateTimer(1.2).Timeout += () => Launch(launch == "continue" ? LaunchMode.Continue : LaunchMode.New, SeedCode.NewRandom());
         if (_autoPick is { } pick && _items.Any(it => it.Id == pick))
         {
@@ -472,6 +498,7 @@ public partial class TitleMain : Node3D
         {
             if (open == "seed") ToggleSeedBox();
             else OpenCard(open);
+            if (_reviewLook is { } look && _card is JellyCard jellies) Callable.From(() => jellies.SetForm(look)).CallDeferred();
         }
     }
 
@@ -607,6 +634,7 @@ public partial class TitleMain : Node3D
     {
         var save = GameSave.Current;
         var p = save.Profile;
+        Item("reef").Detail.Text = save.Current is { } jelly ? $"{jelly.Name} · level {jelly.Level}" : "make your jelly";
         var (cont, contDetail, _) = Item("continue");
         cont.GetParent<Control>().Visible = save.Run is not null;
         if (save.Run is { } run) contDetail.Text = $"{run.Where} · {run.Seed} · {TitleStyle.Clock(run.Elapsed)}";
@@ -669,6 +697,17 @@ public partial class TitleMain : Node3D
         GameSave.Write();
     }
 
+    /// <summary>The jelly wakes in Lantern Bay (the open reef, docs/RPG-PROPOSAL.md).</summary>
+    void PlayJelly(int index)
+    {
+        var save = GameSave.Current;
+        save.Chosen = index;
+        GameSave.Write();
+        RunLaunch.Jelly = index;
+        SeedCode.TryParse(save.Jellies[index].Seed, out var seed);
+        Launch(LaunchMode.Reef, seed);
+    }
+
     /// <summary>
     /// The menu fades and Clementine swims off to the right, the camera after her and the loading page over the shot, the
     /// first level being shaped meanwhile.
@@ -686,10 +725,19 @@ public partial class TitleMain : Node3D
             saved = run;
             seed = kept;
         }
-        var id = saved is not null ? RunLaunch.Start(saved) : RunLaunch.Start(GameSave.Current.Profile, _view);
-        float luck = saved?.Luck ?? 0f;
-        RunLaunch.Shaping = (seed, id, luck, TopDownMain.Shape(seed, id, luck));
-        TopDownMain.FillFirstSplash(_splash, seed, saved?.CustomSeed ?? mode == LaunchMode.Seeded, id, saved, _catalog, _tuning);
+        if (mode == LaunchMode.Reef && GameSave.Current.Current is { } jelly)
+        {
+            var bay = TopDownMain.BayId;
+            RunLaunch.Shaping = (seed, bay, 0f, TopDownMain.ShapeBay());
+            TopDownMain.FillBaySplash(_splash, jelly);
+        }
+        else
+        {
+            var id = saved is not null ? RunLaunch.Start(saved) : RunLaunch.Start(GameSave.Current.Profile, _view);
+            float luck = saved?.Luck ?? 0f;
+            RunLaunch.Shaping = (seed, id, luck, TopDownMain.Shape(seed, id, luck));
+            TopDownMain.FillFirstSplash(_splash, seed, saved?.CustomSeed ?? mode == LaunchMode.Seeded, id, saved, _catalog, _tuning);
+        }
 
         Input.MouseMode = Input.MouseModeEnum.Hidden;
         CloseInline();
@@ -705,6 +753,15 @@ public partial class TitleMain : Node3D
         var page = CreateTween();
         page.TweenInterval(Reduced ? 0f : PageWait);
         page.TweenProperty(_splash, "modulate:a", 1f, Reduced ? 0.15f : PageFade);
+    }
+
+    /// <summary>How far east of her the camera looks to keep her at DressAt across the screen while she is dressed (metres).</summary>
+    float DressShift()
+    {
+        var cam = _camera.Camera;
+        float distance = (cam.GlobalPosition - Focus(1f)).Length();
+        var size = GetViewport().GetVisibleRect().Size;
+        return (0.5f - DressAt) * 2f * distance * Mathf.Tan(Mathf.DegToRad(cam.Fov) * 0.5f) * size.X / Mathf.Max(size.Y, 1f);
     }
 
     /// <summary>How far east of her the camera looks to keep her at LaunchAt across the screen (metres).</summary>
@@ -780,11 +837,14 @@ public partial class TitleMain : Node3D
         {
             "stats" => new StatsCard(GameSave.Current.Profile, id => _catalog is not null && _catalog.TryGet(id, out var it) ? it.Name : id, close),
             "pedia" or "creatures" => new SeaPediaCard(GameSave.Current.Profile, _catalog, close),
+            "jellies" => new JellyCard(PlayJelly, close) { Preview = look => OctoShoots.Game.Fx.HerColor.SetLook(look) },
             "save" => new SaveCard(_catalog, () => Launch(LaunchMode.Continue, default), () => AbandonSavedRun(), Refresh, close),
             _ => new SettingsCard(_view, ApplyView, close),
         };
         var size = PageSize;
-        var cardSize = new Vector2(Mathf.Min(1060f, size.X - 120f), Mathf.Min(780f, size.Y - 70f));
+        // The jelly card keeps to the right half: she is framed on the left.
+        var cardSize = which == "jellies" ? new Vector2(Mathf.Min(680f, size.X * 0.45f), Mathf.Min(780f, size.Y - 70f))
+            : new Vector2(Mathf.Min(1060f, size.X - 120f), Mathf.Min(780f, size.Y - 70f));
         card.CustomMinimumSize = cardSize;
         card.Size = cardSize;
         card.Position = new Vector2(size.X - cardSize.X - 56f, (size.Y - cardSize.Y) * 0.5f);
@@ -792,7 +852,7 @@ public partial class TitleMain : Node3D
         _ui.MoveChild(card, _fade.GetIndex());
         _card = card;
         TitleStyle.Surface(card, 80f, 0.42f, 0f, Reduced);
-        _ring.CreateTween().TweenProperty(_ring, "modulate:a", 0.25f, 0.2f);
+        _ring.CreateTween().TweenProperty(_ring, "modulate:a", which == "jellies" ? 0f : 0.25f, 0.2f);
         if (which == "creatures" && card is SeaPediaCard pedia) pedia.CallDeferred(SeaPediaCard.MethodName.ShowCreatures);
         // Focus the card's first control, so the keyboard works there.
         CallDeferred(MethodName.FocusCard);
@@ -820,6 +880,8 @@ public partial class TitleMain : Node3D
         if (_card is null) return;
         var card = _card;
         _card = null;
+        // Out of the jelly card she is Clementine again (unless a jelly is on her way to the bay).
+        if (card is JellyCard && !_launching) OctoShoots.Game.Fx.HerColor.Load(force: true);
         if (instant) card.QueueFree();
         else TitleStyle.Dive(card, card.QueueFree, 0.38f, Reduced);
         _ring.CreateTween().TweenProperty(_ring, "modulate:a", 1f, 0.2f);

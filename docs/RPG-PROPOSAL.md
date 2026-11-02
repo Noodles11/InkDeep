@@ -1,0 +1,344 @@
+# The open reef: Ink Deep as a roguelike RPG (proposal)
+
+A proposal for branch `m4-rpg`: the dive becomes an open reef to explore from a town, with quests, NPCs freed from the
+Leak, and one purpose: close every leak and give the ocean back its freedom. Nothing here is built. It maps each idea
+onto what the game already has, and lists what the Theme Bible would have to change (§10) and what is left to decide (§11).
+
+## 1. The game in one breath
+
+Clementine lives in Lantern Bay, the last clean water of the reef. Out in the reef, every leak bleeds tank-water from
+the dead end of its own cave. She rides the currents out, swims down the caves through what the Leak has made of the
+reef's creatures, and seals the leaks with her inner light. Each seal gives her experience, which is the only
+experience there is, and each one makes the reef visibly cleaner. The creatures she frees go home to the bay and ask
+for her help. What she keeps is her level, her active pearls and her name. What she risks on every trip is her
+passive pearls and the shells she is carrying.
+
+The two runs in the brief share one spine, and the whole design serves it: **find a leak, fight your way to it, seal
+it, and the reef remembers.**
+
+## 2. The world
+
+```
+                        ┌──────────────────────┐
+                        │     LANTERN BAY      │  static map, safe, no ink
+                        │  shop · stash · board│
+                        │  mirror · NPC homes  │
+                        └──────────┬───────────┘
+                     current station (fast travel)
+         ┌─────────────────────────┼─────────────────────────┐
+   ┌─────┴──────┐            ┌─────┴──────┐            ┌─────┴──────┐
+   │ SHALLOWS   │  currents  │   KELP     │  currents  │  GALLEON … │  regions: static maps,
+   │ region map │────────────│ region map │────────────│            │  one biome each
+   └──┬────┬────┘            └──┬────┬────┘            └────────────┘
+      │    │ cave mouths        │    │
+   ┌──┴┐ ┌─┴─┐               ┌──┴┐ ┌─┴──┐
+   │cave│ │cave│  seeded     │cave│ │crown│  great leak: authored,
+   │leak│ │leak│  sub-levels │leak│ │leak │  boss-guarded, closes for good
+   └────┘ └────┘              └────┘ └─────┘
+```
+
+### 2.1 Lantern Bay (static)
+
+- **Where every session starts.** After loading her profile, she wakes here (idea 13). The bay has no ink, no
+  creatures to fight and no Menace.
+- **Places in the bay:**
+  - The shell shop, which buys and sells pearls.
+  - The **stash**, where she keeps her pearls (§5.2).
+  - The **notice board**, which lists quests (§6).
+  - The **mirror**, where she changes her look (§8).
+  - A **home for each NPC** she has freed (§7).
+  - The **current station**, the departure point for every region she has opened.
+- **Bay cleanse meter.** A single meter shows how much of the reef is free. It is the sum of the great leaks sealed in
+  every region.
+
+### 2.2 Regions (static)
+
+- **One biome per region,** following the depth order already in the game: Shallows, Kelp, Galleon, Carnival, Trench,
+  Abyss.
+- **A fixed Menace per region.** Menace still drives everything it drives today: light, ink coverage, creature
+  aggression and colour (Bible §3 Pillar 5). Going further out still feels like going deeper.
+- **A region map is hand-made** (idea 14). It holds:
+  - The arrival point of its current.
+  - Cave mouths.
+  - Lantern posts, which are respawn points.
+  - Secrets: fake walls, Crab Deals.
+  - Fountains.
+  - The crown cave of its great leak.
+- **Ink on a region map.** Free-roaming creatures and corrupted fish live on it (ADVENTURE.md §3–4). How much of the
+  map is inked follows the region's cleanse level, not the run.
+
+### 2.3 Leak caves (seeded)
+
+These cover idea 5.
+
+- **One leak per cave,** at the dead end of the main cavern path.
+- **The generator.** Caves come from the current generator (`TopDownGenerator` with `CaveLayout`). The one change is
+  that the way-down chamber becomes the leak chamber, with no hole.
+- **Mobs.** Side chambers off the main path hold lurking mobs. The biome decides which mobs and the cave's level
+  decides how strong (§9). The whole cave is corrupted: ink coverage is fixed high, and the start is the only clean
+  water.
+- **After the seal.** The cave's **return current** wakes. This is the existing main-current machinery, running from
+  the leak chamber back to the mouth. She can ride it out in seconds, or swim out on her own and loot the side chambers
+  in clean water. Sealing a leak dissolves its ink (already true today), so the way out is the safe half of the cave.
+- **Two kinds of leak:**
+  - **Minor leaks.** Infinite and seeded (idea 12). A region always keeps three open: when she seals one, a new cave
+    mouth opens somewhere else on the region map the next time she visits. This is the repeatable "close the leak"
+    content.
+  - **Great leaks.** One per region, a fixed cave with a fixed layout and a boss guarding the leak chamber (the boss
+    generator). They close **for good**: the region map clears, its currents turn blue, and the bay's meter rises.
+- **The Crack** is the last great leak, at the bottom of the Abyss region. It leads into the Tank finale.
+
+## 3. Currents as travel
+
+This covers idea 1, and almost all of it already exists:
+
+1. **Boarding.** She swims into a **current station**, a glowing stream at the bay's edge or at a region's arrival
+   point. A travel menu opens (the map), and she picks a destination she has unlocked.
+2. **The ride is the loading screen.** The existing dive transition is reused with the camera kept top-down (no new
+   camera break, Bible §6.1). She is swept along in the main current's streaming particles, snow streaking past and
+   ribbons trailing, while the palette slides toward the target region's water. The target level loads underneath, the
+   same way the dive loads the level below today.
+3. **Arrival.** She is pushed in from the **top** edge of the target map and drifts down until she settles into the
+   current's moving layer. That layer is the main current that already exists in a level (DESIGN-TOPDOWN §4.7). It
+   carries her a little way and then lets her go.
+4. **Unlocking routes.** Sealing a region's great leak unclogs the current network around it. This is the "northern
+   run turned blue" beat from the brief.
+
+The return current out of a sealed leak cave (§2.3) uses the same ride, as a short version inside the level.
+
+## 4. Experience comes only from leaks
+
+This covers ideas 2, 9 and 12.
+
+- **The only source.** Experience comes only from sealing leaks. A minor leak is worth `25 × caveLevel^0.8`; a great
+  leak is worth ten times that. Freeing creatures, bosses and quests give none. A quest pays in shells, pearls or NPCs.
+  A "close the leak" contract pays through the leak itself.
+- **What levels do.** Levels are **the only way her stats change** (shot speed, swim speed, damage, max HP, glow, dash
+  cooldown, bubbles). Each level gives skill points to spend in the existing skill screen, and each point still adds
+  6 max HP, so her arms still grow with her (ADVENTURE.md §7).
+- **A level-up waits for calm.** It lands when the room is quiet, as it does now.
+- **No level cap.** Each level costs more experience, and minor-leak experience rises with cave level, so the curve
+  holds.
+
+## 5. Pearls
+
+### 5.1 Passive pearls: behaviour only
+
+This covers ideas 7 and 9.
+
+- **What they do.** A passive changes **how** she plays: more shots, piercing, explosions, homing, bubbles that merge,
+  and so on.
+- **Where they come from.** Shops, bosses, secret rooms, Crab Deals and treasure chambers in caves.
+- **No limit.** She can absorb as many as she finds. The bell shows 16 motifs, and the rest glow inside, as now.
+- **The stat pearls have to go or change.** About 22 of the 64 passives today only change stats (Coral Crown, Squid
+  Ink Espresso, Shark Tooth, Dolphin Fin, Cuttlebone and others). Each one either becomes a behaviour or is dropped.
+  The transformations (Shark Mode, Pirate and the rest) lose their stat parts the same way.
+- **Lost on death.** When she dims, every passive she has absorbed comes out of her bell as **lost light**, a single
+  glowing pearl-cluster where she fell, together with the shells she was carrying. If she reaches it, she gets
+  everything back. If she dims again before reaching it, it is gone. This is the corpse-run in the brief, and it keeps
+  the roguelike stakes.
+
+### 5.2 Active pearls: slots and the stash
+
+This covers idea 6.
+
+- **Where they come from.** Key quests give actives (the 13 that exist today: Tide Pulse, Conch Horn, Bubble Shield
+  and the rest). They are **never lost**.
+- **Slots.** She has **three active slots** with three buttons. The bell's centre halo shows the active in slot 1, and
+  slots 2 and 3 appear as small halos to either side. In the bay she can swap actives between her slots and the stash.
+
+### 5.3 Selling
+
+This covers idea 8. Any pearl can be sold at the shell shop for **silver shells**:
+
+- **An active** from the stash sells for its price.
+- **An absorbed passive** sells at half its price. It is drawn back out of the bell, and its motif fades: the
+  absorption ritual run in reverse.
+
+Silver shells are the one currency: the shells of today, renamed.
+
+## 6. Quests
+
+- **Key quests.** An authored chain, one per region, given by the NPCs freed there. They lead to the region's great
+  leak, and their steps reward active pearls. Quest steps are small: chart a chamber, free a named creature, seal a
+  minor leak, bring back a pearl.
+- **Contracts.** Infinite and generated by the level generator from the region's seed and a counter. They appear on
+  the notice board: "a leak in the Kelp, level 7". A contract opens a fresh cave mouth on that region's map.
+- **NPC requests.** Short, repeatable errands from freed NPCs, such as freeing three of their kind or finding their
+  lost pearl. They reward shells or a passive.
+- **The quest log.** It lives in the pause screen. The map marks the next step.
+
+## 7. Freed NPCs
+
+This covers idea 3.
+
+- **Named creatures.** Some corrupted creatures are named: the target of a quest step, or one per great-leak region
+  waiting in its caves. Freeing one plays the usual freeing (Bible §6.5), then a short cutscene:
+  - The camera stays where it is.
+  - The creature turns, looks at her, and swims up and away, trailing gold.
+  - A caption reads "Kip has gone home to Lantern Bay".
+- **In the bay.** The NPC has a home there. She swims close to talk (a speech bubble with a portrait).
+- **Clementine never speaks.** She answers with her body: a bob means yes, a turn away means no (Bible §5.3).
+- **Bosses come too.** Freed bosses become NPCs, so the Drippus can take up residence by the notice board.
+
+## 8. Character creation
+
+This covers idea 10.
+
+- **When.** On first launch, over the live sea (the title screen that exists), before she wakes in the bay.
+- **What can be chosen:**
+  - **Gonad symbols:** the four gonad rings, picked from a set of shapes.
+  - **Glow colour.**
+  - **Oral arm colour.**
+  - **Tentacle tip colour.**
+  - **A name.**
+- **Changing it later.** Everything except the name can be changed at the bay's mirror.
+- **What already supports this.** The bell and arm shaders already take colours as parameters. The gonads are drawn
+  as the HUD gauge and on her bell, so a symbol set needs new shapes in both places.
+
+## 9. Mobs: biomes and levels
+
+This covers idea 11.
+
+- **Biome rosters.** Each biome has its own roster. The Depth 1 bestiary becomes the Shallows roster, and later
+  biomes get their own.
+- **Mob level.** A mob's level is `region tier + cave level offset`. Each level scales its HP, damage and corruption
+  meter. Its look already scales with Menace, and that stays.
+- **Where levels show.** Levels are shown on the quest board and the region map (which caves are which level), not
+  floating over creatures, so the Bible's diegetic-first rule holds.
+
+## 10. What changes in the Theme Bible
+
+I haven't changed the Bible: it's yours to decide. These parts of the proposal contradict it.
+
+| Bible | What it says | What the proposal does |
+|---|---|---|
+| §1, §4 | Clementine, alone, dives after her family; it ends at the Crack | A jelly of the Clementine bloom, named by the player, cleans an open reef region by region. The Crack is still the end. |
+| §4.5, §12 Commitment | Runs end in rifts or death; descent is one-way | No runs. She returns to the bay, and only death has stakes (lost light). |
+| §3 Pillar 3, §13 | Absorption is forever; no dropping pearls | Passives can be sold back out of her bell, and she loses them all when she dims |
+| §5.2 | One active, at the centre halo | Three slots |
+| §5.2 grid | "Stat up" rings are a motif family | No stat pearls, so the ring motif needs a new meaning |
+| §6.5, §13 | Freed creatures swim off and never help her | Named ones go home and give quests. Do freed fish help in fights? The brief says yes (§11 Q5) |
+| §6.1 | Only two camera breaks | The current ride keeps the top-down camera, so the rule holds |
+| §6.3, §3 Pillar 1 | Clementine is always tangerine and gold, the only hue that never changes | The player picks her glow and colours freely, and she is no longer always the warmest light |
+| §13 | No hub, no free-swim Tide Pool | Lantern Bay is a free-swim hub |
+| §7 | Each depth is three seeded reefs | Each region is a static map with seeded caves |
+
+## 11. Decisions and open questions
+
+Decided:
+
+- **Local profiles.** "Logging in" means picking a profile. The name is unique among the save slots on one machine.
+  There are no accounts or server.
+- **One of the bloom.** "Clementine" is the bloom's family name. The player names their own jelly, who is one of the
+  bloom, so the story holds as written.
+- **The glow takes any colour.** So do the arms and tentacle tips. The Warmth Test (Bible §12) no longer holds for
+  her glow.
+- **Absorbed on pickup, sold at half.** Passives are absorbed as today, and the shop can draw one back out for half
+  its price (§5.3).
+- **Freed fish only eat ink.** They clean the water and never fight for her.
+- **She seals a leak by staying near it,** with no shots (ADVENTURE.md §1).
+- **One leak per cave.**
+
+## 12. Inconsistencies in the brief
+
+These are settled in this proposal as noted:
+
+- **One leak per cave.** The first run finds three leaks in one cave, but idea 5 gives every leak its own cave. The
+  proposal has one leak per cave.
+- **Shells and skill points.** The brief has "3 shells-to-go-until-a-skill-point", but skill points come from
+  experience, not shells.
+- **When a half-tied leak heals.** In the brief it heals between visits. In the proposal it heals within seconds of
+  her leaving (as now), so leaving a leak half-tied never pays.
+- **Offline change.** "Overnight the simulation unclogged the northern run": the proposal has no offline world change.
+  Currents unclog when she seals a great leak.
+- **The fusion catalyst** is a new system that isn't in the ideas. It is left out for now.
+
+## 13. How it would be built
+
+Each step is playable on its own:
+
+1. **The profile and the bay.**
+   - A profile save: name, look, level, experience, shells, actives, stash, quests, freed NPCs, sealed great leaks.
+   - A loader for static maps. The bay is drawn as data in the generator's own terms (chambers and tunnels), so
+     `LevelView`, `TopoMap` and the post pass draw it unchanged.
+   - Lantern Bay with the shop and the current station.
+2. **Leak caves and current travel.**
+   - A cave mode for the generator, with the leak at the dead end and no hole.
+   - The return current.
+   - The current ride between the bay and one region map (Shallows).
+   - Experience from leaks only.
+3. **The progression rework.**
+   - Stats from levels only.
+   - Rework or remove the stat pearls.
+   - Three active slots and the stash.
+   - Selling.
+   - Death and lost light.
+4. **Character creation and the mirror.**
+5. **NPCs and quests:** named creatures, the go-home cutscene, the notice board, contracts, the first key-quest chain
+   (Shallows).
+6. **Regions.**
+   - Static maps for the other five biomes.
+   - Biome rosters and mob levels.
+   - Great leaks with bosses.
+   - The region cleanse and the current network.
+7. **The ending:** the Crack as the last great leak, and the Tank.
+
+**What steps 1 and 2 have so far:**
+
+- **Hand-drawn maps.** `data/maps/<name>.json` (`HandLayout`) names chambers, tunnels, cave rooms, open places and a
+  region's cave mouths. `TopDownGenerator.FromHand` builds the level with the seeded level's own stages (rock, rooms,
+  arches and passes, decoration, kelp); the map's seed shapes only the details. A hand-drawn map (`LevelMap.Station`)
+  holds no leaks and no main current; its exit is a current station.
+- **Lantern Bay** (`data/maps/lantern_bay.json`): the lantern post where she wakes, the lagoon, the commune, the
+  market with the shell shop's cave, and the current station. A haven (`LevelMap.Haven`): it runs on the open reef's
+  own rules, so her arm and the HUD are as everywhere, but holds no leaks and so no ink.
+- **The Sunlit Shallows** (`data/maps/shallows.json`), the first region: the landing where the current drops her, a
+  station home (north-east), a glade, and three cave mouths, drawn as dark ink vortices (`PortalView`).
+- **Leak caves** (`TopDownGenerator.GenerateCave`, `LevelPlan.ForCave`, `LevelMap.LeakCave`):
+  - **Shape:** a seeded level with its one leak at the dead end of the main path where the way down would be, and no
+    shaft. Now and then it has a clam room, a secret or a shell cache off the path.
+  - **Ink:** at least 90% of the water starts inked (`ReefTuning.CaveInk`).
+  - **Sealed:** its return current wakes and runs from the leak back to the mouth (`MainCurrent.Course`). Swimming
+    back to the mouth, once she has been 10 m in, takes her out to the region at that mouth (`PlaneWorld.LeavingCave`).
+- **Behind each mouth** (`OpenReef`): there is always a cave, grown from her jelly's own seed. Sealing one puts a
+  fresh one behind the same mouth. A region's caves go up a level every three sealed there, starting at the region's
+  tier.
+- **Experience** (`PlaneOptions.Reef`): on the open reef only a sealed leak gives any, `25 × cave level^0.8`
+  (`ReefTuning.LeakXp`). No level-up is held back.
+- **The current ride** (`TopDownMain.BeginRide`, `StepRide`, `StepArrive`):
+  - **Where it goes:** the bay's station leads to the Shallows, a region's station leads home, a mouth leads to its
+    cave, and a cave's mouth leads back out.
+  - **Leaving:** she is swept off and lifted. The place dissolves round where she was (the dive's iris) until only
+    water and streaming snow are left, and the next place is made meanwhile; the ride lasts at least 2.4 s.
+  - **Arriving:** she comes down into the next place from a level's height above, still carried the way the current
+    took her. The place opens out round her, and she settles in its water.
+  - **No bounce-back:** a way through takes her only once she has swum clear of the one she came out of.
+- **Jellies** (`SaveFile.Jellies`, `Jelly`, `JellyLook`, `JellyNames`; the title's Lantern Bay card, `JellyCard`):
+  - **The card:** pick a jelly, or make one with a name unique on this machine, a gonad shape (horseshoe, ring,
+    clover, crescent, star), and glow, arm and tip colours. She wakes in the bay.
+  - **Her preview:** while the card is open, the title frames her close on the left, as the pause menu does in the
+    game, with the card on the right. She wears the form as it is set, live, or a saved jelly while the pointer is on
+    her name.
+  - **What is kept:** level, experience, skill points, shells, passive and active pearls, and the caves sealed per
+    region. It is saved on every way through, on leaving to the title, and on every seal.
+  - **Her look** (`HerColor.SetLook`): her arm colour is her bell and arms; her glow is her light, shots and the glow
+    she casts; her tips glow their colour (Clementine's twinkle in random hues); her gonads take their shape on her bell
+    and on the HUD's gauge (`gonad_shape.gdshaderinc`).
+- **Dimming:** when she dims on the open reef, her passive pearls and the shells on her are lost; her level, actives
+  and name are kept. She wakes at the lantern post. (Lost light, to win them back, is step 3.)
+- **Verification starts:** `--reef=bay|shallows|cave` starts there with a jelly that is never saved, and
+  `--at=mouth` puts her by a region's first mouth.
+
+**Static-map authoring.** This needs a tool. I recommend extending the cave generator page (`tools/cavegen/`) into an
+editor: place chambers, tunnels and places by hand, and save to JSON that the game loads.
+
+## 14. Weak points
+
+- **A big rewrite of the run model.** The sim assumes a run: `PlaneRun`, `LevelPlan` and the reflection snapshot.
+  The profile has to sit above it, and every level must load from the profile, not from the run.
+- **Static maps lose the variety of seeds.** The repeatable content lives in the caves, so cave generation has to
+  carry the replay value. Biomes need distinct cave shapes, not only palettes.
+- **Quests and NPCs need writing.** The voice is in the Bible (§10). The volume is new.
+- **Without stat pearls, a run has fewer kinds of find.** Behaviour pearls have to be varied enough to carry the
+  loot.

@@ -117,7 +117,7 @@ public sealed partial class PlaneWorld
     /// </summary>
     void PlaceFlounders(Rng rng, List<Vector2> anchors, Func<Vector2, bool> allowed)
     {
-        float rate = AdventureTuning.Rate(FlounderTuning.Home, Map.Depth);
+        float rate = AdventureTuning.Rate(FlounderTuning.Home, LifeDepth);
         int want = (int)MathF.Round((FlounderTuning.Min + rng.Int(FlounderTuning.Max - FlounderTuning.Min + 1)) * rate);
         var hosts = Map.Abyss ? new List<Vector2>(Map.Shelves) : new List<Vector2>(anchors);
         Shuffle(hosts, rng);

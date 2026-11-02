@@ -81,11 +81,16 @@ public sealed class PlaneCurrent
 /// <summary>The main current's course, worked out from the map alone (the springs keep off it, the world lays it).</summary>
 public static class MainCurrent
 {
-    /// <summary>From her start to the way down; a boss level's, to its arena's edge (it does not blow through the fight).</summary>
+    /// <summary>
+    /// From her start to the way down; a boss level's, to its arena's edge (it does not blow through the fight); a leak
+    /// cave's, from its leak back to its mouth.
+    /// </summary>
     public static List<Vector2> Course(LevelMap map)
     {
         if (map.MainCourse is { } known) return known;
-        var course = Route(map, map.Exit.Position, map.Start.Position, new Dictionary<(Vector2, float), float[]>());
+        // A leak cave's runs the other way: from its sealed leak back out to the mouth.
+        var course = map.LeakCave ? Route(map, map.Start.Position, map.Exit.Position, new Dictionary<(Vector2, float), float[]>())
+            : Route(map, map.Exit.Position, map.Start.Position, new Dictionary<(Vector2, float), float[]>());
         if (map.HasBoss)
         {
             int inside = course.FindIndex(q => Vector2.Distance(q, map.Exit.Position) < map.Exit.Radius);
@@ -162,6 +167,8 @@ public sealed partial class PlaneWorld
     /// <summary>Lays the main current (MainCurrent.Course), asleep until enough leaks are sealed.</summary>
     void PlaceCurrents()
     {
+        // A region's water has no main current of its own: it would carry her to its station and home.
+        if (Map.Station) return;
         var course = MainCurrent.Course(Map);
         if (course.Count < 2) return;
         var main = new PlaneCurrent { Speed = CurrentTuning.MainSpeed, HalfStart = CurrentTuning.MainHalfWidth, HalfEnd = CurrentTuning.MainHalfWidth, Strength = LeaksLeft == 0 ? 1f : 0f };

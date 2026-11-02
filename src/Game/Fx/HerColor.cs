@@ -25,12 +25,29 @@ public static class HerColor
 
     /// <summary>Her light: bubbles, shots, halos, trails.</summary>
     public static Color Light => LightOverride ?? Shift(Body, hue: 0.041f, sat: 0.78f);
-    /// <summary>The colour of her glow in the water (the light she casts).</summary>
-    public static Color Glow => Shift(Body, hue: 0.004f, sat: 0.65f);
-    /// <summary>The warm tint her glow lays on the floor under her: a deeper, richer body colour.</summary>
-    public static Color Warm => Shift(Body, hue: -0.008f, sat: 1.1f);
+    /// <summary>The colour of her glow in the water (the light she casts): from her light when it is set, else her body.</summary>
+    public static Color Glow => Shift(LightOverride ?? Body, hue: 0.004f, sat: 0.65f);
+    /// <summary>The tint her glow lays on the floor under her: a deeper, richer shade of the same.</summary>
+    public static Color Warm => Shift(LightOverride ?? Body, hue: -0.008f, sat: 1.1f);
 
     public static event Action? Changed;
+
+    /// <summary>A jelly's tentacle tips (null: they twinkle in random hues, as Clementine's), and her gonads' shape (JellyNames.Symbols).</summary>
+    public static Color? Tips { get; private set; }
+    public static int Gonads { get; private set; }
+
+    /// <summary>
+    /// A jelly's look (docs/RPG-PROPOSAL.md §8), applied at once: her bell and arms, her glow, her tips and her gonads'
+    /// shape. Load (forced) goes back to Clementine's own.
+    /// </summary>
+    public static void SetLook(OctoShoots.Core.Saves.JellyLook look)
+    {
+        if (Color.HtmlIsValid(look.Arms)) Body = Color.FromHtml(look.Arms);
+        LightOverride = Color.HtmlIsValid(look.Glow) ? Color.FromHtml(look.Glow) : null;
+        Tips = Color.HtmlIsValid(look.Tips) ? Color.FromHtml(look.Tips) : null;
+        Gonads = Math.Max(0, Array.IndexOf(OctoShoots.Core.Saves.JellyNames.Symbols, look.Gonads));
+        Publish();
+    }
 
     static bool _loaded;
 
@@ -39,6 +56,8 @@ public static class HerColor
     {
         if (_loaded && !force) return;
         _loaded = true;
+        Tips = null;
+        Gonads = 0;
         var cfg = new ConfigFile();
         if (cfg.Load(File) == Error.Ok)
         {
@@ -73,6 +92,9 @@ public static class HerColor
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_body"), AsVector(Body));
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_light"), AsVector(Light));
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_warm"), AsVector(Warm));
+        RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_tips"), AsVector(Tips ?? Colors.White));
+        RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_tips_set"), Tips is null ? 0f : 1f);
+        RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_gonads"), Gonads);
         Changed?.Invoke();
     }
 

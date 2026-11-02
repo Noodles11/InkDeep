@@ -265,7 +265,7 @@ public sealed partial class PlaneWorld
         // The adventure: about as many as there would be anemones (its Inkwardens are turned pufferfish).
         if (Options.Adventure)
             want = (int)MathF.Round((AdventureTuning.PufferMin + rng.Int(AdventureTuning.PufferMax - AdventureTuning.PufferMin + 1))
-                * AdventureTuning.Rate(AdventureTuning.BaseHome, Map.Depth));
+                * AdventureTuning.Rate(AdventureTuning.BaseHome, LifeDepth));
         var anchors = Map.Plazas.Select(z => z.Center).Concat(Map.Spawns.Where(s => s.Role != SpawnRole.Ambush).Select(s => s.Position)).ToList();
         foreach (var c in Map.Corridors.Where(c => c.Kind == CorridorKind.Main))
             for (int i = 6; i < c.Points.Count - 6; i += 9) anchors.Add(c.Points[i]);

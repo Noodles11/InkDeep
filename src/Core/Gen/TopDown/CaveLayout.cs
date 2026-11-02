@@ -129,6 +129,58 @@ public sealed class CaveLayout
         return (g, null);
     }
 
+    /// <summary>
+    /// A cave drawn by hand (<see cref="HandLayout"/>): its chambers, tunnels and places where the map puts them, only
+    /// their outlines and bends from <paramref name="rng"/>. No rules of size or spacing apply; it fails only when a room
+    /// has no way to it or the exit cannot be reached.
+    /// </summary>
+    public static (CaveLayout? Layout, string? Why) FromHand(HandLayout hand, Rng rng, Func<PoiKind, float> radius)
+    {
+        var g = new CaveLayout();
+        uint seed = (uint)(rng.NextU64() >> 34);
+        var byId = new Dictionary<string, Chamber>();
+        foreach (var c in hand.Chambers)
+        {
+            var chamber = MakeChamber(rng, new Vector2(c.X, c.Y), c.R, c.Role);
+            g.Chambers.Add(chamber);
+            byId[c.Id] = chamber;
+        }
+        if (g.Chambers.Count(c => c.Role == Role.Start) != 1 || g.Chambers.Count(c => c.Role == Role.Exit) != 1)
+            return (null, "a map needs one start chamber and one exit chamber");
+        g.Start = g.Chambers.First(c => c.Role == Role.Start);
+        g.Exit = g.Chambers.First(c => c.Role == Role.Exit);
+        foreach (var t in hand.Tunnels)
+        {
+            if (!byId.TryGetValue(t.A, out var a) || !byId.TryGetValue(t.B, out var b)) return (null, $"a tunnel {t.A}–{t.B} to no chamber");
+            g.Tunnels.Add(MakeTunnel(rng, a, b, t.Width, t.Kind));
+        }
+        foreach (var room in hand.Rooms)
+        {
+            if (!byId.TryGetValue(room.From, out var parent)) return (null, $"the {room.Kind} off no chamber");
+            float r = radius(room.Kind), angle = room.Angle * MathF.PI / 180f;
+            Vector2 at = parent.At + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * (parent.R + room.Distance);
+            var chamber = MakeChamber(rng, at, r, Role.Branch);
+            chamber.Room = true;
+            chamber.Keep = RoomKeep(room.Kind);
+            var tunnel = MakeTunnel(rng, parent, chamber, room.Width, CorridorKind.Spur);
+            // As a generated room's: the tunnel runs to the room's mouth, and no further.
+            var kept = tunnel.Points.TakeWhile(p => Vector2.Distance(p, at) > r + 1f).ToList();
+            if (kept.Count < 2) return (null, $"the {room.Kind} is too close to its chamber");
+            Vector2 facing = Vector2.Normalize(kept[^1] - at);
+            kept.Add(at + facing * r);
+            tunnel.Points = kept;
+            g.Chambers.Add(chamber);
+            g.Tunnels.Add(tunnel);
+            g.Places.Add(new Place { Kind = room.Kind, At = at, Radius = r, Spur = tunnel, Facing = facing });
+        }
+        foreach (var place in hand.Places)
+            g.Places.Add(new Place { Kind = place.Kind, At = new Vector2(place.X, place.Y), Radius = place.R });
+        g.Rasterise(seed);
+        g.PathToExit = g.Geodesic(g.Start.At)[Index(g.Exit.At)];
+        if (!float.IsFinite(g.PathToExit)) return (null, "the exit cannot be reached from the start");
+        return (g, null);
+    }
+
     // ───────────────────────── the graph ─────────────────────────
 
     static float Pick(Rng rng, (float Lo, float Hi) r) => rng.Range(r.Lo, r.Hi);

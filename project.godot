@@ -55,6 +55,18 @@ her_warm={
 "type": "vec3",
 "value": Vector3(1, 0.46, 0.18)
 }
+her_tips={
+"type": "vec3",
+"value": Vector3(1, 0.851, 0.478)
+}
+her_tips_set={
+"type": "float",
+"value": 0.0
+}
+her_gonads={
+"type": "int",
+"value": 0
+}
 sun_dir={
 "type": "vec3",
 "value": Vector3(0.42, -0.86, 0.28)

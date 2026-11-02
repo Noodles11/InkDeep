@@ -47,7 +47,7 @@ public static class LevelValidator
         if (flat is not null) return flat;
 
         // Topography: the shaft is the only deep water (the deepest point of the level lies in it).
-        if (!map.Shaft.Contains(DeepestPoint(map), 1f)) return "the shaft is not the deepest point";
+        if (!map.LeakCave && !map.Shaft.Contains(DeepestPoint(map), 1f)) return "the shaft is not the deepest point";
         float peak = InteriorPeak(map);
         if (peak is < 3f or > 14f) return $"highest peak {peak:0.0} m (want 3–14 m)";
 

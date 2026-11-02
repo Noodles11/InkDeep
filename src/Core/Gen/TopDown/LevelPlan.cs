@@ -86,6 +86,8 @@ public sealed class LevelPlan
     /// </summary>
     public float Menace { get; init; }
     public LevelId Next { get; init; }
+    /// <summary>A leak cave (LevelMap.LeakCave): no way down, one leak where it would be.</summary>
+    public bool LeakCave { get; init; }
 
     public int Places => Treasures + Secrets + Curses + Shops + Caches + Crabs + (HasBoss ? 1 : 0);
     /// <summary>The level's template (docs/LEVEL-TEMPLATES-PROPOSAL.md): null in the tutorial.</summary>
@@ -272,6 +274,32 @@ public sealed class LevelPlan
             if (boss < 3 || picked.Distinct().Count() >= 3 || attempt >= 12) return (picked, treasures);
         }
     }
+
+    /// <summary>
+    /// A leak cave's plan (docs/RPG-PROPOSAL.md §2.3): the general level's shape, no shop, no crab, no boss; now and then a
+    /// clam room, a secret or a shell cache for what lies off its main path; the Menace its region gives it.
+    /// </summary>
+    public static LevelPlan ForCave(SeedCode seed, LevelId id, float menace)
+    {
+        var streams = new RunStreams(seed);
+        var rng = streams.Plan(id);
+        return new LevelPlan
+        {
+            Id = id,
+            Treasures = rng.NextFloat() < CaveTreasure ? 1 : 0,
+            Secrets = rng.NextFloat() < LevelStocking.Secret ? 1 : 0,
+            Caches = rng.NextFloat() < LevelStocking.Cache ? 1 : 0,
+            EntryStamp = streams.StampSeed(id),
+            ExitStamp = streams.StampSeed(id with { Level = id.Level + 1 }),
+            Menace = menace,
+            Next = id,
+            Template = LevelTemplates.Get("default"),
+            LeakCave = true,
+        };
+    }
+
+    /// <summary>How often a leak cave holds a clam room.</summary>
+    public const float CaveTreasure = 0.35f;
 
     /// <summary>The tutorial's levels: every kind of place between its two, set rather than rolled.</summary>
     static LevelPlan Tutorial_(SeedCode seed, RunStreams streams, LevelId id)

@@ -15,6 +15,7 @@ shader_type spatial;
 render_mode unshaded, cull_back, blend_mix, depth_draw_never, depth_test_disabled;
 
 #include "res://assets/shaders/pearl_engraving.gdshaderinc"
+#include "res://assets/shaders/gonad_shape.gdshaderinc"
 
 uniform float pulse = 0.0;      // contraction, about −0.15 (flared) to 1 (fully contracted)
 uniform float wave = 1.0;       // the light wave's position along the bell, 0 apex → 1 margin
@@ -83,7 +84,7 @@ void fragment() {
 	float u = along;
 	float fres = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.0);
 
-	// The four gonads: horseshoes round her middle, open toward the centre — her health, a quarter each. Ring k holds
+	// The four gonads round her middle (horseshoes open toward the centre, or her jelly's own shape) — her health, a quarter each. Ring k holds
 	// the quarter from k/4 up: always warm gold, breathing with her pulse, and as opaque as its quarter is full — a
 	// draining ring fades, an empty one is gone into the bell. When only the first is left its light pulses slowly in
 	// and out: a dying light at the centre of her. The first is a little larger and hotter than the rest: it leads — she
@@ -97,13 +98,14 @@ void fragment() {
 		float ka = 0.7853982 + float(k) * 1.5707963;
 		vec2 c = vec2(cos(ka), sin(ka)) * 0.43;
 		vec2 d = q - c;
-		float open = 1.0 - smoothstep(0.35, 0.75, dot(normalize(d + 1e-5), -normalize(c)));
 		float size = k == 0 ? 0.2 : 0.17;
-		float shape = line(length(d) - size, (k == 0 ? 0.07 : 0.06) + 0.035 * waiting) * open;
+		float open;
+		float sd = gonad_sd(d, c, ka, size, open);
+		float shape = line(sd, (k == 0 ? 0.07 : 0.06) + 0.035 * waiting) * open;
 		float lit = clamp(health * 4.0 - float(k), 0.0, 1.0);
 		if (k == 0) lit *= mix(1.0, dying, critical);
 		gonad = max(gonad, shape * lit);
-		halo = max(halo, line(length(d) - size, 0.22 + 0.16 * waiting) * open * lit);
+		halo = max(halo, line(sd, 0.22 + 0.16 * waiting) * open * lit);
 		if (k == 0) lead = shape * lit;
 	}
 	// (No stomach drawn: her middle is clear.)

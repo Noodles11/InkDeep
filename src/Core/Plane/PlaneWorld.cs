@@ -122,7 +122,8 @@ public sealed partial class PlaneWorld
     public PlaneWorld(LevelMap map, Tuning tuning, PlaneRun? run = null, PlaneOptions? options = null)
     {
         Map = map;
-        Options = options ?? PlaneOptions.Default;
+        // A haven (Lantern Bay) runs without the corruption and the adventure: clean water, healthy fish, its shop.
+        Options = map.Haven ? PlaneOptions.Haven : options ?? PlaneOptions.Default;
         Tuning = tuning;
         Run = run ?? new PlaneRun(null, tuning);
         Player.Position = Player.PrevPosition = map.Start.Position;

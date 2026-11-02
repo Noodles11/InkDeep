@@ -23,8 +23,22 @@ public sealed class PlaneOptions
     /// Lashjaws, Thumpsquirts, dens, Queen Clam) and the ground's starting ink are off.
     /// </summary>
     public bool Adventure;
+    /// <summary>
+    /// The open reef (docs/RPG-PROPOSAL.md §4): sealing a leak is the only experience there is, worth its cave's level
+    /// (ReefTuning.LeakXp), and no level-up is held back on a first level.
+    /// </summary>
+    public bool Reef;
 
     public static PlaneOptions Default { get; set; } = new() { Adventure = true };
+
+    /// <summary>
+    /// A haven's (LevelMap.Haven): the open reef's own rules (so she, her arm and the HUD are as everywhere), but nothing
+    /// of the Leak in it: a hand-drawn map holds no leaks, so no ink.
+    /// </summary>
+    public static PlaneOptions Haven => OpenReef;
+
+    /// <summary>The open reef's regions and leak caves.</summary>
+    public static PlaneOptions OpenReef => new() { Adventure = true, Reef = true };
 }
 
 /// <summary>The corruption's numbers (docs/CORRUPTION.md). Provisional, like the rest of plane combat.</summary>

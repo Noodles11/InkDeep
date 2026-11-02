@@ -1,0 +1,35 @@
+// The Sunlit Shallows region (docs/RPG-PROPOSAL.md §2.2): the first stretch of open reef past the bay.
+// The current from the bay drops her at the landing; its station (north-east) takes her home. Each of the
+// three mouths leads down into a leak cave.
+{
+  "name": "shallows",
+  "title": "Sunlit Shallows",
+  "seed": "SHALWS2Q",
+  "number": 1,
+  "depth": 1,
+  "menace": 0,
+  "tier": 1,
+  "chambers": [
+    { "id": "landing", "x": 68, "y": 28, "r": 11, "role": "Start" },
+    { "id": "station", "x": 112, "y": 30, "r": 9, "role": "Exit" },
+    { "id": "glade", "x": 70, "y": 68, "r": 15, "role": "Main" },
+    { "id": "west", "x": 28, "y": 74, "r": 10, "role": "Branch" },
+    { "id": "south", "x": 64, "y": 112, "r": 11, "role": "Branch" },
+    { "id": "east", "x": 112, "y": 94, "r": 10, "role": "Branch" },
+    { "id": "kelp", "x": 32, "y": 34, "r": 9, "role": "Branch" }
+  ],
+  "tunnels": [
+    { "a": "landing", "b": "glade", "width": 9 },
+    { "a": "landing", "b": "station", "width": 7 },
+    { "a": "glade", "b": "west", "width": 7, "kind": "Side" },
+    { "a": "glade", "b": "south", "width": 8, "kind": "Side" },
+    { "a": "glade", "b": "east", "width": 7, "kind": "Side" },
+    { "a": "west", "b": "kelp", "width": 6, "kind": "Side" },
+    { "a": "kelp", "b": "landing", "width": 6, "kind": "Side" }
+  ],
+  "mouths": [
+    { "x": 24, "y": 76 },
+    { "x": 64, "y": 116 },
+    { "x": 116, "y": 96 }
+  ]
+}

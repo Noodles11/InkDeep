@@ -17,6 +17,9 @@ uniform float glow = 1.0;
 // Her colours (HerColor.cs, data/clementine_color.cfg): body is the bell and tentacles, gold her light.
 global uniform vec3 her_body;
 global uniform vec3 her_light;
+// Her jelly's tentacle tips (HerColor.SetLook): her_tips_set 1, they glow that colour; 0, they twinkle in random hues.
+global uniform vec3 her_tips;
+global uniform float her_tips_set;
 #define body her_body
 #define gold her_light
 uniform vec3 flash : source_color = vec3(1.0, 0.239, 0.498);
@@ -58,6 +61,7 @@ void fragment() {
 		// Its tip twinkles in colours, as an optical fibre's: a new random hue every moment, flaring and dimming.
 		float beat = floor(TIME * 2.5 + seed * 13.0);
 		vec3 shade = mix(hue(hash1(beat + seed * 91.0)), hue(hash1(beat + 1.0 + seed * 91.0)), smoothstep(0.6, 1.0, fract(TIME * 2.5 + seed * 13.0)));
+		shade = mix(shade, her_tips, her_tips_set);
 		float flare = 0.55 + 0.45 * sin(TIME * (9.0 + 6.0 * seed) + seed * 30.0);
 		col = mix(col, mix(shade, vec3(1.0), 0.25) * (1.4 + 0.6 * flare), tip);
 		a *= 0.2 * (1.0 - 0.5 * t) + 0.45 * bead + tip * (0.5 + 0.45 * flare);

@@ -1278,8 +1278,16 @@ public partial class LevelView : Node3D
         _ => kind.ToString(),
     };
 
-    /// <summary>A place's name on this level: a boss level's exit is the Crack.</summary>
-    public static string PlaceName(LevelMap map, PoiKind kind) => kind == PoiKind.Exit && map.HasBoss ? "The Crack" : PlaceName(kind);
+    /// <summary>A place's name on this level: a boss level's exit is the Crack; the open reef's exits and starts have their own.</summary>
+    public static string PlaceName(LevelMap map, PoiKind kind) => kind switch
+    {
+        PoiKind.Exit when map.Station => "Current station",
+        PoiKind.Exit when map.LeakCave => "The leak",
+        PoiKind.Exit when map.HasBoss => "The Crack",
+        PoiKind.Start when map.LeakCave => "Cave mouth",
+        PoiKind.Start when map.Haven => "Lantern post",
+        _ => PlaceName(kind),
+    };
 
     // ───────────────────────── decoration ─────────────────────────
 

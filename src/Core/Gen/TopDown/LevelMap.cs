@@ -286,6 +286,24 @@ public sealed class LevelMap
     /// <summary>The tutorial's open rift: the arena holds no boss, and the Crack stands open from the start.</summary>
     public bool Rift;
     public float Menace;
+    /// <summary>
+    /// A safe place drawn by hand (HandLayout.Haven: Lantern Bay): no ink, no leaks, nothing corrupted, no shaft; its
+    /// exit is a current station.
+    /// </summary>
+    public bool Haven;
+    /// <summary>A hand-drawn map's name (HandLayout.Title), or empty for a seeded level.</summary>
+    public string Title = "";
+    /// <summary>A hand-drawn map (the bay, a region): its exit is a current station, and it holds no leaks of its own.</summary>
+    public bool Station;
+    /// <summary>
+    /// A leak cave (docs/RPG-PROPOSAL.md §2.3): one leak, at the dead end of its main path where a way down would be;
+    /// no shaft; sealed, its return current runs back to the mouth she came in by (its start).
+    /// </summary>
+    public bool LeakCave;
+    /// <summary>A leak cave's level (what its leak is worth, how strong its creatures are); 0 elsewhere.</summary>
+    public int CaveLevel;
+    /// <summary>A region's cave mouths: swimming into one takes her down into its leak cave.</summary>
+    public List<Vector2> Mouths = new();
     public ulong EntryStampSeed, ExitStampSeed;
     public bool EntryFromArena;
     /// <summary>Where the floor gives way to the level below.</summary>

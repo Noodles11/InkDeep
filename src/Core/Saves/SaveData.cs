@@ -8,6 +8,86 @@ public sealed class SaveFile
     public int Version { get; set; } = SaveCodec.CurrentVersion;
     public Profile Profile { get; set; } = new();
     public SuspendedRun? Run { get; set; }
+    /// <summary>The jellies made on this machine (docs/RPG-PROPOSAL.md §8, §11: local profiles), each her own save.</summary>
+    public List<Jelly> Jellies { get; set; } = new();
+    /// <summary>Which of them was played last (an index into Jellies; −1: none yet).</summary>
+    public int Chosen { get; set; } = -1;
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Jelly? Current => Chosen >= 0 && Chosen < Jellies.Count ? Jellies[Chosen] : null;
+}
+
+/// <summary>
+/// One jelly of the Clementine bloom, as the player made her (docs/RPG-PROPOSAL.md): her name and look, and everything
+/// she keeps between trips out of Lantern Bay. What she carries on a trip that death can take (her passive pearls and
+/// the shells on her) is kept here too, between trips.
+/// </summary>
+public sealed class Jelly
+{
+    public string Name { get; set; } = "";
+    public JellyLook Look { get; set; } = new();
+    /// <summary>Her level and the experience toward the next; only sealing leaks gives experience.</summary>
+    public int Level { get; set; } = 1;
+    public int Xp { get; set; }
+    /// <summary>Skill points not yet spent, and the points spent (by stat name): the only way her stats change.</summary>
+    public int Points { get; set; }
+    public Dictionary<string, int> Skills { get; set; } = new();
+    /// <summary>Silver shells on her.</summary>
+    public int Shells { get; set; }
+    /// <summary>The passive pearls absorbed into her bell (lost as lost light when she dims).</summary>
+    public List<string> Passives { get; set; } = new();
+    /// <summary>Every active pearl she owns (never lost), and which sit in her three slots (null: an empty slot).</summary>
+    public List<string> Actives { get; set; } = new();
+    public List<string?> Slots { get; set; } = new() { null, null, null };
+    /// <summary>The great leaks sealed for good, and the named creatures freed (now living in the bay), by id.</summary>
+    public HashSet<string> GreatLeaks { get; set; } = new();
+    public HashSet<string> Freed { get; set; } = new();
+    /// <summary>Her world's seed code: every leak cave is grown from it.</summary>
+    public string Seed { get; set; } = "";
+    /// <summary>Per region: the cave behind each of its mouths now, and how many minor leaks she has sealed there (OpenReef).</summary>
+    public Dictionary<string, List<int>> Caves { get; set; } = new();
+    public Dictionary<string, int> Sealed { get; set; } = new();
+    /// <summary>When she was made and last played, as ISO 8601 local times.</summary>
+    public string Made { get; set; } = "";
+    public string Played { get; set; } = "";
+    public double PlaySeconds { get; set; }
+}
+
+/// <summary>How she looks (docs/RPG-PROPOSAL.md §8): every colour as #RRGGBB, any colour the player likes.</summary>
+public sealed class JellyLook
+{
+    /// <summary>The shape her four gonads take (JellyNames.Symbols).</summary>
+    public string Gonads { get; set; } = "horseshoe";
+    /// <summary>Her glow: her light, her rim, her shots. Clementine's own gold by default.</summary>
+    public string Glow { get; set; } = "#FFC46B";
+    /// <summary>Her bell and oral arms.</summary>
+    public string Arms { get; set; } = "#FF8C42";
+    /// <summary>The tips of her eight tentacles.</summary>
+    public string Tips { get; set; } = "#FFD97A";
+}
+
+/// <summary>The rules for a jelly's name and the choices for her look.</summary>
+public static class JellyNames
+{
+    public const int MaxLength = 16;
+    public static readonly string[] Symbols = { "horseshoe", "ring", "clover", "crescent", "star" };
+
+    /// <summary>Why a name cannot be taken (empty, too long, odd characters, or another jelly's already), or null.</summary>
+    public static string? Problem(string name, IEnumerable<Jelly> others)
+    {
+        string n = name.Trim();
+        if (n.Length == 0) return "She needs a name";
+        if (n.Length > MaxLength) return $"At most {MaxLength} letters";
+        foreach (char c in n)
+            if (!char.IsLetterOrDigit(c) && c is not (' ' or '-' or '\'' or '_')) return "Letters, digits, spaces, - ' and _ only";
+        foreach (var o in others)
+            if (string.Equals(o.Name.Trim(), n, System.StringComparison.OrdinalIgnoreCase)) return "Another jelly has that name";
+        return null;
+    }
+
+    /// <summary>Whether a colour is written as the look keeps it (#RRGGBB).</summary>
+    public static bool IsColour(string s) =>
+        s.Length == 7 && s[0] == '#' && System.Linq.Enumerable.All(s.Substring(1), System.Uri.IsHexDigit);
 }
 
 /// <summary>Meta progress: achievements (which unlock pearls), the Sea-pedia's records and the statistics.</summary>

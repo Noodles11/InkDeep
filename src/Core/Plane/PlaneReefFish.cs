@@ -156,7 +156,7 @@ public sealed partial class PlaneWorld
             n = ReefFishTuning.ForDepth(1);
             n.SizeMin = AdventureTuning.SchoolMin;
             n.SizeMax = AdventureTuning.SchoolMax;
-            more *= AdventureTuning.FishMore * AdventureTuning.Rate(AdventureTuning.BaseHome, Map.Depth);
+            more *= AdventureTuning.FishMore * AdventureTuning.Rate(AdventureTuning.BaseHome, LifeDepth);
         }
         int More(int count) => (int)MathF.Round(count * more);
         int ids = 0;

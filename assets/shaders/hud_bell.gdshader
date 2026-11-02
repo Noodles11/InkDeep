@@ -5,6 +5,7 @@
 shader_type canvas_item;
 
 #include "res://assets/shaders/pearl_engraving.gdshaderinc"
+#include "res://assets/shaders/gonad_shape.gdshaderinc"
 
 global uniform vec3 her_body;
 global uniform vec3 her_light;
@@ -53,16 +54,17 @@ void fragment() {
 	float rim = line(r - (edge - 0.05), 0.09) * inside;
 	col = mix(col, mix(her_body, vec3(1.0, 0.96, 0.9), 0.45) * 1.25, rim);
 	a = max(a, rim);
-	// Her four gonads, open toward the middle.
+	// Her four gonads, in her shape (gonad_shape).
 	float gonad = 0.0, glow = 0.0;
 	float waiting = points * (0.5 + 0.5 * sin(TIME * 4.5));
 	for (int k = 0; k < 4; k++) {
 		float ka = 0.7853982 + float(k) * 1.5707963;
 		vec2 c = vec2(cos(ka), sin(ka)) * 0.4;
 		vec2 d = q - c;
-		float open = 1.0 - smoothstep(0.35, 0.75, dot(normalize(d + 1e-5), -normalize(c)));
-		gonad = max(gonad, line(length(d) - 0.17, 0.08 + 0.045 * waiting) * open);
-		glow = max(glow, line(length(d) - 0.17, 0.24) * open);
+		float open;
+		float sd = gonad_sd(d, c, ka, 0.17, open);
+		gonad = max(gonad, line(sd, 0.08 + 0.045 * waiting) * open);
+		glow = max(glow, line(sd, 0.24) * open);
 	}
 	col = mix(col, vec3(1.0, 0.8, 0.4) * 1.3, glow * waiting * 0.7);
 	a = max(a, glow * waiting * 0.6);

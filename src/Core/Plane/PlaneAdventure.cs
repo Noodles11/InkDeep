@@ -330,6 +330,13 @@ public sealed partial class PlaneWorld
     /// </summary>
     void PlaceLeaks()
     {
+        // A hand-drawn map holds none of its own; a leak cave holds one, at the dead end where a way down would be.
+        if (Map.Station) return;
+        if (Map.LeakCave)
+        {
+            Leaks.Add(new PlaneLeak { Position = Map.Exit.Position, Needed = AdventureTuning.LeakSeconds + AdventureTuning.LeakSecondsPerMenace * Menace });
+            return;
+        }
         // Where she can swim with the boss's walls shut: they wait for the leaks, so none may lie behind them.
         var bossWalls = _rocks.Where(r => r.Kind == SealKind.Boss).ToList();
         var reach = LevelValidator.Distances(Map, Map.Start.Position, blocked: q => bossWalls.Exists(r => r.Contains(q)));
@@ -399,7 +406,8 @@ public sealed partial class PlaneWorld
                 reach.Enqueue(next, far + 1f + AdventureTuning.PuddleRagged * _inkRng.NextFloat());
             }
         }
-        int size = Math.Min((int)MathF.Round(AdventureTuning.StartInk(Menace) * dots.Open.Count(o => o)), water.Count);
+        float share = Map.LeakCave ? MathF.Max(ReefTuning.CaveInk, AdventureTuning.StartInk(Menace)) : AdventureTuning.StartInk(Menace);
+        int size = Math.Min((int)MathF.Round(share * dots.Open.Count(o => o)), water.Count);
         for (int i = 0; i < size; i++)
         {
             dots.Add(water[i]);
