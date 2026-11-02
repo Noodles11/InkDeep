@@ -1,7 +1,7 @@
 // A leak (AdventureView): an X-shaped tear hanging in the water, facing the camera. Nearly invisible: the post pass bends
 // the picture through it like hot air (topdown_post.gdshader), and this draws what lies over that: a purple shimmer that
-// runs through it on a beat, the faint outline left once she has found it, and the golden threads that tie it, one arm at
-// a time, stitching each from the middle out. As it seals, the threads pull tight, the arms close, and both dissolve.
+// runs through it on a beat, the faint outline left once she has found it, and the gold staples that close it: two to an
+// arm, one arm at a time, each snapping in across the tear. As it seals, they bite tight, the arms close, and all dissolve.
 //   UV: the camera-facing quad.
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
@@ -10,7 +10,7 @@ render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabl
 instance uniform vec4 ties = vec4(0.0);
 /// Its shimmer now (0..1), how plainly it shows once found (0..1), how far sealed (0..1), a tie about to snap (0..1).
 instance uniform vec4 state = vec4(0.0);
-/// The thread's colour (gold; ink if the boss shut it).
+/// The staples' colour (gold; ink if the boss shut it).
 instance uniform vec3 thread = vec3(1.0, 0.6, 0.1);
 instance uniform float seed = 0.0;
 
@@ -42,16 +42,24 @@ void fragment() {
 		float along = dot(p, d) / 0.88, side = dot(p, n);
 		if (along < 0.0 || along > 1.0) continue;
 		float tie = k == 0 ? ties.x : k == 1 ? ties.y : k == 2 ? ties.z : ties.w;
-		// The tied length, from the middle out.
-		float held = 1.0 - smoothstep(tie * 1.12 - 0.12, tie * 1.12, along);
+		// Pulled together as its staples go in.
 		side += (noise(vec2(along * 9.0 + float(k) * 5.0, seed)) - 0.5) * 0.07 * (1.0 - closed);
-		float width = (0.15 * (1.0 - along * 0.9) + 0.012) * (1.0 - 0.55 * held) * (1.0 - closed);
+		float width = (0.15 * (1.0 - along * 0.9) + 0.012) * (1.0 - 0.55 * tie) * (1.0 - closed);
 		tear = max(tear, 1.0 - smoothstep(width * 0.55, width + 0.01, abs(side)));
-		// The thread: a zigzag across the tear, stitched from the middle out, trembling where it is about to snap.
-		float stitch = (abs(fract(along * 9.0) - 0.5) * 4.0 - 1.0) * (0.065 * (1.0 - along * 0.8)) * (1.0 - closed * 0.8);
-		stitch += fray * (noise(vec2(along * 20.0, TIME * 30.0)) - 0.5) * 0.05;
-		float thick = 0.008 + 0.02 * closed;
-		gold = max(gold, held * (1.0 - smoothstep(thick, thick + 0.016, abs(side - stitch))));
+		// Two staples across it: the first in over the first half of the tie, the second over the rest. A crown and two
+		// short legs biting into the tear's lips.
+		for (int n = 0; n < 2; n++) {
+			float in_ = clamp(tie * 2.0 - float(n), 0.0, 1.0);
+			if (in_ <= 0.0) continue;
+			float at = 0.3 + 0.36 * float(n);
+			float tremble = fray * (noise(vec2(TIME * 30.0, float(k + n))) - 0.5) * 0.03;
+			float s = side + tremble, u = (along - at) * 0.88;
+			float t = 0.014 + 0.01 * closed;
+			float half_ = (0.13 - 0.05 * at) * (1.0 - 0.3 * closed);
+			float crown = step(abs(u), t) * step(abs(s), half_ + t);
+			float legs = step(abs(abs(s) - half_), t) * step(-0.05, u) * step(u, t);
+			gold = max(gold, max(crown, legs) * smoothstep(0.0, 0.5, in_));
+		}
 	}
 	vec3 purple = mix(vec3(0.42, 0.14, 0.75), vec3(0.78, 0.42, 1.0), shimmer);
 	float tearShown = tear * (seen * 0.14 + shimmer * 0.42) * (1.0 - closed);

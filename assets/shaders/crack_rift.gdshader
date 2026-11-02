@@ -24,5 +24,5 @@ void fragment() {
 	vec2 q = world.xz * 0.35;
 	float shimmer = sin(q.x + TIME * 0.5 + 1.7 * sin(q.y * 0.8 - TIME * 0.3)) * sin(q.y * 1.3 - TIME * 0.4);
 	ALBEDO = water * (1.0 + 0.06 * shimmer);
-	ALPHA = open * (1.0 - smoothstep(0.93, 1.0, UV.x));
+	ALPHA = open * 0.62 * (1.0 - smoothstep(0.25, 1.0, UV.x));
 }

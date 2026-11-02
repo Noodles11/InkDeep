@@ -141,7 +141,7 @@ public sealed partial class PlaneWorld
     /// <summary>The level's standing current, the main one (adventure levels only).</summary>
     public List<PlaneCurrent> Currents { get; } = new();
 
-    /// <summary>The water's flow at p (m/s): the leaks' light outward push, and the main current's too if asked.</summary>
+    /// <summary>The water's flow at p (m/s): the leaks' push, harder the nearer, and the main current's too if asked.</summary>
     public Vector2 CurrentAt(Vector2 p, bool main = true)
     {
         Vector2 flow = Vector2.Zero;
@@ -152,8 +152,9 @@ public sealed partial class PlaneWorld
         {
             var off = p - v.Position;
             float d = off.Length();
-            if (v.Push <= 0f || d >= AdventureTuning.LeakReach || d < 1e-3f) continue;
-            flow += off / d * (push * v.Push * (1f - d / AdventureTuning.LeakReach));
+            if (v.Push <= 0f || d >= AdventureTuning.LeakReach) continue;
+            float k = 1f - d / AdventureTuning.LeakReach;
+            flow += (d < 1e-3f ? Vector2.UnitY : off / d) * (push * v.Push * k * k);
         }
         return flow;
     }
@@ -171,7 +172,7 @@ public sealed partial class PlaneWorld
     /// <summary>
     /// The currents' turn: the main one wakes once enough leaks are sealed, and a leak's push dies with it. What they
     /// carry: Clementine, sliding along rock, every shot and ink cloud. The creatures live in this water and hold their
-    /// ground in it, and shells, hearts and pearls stay where they lie (a current that never stops would sweep them all
+    /// ground in the main current (a leak's push turns them all the same), and shells, hearts and pearls stay where they lie (a current that never stops would sweep them all
     /// to the way down).
     /// </summary>
     void StepCurrents()
@@ -192,6 +193,37 @@ public sealed partial class PlaneWorld
         {
             Vector2 d = CurrentAt(cloud.Position) * Dt;
             if (d != Vector2.Zero && Map.IsOpen(cloud.Position + d)) cloud.Position += d;
+        }
+        if (Leaks.Exists(v => !v.Sealed)) KeepFromLeaks();
+    }
+
+    /// <summary>No creature gets under a leak: the push turns them, and none comes nearer than LeakClear.</summary>
+    void KeepFromLeaks()
+    {
+        foreach (var m in Murklings)
+            if (m.Alive && !m.Clinging) Shove(ref m.Position);
+        foreach (var w in Inkwardens)
+            if (w.Alive) Shove(ref w.Position);
+        foreach (var mob in Mobs)
+            if (mob.Alive) Shove(ref mob.Position);
+        foreach (var f in Fish) Shove(ref f.Position);
+        foreach (var f in ReefFish) Shove(ref f.Position);
+        foreach (var school in Schools) Shove(ref school.Position);
+    }
+
+    void Shove(ref Vector2 at)
+    {
+        foreach (var v in Leaks)
+        {
+            if (v.Sealed) continue;
+            var off = at - v.Position;
+            float d = off.Length();
+            if (d >= AdventureTuning.LeakReach) continue;
+            var away = d > 1e-3f ? off / d : Vector2.UnitY;
+            float k = 1f - d / AdventureTuning.LeakReach;
+            var to = at + away * ((AdventureTuning.LeakPush + AdventureTuning.LeakPushPerMenace * Menace) * k * k * Dt);
+            if (d < AdventureTuning.LeakClear) to = v.Position + away * AdventureTuning.LeakClear;
+            if (Map.IsOpen(to)) at = to;
         }
     }
 }

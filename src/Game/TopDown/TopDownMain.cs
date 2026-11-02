@@ -37,6 +37,8 @@ public partial class TopDownMain : Node3D
     LevelId _id = LevelId.First;
     CombatView _combat = null!;
     CurrentView _currents = null!;
+    CrabView _crab = null!;
+    float _holeShown;
     KelpView _kelp = null!;
     AbyssView _abyss = null!;
     VaseView _vases = null!;
@@ -122,7 +124,6 @@ public partial class TopDownMain : Node3D
     BellView _bell = null!;
     /// <summary>Where her light reaches over the reef (light_field.gdshaderinc reads it): redone as she moves.</summary>
     readonly OctoShoots.Game.Fx.HorizonMap _lantern = new();
-    PearlOrbitView _orbit = null!;
     CameraRig _camera = null!;
     DebugMapOverlay _debugMap = null!;
     MinimapView _minimap = null!;
@@ -227,7 +228,16 @@ public partial class TopDownMain : Node3D
     string? _startAt;
     /// <summary>Verification: bud a murkling ("murk") or a prime ("prime") on the densest ink near her at the start.</summary>
     string? _dbgBud;
-    /// <summary>Verification (--dbg-leak-hits=n): the first leak held at this many hits.</summary>
+    /// <summary>A Crab Deal's pearl near her: what it does, floating over it.</summary>
+    (string Id, Vector3 Over)? NearDeal()
+    {
+        foreach (var stand in _world.Stands)
+            if (stand.Kind == StandKind.Deal && !stand.Sold && System.Numerics.Vector2.Distance(stand.Position, _world.Player.Position) <= PearlHint.Reach)
+                return (stand.ItemId, new Vector3(stand.Position.X, LevelMap.SwimBand + 1.5f, stand.Position.Y));
+        return null;
+    }
+
+    /// <summary>Verification (--dbg-leak-hits=n): the first leak held at this many stages.</summary>
     int _dbgLeakHits;
     /// <summary>Verification (--dbg-leaks=n): this many leaks sealed from the start.</summary>
     int _dbgLeaks;
@@ -267,8 +277,6 @@ public partial class TopDownMain : Node3D
         BuildEnvironment();
         _level = new LevelView();
         AddChild(_level);
-        _orbit = new PearlOrbitView();
-        AddChild(_orbit);
         _bell = new BellView();
         AddChild(_bell);
         // Prism Pearl: the red and the blue beside her while her light is split.
@@ -276,6 +284,8 @@ public partial class TopDownMain : Node3D
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_horizon"), _lantern.Texture);
         _combat = new CombatView();
         AddChild(_combat);
+        _crab = new CrabView();
+        AddChild(_crab);
         _currents = new CurrentView();
         AddChild(_currents);
         _kelp = new KelpView();
@@ -319,6 +329,7 @@ public partial class TopDownMain : Node3D
         _damage = new DamageNumbers();
         AddChild(_damage);
         _sfx = new Sfx();
+        _crab.Click = () => _sfx.PlayPitched("pop", 2.6f, -16f);
         AddChild(_sfx);
         if (_achievementBanner is not null) _achievementBanner.Sound = _sfx;
         // Light bubbles: a merge chimes, a semitone higher for every bubble it holds (at most one chime per 60 ms).
@@ -471,6 +482,7 @@ public partial class TopDownMain : Node3D
             Level = _id.Level,
             Items = _run.Items.ToList(),
             Hp = _run.Hp,
+            ArmCuts = _run.ArmCuts,
             Shells = _run.Shells,
             ActiveCharge = _run.ActiveCharge,
             Xp = _run.Xp,
@@ -1061,6 +1073,7 @@ public partial class TopDownMain : Node3D
                 // Back where the save left her: what she carried onto this level, and the run's totals so far.
                 foreach (string id in saved.Items)
                     if (_catalog?.Contains(id) == true) _run.Add(id);
+                _run.ArmCuts = saved.ArmCuts;
                 _run.Xp = saved.Xp;
                 _run.XpLevel = Math.Max(saved.XpLevel, 1);
                 _run.Points = saved.Points;
@@ -1234,6 +1247,7 @@ public partial class TopDownMain : Node3D
             _corruption.Show(null, null);
             _blight.Show(_world);
             _adventure.Show(_world);
+            _crab.Show(_world);
             _springs.Show(_world);
             return;
         }
@@ -1241,6 +1255,7 @@ public partial class TopDownMain : Node3D
         _level.SetCorruption(_corruptTex.Texture);
         _blight.Show(_world);
         _adventure.Show(_world);
+        _crab.Show(_world);
         _springs.Show(_world);
         // The shards were laid out already if she dived here; otherwise they are laid out now, off the main thread.
         if (_belowLayout is { } ready && ReferenceEquals(_belowLayoutMap, map)) _corruption.Show(ready, _corruptTex.Texture);
@@ -1274,9 +1289,13 @@ public partial class TopDownMain : Node3D
         _vapour.Tick(dt, _camera.Camera);
         _blight.Sync(_world, dt, _camera.Camera);
         _adventure.Sync(_world, dt, _camera);
+        _crab.Sync(_world, dt);
+        // A regular way down has no seabed; on the dive itself the level below takes over.
+        _holeShown = Mathf.MoveToward(_holeShown, _map.HasBoss || _diving ? 0f : 1f, dt * 2f);
+        _camera.SetHole(_map.Exit.Position, _map.Exit.Radius, _holeShown);
         if (_dbgLeakHits > 0 && _world.Leaks.Count > 0)
         {
-            _world.Leaks[0].Hits = _dbgLeakHits;
+            _world.Leaks[0].Light = _world.Leaks[0].Needed * _dbgLeakHits / AdventureTuning.Stages + 0.01f;
             _world.Leaks[0].Since = 0f;
         }
         _springs.Sync(dt, _camera.Camera, Focus(alpha) with { Y = LevelMap.SwimBand });
@@ -1314,6 +1333,14 @@ public partial class TopDownMain : Node3D
             "boss-near" => _map.HasBoss ? _world.ArenaCenter + new System.Numerics.Vector2(0f, 6.5f) : null,
             "shop" => _map.Caves.Where(c => _map.Pois[c.Poi].Kind == PoiKind.Shop).Select(c => (System.Numerics.Vector2?)(c.Mouth - c.Facing * 1.5f)).FirstOrDefault(),
             // Out along the shop's passage, facing its gateway.
+            // Inside a Crab Deal room, its fake wall already down.
+            "crab" => _world.Seals.Where(x => x.Rock.Fake).Select(x =>
+            {
+                _world.DebugOpenSeal(x);
+                _level.Slide(x.Rock.Center);
+                foreach (var e in _world.Events) _seals.OnEvent(_world, e);
+                return (System.Numerics.Vector2?)(_map.Caves[x.Rock.Cave].Mouth - x.Facing * 3f);
+            }).FirstOrDefault(),
             "shop-out" => _map.Caves.Where(c => _map.Pois[c.Poi].Kind == PoiKind.Shop).Select(c => (System.Numerics.Vector2?)(c.Mouth + c.Facing * 6f)).FirstOrDefault(),
             // Beside the level's light spring, if it has one.
             "spring" => _world.Springs.Select(sp => (System.Numerics.Vector2?)(sp.Position + new System.Numerics.Vector2(0f, SpringTuning.Radius + 1.5f))).FirstOrDefault(),
@@ -1580,7 +1607,7 @@ public partial class TopDownMain : Node3D
             if (_world?.Pearls.Find(q => q.Absorbing) is { } ritual && _catalog is not null && _catalog.TryGet(ritual.ItemId, out var item)) absorbing = item;
             _pearlBanner.Step(dt, absorbing, _achievementBanner.Busy);
             // A clam room's pearl near her: what it does, floating over its shell.
-            var waiting = _clamRooms.Near(_world, PearlHint.Reach);
+            var waiting = _clamRooms.Near(_world, PearlHint.Reach) ?? NearDeal();
             ItemDef? told = null;
             if (waiting is { } near) _catalog?.TryGet(near.Id, out told);
             _pearlHint.Step(dt, told, waiting is { } over ? _camera.Camera.UnprojectPosition(over.Over) : default);
@@ -1690,6 +1717,7 @@ public partial class TopDownMain : Node3D
             {
                 _blight.OnEvent(e);
                 _adventure.OnEvent(_world, e);
+                _crab.OnEvent(_world, e);
                 _seals.OnEvent(_world, e);
                 // A level reached: her gonads pulse, on her and on the HUD, until the point is spent in the pause menu.
                 if (e.Type == PlaneEventType.LevelUp)
@@ -1920,7 +1948,6 @@ public partial class TopDownMain : Node3D
         });
         Guard("lantern", SyncLantern);
         OctoShoots.Game.Fx.SunMap.Poll(_map);
-        Guard("orbit", () => _orbit.Sync(_world.Run.Items, _catalog, _bell.GlobalPosition, dt, _bell.Visible));
         _combat.HerAt = _bell.GlobalPosition;
         Guard("combat", () => _combat.Sync(_world, dt));
         Guard("surge", () => _surgeView.Sync(_world, dt));
@@ -2169,7 +2196,7 @@ public partial class TopDownMain : Node3D
     }
 
     /// <summary>The views of a level's life: its creatures, pickups and shots, Queen Clam, damage numbers, currents.</summary>
-    IEnumerable<Node> LevelLife => new Node[] { _combat, _puffers, _reefFish, _curseDen, _clamRooms, _geysers, _boss, _damage, _currents, _vases, _abyss };
+    IEnumerable<Node> LevelLife => new Node[] { _crab, _combat, _puffers, _reefFish, _curseDen, _clamRooms, _geysers, _boss, _damage, _currents, _vases, _abyss };
 
     /// <summary>
     /// Fades the old level's life during the dive: each piece fades out over a few metres as the iris's dissolving edge
@@ -2433,22 +2460,10 @@ public partial class TopDownMain : Node3D
     }
 
     /// <summary>The corruption war's moments: shakes, sounds and words (the sights are BlightView's).</summary>
-    /// <summary>How lit the leak at this mouth is (0..1).</summary>
-    float LeakGlowAt(System.Numerics.Vector2 mouth)
-    {
-        foreach (var v in _world.Leaks)
-            if (v.Position == mouth) return v.Glow;
-        return 0f;
-    }
-
     void CorruptionEvent(in PlaneEvent e)
     {
         switch (e.Type)
         {
-            case PlaneEventType.LeakLit:
-                // The leak takes her light: a chime rising as it fills.
-                _sfx.PlayPitched("bell_ring", 1.1f + 0.7f * LeakGlowAt(e.Position), -13f);
-                break;
             case PlaneEventType.LeakTied:
                 // A tie pulled tight: a clear note, rising with each.
                 _haptics.Pulse(0.3f, 0.2f, 0.15f);
@@ -2468,6 +2483,21 @@ public partial class TopDownMain : Node3D
             case PlaneEventType.ExitOpened:
                 _sfx.PlayPitched("bell_ring", 0.6f, -4f);
                 Say("The way down is open");
+                break;
+            case PlaneEventType.DealRefused:
+                _sfx.PlayPitched("pop", 0.5f, -8f);
+                Say("Too little left to cut");
+                break;
+            case PlaneEventType.ClawCut:
+                // The claw shuts on her arms: a heavy snap, felt.
+                _camera.Shake(0.7f);
+                _haptics.Pulse(0.9f, 0.7f, 0.3f);
+                _sfx.PlayPitched("pop", 0.4f, -2f);
+                Say("The crab takes its due");
+                break;
+            case PlaneEventType.LastLight:
+                _camera.Shake(0.8f);
+                _sfx.PlayPitched("bell_ring", 0.7f, -3f);
                 break;
             case PlaneEventType.MainCurrentWoke:
                 // The water remembers its way: a long swell, felt, as the healthy current starts up again.
@@ -3145,9 +3175,7 @@ public partial class TopDownMain : Node3D
                   .Concat(_world.Lashjaws.Where(l => l.Alive).Select(l => l.Position))
                   .Where(q => System.Numerics.Vector2.Distance(q, from) < 14f)
                   .OrderBy(q => System.Numerics.Vector2.Distance(q, from)).Select(q => (System.Numerics.Vector2?)q).FirstOrDefault()
-              // With no creature to shoot, the nearest open leak near her (the adventure's), else the nearest standing pot.
-              ?? _world.Leaks.Where(v => !v.Sealed && System.Numerics.Vector2.Distance(v.Position, from) < 14f)
-                  .OrderBy(v => System.Numerics.Vector2.Distance(v.Position, from)).Select(v => (System.Numerics.Vector2?)v.Position).FirstOrDefault()
+              // With no creature to shoot, the nearest standing pot.
               ?? _world.Vases.Where(v => !v.Broken).OrderBy(v => System.Numerics.Vector2.Distance(v.Position, from)).Select(v => (System.Numerics.Vector2?)v.Position).FirstOrDefault();
         // Nothing to shoot at: straight ahead, the way she faces.
         input.Aim = target is { } at && System.Numerics.Vector2.DistanceSquared(at, from) > 1e-4f ? System.Numerics.Vector2.Normalize(at - from) : _world.Player.Aim;

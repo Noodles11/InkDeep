@@ -214,7 +214,6 @@ public sealed class PlaneShot
     /// <summary>It has struck a secret's seal (a bubble that bounces off counts once).</summary>
     public bool SealStruck;
     /// <summary>It has struck a leak's mouth already (once a bubble).</summary>
-    public bool LeakStruck;
     /// <summary>A pufferling's needle: fast, and it pops any bubble it meets (flying on).</summary>
     public bool Needle;
     public int PearlHp;
@@ -236,6 +235,8 @@ public sealed class PlanePearl
     /// <summary>Set where it lies (a boss's cleansed pearl): it does not float down into place.</summary>
     public bool Placed;
     public bool Absorbing => Ritual >= 0f && !Taken;
+    /// <summary>Bought from the crab: the claw takes its price when it is absorbed.</summary>
+    public bool Deal;
 }
 
 /// <summary>
@@ -458,17 +459,6 @@ public sealed partial class PlaneWorld
             if (shot.FromPlayer)
             {
                 if (BubbleHitsBoss(shot)) continue;
-                // A leak takes her light where it floats.
-                if (!shot.LeakStruck)
-                    foreach (var v in Leaks)
-                    {
-                        if (v.Sealed || !Reaches(shot, v.Position, AdventureTuning.LeakRadius)) continue;
-                        shot.LeakStruck = true;
-                        StrikeLeak(v, ShotLight(shot));
-                        if (!shot.Pierce && !shot.Boomerang) Pop(shot, v.Position - shot.Position);
-                        break;
-                    }
-                if (shot.Life <= 0f) continue;
                 // Queen Clam's pearls are corruption: her light cannot clear them, and passes through.
                 foreach (var mob in Mobs)
                 {
@@ -591,6 +581,7 @@ public sealed partial class PlaneWorld
         if (pearl.Taken) return;
         pearl.Taken = true;
         Absorb(pearl.ItemId, Player.Position);
+        if (pearl.Deal) PayDeal();
     }
 
     /// <summary>A pearl taken (found or bought): absorbed into her loadout; one that heals on pickup heals her now.</summary>
@@ -679,6 +670,7 @@ public sealed partial class PlaneWorld
         p.HurtTimer = PlaneCombatTuning.PlayerHurtGrace;
         LastHitSource = source;
         Events.Add(new PlaneEvent(PlaneEventType.PlayerHit, at ?? p.Position, dir, damage, source));
+        SpendLastLight();
         return true;
     }
 
@@ -689,7 +681,7 @@ public sealed partial class PlaneWorld
     float ShotLight(PlaneShot shot) => MathF.Min(shot.Damage / (PlaneCombatTuning.ShotDamage * DamageScale), 1f);
 
     /// <summary>Her damage stat as a factor on a bubble's damage (1 with no pearls; Shark Tooth and Coral Crown raise it).</summary>
-    float DamageScale => Run.Loadout.Stats.Damage / MathF.Max(Tuning.Damage, 0.01f);
+    float DamageScale => Run.Loadout.Stats.Damage / MathF.Max(Tuning.Damage, 0.01f) * TitheScale;
 
     /// <summary>Her stats against the tuning's own (1 with no pearls): how fast she throws, how fast and far her light flies.</summary>
     float FireScale => Run.Loadout.Stats.FireRate / MathF.Max(Tuning.FireRate, 0.01f);
@@ -741,7 +733,7 @@ public sealed partial class PlaneWorld
                 Hue = hue == PrismHue.None && Prism ? PrismHue.Green : hue,
                 Life = PlaneCombatTuning.ShotLife + hover,
                 FromPlayer = true,
-                Damage = damage,
+                Damage = damage * (Molten ? CrabTuning.Molten : 1f),
                 Radius = radius,
                 BaseRadius = radius,
                 Grow = spec.Grow,
@@ -753,7 +745,7 @@ public sealed partial class PlaneWorld
                 Hover = hover,
                 Volley = _volleys,
                 Homing = spec.Homing,
-                Pierce = spec.Pierce,
+                Pierce = spec.Pierce || Molten,
                 Boomerang = spec.Boomerang,
                 Wave = spec.Wave,
                 WavePhase = MathF.Tau * i / count,

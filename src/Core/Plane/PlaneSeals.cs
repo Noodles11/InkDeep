@@ -63,6 +63,8 @@ public sealed partial class PlaneWorld
     {
         foreach (var seal in Seals)
         {
+            // A fake wall is no wall to her: it gives way as she swims into it.
+            if (!seal.Open && seal.Rock.Fake && seal.Rock.Contains(Player.Position, Radius + CrabTuning.WallTouch)) OpenSeal(seal);
             if (seal.Open || seal.Hits <= 0) continue;
             seal.Since += Dt;
             if (seal.Since < SealTuning.Hold) continue;
@@ -78,7 +80,7 @@ public sealed partial class PlaneWorld
     {
         foreach (var seal in Seals)
         {
-            if (seal.Open || seal.Barred || !seal.Rock.Contains(at, 0.3f) || Vector2.Distance(at, seal.Emblem) > SealTuning.Reach) continue;
+            if (seal.Open || seal.Barred || seal.Rock.Fake || !seal.Rock.Contains(at, 0.3f) || Vector2.Distance(at, seal.Emblem) > SealTuning.Reach) continue;
             if (seal.Kind == SealKind.Boss && LeaksLeft > 0)
             {
                 Events.Add(new PlaneEvent(PlaneEventType.SealRefused, seal.Emblem, seal.Facing, LeaksLeft));
@@ -91,13 +93,18 @@ public sealed partial class PlaneWorld
             seal.Hits++;
             Events.Add(new PlaneEvent(PlaneEventType.SealLit, seal.Emblem, seal.Facing, seal.Glow));
             if (seal.Hits < seal.Needed) return;
-            seal.Open = true;
-            // Only its gate gives way: a long wall's sides stay standing.
-            _rocks.Remove(seal.Rock);
-            _rocks.AddRange(seal.Rock.Remains());
-            Events.Add(new PlaneEvent(PlaneEventType.SealOpened, seal.Rock.Center, seal.Facing, seal.Rock.Radius));
+            OpenSeal(seal);
             return;
         }
+    }
+
+    void OpenSeal(SecretSeal seal)
+    {
+        seal.Open = true;
+        // Only its gate gives way: a long wall's sides stay standing.
+        _rocks.Remove(seal.Rock);
+        _rocks.AddRange(seal.Rock.Remains());
+        Events.Add(new PlaneEvent(PlaneEventType.SealOpened, seal.Rock.Center, seal.Facing, seal.Rock.Radius));
     }
 
     /// <summary>
@@ -137,6 +144,8 @@ public sealed partial class PlaneWorld
     }
 
     /// <summary>Verification: a shot of her light striking this seal's emblem (or the first one still shut).</summary>
+    public void DebugOpenSeal(SecretSeal seal) => OpenSeal(seal);
+
     public void DebugStrikeSeal(SecretSeal? which = null)
     {
         if ((which ?? Seals.FirstOrDefault(x => !x.Open)) is { } seal) StrikeSeal(seal.Emblem - seal.Facing * 0.3f);

@@ -200,15 +200,6 @@ public sealed partial class PlaneWorld
         _surgeWall -= Dt;
         if (_surgeWall > 0f) return;
         foreach (var ray in surge.Rays)
-            for (int i = 0; i + 1 < ray.Points.Count; i++)
-                foreach (var v in Leaks)
-                {
-                    if (v.Sealed || Geo.SegmentDistance(v.Position, ray.Points[i], ray.Points[i + 1]) > AdventureTuning.LeakRadius) continue;
-                    _surgeWall = ShotInterval;
-                    StrikeLeak(v);
-                    return;
-                }
-        foreach (var ray in surge.Rays)
         {
             if (ray.Wall is not { } wall) continue;
             _surgeWall = ShotInterval;

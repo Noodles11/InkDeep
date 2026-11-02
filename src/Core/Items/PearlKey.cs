@@ -98,6 +98,8 @@ public static class PearlKey
                 case "magnet" or "richCaches" or "richDrops": Add(Luck, PearlIcon.Nautilus); break;
                 case "landmarks" or "minimap": Add(Wayfinding, PearlIcon.Nautilus); break;
                 case "mergeBubbles": Add(MoreShots, PearlIcon.Chevron); break;
+                case "severedNerve" or "moltenCarapace" or "clawTithe": Add(Damage, PearlIcon.Chevron, 1.5f); break;
+                case "lastLight": Add(Defence, PearlIcon.Shield, 1.5f); break;
             }
         if (item.Active is { } a)
         {

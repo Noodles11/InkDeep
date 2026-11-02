@@ -26,11 +26,9 @@ public static class LightSprings
     {
         var found = new List<Vector2>();
         var rng = new Rng(map.Seed ^ 0x5B21C5UL ^ ((ulong)map.Level << 18) ^ ((ulong)map.Depth << 26) ^ ((ulong)map.Cycle << 34) ^ ((ulong)map.Attempt << 50));
-        // As many as the level's template says, else the general chance of one, likelier with her luck. An adventure's
-        // abyss reef always has one, and a second by her luck.
+        // At most one: a template's say, else the general chance, likelier with her luck. An adventure's abyss reef always has it.
         float bonus = OctoShoots.Core.Items.LuckTuning.SpringBonus(map.Luck);
-        int want = map.Abyss ? Math.Max(map.Template?.Rules.Springs ?? 1, 1) + (rng.NextFloat() < bonus ? 1 : 0)
-            : map.Template?.Rules.Springs ?? (rng.NextFloat() < MathF.Min(SpringTuning.Chance + bonus, 0.95f) ? 1 : 0);
+        int want = map.Abyss ? 1 : Math.Min(map.Template?.Rules.Springs ?? (rng.NextFloat() < MathF.Min(SpringTuning.Chance + bonus, 0.95f) ? 1 : 0), 1);
         if (want <= 0) return found;
         var candidates = map.Plazas.Select(p => p.Center).ToList();
         foreach (var c in map.Corridors.Where(c => c.Kind is CorridorKind.Main or CorridorKind.Side))

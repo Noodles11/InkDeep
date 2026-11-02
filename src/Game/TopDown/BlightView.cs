@@ -184,9 +184,9 @@ public partial class BlightView : Node3D
             view.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("aim"), new Vector3(m.Aim.X, 0f, m.Aim.Y));
             // The adventure's kinds: a spiked one (a blue tang), a tadpole (a clownfish) with its tail out behind.
             bool adventure = world.Options.Adventure && m.Fish is not null;
-            bool spiked = adventure && m.Fish!.Kind == ReefFishKind.BlueTang, tadpole = adventure && m.Fish!.Kind == ReefFishKind.Clownfish;
-            view.Mesh = spiked ? _spikySphere : _sphere;
-            view.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("spikes"), spiked ? 1f : 0f);
+            const bool spiked = false, tadpole = false;
+            view.Mesh = _sphere;
+            view.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("spikes"), 0f);
             view.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("tadpole"), tadpole && !m.Clinging ? 1f : 0f);
             if (m.Velocity.LengthSquared() > 0.04f)
                 view.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("swim"), new Vector3(m.Velocity.X, 0f, m.Velocity.Y).Normalized());

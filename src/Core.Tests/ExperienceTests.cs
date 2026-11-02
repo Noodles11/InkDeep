@@ -56,8 +56,8 @@ public class ExperienceTests
         run.Hp = 50f;
         float max = run.MaxHp, damage = run.Loadout.Stats.Damage;
         Assert.True(run.Spend(Stat.MaxHp));
-        Assert.Equal(max + 10f, run.MaxHp, 3);
-        Assert.Equal(60f, run.Hp, 3);
+        Assert.Equal(max + 10f + ExperienceTuning.HpPerPoint, run.MaxHp, 3);
+        Assert.Equal(60f + ExperienceTuning.HpPerPoint, run.Hp, 3);
         Assert.True(run.Spend(Stat.Damage));
         Assert.Equal(damage + t.Damage * 0.06f, run.Loadout.Stats.Damage, 4);
         Assert.Equal(0, run.Points);
@@ -74,8 +74,8 @@ public class ExperienceTests
         w.Run.Gain(ExperienceTuning.FirstLevel);
         w.Player.Hp = 40f;
         Assert.True(w.SpendSkill(Stat.MaxHp));
-        Assert.Equal(50f, w.Player.Hp, 3);
-        Assert.Equal(110f, w.Run.MaxHp, 3);
+        Assert.Equal(50f + ExperienceTuning.HpPerPoint, w.Player.Hp, 3);
+        Assert.Equal(110f + ExperienceTuning.HpPerPoint, w.Run.MaxHp, 3);
     }
 
     [Fact]

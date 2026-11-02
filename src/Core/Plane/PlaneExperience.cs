@@ -13,6 +13,8 @@ namespace OctoShoots.Core.Plane;
 /// </summary>
 public static class ExperienceTuning
 {
+    /// <summary>Every skill point spent, whatever on, adds this much max HP (and so length to her arms).</summary>
+    public const float HpPerPoint = 6f;
     /// <summary>A step every CleanseStep of the level's corruption cleansed (its highest mark so far), worth CleanseXp.</summary>
     public const float CleanseStep = 0.1f;
     public const int CleanseXp = 10;

@@ -19,13 +19,16 @@ public sealed class PlaneRun
     public static readonly string[] PortedPearls =
     {
         "triple_tentacle", "hammerhead", "anglerfish_lure", "swordfish_bill", "mirror_scale", "boomerang_shrimp", "double_helix",
-        "coral_crown", "moon_jelly_heart", "shark_tooth", "pearl_diver", "starfish_arm", "ink_sac", "remora_sucker",
+        "coral_crown", "moon_jelly_heart", "shark_tooth", "starfish_arm", "ink_sac", "remora_sucker",
         "captains_hook", "lantern_pearl", "bubble_coral", "plankton_swarm", "mitosis", "giant_squid_eye",
         "lucky_sea_glass", "pirates_doubloon",
         "squid_ink_espresso", "whale_lung", "pufferfish_pout", "cuttlebone", "cannonball", "dolphin_fin", "coral_polyp",
         "abyssal_glow", "glass_squid", "sea_cucumber", "sardine_run", "pistol_shrimp", "brass_compass", "sea_chart_nautilus",
         "bubble_shield", "whale_song", "firefly_squid", "prism_pearl", StartingPearl,
     };
+
+    /// <summary>The pearls found only in a Crab Deal (never offered anywhere else).</summary>
+    public static readonly string[] CrabPearls = { "severed_nerve", "molten_carapace", "last_light", "claw_tithe" };
 
     /// <summary>The active pearl every run starts with (Tide Pulse).</summary>
     public const string StartingPearl = "tide_pulse";
@@ -50,7 +53,16 @@ public sealed class PlaneRun
     public int Shells { get; set; }
     public LevelId Level { get; set; } = LevelId.First;
 
-    public float MaxHp => Loadout.Stats.MaxHp;
+    public float MaxHp => Loadout.Stats.MaxHp * System.MathF.Pow(1f - CrabTuning.Cut, ArmCuts);
+
+    /// <summary>The deals she has struck: each cut a share of her max HP off for the rest of the run.</summary>
+    public int ArmCuts { get; set; }
+
+    /// <summary>Whether a deal would leave her enough.</summary>
+    public bool CanBeCut => MaxHp * (1f - CrabTuning.Cut) >= CrabTuning.LeastMaxHp;
+
+    /// <summary>A deal's price, taken.</summary>
+    public void TakeCut() => ArmCuts++;
 
     /// <summary>The active pearl she holds (the last one taken; one at a time), used with F.</summary>
     public ItemDef? Active => Loadout.Active;
@@ -65,7 +77,7 @@ public sealed class PlaneRun
     /// <summary>Her skill points, spent: how many on each modifier.</summary>
     public Dictionary<OctoShoots.Core.Items.Stat, int> Skills { get; } = new();
 
-    /// <summary>How many skill points she has spent in all (each grows her oral arm a little).</summary>
+    /// <summary>How many skill points she has spent in all (each adds a little max HP, whatever it went on).</summary>
     public int Upgrades => Skills.Values.Sum();
 
     /// <summary>The experience it takes to reach the next level.</summary>
@@ -124,7 +136,8 @@ public sealed class PlaneRun
     /// <summary>Rebuilds the loadout after her skill points were set from outside (a resumed save).</summary>
     public void Refresh() => Rebuild();
 
-    void Rebuild() => Loadout = Loadout.Build(Catalog, Items, Tuning, OctoShoots.Core.Plane.Skills.Mods(Skills, Tuning));
+    void Rebuild() => Loadout = Loadout.Build(Catalog, Items, Tuning, OctoShoots.Core.Plane.Skills.Mods(Skills, Tuning)
+        .Append(new StatMod { Stat = Stat.MaxHp, Op = StatOp.Add, Value = ExperienceTuning.HpPerPoint * Upgrades }));
 
     /// <summary>
     /// The achievements earned (the profile's, shared: one earned mid-run unlocks its pearl from then on). Locked pearls

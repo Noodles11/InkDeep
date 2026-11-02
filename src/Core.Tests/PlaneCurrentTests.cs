@@ -95,18 +95,30 @@ public class PlaneCurrentTests
     }
 
     [Fact]
-    public void EachOpenLeakPushesOutwardLightly_ThePushDyingWithIt()
+    public void ALeakPushesHarderTheNearer_MoreThanSheCanSwimAgainstAtItsMiddle()
     {
         var w = World();
         var v = w.Leaks[0];
-        var at = v.Position + new Vector2(2f, 0f);
-        var push = w.CurrentAt(at, main: false);
-        Assert.True(push.X > 0.3f && push.X < 3f, $"{push}");
+        foreach (var o in w.Leaks.Skip(1)) o.Push = 0f;
+        float At(float d) => w.CurrentAt(v.Position + new Vector2(d, 0f), main: false).X;
+        Assert.True(At(0.5f) > 6f + 1f, $"{At(0.5f)}");
+        Assert.True(At(0.5f) > At(3f) && At(3f) > At(8f) && At(8f) > 0f);
         Assert.Equal(Vector2.Zero, w.CurrentAt(v.Position + new Vector2(AdventureTuning.LeakReach + 1f, 0f), main: false));
         w.DebugSealLeak(v);
         Run(w, CurrentTuning.LeakFall + 0.1f);
-        Assert.Equal(0f, v.Push);
-        Assert.Equal(Vector2.Zero, w.CurrentAt(at, main: false));
+        Assert.Equal(Vector2.Zero, w.CurrentAt(v.Position + new Vector2(2f, 0f), main: false));
+    }
+
+    [Fact]
+    public void NoCreatureGetsUnderALeak()
+    {
+        var w = World();
+        var v = w.Leaks[0];
+        var fish = w.ReefFish[0];
+        fish.Position = v.Position;
+        var at = fish.Position;
+        Run(w, 0.1f);
+        Assert.True(Vector2.Distance(fish.Position, v.Position) >= AdventureTuning.LeakClear - 0.5f);
     }
 
     [Fact]

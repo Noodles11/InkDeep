@@ -228,3 +228,14 @@ caption reads "Synergy!" with its name, a chime plays and a ring of her light go
 | **Shark Mode** | predator | Speed and damage up, freeing heals |
 | **Coral Reef** | coral | The reef mends you: slowly regain health |
 | **Pirate** | galleon | +1 damage, +2 luck, foes drop more coins |
+
+## The crab's pearls
+
+Found only in a Crab Deal (docs/ADVENTURE.md §7), at the price of a quarter of her max HP.
+
+| Pearl | Tagline | Effect |
+|---|---|---|
+| **Severed Nerve** | *It never stopped stinging* | A severed strand circles her, stinging as her arm does |
+| **Molten Carapace** | *Hurt, it runs hot* | Under half health her shots pierce and do 60% more |
+| **Last Light** | *Not yet* | Once a level, a killing blow leaves her at 1 HP in a flood of light |
+| **Claw Tithe** | *Paid in full* | Each cut the crab has taken adds 25% damage |

@@ -23,16 +23,17 @@ public static class AdventureTuning
     /// </summary>
     public const int LevelLeaks = 5, LeaksToClear = 3;
     public const float LeakSpacing = 30f, LeakFromStart = 24f;
-    /// <summary>A leak: her shots strike it this far from its middle (a little wider than she is); it pushes out this far, this hard (+ PerMenace × Menace).</summary>
-    public const float LeakRadius = 1f, LeakReach = 6f, LeakPush = 1.5f, LeakPushPerMenace = 0.5f;
+    /// <summary>A leak's push: out to LeakReach, hardest at its middle (LeakPush + PerMenace × Menace, more than she can swim against), falling away as the square of the distance. No creature comes nearer than LeakClear.</summary>
+    public const float LeakReach = 12f, LeakPush = 9f, LeakPushPerMenace = 1f, LeakClear = 2.5f;
     /// <summary>
-    /// Sealing: LeakHits shots (+ LeakHitsPerMenace × Menace) of her light, in Stages: each of the first four ties one of
-    /// its arms, the last shuts it. LeakHold seconds after her last, it heals: a tie's worth every LeakDrain seconds, each
-    /// tie snapping as it goes back past it. Each sealed is worth LeakXp, and throws LeakShells shells out of it.
+    /// Sealing: her inner light does it, no shots: LeakSeconds (+ LeakSecondsPerMenace × Menace) of her staying within
+    /// LeakSealReach, in Stages: each of the first four ties one of its arms, the last shuts it. LeakHold seconds after
+    /// she leaves it heals, a stage every LeakDrain seconds, each tie snapping as it goes back past it. Each sealed is
+    /// worth LeakXp, and throws LeakShells shells out of it.
     /// </summary>
-    public const int LeakHits = 15, LeakXp = 25, LeakShells = 5, Stages = 5;
-    public const float LeakHitsPerMenace = 5f, LeakHold = 1.5f, LeakDrain = 1.2f;
-    /// <summary>Her first hit rouses the fish within RouseReach of it; each tie makes it spit LeakSpit drops at LeakSpitSpeed, LeakSpitHit of a throw's damage each.</summary>
+    public const int LeakXp = 25, LeakShells = 5, Stages = 5;
+    public const float LeakSeconds = 10f, LeakSecondsPerMenace = 10f, LeakSealReach = 6f, LeakHold = 1.5f, LeakDrain = 1.2f;
+    /// <summary>Her first coming near rouses the fish within RouseReach of it; each tie makes it spit LeakSpit drops at LeakSpitSpeed, LeakSpitHit of a throw's damage each.</summary>
     public const float RouseReach = 14f, LeakSpitSpeed = 5f, LeakSpitHit = 0.6f;
     public const int LeakSpit = 8;
     /// <summary>Sealed, its ink dissolves outward from it at this speed (m/s).</summary>
@@ -82,14 +83,14 @@ public static class AdventureTuning
     public const float ShoalSpeed = 9f, ShoalRing = 1.8f, ShoalLayer = 0.4f, ShoalRadius = 0.2f, ShoalSense = 14f, ShoalOrbit = 1.1f;
 
     /// <summary>
-    /// Her oral arm: ArmBase metres long, ArmPerUpgrade longer for each skill point she has spent (at most ArmMax). It
+    /// Her oral arm: ArmBase metres long at ArmHp max HP, in proportion for more or less (between ArmMin and ArmMax).
     /// trails her along the way she swam (her last ArmMemory seconds of it, so it gathers in when she stops). A
     /// corrupted creature it touches (within ArmWidth of it) takes ArmShare of a shot's damage, once every ArmEvery.
     /// </summary>
-    public const float ArmBase = 3.2f, ArmPerUpgrade = 0.2f, ArmMax = 6f, ArmMemory = 1.5f, ArmWidth = 0.14f, ArmShare = 0.3f, ArmEvery = 0.4f;
+    public const float ArmBase = 3.2f, ArmHp = 100f, ArmMin = 1.5f, ArmMax = 6.5f, ArmMemory = 1.5f, ArmWidth = 0.14f, ArmShare = 0.3f, ArmEvery = 0.4f;
 
     /// <summary>Her oral arm's length after so many skill points spent.</summary>
-    public static float ArmLength(int upgrades) => System.MathF.Min(ArmBase + ArmPerUpgrade * upgrades, ArmMax);
+    public static float ArmLength(float maxHp) => System.Math.Clamp(ArmBase * maxHp / ArmHp, ArmMin, ArmMax);
 }
 
 /// <summary>
@@ -279,24 +280,25 @@ public sealed class InkDots
 public sealed class PlaneLeak
 {
     public Vector2 Position;
-    public int Hits, Needed;
-    /// <summary>Light short of a whole hit (a small shot is only part of one).</summary>
-    public float Credit;
+    /// <summary>The seconds of her light it has taken, and those it needs.</summary>
+    public float Light, Needed;
+    /// <summary>An Inkwarden guards it this moment.</summary>
+    public bool Warded;
     public bool Sealed;
     /// <summary>Shut by the boss as it rose, not by her.</summary>
     public bool Drunk;
-    /// <summary>She has struck it at least once (it roused the fish round it).</summary>
+    /// <summary>She has come near it (it roused the fish round it).</summary>
     public bool Roused;
-    /// <summary>Since her last hit (it heals once LeakHold has passed), and the healing's clock.</summary>
-    public float Since, DrainClock;
+    /// <summary>Since she last lit it (it heals once LeakHold has passed).</summary>
+    public float Since;
     /// <summary>Sealed: how far out from it the ink has dissolved (negative: none under way).</summary>
     public float Wave = -1f;
     /// <summary>How much of its outward push is left (it dies with it).</summary>
     public float Push = 1f;
     /// <summary>How full of her light it is, 0..1.</summary>
-    public float Glow => Needed <= 0 ? 1f : Hits / (float)Needed;
+    public float Glow => Needed <= 0f ? 1f : Light / Needed;
     /// <summary>The arms tied now (0..4).</summary>
-    public int Ties => Sealed ? AdventureTuning.Stages - 1 : Math.Min(Hits * AdventureTuning.Stages / Math.Max(Needed, 1), AdventureTuning.Stages - 1);
+    public int Ties => Sealed ? AdventureTuning.Stages - 1 : Math.Min((int)(Glow * AdventureTuning.Stages), AdventureTuning.Stages - 1);
 }
 
 public sealed partial class PlaneWorld
@@ -332,7 +334,7 @@ public sealed partial class PlaneWorld
         var bossWalls = _rocks.Where(r => r.Kind == SealKind.Boss).ToList();
         var reach = LevelValidator.Distances(Map, Map.Start.Position, blocked: q => bossWalls.Exists(r => r.Contains(q)));
         var safes = SafePlaces().ToList();
-        int needed = AdventureTuning.LeakHits + (int)MathF.Round(AdventureTuning.LeakHitsPerMenace * Menace);
+        float needed = AdventureTuning.LeakSeconds + AdventureTuning.LeakSecondsPerMenace * Menace;
         var chambers = Map.Plazas.Select(z => z.Center).ToList();
         var sides = new List<Vector2>();
         foreach (var c in Map.Corridors.Where(c => c.Kind == CorridorKind.Side))
@@ -349,14 +351,14 @@ public sealed partial class PlaneWorld
     }
 
     /// <summary>Opens leaks at these spots, until the level has its number of them.</summary>
-    void PlaceLeaks(List<Vector2> spots, float[] reach, List<(Vector2 Centre, float Radius)> safes, int needed, bool lastResort)
+    void PlaceLeaks(List<Vector2> spots, float[] reach, List<(Vector2 Centre, float Radius)> safes, float needed, bool lastResort)
     {
         int want = AdventureTuning.LevelLeaks;
         for (float spacing = AdventureTuning.LeakSpacing; spacing > 3.5f && Leaks.Count < want; spacing *= 0.75f)
             foreach (var at in spots)
             {
                 if (Leaks.Count >= want) break;
-                if (!Clear(at, AdventureTuning.LeakRadius) || float.IsPositiveInfinity(LevelValidator.DistanceAt(reach, at))) continue;
+                if (!Clear(at, 1f) || float.IsPositiveInfinity(LevelValidator.DistanceAt(reach, at))) continue;
                 if (Vector2.Distance(at, Map.Start.Position) < (lastResort ? MathF.Min(AdventureTuning.LeakFromStart, spacing) : AdventureTuning.LeakFromStart)) continue;
                 if (Vector2.Distance(at, Map.Exit.Position) < Map.Exit.Radius + 6f || Map.Shaft.Contains(at, 4f)) continue;
                 if (safes.Any(s => Vector2.Distance(at, s.Centre) < s.Radius + 4f)) continue;
@@ -429,16 +431,30 @@ public sealed partial class PlaneWorld
             var v = Leaks[k];
             if (v.Wave >= 0f) Dissolve(dots, v, k);
             v.Push = MathUtil.MoveToward(v.Push, v.Sealed ? 0f : 1f, Dt / CurrentTuning.LeakFall);
-            if (v.Sealed || v.Hits <= 0) continue;
+            if (v.Sealed) continue;
+            // Near it, her inner light works on it on its own (an Inkwarden in reach turns it aside).
+            if (Tick % 15 == 0) v.Warded = Ward(v, v.Position, 1f) <= 0f;
+            int ties = v.Ties;
+            if (!Defeated && !v.Warded && Vector2.Distance(Player.Position, v.Position) <= AdventureTuning.LeakSealReach)
+            {
+                if (!v.Roused) Rouse(v);
+                v.Since = 0f;
+                v.Light += Dt;
+                if (v.Light >= v.Needed)
+                {
+                    SealLeak(v);
+                    continue;
+                }
+                if (v.Ties <= ties) continue;
+                Events.Add(new PlaneEvent(PlaneEventType.LeakTied, v.Position, Vector2.UnitY, v.Ties));
+                Spit(v);
+                continue;
+            }
+            if (v.Light <= 0f) continue;
             // Left alone it heals, its ties snapping as it goes back past them.
             v.Since += Dt;
             if (v.Since < AdventureTuning.LeakHold) continue;
-            v.DrainClock += Dt;
-            float every = AdventureTuning.LeakDrain * AdventureTuning.Stages / v.Needed;
-            if (v.DrainClock < every) continue;
-            v.DrainClock -= every;
-            int ties = v.Ties;
-            v.Hits--;
+            v.Light = MathF.Max(0f, v.Light - v.Needed / AdventureTuning.Stages / AdventureTuning.LeakDrain * Dt);
             if (v.Ties < ties) Events.Add(new PlaneEvent(PlaneEventType.LeakUntied, v.Position, Vector2.UnitY, v.Ties));
         }
     }
@@ -479,31 +495,7 @@ public sealed partial class PlaneWorld
 
     readonly List<int> _back = new();
 
-    /// <summary>One of her shots struck a leak: it adds its light; each stage ties an arm, the last shuts it.</summary>
-    void StrikeLeak(PlaneLeak v, float light = 1f)
-    {
-        if (v.Sealed) return;
-        // An Inkwarden in reach guards it: her light is turned aside.
-        if (Ward(v, v.Position, 1f) <= 0f) return;
-        v.Since = v.DrainClock = 0f;
-        v.Credit += light;
-        if (v.Credit < 0.999f) return;
-        v.Credit -= 1f;
-        if (!v.Roused) Rouse(v);
-        int ties = v.Ties;
-        v.Hits++;
-        Events.Add(new PlaneEvent(PlaneEventType.LeakLit, v.Position, Vector2.UnitY, v.Glow));
-        if (v.Hits >= v.Needed)
-        {
-            SealLeak(v);
-            return;
-        }
-        if (v.Ties <= ties) return;
-        Events.Add(new PlaneEvent(PlaneEventType.LeakTied, v.Position, Vector2.UnitY, v.Ties));
-        Spit(v);
-    }
-
-    /// <summary>Her first hit: it lashes out at the water round it, and the fish there turn.</summary>
+    /// <summary>She comes near: it lashes out at the water round it, and the fish there turn.</summary>
     void Rouse(PlaneLeak v)
     {
         v.Roused = true;
@@ -528,7 +520,7 @@ public sealed partial class PlaneWorld
         bool wakes = LeaksLeft > 0;
         v.Sealed = true;
         v.Drunk = drunk;
-        v.Hits = v.Needed;
+        v.Light = v.Needed;
         if (!drunk) v.Wave = 0f;
         Events.Add(new PlaneEvent(drunk ? PlaneEventType.LeakDrunk : PlaneEventType.LeakSealed, v.Position, Vector2.UnitY, LeaksLeft));
         if (wakes && LeaksLeft == 0) Events.Add(new PlaneEvent(PlaneEventType.MainCurrentWoke, v.Position, Vector2.UnitY));
@@ -550,9 +542,6 @@ public sealed partial class PlaneWorld
     {
         if ((which ?? Leaks.FirstOrDefault(v => !v.Sealed)) is { } v) SealLeak(v);
     }
-
-    /// <summary>Tests: one of her shots striking this leak's mouth.</summary>
-    public void DebugStrikeLeak(PlaneLeak v, float light = 1f) => StrikeLeak(v, light);
 
     /// <summary>Verification and tests: a dot at a point (false where none may lie or one already does).</summary>
     public bool DebugDot(Vector2 at) => Dots?.Add(InkDots.CellOf(at)) ?? false;
@@ -804,8 +793,8 @@ public sealed partial class PlaneWorld
     readonly List<(Vector2 At, float Time)> _trail = new();
     readonly List<Vector2> _arm = new();
 
-    /// <summary>Her oral arm's length now (it grows with every skill point she spends).</summary>
-    public float ArmLength => AdventureTuning.ArmLength(Run.Upgrades);
+    /// <summary>Her oral arm's length now: her max HP, as a length.</summary>
+    public float ArmLength => AdventureTuning.ArmLength(Run.MaxHp);
 
     /// <summary>Her oral arm as the sim has it: from her, back along the way she swam, as far as it reaches.</summary>
     public IReadOnlyList<Vector2> Arm => _arm;
@@ -867,6 +856,7 @@ public sealed partial class PlaneWorld
     {
         float best = float.MaxValue;
         for (int i = 1; i < _arm.Count; i++) best = MathF.Min(best, Geo.SegmentDistance(at, _arm[i - 1], _arm[i]));
+        if (NerveAt is { } nerve) best = MathF.Min(best, Vector2.Distance(at, nerve));
         return best;
     }
 

@@ -863,7 +863,7 @@ Deterministic and cheap: the same level always schedules the same events.
   so that it holds a rider round a bend: left to itself, it carries her all the way. Sealing the leaks heals the reef's
   water, and this is what that looks like. It replaces any pointer to the way down, no light spring lies on it, and once it runs Sea Chart Nautilus
   draws it on both maps.
-- **The leaks' push** (docs/ADVENTURE.md §1): each open leak pushes outward lightly, within 6 m.
+- **The leaks' push** (docs/ADVENTURE.md §1): each open leak pushes outward out to 12 m, harder the nearer.
 - **What they carry:** Clementine (sliding along rock), every shot and ink clouds. The creatures live in this water and
   hold their ground in it, and shells, hearts and pearls stay where they lie: a current that never stops would sweep
   them all to the way down.
@@ -1142,7 +1142,7 @@ The FP staging ("look up through the surface") is replaced:
   runs end at Depth 1; each first boss kill deepens the Crack's reach. Admiral's
   Chart / unlock table inherited.
 - **The Crack**: a rift in the boss arena floor; boss guards it; on her freeing it
-  opens, flush with the floor, the next depth's water lying in it, with updraft bubbles + light (inherited §5.2).
+  opens, its water tinted the next depth's colour, with updraft bubbles + light (inherited §5.2).
   Diving into it (§4.6) leads to the next depth's first level, which starts on
   the arena's level floor.
 - **Endings:** per level, exactly two — dive down the way out, or perish
@@ -1659,7 +1659,7 @@ at mist distance (inherited fade rule).
   grass meadows and bommies, and cosmetic ground cover of seagrass meadows, a few sponge-like coral heads at the
   feet of walls and lone ones out on the floor; no rubble, boulders or glowing anemones. It is deterministic from
   the seed and touches no play. Flora is repainted in the depth's palette, and soft things sway.
-- **The Crack**, open, lies flush with the arena floor, a flat rift filled with the next depth's own water colour
+- **The Crack**, open, is a soft rift in the arena floor, the water in it tinted the next depth's colour
   (`crack_rift.gdshader`, on the same sheet as the sand that sealed it); that water's light spills over the floor and
   bubbles rise from it. The ground round it is kept down to the arena's floor (`AbyssReef.LevelRound`), so no rim stands round it.
 - **Depth focus** (the look, after Below):

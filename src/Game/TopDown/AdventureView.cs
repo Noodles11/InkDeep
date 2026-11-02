@@ -9,8 +9,8 @@ namespace OctoShoots.Game.TopDown;
 /// <summary>
 /// The adventure on screen (docs/ADVENTURE.md), presentation only: the ink as tiny purple specks through the water's layers,
 /// thicker the nearer its leak (ink_dot.gdshader, one MultiMesh); the leaks, X-shaped tears hanging in the water facing the
-/// camera, hot air in the post pass with a purple shimmer running through them on a beat, tied arm by arm with golden
-/// thread as she strikes them (leak.gdshader), the ties snapping again if she stops, and dissolving, thread and tear
+/// camera, hot air in the post pass with a purple shimmer running through them on a beat, stapled arm by arm with gold
+/// as her inner light works on them (leak.gdshader), the ties snapping again if she stops, and dissolving, thread and tear
 /// alike, once sealed; dots her light clears go up in magic particles.
 /// </summary>
 public partial class AdventureView : Node3D
@@ -167,7 +167,7 @@ public partial class AdventureView : Node3D
             // A short swell, then quiet.
             float shimmer = Mathf.Pow(Mathf.Max(Mathf.Sin(node.Beat * Mathf.Tau), 0f), 6f);
             // A tie about to snap trembles first.
-            float fray = !v.Sealed && v.Hits > 0 && v.Since > AdventureTuning.LeakHold * 0.5f ? 1f : 0f;
+            float fray = !v.Sealed && v.Light > 0f && v.Since > AdventureTuning.LeakHold * 0.5f ? 1f : 0f;
             node.Quad.SetInstanceShaderParameter(SN.Of("state"), new Vector4(shimmer, node.Seen, shut, fray));
             node.Light.LightEnergy = (0.15f + 1.1f * shimmer) * (1f - shut);
             if (!v.Sealed && shown < _airs.Length) _airs[shown++] = new Vector3(v.Position.X, v.Position.Y, 1f - 0.7f * v.Glow);
@@ -177,8 +177,8 @@ public partial class AdventureView : Node3D
 
     /// <summary>Her light's steam where it struck (CombatView.Steam): the place, the way the light went, the body's radius, how hard.</summary>
     public System.Action<Vector3, Vector3, float, float>? Steam;
-    /// <summary>A leak's width for the steam, how hard a hit on it is, and how hard its sealing.</summary>
-    const float LeakSteamRadius = 0.6f, LeakSteamHit = 0.3f, LeakSteamSealed = 1f;
+    /// <summary>A leak's width for the steam, and how hard its sealing.</summary>
+    const float LeakSteamRadius = 0.6f, LeakSteamSealed = 1f;
 
     /// <summary>The adventure's events: dots cleared go up in magic particles, a dot drawn to the boss flies to it, a leak struck steams.</summary>
     public void OnEvent(PlaneWorld world, in PlaneEvent e)
@@ -205,9 +205,6 @@ public partial class AdventureView : Node3D
             }
             case PlaneEventType.DotEaten:
                 for (int i = 0; i < 2; i++) Rise(at, 0.4f, 0.7f);
-                break;
-            case PlaneEventType.LeakLit:
-                Steam?.Invoke(at + Vector3.Up * LeakHeight, Vector3.Up, LeakSteamRadius, LeakSteamHit);
                 break;
             case PlaneEventType.LeakUntied:
                 Burst(at, 12);

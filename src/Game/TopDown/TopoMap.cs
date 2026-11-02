@@ -262,7 +262,7 @@ public partial class TopoMap : Control
         for (int i = 0; i < map.Pois.Count; i++)
         {
             var poi = map.Pois[i];
-            bool shown = Visited.Contains(i) || Landmarks && poi.Kind != PoiKind.Secret;
+            bool shown = Visited.Contains(i) || Landmarks && poi.Kind is not (PoiKind.Secret or PoiKind.CrabDeal);
             if (!shown) continue;
             Vector2 p = P(poi.Position);
             if (poi.Kind == PoiKind.Exit && ShowDetail)
@@ -388,6 +388,9 @@ public partial class TopoMap : Control
                 break;
             case PoiKind.Secret:
                 Glyph(font, p, "?", 15, k);
+                break;
+            case PoiKind.CrabDeal:
+                Glyph(font, p, "X", 13, k);
                 break;
             default:
                 Glyph(font, p, "!", 15, k);

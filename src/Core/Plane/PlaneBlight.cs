@@ -927,6 +927,8 @@ public sealed partial class PlaneWorld
                 }
             }
             if (shot.Life <= 0f) continue;
+            // Her light passes other shots by, unless a pearl lets it strike them.
+            if (!Has("breaksShots")) continue;
             foreach (var s in MurkShots)
             {
                 if (s.Life <= 0f || !s.Airborne || !Reaches(shot, s.Position, s.Radius)) continue;

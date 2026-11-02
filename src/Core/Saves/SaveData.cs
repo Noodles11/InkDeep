@@ -110,6 +110,8 @@ public sealed class SuspendedRun
     public string Where => new OctoShoots.Core.Gen.TopDown.LevelId(Cycle, Depth, Level).ToString();
     public List<string> Items { get; set; } = new();
     public float Hp { get; set; }
+    /// <summary>The Crab Deals she has struck.</summary>
+    public int ArmCuts { get; set; }
     public int Shells { get; set; }
     /// <summary>How charged her active pearl was (0–1).</summary>
     public float ActiveCharge { get; set; } = 1f;

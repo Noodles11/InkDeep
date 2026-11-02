@@ -683,7 +683,7 @@ public class CorruptionTests
     }
 
     [Fact]
-    public void AThrowFallsAtItsRangeAndStainsTheSand_ButStruckInTheAirItSplattersAndStainsNothing()
+    public void AThrowFallsAtItsRangeAndStainsTheSand_AndHerLightPassesItBy()
     {
         var w = Level(p => TestLevels.General(p) && !p.HasBoss);
         Quiet(w);
@@ -711,24 +711,16 @@ public class CorruptionTests
         // The sand where it fell (cleaned before) is stained now (her own glow, 9 m off, does not reach it).
         Assert.True(field.At(at) > 0.2f, "it stains the sand");
 
-        // Struck in the air by her light: a splatter, the ground untouched.
+        // Her light passes a throw by.
         var shot = new MurkShot { Position = w.Player.Position + dir * 4f, Velocity = -dir * BlightTuning.ThrowSpeed };
         w.MurkShots.Add(shot);
-        // The ground along its flight, measured before and after (the rest of the level lives on meanwhile).
-        float Along() => Enumerable.Range(0, CorruptionField.N * CorruptionField.N)
-            .Where(i => Geo.SegmentDistance(CellAt(i), w.Player.Position, w.Player.Position + dir * 6f) < 3f).Sum(i => field.Density[i]);
-        float before = Along();
-        w.Step(new PlaneInput { Aim = dir, Fire = true });
         bool burst = false;
         for (int i = 0; i < 30 && !burst; i++)
         {
             w.Step(new PlaneInput { Aim = dir, Fire = true });
             burst = w.Events.Any(e => e.Type == PlaneEventType.MurkShotBurst);
         }
-        Assert.True(burst);
-        Assert.DoesNotContain(w.Events, e => e.Type == PlaneEventType.MurkShotLanded);
-        // Nothing stained there (a landed throw's stain adds several; the level's slow regrowth a few hundredths).
-        Assert.True(Along() <= before + 0.5f, $"stained {Along() - before:0.00}");
+        Assert.False(burst);
     }
 
     [Fact]

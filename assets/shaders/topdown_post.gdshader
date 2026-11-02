@@ -97,6 +97,8 @@ uniform int current_count = 0;
 // The leaks (AdventureView): where each is on her plane (x, z) and how open (0..1).
 uniform vec3 leaks[8];
 uniform int leak_count = 0;
+// A way down (x, z, radius of its opening, how much): below the rim there is no seabed, only water.
+uniform vec4 hole = vec4(0.0);
 // Blasts' marks (CameraRig.AddBlur): where a burst of her light went off, a small round smear of the picture on her
 // plane — a zoom blur drawn in toward its middle — that fades: world x, z, age (0 → 1), radius (m).
 uniform vec4 blurs[4];
@@ -268,6 +270,11 @@ void fragment() {
 		}
 	}
 
+	float hole_deep = 0.0;
+	if (hole.w > 0.0) {
+		hole_deep = hole.w * (1.0 - smoothstep(hole.z * 0.72, hole.z * 1.02, distance(world.xz, hole.xy))) * (1.0 - smoothstep(-5.0, -2.0, world.y));
+	}
+
 	// Painted, the depths below her are stated as flat layers of water (each a step deeper, hazier), barely blurred.
 	float layered = below;
 	if (reef_art > 0 && reef_art != 4 && reef_art != 5 && !open_deep) {
@@ -335,6 +342,8 @@ void fragment() {
 		}
 		col *= 1.0 - deep_fish_shade * shadow * smoothstep(0.0, 1.5, below);
 	}
+	// A way down: the ground gives way to the water itself.
+	col = mix(col, reef_water_deep, hole_deep);
 	// Her swells thicken the water a shade where they pass.
 	col = mix(col, reef_water_deep, clamp(swell_density, 0.0, 1.0) * 0.05);
 

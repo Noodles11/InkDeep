@@ -44,6 +44,19 @@ public class AdventureTests
         return w;
     }
 
+    /// <summary>She stays near a leak for so long, held there against its push.</summary>
+    static void Shine(PlaneWorld w, PlaneLeak v, float seconds)
+    {
+        var at = v.Position + new Vector2(0f, AdventureTuning.LeakSealReach - 1f);
+        at = new[] { 1f, -1f }.Select(k => v.Position + new Vector2(0f, k * (AdventureTuning.LeakSealReach - 1f))).Concat(new[] { 1f, -1f }.Select(k => v.Position + new Vector2(k * (AdventureTuning.LeakSealReach - 1f), 0f))).First(q => w.Map.IsOpen(q));
+        for (int i = 0; i < seconds * PlaneWorld.TickRate; i++)
+        {
+            w.Player.Position = w.Player.PrevPosition = at;
+            w.Player.Hp = w.Run.MaxHp;
+            w.Step(default);
+        }
+    }
+
     static void NoInk(PlaneWorld w)
     {
         foreach (int i in w.Dots!.Live.ToArray()) w.Dots.Remove(i);
@@ -173,20 +186,15 @@ public class AdventureTests
     }
 
     [Fact]
-    public void Each_stage_ties_an_arm_the_last_seals_it_and_left_alone_the_ties_snap()
+    public void Staying_near_ties_arm_after_arm_and_left_alone_the_ties_snap()
     {
         var w = World();
         w.ReefFish.Clear();
         var v = w.Leaks[0];
-        int stage = v.Needed / AdventureTuning.Stages;
-        for (int tie = 1; tie < AdventureTuning.Stages; tie++)
-        {
-            for (int i = 0; i < stage; i++) w.DebugStrikeLeak(v);
-            Assert.Equal(tie, v.Ties);
-            Assert.Contains(w.Events, e => e.Type == PlaneEventType.LeakTied);
-            w.Events.Clear();
-        }
+        Shine(w, v, v.Needed * 0.85f);
+        Assert.Equal(AdventureTuning.Stages - 1, v.Ties);
         Assert.False(v.Sealed);
+        w.Player.Position = w.Player.PrevPosition = w.Map.Start.Position;
         // She stops: after a grace, a tie snaps about every LeakDrain seconds.
         int snapped = 0;
         for (int i = 0; i < (AdventureTuning.LeakHold + AdventureTuning.LeakDrain * 2.5f) * PlaneWorld.TickRate; i++)
@@ -213,7 +221,7 @@ public class AdventureTests
         Assert.Equal(0.95f, AdventureTuning.StartInk(1f), 3);
         Assert.Equal(0.95f, AdventureTuning.StartInk(3f), 3);
         float last = 0f;
-        foreach (int depth in new[] { 2, 4, 7 })
+        foreach (int depth in new[] { 2, 4, 6 })
         {
             var w = At(depth);
             float share = w.Dots!.Count / (float)w.Dots.Open.Count(o => o);
@@ -269,17 +277,6 @@ public class AdventureTests
     }
 
     [Fact]
-    public void A_vent_counts_a_shots_light_not_the_shots()
-    {
-        var w = World();
-        var v = w.Leaks[0];
-        for (int i = 0; i < 3; i++) w.DebugStrikeLeak(v, 0.3f);
-        Assert.Equal(0, v.Hits);
-        w.DebugStrikeLeak(v, 0.3f);
-        Assert.Equal(1, v.Hits);
-    }
-
-    [Fact]
     public void A_volley_shares_her_light()
     {
         Assert.Equal(1f, PlaneCombatTuning.VolleyPower(1), 3);
@@ -300,41 +297,22 @@ public class AdventureTests
     }
 
     [Fact]
-    public void A_vent_seals_with_hits_in_a_row_and_its_light_drains_if_they_stop()
+    public void A_leak_seals_in_her_light_with_no_shots_ten_seconds_and_longer_with_menace()
     {
         var w = World();
         var v = w.Leaks[0];
-        for (int i = 0; i < v.Needed - 2; i++) w.DebugStrikeLeak(v);
+        Assert.Equal(AdventureTuning.LeakSeconds + AdventureTuning.LeakSecondsPerMenace * w.Menace, v.Needed, 3);
+        Shine(w, v, v.Needed * 0.8f);
         Assert.False(v.Sealed);
-        int lit = v.Hits;
+        float lit = v.Light;
+        w.Player.Position = w.Player.PrevPosition = w.Map.Start.Position;
         Run(w, 3 * PlaneWorld.TickRate);
-        Assert.True(v.Hits < lit, "its light should drain once her hits stop");
-        for (int i = 0; i < v.Needed && !v.Sealed; i++) w.DebugStrikeLeak(v);
+        Assert.True(v.Light < lit, "it heals once she leaves");
+        Shine(w, v, v.Needed + 0.5f);
         Assert.True(v.Sealed);
         Assert.False(w.ExitOpen);
         foreach (var o in w.Leaks.Skip(1)) w.DebugSealLeak(o);
         Assert.True(w.ExitOpen);
-    }
-
-    [Fact]
-    public void Her_shots_at_a_vent_light_it()
-    {
-        var w = World();
-        w.ReefFish.Clear();
-        var v = w.Leaks[0];
-        // Before it, facing it.
-        var at = new[] { Vector2.UnitX, Vector2.UnitY, -Vector2.UnitX, -Vector2.UnitY }.Select(d => v.Position + d * 3f).First(q => w.Clear(q, w.Radius));
-        w.Player.Position = w.Player.PrevPosition = at;
-        var aim = Vector2.Normalize(v.Position - at);
-        int lit = 0;
-        for (int i = 0; i < 2 * PlaneWorld.TickRate; i++)
-        {
-            w.Player.Position = at;
-            w.Player.Velocity = Vector2.Zero;
-            w.Step(new PlaneInput { Aim = aim, Fire = true });
-            lit += w.Events.Count(e => e.Type == PlaneEventType.LeakLit);
-        }
-        Assert.True(lit >= 3, $"only {lit} shots lit it");
     }
 
     [Fact]
@@ -601,25 +579,6 @@ public class AdventureTests
     }
 
     [Fact]
-    public void Firefly_squids_surge_held_on_a_leaks_mouth_seals_it()
-    {
-        var run = new PlaneRun(Catalog.Value, new Tuning());
-        run.Add("firefly_squid");
-        var w = new PlaneWorld(TestLevels.Get(TestLevels.Find(p => p.Id.Depth == 2 && !p.HasBoss)), new Tuning(), run, Adventure);
-        w.Inkwardens.Clear();
-        var v = w.Leaks[0];
-        var at = new[] { Vector2.UnitX, Vector2.UnitY, -Vector2.UnitX, -Vector2.UnitY }.Select(d => v.Position + d * 3f).First(q => w.Clear(q, w.Radius));
-        var aim = Vector2.Normalize(v.Position - at);
-        for (int i = 0; i < 12 * PlaneWorld.TickRate && !v.Sealed; i++)
-        {
-            w.Player.Position = w.Player.PrevPosition = at;
-            w.Player.Hp = 100f;
-            w.Step(new PlaneInput { Aim = aim, Fire = true });
-        }
-        Assert.True(v.Sealed);
-    }
-
-    [Fact]
     public void The_boss_wall_takes_no_light_until_every_vent_is_sealed_and_no_vent_lies_behind_it()
     {
         int walls = 0;
@@ -749,15 +708,20 @@ public class AdventureTests
         Run(w, 1);
         var warden = w.Inkwardens.Single();
         Assert.Contains(w.GuardedBy(warden), at => at == v.Position);
-        for (int i = 0; i < v.Needed + 2; i++) w.DebugStrikeLeak(v);
+        bool warded = false;
+        for (int i = 0; i < 30; i++)
+        {
+            Shine(w, v, 1f / PlaneWorld.TickRate);
+            warded |= w.Events.Exists(e => e.Type == PlaneEventType.Warded);
+        }
         Assert.False(v.Sealed);
-        Assert.Equal(0, v.Hits);
-        Assert.Contains(w.Events, e => e.Type == PlaneEventType.Warded);
+        Assert.True(v.Light < 0.3f, "her light is turned aside");
+        Assert.True(warded);
         // Freed, it guards no more.
         warden.Corruption.Value = 0.5f;
         w.DebugBurst(warden.Position, 0.5f, 10f);
         Run(w, 1);
-        for (int i = 0; i < v.Needed; i++) w.DebugStrikeLeak(v);
+        Shine(w, v, v.Needed + 1f);
         Assert.True(v.Sealed);
     }
 
@@ -789,12 +753,14 @@ public class AdventureTests
         Assert.True(m.Corruption.Value < full);
         Assert.True(w.Arm.Count >= 2);
 
-        // Each skill point spent grows it a little, up to its most.
+        // Its length is her max HP, and every skill point spent adds to that.
         Assert.Equal(AdventureTuning.ArmBase, w.ArmLength, 3);
         w.Run.Points = 3;
         for (int i = 0; i < 3; i++) Assert.True(w.SpendSkill(OctoShoots.Core.Items.Stat.Damage));
-        Assert.Equal(AdventureTuning.ArmBase + 3 * AdventureTuning.ArmPerUpgrade, w.ArmLength, 3);
-        Assert.Equal(AdventureTuning.ArmMax, AdventureTuning.ArmLength(1000), 3);
+        Assert.Equal(AdventureTuning.ArmLength(100f + 3 * ExperienceTuning.HpPerPoint), w.ArmLength, 3);
+        Assert.True(w.ArmLength > AdventureTuning.ArmBase);
+        Assert.Equal(AdventureTuning.ArmMax, AdventureTuning.ArmLength(1000f), 3);
+        Assert.Equal(AdventureTuning.ArmMin, AdventureTuning.ArmLength(10f), 3);
     }
 
     [Fact]

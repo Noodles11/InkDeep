@@ -9,7 +9,7 @@ namespace OctoShoots.Core.Items;
 /// <summary>All items, synergies and transformations, loaded from data/items.json.</summary>
 public sealed class ItemCatalog
 {
-    public static readonly string[] KnownPools = { "treasure", "shop", "boss", "secret", "siren", "whale", "curse", "goldenClam", "start" };
+    public static readonly string[] KnownPools = { "treasure", "shop", "boss", "secret", "siren", "whale", "crab", "curse", "goldenClam", "start" };
     public static readonly string[] KnownTags = { "tentacle", "glow", "predator", "coral", "galleon" };
 
     public static readonly JsonSerializerOptions Json = new()

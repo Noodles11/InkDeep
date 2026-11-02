@@ -77,7 +77,7 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     /// <summary>Experience: gained (Size: how much), and a level reached (Size: the new level).</summary>
     XpGained, LevelUp,
     /// <summary>The adventure: an ink dot cleared by her light or eaten by a fish; a leak lit (Size: its glow) or sealed (Size: leaks still open); the way down opened; an anemone turned (Size: its scale).</summary>
-    DotCleared, DotEaten, DotGathered, LeakLit, LeakTied, LeakUntied, LeakSealed, LeakDrunk, MainCurrentWoke, ExitOpened, AnemoneTurned,
+    DotCleared, DotEaten, DotGathered, LeakTied, LeakUntied, LeakSealed, LeakDrunk, MainCurrentWoke, DealRefused, DealStruck, ClawCut, LastLight, ExitOpened, AnemoneTurned,
     /// <summary>The adventure's Inkwarden: struck, it rouses (rolls its spikes out); it fires a spike (Direction: its way).</summary>
     WardenRoused, WardenSpike,
     /// <summary>Drippus Prime: a murkling born out of it (Direction: its way out); its near side dimpling to bounce her (Direction: toward her); the bounce (at its skin; Direction: the way she is flung).</summary>
@@ -137,6 +137,7 @@ public sealed partial class PlaneWorld
         bool adventure = Options.Adventure;
         PlaceCurse();
         PlaceShop();
+        PlaceCrab();
         PlaceShells();
         PlaceBoss();
         if (Options.Vases) PlaceVases();

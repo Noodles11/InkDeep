@@ -40,6 +40,8 @@ public static class LevelStocking
     /// </summary>
     public const float SecondTreasure = 0.5f;
     public const float Secret = 0.4f, Curse = 0.3f;
+    /// <summary>Past the first depth, this often a depth hides one Crab Deal, on a level short of its boss (about three a run).</summary>
+    public const float CrabDepth = 0.6f;
     /// <summary>From level 2 of a depth: a shop, and a guarded shell cache.</summary>
     public const float Shop = 0.45f, Cache = 0.6f;
     /// <summary>The tutorial's two levels, between them every kind of place: level 1 a clam room, a secret and a shell
@@ -57,7 +59,7 @@ public static class LevelStocking
 /// </summary>
 public sealed class LevelPlan
 {
-    public const int Depths = 7;
+    public const int Depths = 6;
     /// <summary>The tutorial depth (Depth 0 to the player): never part of a loop after the first.</summary>
     public const int Tutorial = 1;
 
@@ -68,6 +70,7 @@ public sealed class LevelPlan
     public bool Rift { get; init; }
     public int Treasures { get; init; }
     public int Secrets { get; init; }
+    public int Crabs { get; init; }
     public int Curses { get; init; }
     public int Shops { get; init; }
     public int Caches { get; init; }
@@ -84,7 +87,7 @@ public sealed class LevelPlan
     public float Menace { get; init; }
     public LevelId Next { get; init; }
 
-    public int Places => Treasures + Secrets + Curses + Shops + Caches + (HasBoss ? 1 : 0);
+    public int Places => Treasures + Secrets + Curses + Shops + Caches + Crabs + (HasBoss ? 1 : 0);
     /// <summary>The level's template (docs/LEVEL-TEMPLATES-PROPOSAL.md): null in the tutorial.</summary>
     public LevelTemplate? Template { get; init; }
 
@@ -107,6 +110,17 @@ public sealed class LevelPlan
         if (id.Level < BossLevel(seed, id.Cycle, id.Depth)) return id with { Level = id.Level + 1 };
         // After the last depth the loop begins again below the tutorial.
         return id.Depth < Depths ? new LevelId(id.Cycle, id.Depth + 1, 1) : new LevelId(id.Cycle + 1, Tutorial + 1, 1);
+    }
+
+    /// <summary>The level of this depth that hides its Crab Deal (0: none). Never in the first real depth, nor on a boss level.</summary>
+    static int CrabLevel(RunStreams streams, LevelId id)
+    {
+        if (id.Depth <= Tutorial + 1) return 0;
+        var rng = streams.Plan(new LevelId(id.Cycle, id.Depth, 0));
+        if (rng.NextFloat() >= LevelStocking.CrabDepth) return 0;
+        int boss = BossLevel(streams.Seed, id.Cycle, id.Depth);
+        var levels = Enumerable.Range(2, 3).Where(l => l != boss).ToList();
+        return levels[rng.Int(levels.Count)];
     }
 
     /// <summary>The level she dived from, or null for the first level of the run.</summary>
@@ -167,7 +181,8 @@ public sealed class LevelPlan
 
         // Over the cap: drop the curse den, then the secret, the shell cache — what the template requires last.
         // Treasure rooms stay.
-        int Total() => treasures + secrets + curses + shops + caches + (boss ? 1 : 0);
+        int crabs = CrabLevel(streams, id) == id.Level ? 1 : 0;
+        int Total() => treasures + secrets + curses + shops + caches + crabs + (boss ? 1 : 0);
         for (int pass = 0; pass < 2 && Total() > LevelStocking.MaxPlaces; pass++)
             while (Total() > LevelStocking.MaxPlaces)
             {
@@ -186,6 +201,7 @@ public sealed class LevelPlan
             HasBoss = boss,
             Treasures = treasures,
             Secrets = secrets,
+            Crabs = crabs,
             Curses = curses,
             Shops = shops,
             Caches = caches,

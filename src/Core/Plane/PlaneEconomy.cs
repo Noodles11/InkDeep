@@ -56,7 +56,7 @@ public sealed class PlaneHeart
     public bool Taken;
 }
 
-public enum StandKind { Pearl, Health }
+public enum StandKind { Pearl, Health, Deal }
 
 /// <summary>Something for sale in the shop: touch it with enough shells to buy it.</summary>
 public sealed class ShopStand
@@ -66,6 +66,8 @@ public sealed class ShopStand
     public int Price;
     public Vector2 Position;
     public bool Sold;
+    /// <summary>A deal's: how long she has stayed at it.</summary>
+    public float Hold;
 }
 
 /// <summary>What happened in the room, for the splash screen after the rift.</summary>
@@ -227,7 +229,7 @@ public sealed partial class PlaneWorld
         for (int i = 0; i < Stands.Count; i++)
         {
             var stand = Stands[i];
-            if (stand.Sold || Vector2.Distance(stand.Position, p.Position) > Radius + PlaneEconomyTuning.StandReach) continue;
+            if (stand.Kind == StandKind.Deal || stand.Sold || Vector2.Distance(stand.Position, p.Position) > Radius + PlaneEconomyTuning.StandReach) continue;
             near = i;
             // A top-up is only sold to someone hurt.
             if (stand.Kind == StandKind.Health && p.Hp >= Run.MaxHp) continue;
@@ -251,5 +253,6 @@ public sealed partial class PlaneWorld
             Events.Add(new PlaneEvent(PlaneEventType.Purchased, stand.Position, Vector2.Zero));
         }
         if (near < 0) _denied = -1;
+        StepDeals();
     }
 }

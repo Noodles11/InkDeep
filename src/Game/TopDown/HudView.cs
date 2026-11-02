@@ -278,6 +278,7 @@ public partial class HudView : Control
         if (_adventure)
         {
             float max = Mathf.Max(world.Run.MaxHp, 1f);
+            _maxShare = Mathf.MoveToward(_maxShare, AdventureTuning.ArmLength(max) / AdventureTuning.ArmBase, dt);
             float health = Mathf.Clamp(world.Player.Hp / max, 0f, 1f);
             if (health < _health - 1e-4f)
             {
@@ -464,9 +465,13 @@ public partial class HudView : Control
     static Vector2 ArmRootOf(int i) => BellAt + new Vector2((i - 1f) * ArmGap, ArmTop);
 
     Vector2 ArmAt(int i, float f) =>
-        ArmRootOf(i) + new Vector2(Mathf.Sin(_time * 1.3f + i * 1.9f + f * 3.2f) * 3.2f * f, f * ArmLength);
+        ArmRootOf(i) + new Vector2(Mathf.Sin(_time * 1.3f + i * 1.9f + f * 3.2f) * 3.2f * f, f * ArmSpan(i));
 
-    Vector2 Foot(int i) => ArmRootOf(i) + new Vector2(0f, ArmLength + 14f);
+    Vector2 Foot(int i) => ArmRootOf(i) + new Vector2(0f, ArmSpan(i) + 14f);
+
+    /// <summary>An arm's length on the gauge: the health arm's is her max HP, the way her arms' are in the water.</summary>
+    float ArmSpan(int i) => i == 0 ? ArmLength * _maxShare : ArmLength;
+    float _maxShare = 1f;
 
     static float ArmWidth(float f) => Mathf.Lerp(ArmRoot, ArmTip, f);
 

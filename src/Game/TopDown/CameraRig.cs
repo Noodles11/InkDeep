@@ -126,6 +126,10 @@ public partial class CameraRig : Node3D
 
     readonly float[] _lenses = new float[CombatView.MaxLenses * 4];
 
+    /// <summary>A way down's opening, where the ground gives way to water (strength 0: none).</summary>
+    public void SetHole(System.Numerics.Vector2 at, float radius, float strength) =>
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("hole"), new Vector4(at.X, at.Y, radius, strength));
+
     /// <summary>The leaks' hot air (AdventureView): where each is and how open.</summary>
     public void SetLeaks(Vector3[] leaks, int count)
     {

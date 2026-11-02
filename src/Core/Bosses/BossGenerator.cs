@@ -215,7 +215,7 @@ public static class BossGenerator
         depth > 1 ? For(runSeed, cycle, depth - 1) : cycle > 1 ? For(runSeed, cycle - 1, LastDepth) : null;
 
     /// <summary>The deepest depth with a generated boss (as the player numbers them).</summary>
-    public const int LastDepth = 6;
+    public const int LastDepth = 5;
 
     /// <summary>
     /// Queen Clam: The Lid with her own hand-tuned numbers (PlaneBossTuning), the roll every generated boss is held to.

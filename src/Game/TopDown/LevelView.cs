@@ -71,6 +71,7 @@ public partial class LevelView : Node3D
         PoiKind.Shop => new Color(0.35f, 0.95f, 0.45f),        // green
         PoiKind.CurseDen => new Color(1f, 0.25f, 0.25f),       // red
         PoiKind.Secret => new Color(0.7f, 0.4f, 1f),           // violet (no beacon)
+        PoiKind.CrabDeal => new Color(0.95f, 0.4f, 0.3f),      // crab red (no beacon)
         PoiKind.Exit => new Color(1f, 0.55f, 0.15f),           // orange (the Crack, the way down)
         PoiKind.ShellCache => new Color(0.3f, 0.9f, 0.85f),    // teal (the treasure pool's colour)
         _ => new Color(0.95f, 0.95f, 0.95f),                   // the start: white
@@ -538,16 +539,12 @@ public partial class LevelView : Node3D
 
     /// <summary>
     /// A chunk of the ground. The shaft has no floor: through it, the level below shows. (An abyss reef's dropped floor is
-    /// drawn all the way down, so the water's murk takes it smoothly rather than at a cut edge.) No ground at all is drawn
-    /// inside the Crack: the sand over it and the rift that replaces it lie across the hole.
+    /// drawn all the way down, so the water's murk takes it smoothly rather than at a cut edge.)
     /// </summary>
     internal static LevelShape.Surface? ChunkSurface(LevelMap map, int x0, int y0, int x1, int y1) =>
         SurfaceMesh((x, y) => SmoothHeight(map, x, y), x0, y0, x1, y1,
-            (x, y) => !(map.HasBoss && map.Shaft.Contains(new System.Numerics.Vector2(x, y), RiftGround))
-                && (SmoothHeight(map, x, y) > LevelMap.ShaftBottom + 0.3f || map.Abyss && !map.Shaft.Contains(new System.Numerics.Vector2(x, y), 3f)));
+            (x, y) => SmoothHeight(map, x, y) > LevelMap.ShaftBottom + 0.3f || map.Abyss && !map.Shaft.Contains(new System.Numerics.Vector2(x, y), 3f));
 
-    /// <summary>How far past the Crack's rim the ground stops being drawn (under the rift's solid part).</summary>
-    const float RiftGround = 0.2f;
 
     /// <summary>How far (metres) the reef is drawn past the square on every side: wider than the view reaches.</summary>
     internal const int Skirt = 32;
@@ -721,7 +718,7 @@ public partial class LevelView : Node3D
     // ───────────────────────── canopy ─────────────────────────
 
     /// <summary>A shop is never roofed over: its room shows from outside, so it is plain where it lies and how to get in.</summary>
-    bool ShopRoof(Canopy c) => _map is { } map && c.Kind == CanopyKind.CaveRoof && CaveOf(c) is int cave and >= 0 && map.Pois[map.Caves[cave].Poi].Kind == PoiKind.Shop;
+    bool ShopRoof(Canopy c) => _map is { } map && c.Kind == CanopyKind.CaveRoof && CaveOf(c) is int cave and >= 0 && map.Pois[map.Caves[cave].Poi].Kind is PoiKind.Shop or PoiKind.CrabDeal;
 
     void AddCanopy(Canopy c)
     {
@@ -1276,6 +1273,7 @@ public partial class LevelView : Node3D
         PoiKind.ShellCache => "Shell cache",
         PoiKind.TreasureCave => "Clam room",
         PoiKind.CurseDen => "Curse den",
+        PoiKind.CrabDeal => "Crab's Deal",
         PoiKind.Exit => "Blue hole",
         _ => kind.ToString(),
     };

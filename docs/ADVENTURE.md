@@ -22,16 +22,17 @@ All numbers are first guesses (`AdventureTuning`).
 - **Nearly invisible:** hot air in the shape of an X (bending the picture in the post pass), with a purple shimmer running
   through it every 3 s, twice as often with her within 10 m. Once she has been within 12 m of it, its outline stays
   faintly there (`leak.gdshader`). The ink thickening round it is how she finds it.
-- **It pushes:** a light push outward, within 6 m: 1.5 m/s + 0.5 × Menace at the middle, fading out, dying with it.
+- **It pushes:** out to 12 m, harder the nearer: 9 m/s + 1 × Menace at its middle (more than she can swim against: she
+  cannot stay on it), falling away as the square of the distance, and dying with it.
+- **Nothing gets under it:** the push turns every creature, and none comes nearer than 2.5 m.
 - **The only thing that heals.** Every other creature's and boss's meter stays where her light leaves it.
-- **Sealing:** 15 hits + 5 × Menace of her light, in five stages. Each of the first four ties one arm with golden thread,
-  stitched from the middle out (a rising note, and it spits a ring of 8 ink drops at 60% of a throw's damage). The
-  last pulls all four tight: the arms close, and tear and thread dissolve together.
-- **Her first hit rouses it:** healthy fish within 14 m turn at once.
-- **If she stops:** after 1.5 s it heals, one tie's worth every 1.2 s. The thread trembles first, and each tie snaps in
-  reverse as the leak goes back past it.
-- **What counts:** a shot's light is its share of a full shot (a volley's small shots are parts of one), once per shot.
-  Firefly Squid's surge counts as one shot every shot's time, while it runs through the leak.
+- **Sealing:** her inner light does it, no shots: she stays within 6 m for 10 s + 10 × Menace (10 s at Depth 1, 20 s at the
+  last depth), held there against its push. It goes in five stages. Each of the first four closes one arm with two gold
+  staples (a rising note, and it spits a ring of 8 ink drops at 60% of a throw's damage). The last bites all four tight:
+  the arms close, and tear and staples dissolve together.
+- **Her coming near rouses it:** healthy fish within 14 m turn at once.
+- **If she leaves:** after 1.5 s it heals, a stage every 1.2 s. The staples tremble first, and each snaps out in reverse
+  as the leak goes back past it.
 - **Each one sealed** throws 5 shells out of it, as well as its experience. Sealing 3 opens the way on and wakes the main
   current (DESIGN-TOPDOWN §4.7). The other two go on leaking until she seals them or the boss swallows them.
 - **Inkwardens** still guard the leaks in their reach (§4).
@@ -153,3 +154,22 @@ the seabed, a store of healing she may come back to, too bright for any murkling
   template name, its depth and level, and the run's clock.
 - **Vent dots:** top centre, one per leak — dark with a violet glint while it pours, gold once sealed. The level's
   title and the banners sit under them.
+
+## 7. Crab Deals
+
+Rare rooms where an old crab trades its best pearls for a share of her. The sim is in `src/Core/Plane/PlaneCrab.cs`
+(`CrabTuning`), the presentation in `src/Game/TopDown/CrabView.cs`.
+
+- **Rare:** past the first depth, 60% of depths hide one on a level short of the boss, at most one a depth.
+- **Hidden behind a fake wall:** plain rock, no carving. Her shots burst on it, and she simply swims through (it gives way
+  as she touches it). Its clues: a thread of bubbles from the seam and a faint clicking, both within 14 m. Nothing but her
+  opens it, and the room shows on the map only once she has been in it.
+- **The deal:** two pearls, one of them found only here. She stays at one for 1.5 s while a ring fills (leaving cancels),
+  and the other crumbles. Its description floats by it.
+- **The price:** when the pearl is absorbed the crab's claw cuts her arms: 25% of her max HP gone for the run. It cannot
+  kill her, and it is refused if it would leave less than 40.
+- **Her max HP is her arm's length:** 3.2 m at 100, in proportion, between 1.5 m and 6.5 m. The cut shortens the sting and
+  the health arm on the gauge alike. Every skill point spent adds 6 max HP.
+- **The crab's own pearls:** Severed Nerve (a strand circles her, stinging as her arm does), Molten Carapace (under half
+  health her shots pierce and do 60% more), Last Light (once a level, a killing blow leaves her at 1 HP in a flood of light),
+  Claw Tithe (each cut she has taken adds 25% damage).

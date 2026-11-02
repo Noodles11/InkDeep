@@ -184,6 +184,7 @@ public static class TopDownGenerator
         for (int i = 0; i < plan.Shops; i++) kinds.Add(PoiKind.Shop);
         for (int i = 0; i < plan.Treasures; i++) kinds.Add(PoiKind.TreasureCave);
         for (int i = 0; i < plan.Secrets; i++) kinds.Add(PoiKind.Secret);
+        for (int i = 0; i < plan.Crabs; i++) kinds.Add(PoiKind.CrabDeal);
         for (int i = 0; i < plan.Curses; i++) kinds.Add(PoiKind.CurseDen);
         for (int i = 0; i < plan.Caches; i++) kinds.Add(PoiKind.ShellCache);
         if (kinds.Count > 0)
@@ -1276,7 +1277,7 @@ public static class TopDownGenerator
                 CarveLine(map, cave.Chambers[i - 1].Center, cave.Chambers[i].Center, 4f);
             poi.Cave = map.Caves.Count;
             map.Caves.Add(cave);
-            if (poi.Kind == PoiKind.Secret) map.WeakRocks.Add(new WeakRock(cave.Mouth + facing * 1.5f, 2.5f + SealPast, poi.Cave, facing, SealThick, SealKind.Secret));
+            if (poi.Kind is PoiKind.Secret or PoiKind.CrabDeal) map.WeakRocks.Add(new WeakRock(cave.Mouth + facing * 1.5f, 2.5f + SealPast, poi.Cave, facing, SealThick, SealKind.Secret, poi.Kind == PoiKind.CrabDeal));
         }
 
         // Passes, the level's shortcuts: tunnels worn through the rock between two parts of the cave that are close as the

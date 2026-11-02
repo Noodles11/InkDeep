@@ -30,7 +30,7 @@ public partial class CombatView : Node3D
     readonly List<Node3D> _prices = new();
     StandardMaterial3D? _heart;
     static ImageTexture? _tagTexture;
-    Poi? _shop;
+    readonly List<Poi> _shops = new();
     StandardMaterial3D _herShot = null!, _theirShot = null!;
     Mesh _needleMesh = null!;
     ShaderMaterial _needle = null!;
@@ -188,7 +188,7 @@ public partial class CombatView : Node3D
     /// A small price tag hanging on a string below and to the side of the item: a cream card with a hole, the number,
     /// and a shell drawn on it.
     /// </summary>
-    static Node3D PriceTag(int price)
+    static Node3D PriceTag(string price)
     {
         var tag = new Node3D { Visible = false };
         var at = new Vector3(0.95f, -0.55f, 0.65f);
@@ -217,7 +217,7 @@ public partial class CombatView : Node3D
         });
         tag.AddChild(new Label3D
         {
-            Text = price.ToString(),
+            Text = price,
             Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
             PixelSize = 0.0085f,
             FontSize = 40,
@@ -277,13 +277,14 @@ public partial class CombatView : Node3D
         _shells.Clear();
         _stands.Clear();
         _prices.Clear();
-        _shop = world.Map.Pois.FirstOrDefault(p => p.Kind == PoiKind.Shop);
+        _shops.Clear();
+        _shops.AddRange(world.Map.Pois.Where(p => p.Kind is PoiKind.Shop or PoiKind.CrabDeal));
         // The shop's goods float on their own (a clam room's pearl hangs still instead): pearls in their colours, the top-up her
         // gonad emblem in gold. Each hangs a little price tag on a string (its price and a shell), shown only while she is inside the shop.
         foreach (var stand in world.Stands)
         {
             var node = new Node3D { Position = new Vector3(stand.Position.X, LevelMap.SwimBand, stand.Position.Y) };
-            if (stand.Kind == StandKind.Pearl)
+            if (stand.Kind is StandKind.Pearl or StandKind.Deal)
             {
                 Color a = new(1f, 0.95f, 0.85f), b = new(0.8f, 0.85f, 1f);
                 if (catalog is not null && catalog.TryGet(stand.ItemId, out var item) && item.Pearl is { } look)
@@ -305,7 +306,7 @@ public partial class CombatView : Node3D
                 node.AddChild(new OmniLight3D { LightColor = new Color(1f, 0.8f, 0.4f), LightEnergy = 0.8f, OmniRange = 3f, ShadowEnabled = false });
             }
             if (stand.Kind == StandKind.Pearl && fresh?.Contains(stand.ItemId) == true) node.AddChild(NewChip());
-            var tag = PriceTag(stand.Price);
+            var tag = PriceTag(stand.Kind == StandKind.Deal ? $"-{Mathf.RoundToInt(CrabTuning.Cut * 100f)}% HP" : stand.Price.ToString());
             node.AddChild(tag);
             _prices.Add(tag);
             AddChild(node);
@@ -1297,7 +1298,7 @@ void fragment() {
             _stands[i].Visible = !stand.Sold;
             _stands[i].Position = new Vector3(stand.Position.X, LevelMap.SwimBand + 0.2f * Mathf.Sin(_time * 1.6f + i * 1.3f), stand.Position.Y);
         }
-        bool inShop = _shop is not null && System.Numerics.Vector2.Distance(world.Player.Position, _shop.Position) <= _shop.Radius + 1f;
+        bool inShop = _shops.Exists(shop => System.Numerics.Vector2.Distance(world.Player.Position, shop.Position) <= shop.Radius + 1f);
         foreach (var price in _prices) price.Visible = inShop;
 
     }
