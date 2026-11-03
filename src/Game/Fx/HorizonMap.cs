@@ -37,8 +37,8 @@ public sealed class HorizonMap
         _rangeFor = range;
         float step = range / Rings * 0.5f;
         var heights = map.Heights;
-        const int n = LevelMap.Samples;
-        const float max = LevelMap.Size - 0.0001f;
+        int n = map.Samples;
+        float max = map.Size - 0.0001f;
         for (int a = 0; a < Angles; a++)
         {
             // The same angles the shader reads: atan(dz, dx) over the full turn, texel centres.

@@ -101,7 +101,7 @@ public sealed partial class PlaneWorld
         var reach = Gen.TopDown.LevelValidator.Distances(Map, Map.Start.Position);
         for (int tries = 0; tries < 400 && roamers > 0 && Inkwardens.Count < WardenTuning.Max; tries++)
         {
-            var at = new Vector2(_blightRng.Range(4f, Gen.TopDown.LevelMap.Size - 4f), _blightRng.Range(4f, Gen.TopDown.LevelMap.Size - 4f));
+            var at = new Vector2(_blightRng.Range(4f, Map.Size - 4f), _blightRng.Range(4f, Map.Size - 4f));
             if (!WardenSpot(at, reach)) continue;
             Inkwardens.Add(NewWarden(at, roams: true));
             roamers--;
@@ -152,7 +152,7 @@ public sealed partial class PlaneWorld
         var reach = Gen.TopDown.LevelValidator.Distances(Map, Map.Start.Position);
         for (int tries = 0; tries < 4000 && Inkwardens.Count < want; tries++)
         {
-            var at = new Vector2(_blightRng.Range(4f, Gen.TopDown.LevelMap.Size - 4f), _blightRng.Range(4f, Gen.TopDown.LevelMap.Size - 4f));
+            var at = new Vector2(_blightRng.Range(4f, Map.Size - 4f), _blightRng.Range(4f, Map.Size - 4f));
             if (!WardenSpot(at, reach) || !Anchored(cast, Inkwardens.Count, at)) continue;
             Inkwardens.Add(NewWarden(at, roams: false));
         }

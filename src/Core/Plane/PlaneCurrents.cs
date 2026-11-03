@@ -13,12 +13,15 @@ public static class CurrentTuning
     public const float MainSpeed = 3.5f, MainHalfWidth = 4f, MainRise = 3f;
     /// <summary>What keeps her in it round a bend: the pull back to its middle at its edge, as a share of its flow.</summary>
     public const float MainHold = 0.35f;
-    /// <summary>How long a sealed leak's push takes to die.</summary>
-    public const float LeakFall = 1.5f;
     /// <summary>The flow fades to nothing this far past a current's sides, and over this last stretch of its course (m).</summary>
     public const float Feather = 2f, EndFade = 5f;
     /// <summary>The clearances a course is sought with, widest first: down the middle of the water wherever it can be.</summary>
     public static readonly float[] Clearances = { 3f, 2f, 1f, 0.5f };
+    /// <summary>
+    /// A leak cave's way out, held: water pouring in through it from its back, faster than she swims (her cruise is 6),
+    /// running on this far into the cave; once its leak is sealed it dies away over HoldFade s.
+    /// </summary>
+    public const float HoldSpeed = 11f, HoldOut = 6f, HoldFade = 1.5f;
 }
 
 /// <summary>The main current: water running along a course, full strength in its middle and fading past its sides.</summary>
@@ -32,6 +35,8 @@ public sealed class PlaneCurrent
     public float Speed, HalfStart, HalfEnd;
     /// <summary>Its strength now, 0..1.</summary>
     public float Strength;
+    /// <summary>A leak cave's way out held shut: it runs while the cave's leak is open, not once it is sealed.</summary>
+    public bool Holds;
     /// <summary>Its half width this far along its course.</summary>
     public float HalfAt(float along) => HalfStart + (HalfEnd - HalfStart) * MathUtil.Clamp01(along / MathF.Max(Length, 1f));
 
@@ -82,15 +87,12 @@ public sealed class PlaneCurrent
 public static class MainCurrent
 {
     /// <summary>
-    /// From her start to the way down; a boss level's, to its arena's edge (it does not blow through the fight); a leak
-    /// cave's, from its leak back to its mouth.
+    /// From her start to the way down; a boss level's, to its arena's edge (it does not blow through the fight).
     /// </summary>
     public static List<Vector2> Course(LevelMap map)
     {
         if (map.MainCourse is { } known) return known;
-        // A leak cave's runs the other way: from its sealed leak back out to the mouth.
-        var course = map.LeakCave ? Route(map, map.Start.Position, map.Exit.Position, new Dictionary<(Vector2, float), float[]>())
-            : Route(map, map.Exit.Position, map.Start.Position, new Dictionary<(Vector2, float), float[]>());
+        var course = Route(map, map.Exit.Position, map.Start.Position, new Dictionary<(Vector2, float), float[]>());
         if (map.HasBoss)
         {
             int inside = course.FindIndex(q => Vector2.Distance(q, map.Exit.Position) < map.Exit.Radius);
@@ -143,32 +145,34 @@ public static class MainCurrent
 
 public sealed partial class PlaneWorld
 {
-    /// <summary>The level's standing current, the main one (adventure levels only).</summary>
+    /// <summary>The level's standing currents: the main one (adventure levels), or a leak cave's held way out.</summary>
     public List<PlaneCurrent> Currents { get; } = new();
 
-    /// <summary>The water's flow at p (m/s): the leaks' push, harder the nearer, and the main current's too if asked.</summary>
+    /// <summary>The water's flow at p (m/s): the currents', if asked (a leak does not push).</summary>
     public Vector2 CurrentAt(Vector2 p, bool main = true)
     {
         Vector2 flow = Vector2.Zero;
         if (main)
             foreach (var c in Currents) flow += c.At(p);
-        float push = AdventureTuning.LeakPush + AdventureTuning.LeakPushPerMenace * Menace;
-        foreach (var v in Leaks)
-        {
-            var off = p - v.Position;
-            float d = off.Length();
-            if (v.Push <= 0f || d >= AdventureTuning.LeakReach) continue;
-            float k = 1f - d / AdventureTuning.LeakReach;
-            flow += (d < 1e-3f ? Vector2.UnitY : off / d) * (push * v.Push * k * k);
-        }
         return flow;
     }
 
-    /// <summary>Lays the main current (MainCurrent.Course), asleep until enough leaks are sealed.</summary>
+    /// <summary>
+    /// Lays the main current (MainCurrent.Course), asleep until enough leaks are sealed; in a leak cave, the current that
+    /// holds its way out while its leak is open.
+    /// </summary>
     void PlaceCurrents()
     {
+        // A leak cave has no main current: she swims back out herself. But while its leak is open the Leak keeps her in:
+        // water pours in through its way out, from its back out into the cave.
+        if (Map.Way is { } way)
+        {
+            var hold = new PlaneCurrent { Speed = CurrentTuning.HoldSpeed, HalfStart = Doorway.HalfWidth + 0.3f, HalfEnd = Doorway.HalfWidth + 1f, Strength = 1f, Holds = true };
+            hold.Lay(new List<Vector2> { way.Back + way.Into * 0.5f, way.At, way.At - way.Into * CurrentTuning.HoldOut });
+            Currents.Add(hold);
+        }
         // A region's water has no main current of its own: it would carry her to its station and home.
-        if (Map.Station) return;
+        if (Map.Station || Map.LeakCave) return;
         var course = MainCurrent.Course(Map);
         if (course.Count < 2) return;
         var main = new PlaneCurrent { Speed = CurrentTuning.MainSpeed, HalfStart = CurrentTuning.MainHalfWidth, HalfEnd = CurrentTuning.MainHalfWidth, Strength = LeaksLeft == 0 ? 1f : 0f };
@@ -177,15 +181,17 @@ public sealed partial class PlaneWorld
     }
 
     /// <summary>
-    /// The currents' turn: the main one wakes once enough leaks are sealed, and a leak's push dies with it. What they
-    /// carry: Clementine, sliding along rock, every shot and ink cloud. The creatures live in this water and hold their
-    /// ground in the main current (a leak's push turns them all the same), and shells, hearts and pearls stay where they lie (a current that never stops would sweep them all
-    /// to the way down).
+    /// The currents' turn: the main one wakes once enough leaks are sealed. What it carries: Clementine, sliding along
+    /// rock, every shot and ink cloud. The creatures live in this water and hold their ground in it, and shells, hearts
+    /// and pearls stay where they lie (a current that never stops would sweep them all to the way down). No creature
+    /// comes onto an open leak's disc.
     /// </summary>
     void StepCurrents()
     {
         if (Currents.Count == 0 && Leaks.Count == 0) return;
-        foreach (var c in Currents) c.Strength = MathUtil.MoveToward(c.Strength, LeaksLeft == 0 ? 1f : 0f, Dt / CurrentTuning.MainRise);
+        foreach (var c in Currents)
+            c.Strength = c.Holds ? MathUtil.MoveToward(c.Strength, LeaksOpen > 0 ? 1f : 0f, Dt / CurrentTuning.HoldFade)
+                : MathUtil.MoveToward(c.Strength, LeaksLeft == 0 ? 1f : 0f, Dt / CurrentTuning.MainRise);
         var p = Player;
         Vector2 flow = CurrentAt(p.Position);
         if (flow != Vector2.Zero) Move(ref p.Position, ref flow, Radius, report: false);
@@ -204,7 +210,7 @@ public sealed partial class PlaneWorld
         if (Leaks.Exists(v => !v.Sealed)) KeepFromLeaks();
     }
 
-    /// <summary>No creature gets under a leak: the push turns them, and none comes nearer than LeakClear.</summary>
+    /// <summary>No creature gets onto a leak: none comes nearer its disc than LeakClear.</summary>
     void KeepFromLeaks()
     {
         foreach (var m in Murklings)
@@ -225,11 +231,9 @@ public sealed partial class PlaneWorld
             if (v.Sealed) continue;
             var off = at - v.Position;
             float d = off.Length();
-            if (d >= AdventureTuning.LeakReach) continue;
+            if (d >= AdventureTuning.LeakClear) continue;
             var away = d > 1e-3f ? off / d : Vector2.UnitY;
-            float k = 1f - d / AdventureTuning.LeakReach;
-            var to = at + away * ((AdventureTuning.LeakPush + AdventureTuning.LeakPushPerMenace * Menace) * k * k * Dt);
-            if (d < AdventureTuning.LeakClear) to = v.Position + away * AdventureTuning.LeakClear;
+            var to = v.Position + away * AdventureTuning.LeakClear;
             if (Map.IsOpen(to)) at = to;
         }
     }

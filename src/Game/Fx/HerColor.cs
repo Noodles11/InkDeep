@@ -49,6 +49,14 @@ public static class HerColor
         Publish();
     }
 
+    /// <summary>A jelly's colours as her look gives them (the body, her light, the glow she casts), without wearing them.</summary>
+    public static (Color Body, Color Light, Color Glow) Of(OctoShoots.Core.Saves.JellyLook look)
+    {
+        var body = Color.HtmlIsValid(look.Arms) ? Color.FromHtml(look.Arms) : DefaultBody;
+        Color? light = Color.HtmlIsValid(look.Glow) ? Color.FromHtml(look.Glow) : null;
+        return (body, light ?? Shift(body, hue: 0.041f, sat: 0.78f), Shift(light ?? body, hue: 0.004f, sat: 0.65f));
+    }
+
     static bool _loaded;
 
     /// <summary>Reads the file (once, unless forced) and publishes the colours.</summary>

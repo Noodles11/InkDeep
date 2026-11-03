@@ -44,7 +44,7 @@ public class AdventureTests
         return w;
     }
 
-    /// <summary>She stays near a leak for so long, held there against its push.</summary>
+    /// <summary>She stays near a leak for so long, held there among its arms.</summary>
     static void Shine(PlaneWorld w, PlaneLeak v, float seconds)
     {
         var at = v.Position + new Vector2(0f, AdventureTuning.LeakSealReach - 1f);
@@ -186,24 +186,108 @@ public class AdventureTests
     }
 
     [Fact]
-    public void Staying_near_ties_arm_after_arm_and_left_alone_the_ties_snap()
+    public void Staying_near_staples_its_arms_one_after_another_and_left_alone_the_staples_snap()
     {
         var w = World();
         w.ReefFish.Clear();
         var v = w.Leaks[0];
-        Shine(w, v, v.Needed * 0.85f);
-        Assert.Equal(AdventureTuning.Stages - 1, v.Ties);
+        Assert.Equal(AdventureTuning.LeakArms, v.Arms.Length);
+        Shine(w, v, v.Needed * 0.5f);
+        int staples = v.Staples;
+        Assert.InRange(staples, v.StapleCount / 2 - 2, v.StapleCount / 2 + 1);
+        // Arm after arm, from the disc out: the first arms all stapled, the rest none (but the one under way).
+        Assert.Equal(v.StaplesPerArm, v.StapledOn(0));
+        Assert.Equal(0, v.StapledOn(v.Arms.Length - 1));
         Assert.False(v.Sealed);
         w.Player.Position = w.Player.PrevPosition = w.Map.Start.Position;
-        // She stops: after a grace, a tie snaps about every LeakDrain seconds.
+        // She stops: after a grace, a staple snaps out every StapleDrain seconds.
         int snapped = 0;
-        for (int i = 0; i < (AdventureTuning.LeakHold + AdventureTuning.LeakDrain * 2.5f) * PlaneWorld.TickRate; i++)
+        for (int i = 0; i < (AdventureTuning.LeakHold + AdventureTuning.StapleDrain * 2.5f) * PlaneWorld.TickRate; i++)
         {
             Run(w, 1);
             snapped += w.Events.Count(e => e.Type == PlaneEventType.LeakUntied);
         }
         Assert.InRange(snapped, 2, 3);
-        Assert.True(v.Ties < AdventureTuning.Stages - 1);
+        Assert.True(v.Staples < staples);
+    }
+
+    [Fact]
+    public void Its_arms_grow_with_menace_and_longer_arms_take_more_staples_and_longer()
+    {
+        Assert.Equal(AdventureTuning.LeakArmBase, AdventureTuning.LeakArmLength(0f), 3);
+        Assert.True(AdventureTuning.LeakArmLength(1f) > AdventureTuning.LeakArmLength(0.4f));
+        Assert.Equal(AdventureTuning.LeakArmLength(1f), AdventureTuning.LeakArmLength(3f), 3);
+        Assert.True(AdventureTuning.StaplesPerArm(AdventureTuning.LeakArmLength(1f)) > AdventureTuning.StaplesPerArm(AdventureTuning.LeakArmLength(0f)));
+        var w = World();
+        var v = w.Leaks[0];
+        Assert.Equal(AdventureTuning.StaplesPerArm(AdventureTuning.LeakArmLength(w.Menace)), v.StaplesPerArm);
+        Assert.Equal(AdventureTuning.StapleSeconds * v.StapleCount, v.Needed, 3);
+        // Each arm reaches out its length from the disc's rim.
+        foreach (var arm in v.Arms)
+            Assert.InRange(Vector2.Distance(arm.Points[0], arm.Points[^1]), arm.Length * 0.7f, arm.Length + 0.01f);
+    }
+
+    [Fact]
+    public void Its_arms_wiggle_until_stapled_and_sting_her_where_they_are_free()
+    {
+        var w = World();
+        w.ReefFish.Clear();
+        w.Murklings.Clear();
+        var v = w.Leaks[0];
+        var arm = v.Arms[0];
+        var tip = arm.Points[^1];
+        Run(w, PlaneWorld.TickRate);
+        Assert.True(Vector2.Distance(tip, arm.Points[^1]) > 0.01f, "a free arm drifts");
+        // Touching a free stretch: she is stung and thrown off.
+        var on = (arm.Points[^2] + arm.Points[^1]) * 0.5f;
+        w.Player.Position = w.Player.PrevPosition = on;
+        w.Player.Hp = 100f;
+        w.Step(default);
+        Assert.Contains(w.Events, e => e.Type == PlaneEventType.PlayerHit && e.Source == DamageSource.Leak);
+        Assert.True(w.Player.Hp < 100f);
+
+        // Its first arm stapled all along: it holds still, and touching it does nothing.
+        v.Light = v.StaplesPerArm * AdventureTuning.StapleSeconds + 0.01f;
+        v.Since = 0f;
+        w.Player.Position = w.Player.PrevPosition = w.Map.Start.Position;
+        Run(w, 1);
+        var held = arm.Points.ToArray();
+        for (int i = 0; i < PlaneWorld.TickRate / 2; i++)
+        {
+            v.Since = 0f;
+            Run(w, 1);
+        }
+        Assert.All(held.Zip(arm.Points), q => Assert.True(Vector2.Distance(q.First, q.Second) < 1e-4f));
+        // (Past her grace after the sting, her light kept on it so it does not heal.)
+        for (int i = 0; i < 2 * PlaneWorld.TickRate; i++)
+        {
+            v.Since = 0f;
+            Run(w, 1);
+        }
+        w.Player.Position = w.Player.PrevPosition = (arm.Points[^2] + arm.Points[^1]) * 0.5f;
+        w.Player.Hp = 100f;
+        v.Since = 0f;
+        w.Step(default);
+        Assert.DoesNotContain(w.Events, e => e.Type == PlaneEventType.PlayerHit && e.Source == DamageSource.Leak);
+    }
+
+    [Fact]
+    public void A_shot_that_meets_a_free_arm_pops_on_it_and_bends_it_away()
+    {
+        var w = World();
+        w.ReefFish.Clear();
+        w.Murklings.Clear();
+        var v = w.Leaks[0];
+        var arm = v.Arms[2];
+        var mid = (arm.Points[^3] + arm.Points[^2]) * 0.5f;
+        var across = Vector2.Normalize(new Vector2(-(arm.Points[^2] - arm.Points[^3]).Y, (arm.Points[^2] - arm.Points[^3]).X));
+        var from = mid + across * 1.2f;
+        var shot = new PlaneShot { Position = from, Line = from, Velocity = -across * 20f, Life = 1f, FromPlayer = true, Damage = 10f, Range = 10f, Hover = 1f };
+        w.Shots.Add(shot);
+        w.Player.Position = w.Player.PrevPosition = w.Map.Start.Position;
+        for (int i = 0; i < 10 && shot.Life > 0f; i++) Run(w, 1);
+        Assert.True(shot.Life <= 0f, "it popped on the arm");
+        Assert.NotEqual(0f, arm.KickSpeed + arm.Kick);
     }
 
     [Fact]
@@ -297,11 +381,11 @@ public class AdventureTests
     }
 
     [Fact]
-    public void A_leak_seals_in_her_light_with_no_shots_ten_seconds_and_longer_with_menace()
+    public void A_leak_seals_in_her_light_with_no_shots_a_staple_at_a_time()
     {
         var w = World();
         var v = w.Leaks[0];
-        Assert.Equal(AdventureTuning.LeakSeconds + AdventureTuning.LeakSecondsPerMenace * w.Menace, v.Needed, 3);
+        Assert.Equal(AdventureTuning.StapleSeconds * v.StapleCount, v.Needed, 3);
         Shine(w, v, v.Needed * 0.8f);
         Assert.False(v.Sealed);
         float lit = v.Light;

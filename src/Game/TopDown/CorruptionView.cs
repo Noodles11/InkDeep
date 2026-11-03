@@ -91,7 +91,8 @@ public sealed class CorruptionTexture
 public partial class CorruptionView : Node3D
 {
     const int Chunks = 8;
-    const float ChunkSize = LevelMap.Size / (float)Chunks;
+    // (The ink lies on a seeded level's square: the open reef's big map has none on its floor.)
+    const float ChunkSize = LevelMap.Seeded / (float)Chunks;
     /// <summary>One MultiMesh instance: a 3×4 transform and a custom colour (seed, u, v, 0).</summary>
     const int Stride = 16;
     /// <summary>A drop's radius (metres): plankton-fine, a speck at play distance.</summary>
@@ -207,7 +208,7 @@ public partial class CorruptionView : Node3D
                 list.Add(basis.Row0.X); list.Add(basis.Row0.Y); list.Add(basis.Row0.Z); list.Add(p.X);
                 list.Add(basis.Row1.X); list.Add(basis.Row1.Y); list.Add(basis.Row1.Z); list.Add(floor);
                 list.Add(basis.Row2.X); list.Add(basis.Row2.Y); list.Add(basis.Row2.Z); list.Add(p.Y);
-                list.Add(Rand()); list.Add(p.X / LevelMap.Size); list.Add(p.Y / LevelMap.Size); list.Add(rise);
+                list.Add(Rand()); list.Add(p.X / map.Size); list.Add(p.Y / map.Size); list.Add(rise);
             }
         }
         var buffers = new float[lists.Length][];

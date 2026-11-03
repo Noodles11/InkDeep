@@ -146,6 +146,8 @@ public sealed partial class PlaneWorld
             var plug = Map.WeakRocks.FirstOrDefault(w => w.Cave == poi.Cave && poi.Cave >= 0);
             SecretWay = plug.Radius > 0f ? plug.Center : poi.Position;
         }
+        // A leak cave is the Leak's own: no fish live in it (its only creatures are murklings, PlaceCaveMurklings).
+        if (Map.LeakCave) return;
         var rng = new Rng(Map.Seed ^ 0x2EEF15UL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 28) ^ ((ulong)Map.Attempt << 44));
         var n = ReefFishTuning.ForDepth(Map.Depth);
         // The level's template may bring more fish (its fish rule).

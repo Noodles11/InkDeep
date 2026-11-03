@@ -31,8 +31,8 @@ public class PlanePushWaveTests
     /// <summary>A spot with open water all round it, out past the pearl's radius and a margin.</summary>
     static Vector2 OpenSpot(PlaneWorld w, float reach)
     {
-        for (int y = 6; y < LevelMap.Size - 6; y += 2)
-            for (int x = 6; x < LevelMap.Size - 6; x += 2)
+        for (int y = 6; y < LevelMap.Seeded - 6; y += 2)
+            for (int x = 6; x < LevelMap.Seeded - 6; x += 2)
             {
                 var c = new Vector2(x, y);
                 if (Enumerable.Range(0, 24).All(k => w.Clear(c + new Vector2(MathF.Cos(k * MathF.Tau / 24f), MathF.Sin(k * MathF.Tau / 24f)) * reach, 0.6f))

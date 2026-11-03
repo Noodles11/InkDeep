@@ -7,8 +7,8 @@ namespace OctoShoots.Game.Fx;
 /// <summary>
 /// The game's sounds: synth-style placeholders generated at startup, and recorded ones (audio/sfx), played flat or
 /// positionally. All of them go through the Sfx bus, heard as through water: a low-pass filter takes the treble off,
-/// more the deeper she is (SetDepth). Her attacks are lightning under water (PlayZap): a short, sharp electric crackle
-/// muffled by the water, and a sizzle of bubbles after it.
+/// more the deeper she is (SetDepth). Her light thrown is a pop (PlayThrow: one of the recorded pops at random), and
+/// her light striking anything it can harm a squishy pop (PlayStrike).
 /// </summary>
 public partial class Sfx : Node
 {
@@ -16,13 +16,16 @@ public partial class Sfx : Node
     const string Bus = "Sfx";
     /// <summary>The water's low-pass: its cutoff in the Shallows and at the deepest (Hz).</summary>
     const float ShallowCutoff = 7000f, DeepCutoff = 1500f;
-    /// <summary>A zap: how much of the crackle is heard (s), and its bubble tail's delay and length (s).</summary>
-    const float ZapSeconds = 0.26f, TailDelay = 0.05f, TailSeconds = 0.42f;
+    /// <summary>The recorded pops (audio/sfx/pop1–pop10.wav) and the strike (squishpop.mp3).</summary>
+    const int Pops = 10;
+    const string StrikePath = "res://audio/sfx/squishpop.mp3";
 
     AudioEffectLowPassFilter _water = null!;
-    AudioStream? _discharge, _bubble;
-    readonly List<AudioStreamPlayer> _zaps = new(), _tails = new();
-    int _nextZap, _nextTail;
+    readonly List<AudioStream> _pops = new();
+    AudioStream? _strike;
+    int _lastPop = -1;
+    readonly List<AudioStreamPlayer> _recorded = new();
+    int _nextRecorded;
 
     readonly Dictionary<string, AudioStreamWav> _sounds = new();
     readonly List<AudioStreamPlayer> _flat = new();
@@ -42,16 +45,17 @@ public partial class Sfx : Node
             AudioServer.AddBusEffect(idx, new AudioEffectLowPassFilter { CutoffHz = ShallowCutoff, Resonance = 0.6f });
         }
         _water = (AudioEffectLowPassFilter)AudioServer.GetBusEffect(AudioServer.GetBusIndex(Bus), 0);
-        _discharge = ResourceLoader.Exists("res://audio/sfx/electric_discharge.mp3") ? GD.Load<AudioStream>("res://audio/sfx/electric_discharge.mp3") : null;
-        _bubble = ResourceLoader.Exists("res://audio/sfx/big_bubble.mp3") ? GD.Load<AudioStream>("res://audio/sfx/big_bubble.mp3") : null;
-        for (int i = 0; i < 4; i++)
+        for (int i = 1; i <= Pops; i++)
         {
-            var z = new AudioStreamPlayer { Bus = Bus, Stream = _discharge };
-            AddChild(z);
-            _zaps.Add(z);
-            var t = new AudioStreamPlayer { Bus = Bus, Stream = _bubble };
-            AddChild(t);
-            _tails.Add(t);
+            string path = $"res://audio/sfx/pop{i}.wav";
+            if (ResourceLoader.Exists(path)) _pops.Add(GD.Load<AudioStream>(path));
+        }
+        _strike = ResourceLoader.Exists(StrikePath) ? GD.Load<AudioStream>(StrikePath) : null;
+        for (int i = 0; i < 8; i++)
+        {
+            var p = new AudioStreamPlayer { Bus = Bus };
+            AddChild(p);
+            _recorded.Add(p);
         }
         _sounds["shot"] = Make(0.11f, (t, n) => Sweep(t, 0.11f, 620f, 170f) * Env(t, 0.004f, 0.11f) * 0.5f + n * Env(t, 0.002f, 0.05f) * 0.25f);
         _sounds["hit"] = Make(0.16f, (t, n) => Sweep(t, 0.16f, 320f, 80f) * Env(t, 0.002f, 0.16f) * 0.7f + n * Env(t, 0.001f, 0.06f) * 0.5f);
@@ -149,42 +153,32 @@ public partial class Sfx : Node
     }
 
     /// <summary>
-    /// Her light shot out: lightning under water — a short piece of the electric crackle (from a random point in it, at
-    /// a pitch a little apart each time, cut off after ZapSeconds), and a moment after, a quieter sizzle of bubbles
-    /// trailing off. Louder for a stronger volley (volumeDb).
+    /// Her light thrown: one of the recorded pops, picked at random (never the same twice running), at a pitch a little
+    /// apart each time. Louder for a stronger volley (volumeDb).
     /// </summary>
-    public void PlayZap(float volumeDb = 0f)
+    public void PlayThrow(float volumeDb = 0f)
     {
-        if (_discharge is not null)
-        {
-            var z = _zaps[_nextZap];
-            _nextZap = (_nextZap + 1) % _zaps.Count;
-            z.VolumeDb = volumeDb;
-            z.PitchScale = 0.9f + (float)_random.NextDouble() * 0.3f;
-            z.Play((float)_random.NextDouble() * (float)Mathf.Max(0.0, _discharge.GetLength() - ZapSeconds - 0.05));
-            Fade(z, ZapSeconds);
-        }
-        if (_bubble is not null)
-        {
-            var t = _tails[_nextTail];
-            _nextTail = (_nextTail + 1) % _tails.Count;
-            t.VolumeDb = volumeDb - 9f;
-            t.PitchScale = 0.85f + (float)_random.NextDouble() * 0.4f;
-            var tween = CreateTween();
-            tween.TweenInterval(TailDelay);
-            tween.TweenCallback(Callable.From(() => t.Play()));
-            tween.TweenInterval(0.01f);
-            tween.TweenCallback(Callable.From(() => Fade(t, TailSeconds)));
-        }
+        if (_pops.Count == 0) return;
+        int pick = _random.Next(_pops.Count);
+        if (pick == _lastPop && _pops.Count > 1) pick = (pick + 1 + _random.Next(_pops.Count - 1)) % _pops.Count;
+        _lastPop = pick;
+        PlayRecorded(_pops[pick], volumeDb, 0.92f + (float)_random.NextDouble() * 0.18f);
     }
 
-    /// <summary>A player's sound eased out to silence over this long, then stopped.</summary>
-    void Fade(AudioStreamPlayer p, float seconds)
+    /// <summary>Her light striking something it can harm: a squishy pop, a touch apart in pitch each time.</summary>
+    public void PlayStrike(float volumeDb = 0f)
     {
-        float from = p.VolumeDb;
-        var tween = CreateTween();
-        tween.TweenProperty(p, "volume_db", from - 40f, seconds).SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Quad);
-        tween.TweenCallback(Callable.From(p.Stop));
+        if (_strike is not null) PlayRecorded(_strike, volumeDb, 0.9f + (float)_random.NextDouble() * 0.2f);
+    }
+
+    void PlayRecorded(AudioStream stream, float volumeDb, float pitch)
+    {
+        var p = _recorded[_nextRecorded];
+        _nextRecorded = (_nextRecorded + 1) % _recorded.Count;
+        p.Stream = stream;
+        p.VolumeDb = volumeDb;
+        p.PitchScale = pitch;
+        p.Play();
     }
 
     public void Play(string name, float volumeDb = 0f, float pitchJitter = 0.06f)

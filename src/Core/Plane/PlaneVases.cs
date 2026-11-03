@@ -62,8 +62,8 @@ public sealed partial class PlaneWorld
         _vaseRng = new Rng(Map.Seed ^ 0x7A5E5UL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Attempt << 46));
         var rng = _vaseRng;
         var spots = new List<Vector2>();
-        for (float y = LevelMap.RimWidth + 2f; y < LevelMap.Size - LevelMap.RimWidth - 2f; y += 3f)
-        for (float x = LevelMap.RimWidth + 2f; x < LevelMap.Size - LevelMap.RimWidth - 2f; x += 3f)
+        for (float y = LevelMap.RimWidth + 2f; y < Map.Size - LevelMap.RimWidth - 2f; y += 3f)
+        for (float x = LevelMap.RimWidth + 2f; x < Map.Size - LevelMap.RimWidth - 2f; x += 3f)
         {
             var p = new Vector2(x, y);
             if (Fine(p, VaseTuning.RadiusMax + 0.3f) && NearWall(p)) spots.Add(p);

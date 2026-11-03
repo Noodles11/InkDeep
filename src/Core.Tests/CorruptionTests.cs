@@ -487,7 +487,9 @@ public class CorruptionTests
         // Her opening faces the screen (south), whichever side Clementine came in from, and she never turns.
         var facing = boss.Facing;
         Assert.Equal(Vector2.UnitY, facing);
-        // Open, a shot on her shell's rim does nothing; one on her black pearl hurts her.
+        // Open, a shot on her shell's rim does nothing; one on her black pearl hurts her. (Its light's steady burn on the
+        // open pearl aside: that is HerLightTests'.)
+        w.LightBurns = false;
         float hp = boss.Hp;
         var rim = boss.Position + facing * (PlaneBossTuning.BodyRadius - 0.3f);
         w.Shots.Add(new PlaneShot { Position = rim, Line = rim, Velocity = -facing * 0.01f, Life = 1f, FromPlayer = true, Damage = 10f });

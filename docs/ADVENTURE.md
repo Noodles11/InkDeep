@@ -15,24 +15,34 @@ All numbers are first guesses (`AdventureTuning`).
 
 ## 1. Leaks
 
-- **What:** X-shaped tears floating in the water at her plane, always 5 a level, a little bigger than she is (about 2.6 m
-  across) and always facing the camera. They lie in the middle of chambers; failing that on side routes; failing that in
-  any open water; only as a last resort on the main current. At least 30 m apart if the level allows it and 24 m from her
-  start, never in safe places or at the way down.
-- **Nearly invisible:** hot air in the shape of an X (bending the picture in the post pass), with a purple shimmer running
-  through it every 3 s, twice as often with her within 10 m. Once she has been within 12 m of it, its outline stays
-  faintly there (`leak.gdshader`). The ink thickening round it is how she finds it.
-- **It pushes:** out to 12 m, harder the nearer: 9 m/s + 1 × Menace at its middle (more than she can swim against: she
-  cannot stay on it), falling away as the square of the distance, and dying with it.
-- **Nothing gets under it:** the push turns every creature, and none comes nearer than 2.5 m.
+- **What:** brittle stars of ink floating at her plane, always 5 a level (`PlaneLeak`, `LeakArm`). They lie in the
+  middle of chambers; failing that on side routes; failing that in any open water; only as a last resort on the main
+  current. At least 30 m apart if the level allows it and 24 m from her start, never in safe places or at the way down.
+- **Its body:** a dark disc about 0.9 m across where the ink comes through, five soft lobes toward its arms, hot air over
+  it in the post pass. Five arms reach out from it, a fifth of a turn apart, each 2.5 m + 3.5 m × Menace long (no
+  longer than at Menace 1), tapering from 0.28 m wide at the disc to 0.08 m at the tip. They are black ink in little
+  plates with a fringe of short spines, and a violet rim that brightens on its beat (every 3 s, twice as often with her
+  within 10 m) (`leak.gdshader` the disc, `leak_arm.gdshader` the arms).
+- **The arms float and wiggle:** each arm bends at a joint every staple's stretch, a little more toward its tip, on a
+  slow wave of its own, and the arms bob gently as they drift. A stapled stretch cannot move.
+- **The arms sting:** touching an arm where it is not stapled stings her for 6 and throws her off at 7 m/s. A stapled
+  stretch is harmless.
+- **Shooting an arm:** a shot that meets an arm pops on it. On a free stretch it bends the arm away from the shot (sprung
+  back over about a second); a stapled stretch only stops the shot. Shots do nothing to seal it.
+- **No push:** a leak does not push the water. No creature comes nearer its disc than 2.5 m, that is all.
 - **The only thing that heals.** Every other creature's and boss's meter stays where her light leaves it.
-- **Sealing:** her inner light does it, no shots: she stays within 6 m for 10 s + 10 × Menace (10 s at Depth 1, 20 s at the
-  last depth), held there against its push. It goes in five stages. Each of the first four closes one arm with two gold
-  staples (a rising note, and it spits a ring of 8 ink drops at 60% of a throw's damage). The last bites all four tight:
-  the arms close, and tear and staples dissolve together.
+- **Sealing:** her inner light does it, no shots, while she stays within 6 m of its disc, which means coming in among
+  its arms. Gold light-staples go in one every 0.5 s, evenly spaced every 0.6 m along an arm (at least three an arm),
+  from the disc out, one arm after another; so longer arms take more staples and longer (about 10 s at Menace 0, 25 s
+  at Menace 1). Each staple snaps in with a clear note rising as the leak fills. As each arm is stapled shut all along
+  it spits a ring of 8 ink drops at 60% of a throw's damage. The last staple seals it, and its arms and staples dissolve
+  together.
+- **The burn while sealing:** where the staples hold an arm its edges sear as her light burns the corrupted: bleached
+  to a pale crust lit in her colour, crazed with bright seams, a hard bright seam where the searing ends. While she is
+  sealing, the burn reaches further in and burns brighter. The disc pales toward her gold from its rim as it fills.
 - **Her coming near rouses it:** healthy fish within 14 m turn at once.
-- **If she leaves:** after 1.5 s it heals, a stage every 1.2 s. The staples tremble first, and each snaps out in reverse
-  as the leak goes back past it.
+- **If she leaves:** after 1.5 s it heals, a staple every 0.4 s, last in first out; the last one trembles first.
+- **On the maps:** a leak cave's leak shows as a purple five-armed star (`TopoMap.DrawLeakMark`).
 - **Each one sealed** throws 5 shells out of it, as well as its experience. Sealing 3 opens the way on and wakes the main
   current (DESIGN-TOPDOWN §4.7). The other two go on leaking until she seals them or the boss swallows them.
 - **Inkwardens** still guard the leaks in their reach (§4).
@@ -98,7 +108,8 @@ to 60% bigger, with up to 150% more health and up to 100% harder blows. The more
 Not a dot is left on the level afterwards.
 
 Switched off in the adventure (their code kept, to bring back one by one): pufferlings, Blightroots, Blotters,
-Lashjaws, Thumpsquirts, dens and murkling budding. Every level has a light spring (docs/CORRUPTION.md: a god ray onto
+Lashjaws, Thumpsquirts, dens and murkling budding (except in the open reef's leak caves, whose only creatures are
+murklings and primes: docs/RPG-PROPOSAL.md). Every level has a light spring (docs/CORRUPTION.md: a god ray onto
 the seabed, a store of healing she may come back to, too bright for any murkling), a second by her luck
 (docs/PEARLS.md, "Luck"); each keeps the seabed under it (§5).
 
@@ -176,54 +187,50 @@ Rare rooms where an old crab trades its best pearls for a share of her. The sim 
 
 ## 8. Her light
 
-Her light is a lamp in her bell. It shines out two ways: softened through the bell all round her, and as a searchlight
-out of the bell's opening, intense. Only the searchlight burns. Her shots are lanterns, and caves are dark. The sim is in
-`src/Core/Plane/PlaneHerLight.cs` (`HerLightTuning`), `PlaneAsh.cs` (`AshTuning`) and the shot rules in `PlaneCombat.cs`;
-the presentation in `BellView` (both lights), `her_burn.gdshaderinc`, `BlightView.Burn`, `CombatView` (the shots' lamps),
-`ReefLook.Cave`, `GlowPlankton` and `AshView`. Tests: `HerLightTests`, `CaveAshTests`.
+Her light is a lamp in her bell, one sphere of it all round her, and it burns nothing. Her shots are lanterns, and
+their light is what burns the corrupted. Caves are dark. The sim is in `src/Core/Plane/PlaneHerLight.cs`
+(`HerLightTuning`), `PlaneAsh.cs` (`AshTuning`) and the shot rules in `PlaneCombat.cs`; the presentation in `BellView`
+(her light), `her_burn.gdshaderinc`, `BlightView.Burn`, `CombatView` (the shots' lamps), `ReefLook.Cave`,
+`GlowPlankton` and `AshView`. Tests: `HerLightTests`, `CaveAshTests`.
 
-- **Her two lights** (`BellView`):
-  - **Softened:** through the top of the bell, as a standing lamp's through its shade: cast from the top of the bell
-    every way but within 30° of straight down its opening (fading in over 14° past that), where the beam shines
-    instead, so the two make one sphere of light (DESIGN-TOPDOWN §5.3). It turns with her bell: as she tips swimming,
-    the soft light tips with her and the beam swings out behind. It lights the reef round her and burns nothing.
-  - **The searchlight:** out of the bell's opening, the way it points. At rest that is straight down; swimming, her bell
-    tips apex first (1.22 × √(her speed ÷ her cruise) radians off upright, at most 1.38, eased in), so the beam streams
-    out behind her and a little down. About 70° off upright at her cruise. It is a fan, twice as tall as it is wide
-    (25° either side across its middle; up and down count half), and burns out to 10 m (× √ her glow stat: Lantern
-    Pearl reaches farther). It shows a little past that, and casts soft shadows.
-- **It burns the corrupted:**
-  - **Where:** any corrupted creature with some of its body inside the beam, with nothing solid between it and her. It
-    burns what chases her as she swims away; at rest, what lies under her (a Hearthguard on its bed).
-  - **Burn:** it loses 3 corruption a second (× her damage stat) and is freed when none is left. A murkling takes about
-    12 s at the first depth; a turned chromis about 3 s.
+- **Her light** (`BellView`): a bulb's, smooth all round her from her bell's heart (DESIGN-TOPDOWN §5.3), reaching
+  11 m (× √ her glow stat and the depth's lantern: Lantern Pearl reaches farther) and casting soft shadows. It lights
+  the reef round her and clears the ash off a cave's walls (below), but burns no creature.
+- **Her shots' light burns the corrupted** (`PlaneWorld.StepHerLight`):
+  - **Where:** any corrupted creature with some of its body within a shot's light (3.4 m for a plain shot, × √ its
+    share of a plain shot's damage, as its lamp is drawn), with nothing solid between it and the shot. A Hearthguard
+    on its bed under her plane burns as a shot passes over it.
+  - **Burn:** it loses 3 corruption a second for each shot lighting it (× her damage stat), and is freed when none is
+    left. It adds to the shot's hit: what she fires at burns as the light flies past and hangs over it.
   - **Not a hit:** the burn is steady. No flash, no damage numbers, and it does not rouse an Inkwarden. A guarding
     Inkwarden turns the burn aside as it turns her shots.
-  - **Bosses:** a boss burns only where it lies open to her beam (its pearl, or Drippus Prime's whole body).
+  - **Bosses:** a boss burns only where it lies open to the light (its pearl, or Drippus Prime's whole body).
 - **The look of the burn** (`her_burn.gdshaderinc`, in `murkling.gdshaderinc`, `corruption_orb` and `flounder`):
-  - **Where:** only the side of a body facing her bell, inside the beam and in sight of her (a little more from above,
-    so a body is lit over its top, where the camera sees it).
+  - **Which lights:** the first four shots burning something (`PlaneWorld.Burners`), each sent to the shaders as
+    `her_burn0`–`her_burn3`: where it hangs and how far its light reaches.
+  - **Where:** only the side of a body facing a shot, within its light (a little more from above, so a body is lit over
+    its top, where the camera sees it).
   - **Not fire:** the ink bleaches and boils off. Its black thins to a pale, glassy crust lit from within in her colour,
     molten in its cells and crazed by a crawling net of white-hot seams, fizzing with tiny boiling specks.
   - **The edge:** where the burn ends, the crust meets the dark ink in one hard bright seam, torn a little, with a
-    scorched dark band just past it. A body half in the beam shows the beam's edge across it; a body wholly in it shows
-    the edge where its lit side turns away from her.
-  - **Particles** (`BlightView.Burn`): from the lit side, white-hot specks boil off and rise as they cool to her colour.
-    Flakes of bleached ink peel away and sink, and now and then a pale wisp rises and thins.
+    scorched dark band just past it. A body half in a shot's light shows the light's edge across it; a body wholly in
+    it shows the edge where its lit side turns away from the shot.
+  - **Particles** (`BlightView.Burn`): from the side facing the nearest shot lighting it, white-hot specks boil off and
+    rise as they cool to her colour. Flakes of bleached ink peel away and sink, and now and then a pale wisp rises.
 - **It dazzles:**
-  - **Who:** a murkling, an Inkwarden or a Hearthguard coming into her beam.
+  - **Who:** a murkling, an Inkwarden or a Hearthguard coming into a shot's light.
   - **The freeze:** it stops dead for 0.8 s and lets go of a throw it was winding up; an Inkwarden's spin and spikes
-    and a Hearthguard's sting pause where they are. Then it carries on in the beam.
-  - **Again:** only once it has been out of her beam for 2 s.
+    and a Hearthguard's sting pause where they are. Then it carries on in the light.
+  - **Again:** only once it has been out of every shot's light for 2 s.
   - **Not dazzled:** the older rooted and leaping creatures (Blightroots, Blotters, Lashjaws, Thumpsquirts) and bosses.
-  - **The look:** one sharp glint on the side facing her and a ring of sparks off it.
+  - **The look:** one sharp glint on the side facing the shot and a ring of sparks off it.
 - **Her shots are lanterns** (`PlaneCombatTuning`, `CombatView`):
-  - **Flight:** thrown at 20 m/s, a shot eases out to about the end of her range, 6.4 m. It floats 0.12–0.22 s (× her
+  - **Flight:** thrown at 20 m/s, a shot eases out to about the end of her range, 8.3 m. It floats 0.12–0.22 s (× her
     bubble hover stat; with Bubble Coral 0.8–1.2 s) and pops, and its light goes with it.
   - **Its light:** each shot is a real light on the reef round it, as well as a glow on the water. A plain shot reaches
     3.4 m. Both its reach and its strength grow with the square root of its share of a plain shot's damage: a full
     Pearl Diver charge shines about 1.7 times as far, and a shot split from a five-shot volley about 0.6 times.
-  - **Use:** her shots light the dark around her, as well as striking.
+  - **Use:** her shots light the dark around her and burn what their light reaches, as well as striking.
 - **Caves are dark** (`ReefLook.Cave`, for every leak cave):
   - **Light:** no sun, no rays or caustics, and her lantern at the Abyss's strength. Never black: a faint cold shade
     (ambient #4A5688 at 0.32) leaves the outlines of the rock and of what swims there just visible, all but hidden. The
@@ -235,10 +242,10 @@ the presentation in `BellView` (both lights), `her_burn.gdshaderinc`, `BlightVie
     fibrous grain, darker edges and a faint violet sheen. They lie in patches 0.9 m apart along the walls, at three
     heights from 1.6 m under her plane to 1.6 m over it, ten scraps a patch. They are lit as the rock is, so they show
     only where light falls on them.
-  - **Clearing it:** her searchlight clears a patch it falls on in 0.6 s, its scraps going one by one. Each peels off in
-    a twirl of magic particles ("+" and "*") and a flake of ash that drifts down and fades. A shot of hers clears the
-    patches within 0.9 m of where it pops (× √ its share of a plain shot's damage), all at once. Her softened light
-    clears none. Sealing the cave's leak dissolves what is left, in a wave out from the leak at 8 m/s.
+  - **Clearing it:** her light clears a patch within 6 m of her (× √ her glow stat), in sight of her, in 0.6 s, its
+    scraps going one by one. Each peels off in a twirl of magic particles ("+" and "*") and a flake of ash that drifts
+    down and fades. A shot of hers clears the patches within 0.9 m of where it pops (× √ its share of a plain shot's
+    damage), all at once. Sealing the cave's leak dissolves what is left, in a wave out from the leak at 8 m/s.
   - **Over the ways in:** it lies thickest over a secret's sealed wall and a crab's fake one, patches 0.45 m apart all
     over the face she would meet it from. Under it the wall's carving is hidden (`SealView`, `PlaneWorld.SealAsh`), and
     shows again as the ash comes off, so clearing the walls is how she finds the ways in. Clearing ash earns nothing
@@ -246,6 +253,5 @@ the presentation in `BellView` (both lights), `her_burn.gdshaderinc`, `BlightVie
   - **Plankton** (`GlowPlankton`): 120 tiny specks of fluorescent plankton drift in the dark at random, mostly cyan,
     green and blue, now and then a pink one. Each glows up and fades on its own clock. They are the only light in a
     cave that is not hers.
-- **Verification:** `--dbg-burn` holds her swimming on the spot where she starts, her beam out behind her, with
-  murklings round her: one in the beam, one ahead of her, and a prime farther back that the beam's upper edge
-  crosses, half of it burning.
+- **Verification:** `--dbg-burn` holds her still where she starts, firing, with murklings round her: two 4 m off and a
+  prime 7 m off, burning as her shots' light reaches them.

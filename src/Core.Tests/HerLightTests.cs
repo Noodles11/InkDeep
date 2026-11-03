@@ -8,7 +8,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>Her searchlight burns and dazzles the corrupted in its beam (docs/ADVENTURE.md §8; PlaneHerLight.cs).</summary>
+/// <summary>Her shots' light burns and dazzles the corrupted it reaches; her own light burns nothing (docs/ADVENTURE.md §8; PlaneHerLight.cs).</summary>
 public class HerLightTests
 {
     static readonly Lazy<ItemCatalog> Catalog = new(() =>
@@ -47,97 +47,107 @@ public class HerLightTests
         return m;
     }
 
+    /// <summary>A plain shot of hers hanging at her start (held there by Step), its light out to ShotReach.</summary>
+    static PlaneShot Shot(PlaneWorld w)
+    {
+        var s = new PlaneShot { FromPlayer = true, Damage = PlaneCombatTuning.ShotDamage, Life = 100f, Range = 100f, Hover = 100f };
+        w.Shots.Add(s);
+        return s;
+    }
+
     /// <summary>
-    /// A step with her held at the level's start (against its current), full of light, swimming on the spot this way at
-    /// her cruise (zero: still); the murklings held where they are (pinned) when asked.
+    /// A step with her held still at the level's start, full of light, her shots held there too (alive), and the
+    /// murklings held where they are (pinned) when asked.
     /// </summary>
-    static void Step(PlaneWorld w, Vector2 swim, params (Murkling M, Vector2 At)[] pinned)
+    static void Step(PlaneWorld w, params (Murkling M, Vector2 At)[] pinned)
     {
         foreach (var (m, at) in pinned)
         {
             m.Position = at;
             m.Velocity = Vector2.Zero;
         }
-        w.Player.Position = w.Player.PrevPosition = w.Map.Start.Position;
-        w.Player.Velocity = swim * w.CruiseSpeed;
+        var her = w.Map.Start.Position;
+        foreach (var s in w.Shots)
+        {
+            s.Position = s.Line = her;
+            s.From = new Vector2(float.NaN);
+            s.Velocity = Vector2.UnitX * 0.001f;
+            s.Life = 100f;
+        }
+        w.Player.Position = w.Player.PrevPosition = her;
+        w.Player.Velocity = Vector2.Zero;
         w.Player.Hp = 100f;
         w.Step(default);
     }
 
-    /// <summary>She swims on the spot this way for a second: her bell tips, and her beam streams out behind her.</summary>
-    static void Swim(PlaneWorld w, Vector2 swim)
-    {
-        for (int i = 0; i < PlaneWorld.TickRate; i++) Step(w, swim);
-    }
-
     [Fact]
-    public void At_rest_her_beam_shines_straight_down_and_burns_nothing_beside_her()
+    public void Her_own_light_burns_nothing_beside_her()
     {
         var w = Bare();
-        if (Beside(w, 3f) is not { } at) return;
+        if (Beside(w, 2.5f) is not { } at) return;
         var m = Murkling(w, at);
         float full = m.Corruption.Value;
-        for (int i = 0; i < PlaneWorld.TickRate; i++) Step(w, Vector2.Zero, (m, at));
-        Assert.True(w.BeamDirection.Y < -0.99f, $"{w.BeamDirection}");
+        for (int i = 0; i < PlaneWorld.TickRate; i++) Step(w, (m, at));
         Assert.Equal(full, m.Corruption.Value);
         Assert.False(w.InHerLight(m));
     }
 
     [Fact]
-    public void Swimming_her_beam_streams_out_behind_her_and_slowly_burns_what_is_in_it()
+    public void A_shots_light_slowly_burns_what_it_reaches_and_nothing_beyond()
     {
         var w = Bare();
-        if (Beside(w, 3f) is not { } behind) return;
-        var her = w.Map.Start.Position;
-        var swim = Vector2.Normalize(her - behind);
-        Swim(w, swim);
-        // Out behind her and down a little: tipped about 70° at her cruise.
-        Assert.True(Vector2.Dot(Vector2.Normalize(new Vector2(w.BeamDirection.X, w.BeamDirection.Z)), -swim) > 0.95f, $"{w.BeamDirection}");
-        Assert.InRange(MathF.Acos(-w.BeamDirection.Y), 1.1f, 1.3f);
-        var lit = Murkling(w, behind);
-        // One beside her, square to her swim, is outside the beam.
-        var side = her + new Vector2(-swim.Y, swim.X) * 3f;
-        var dark = w.Clear(side, 0.6f) ? Murkling(w, side) : null;
+        if (Beside(w, 2.5f) is not { } near || Beside(w, HerLightTuning.ShotReach + 1.5f) is not { } far) return;
+        var shot = Shot(w);
+        var lit = Murkling(w, near);
+        var dark = Murkling(w, far);
         float full = lit.Corruption.Value;
-        for (int i = 0; i < PlaneWorld.TickRate; i++)
-        {
-            if (dark is null) Step(w, swim, (lit, behind));
-            else Step(w, swim, (lit, behind), (dark, side));
-        }
+        for (int i = 0; i < PlaneWorld.TickRate; i++) Step(w, (lit, near), (dark, far));
         Assert.Equal(full - HerLightTuning.Burn, lit.Corruption.Value, 1);
         Assert.True(w.InHerLight(lit));
-        if (dark is not null)
-        {
-            Assert.Equal(full, dark.Corruption.Value);
-            Assert.False(w.InHerLight(dark));
-        }
+        Assert.True(w.LitFrom(lit) is { } from && Vector2.Distance(from, w.Map.Start.Position) < 0.1f);
+        Assert.Contains(shot, w.Burners);
+        Assert.Equal(full, dark.Corruption.Value);
+        Assert.False(w.InHerLight(dark));
         // Steady, not hits: no flash, no numbers.
         Assert.Equal(0f, lit.Corruption.LastHit);
 
-        // Kept in it, she frees it.
-        for (int i = 0; i < (full / HerLightTuning.Burn + 1f) * PlaneWorld.TickRate && lit.Alive; i++) Step(w, swim, (lit, behind));
+        // Kept in it, it is freed.
+        for (int i = 0; i < (full / HerLightTuning.Burn + 1f) * PlaneWorld.TickRate && lit.Alive; i++) Step(w, (lit, near), (dark, far));
         Assert.False(lit.Alive);
     }
 
     [Fact]
-    public void Coming_into_her_beam_dazzles_a_murkling_still_for_a_moment_then_it_carries_on()
+    public void Two_shots_lighting_it_burn_it_twice_as_fast()
     {
         var w = Bare();
-        if (Beside(w, 4f) is not { } at) return;
-        var swim = Vector2.Normalize(w.Map.Start.Position - at);
-        Swim(w, swim);
+        if (Beside(w, 2.5f) is not { } near) return;
+        Shot(w);
+        Shot(w);
+        var m = Murkling(w, near);
+        float full = m.Corruption.Value;
+        for (int i = 0; i < PlaneWorld.TickRate; i++) Step(w, (m, near));
+        Assert.Equal(full - 2f * HerLightTuning.Burn, m.Corruption.Value, 1);
+    }
+
+    [Fact]
+    public void Coming_into_a_shots_light_dazzles_a_murkling_still_for_a_moment_then_it_carries_on()
+    {
+        var w = Bare();
+        if (Beside(w, 3f) is not { } at) return;
         var m = Murkling(w, at);
-        Step(w, swim);
+        Step(w, (m, at));
+        Shot(w);
+        Step(w, (m, at));
         Assert.Contains(w.Events, e => e.Type == PlaneEventType.Dazzled);
         Assert.True(w.Dazzled(m));
         // Dazzled, it holds still...
-        for (int i = 0; i < (int)(HerLightTuning.Dazzle * PlaneWorld.TickRate) - 3; i++) Step(w, swim);
+        for (int i = 0; i < (int)(HerLightTuning.Dazzle * PlaneWorld.TickRate) - 3; i++) Step(w);
         Assert.Equal(at, m.Position);
-        // ...then carries on, never dazzled again while it stays in her beam.
+        // ...then carries on, never dazzled again while it stays in the light.
         int again = 0;
         for (int i = 0; i < PlaneWorld.TickRate / 2; i++)
         {
-            Step(w, swim);
+            Step(w);
             again += w.Events.Count(e => e.Type == PlaneEventType.Dazzled);
         }
         Assert.False(w.Dazzled(m));
@@ -146,33 +156,30 @@ public class HerLightTests
     }
 
     [Fact]
-    public void A_murkling_out_of_her_beam_long_enough_is_dazzled_again()
+    public void A_murkling_out_of_the_light_long_enough_is_dazzled_again()
     {
         var w = Bare();
-        if (Beside(w, 3f) is not { } near) return;
-        var swim = Vector2.Normalize(w.Map.Start.Position - near);
-        Swim(w, swim);
-        // Out of the beam: ahead of her.
-        var ahead = w.Map.Start.Position + swim * 3f;
+        if (Beside(w, 2.5f) is not { } near || Beside(w, HerLightTuning.ShotReach + 2f) is not { } away) return;
+        Shot(w);
         var m = Murkling(w, near);
-        for (int i = 0; i < PlaneWorld.TickRate; i++) Step(w, swim, (m, near));
+        for (int i = 0; i < PlaneWorld.TickRate; i++) Step(w, (m, near));
         // Out of it, but not long enough: no dazzle on coming back.
-        for (int i = 0; i < (int)(HerLightTuning.Rearm * PlaneWorld.TickRate) / 2; i++) Step(w, swim, (m, ahead));
-        Step(w, swim, (m, near));
+        for (int i = 0; i < (int)(HerLightTuning.Rearm * PlaneWorld.TickRate) / 2; i++) Step(w, (m, away));
+        Step(w, (m, near));
         Assert.DoesNotContain(w.Events, e => e.Type == PlaneEventType.Dazzled);
         // Out of it long enough: dazzled again.
-        for (int i = 0; i < (int)(HerLightTuning.Rearm * PlaneWorld.TickRate) + 2; i++) Step(w, swim, (m, ahead));
-        Step(w, swim, (m, near));
+        for (int i = 0; i < (int)(HerLightTuning.Rearm * PlaneWorld.TickRate) + 2; i++) Step(w, (m, away));
+        Step(w, (m, near));
         Assert.Contains(w.Events, e => e.Type == PlaneEventType.Dazzled);
     }
 
     [Fact]
-    public void Rock_between_her_and_a_murkling_keeps_her_beam_off_it()
+    public void Rock_between_a_shot_and_a_murkling_keeps_its_light_off_it()
     {
         var w = Bare();
         var her = w.Map.Start.Position;
         Vector2? hidden = null;
-        for (float r = 1.5f; r < 6f && hidden is null; r += 0.5f)
+        for (float r = 1.5f; r < HerLightTuning.ShotReach && hidden is null; r += 0.5f)
             for (int i = 0; i < 64; i++)
             {
                 var p = her + new Vector2(MathF.Cos(i * MathF.Tau / 64f), MathF.Sin(i * MathF.Tau / 64f)) * r;
@@ -181,23 +188,25 @@ public class HerLightTests
                 break;
             }
         if (hidden is not { } at) return;
-        var swim = Vector2.Normalize(her - at);
-        Swim(w, swim);
+        Shot(w);
         var m = Murkling(w, at);
         float full = m.Corruption.Value;
-        for (int i = 0; i < PlaneWorld.TickRate; i++) Step(w, swim, (m, at));
-        Assert.True(w.InBeam(at, 0f, m.Radius));
+        for (int i = 0; i < PlaneWorld.TickRate; i++) Step(w, (m, at));
         Assert.Equal(full, m.Corruption.Value);
         Assert.False(w.InHerLight(m));
     }
 
     [Fact]
-    public void Lantern_pearl_lengthens_her_beam()
+    public void A_harder_shot_lights_farther_and_Lantern_pearl_widens_her_own_light()
     {
+        var plain = new PlaneShot { Damage = PlaneCombatTuning.ShotDamage };
+        var hard = new PlaneShot { Damage = PlaneCombatTuning.ShotDamage * 4f };
+        Assert.Equal(HerLightTuning.ShotReach, PlaneWorld.ShotLightReach(plain), 3);
+        Assert.Equal(HerLightTuning.ShotReach * 2f, PlaneWorld.ShotLightReach(hard), 3);
         var w = Bare();
-        float reach = w.BeamReach;
-        Assert.Equal(HerLightTuning.BeamReach, reach, 3);
+        float reach = w.LightReach;
+        Assert.Equal(HerLightTuning.Reach, reach, 3);
         w.Run.Add("lantern_pearl");
-        Assert.True(w.BeamReach > reach);
+        Assert.True(w.LightReach > reach);
     }
 }

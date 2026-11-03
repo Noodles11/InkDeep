@@ -99,6 +99,22 @@ public sealed record ReefLook
         FanA = C("#B48CDC"), FanB = C("#F28BB0"), SoftCoral = C("#F6A5C0"), HardCoral = C("#F1DDA2"), Grass = C("#8FC85A"),
     };
 
+    /// <summary>
+    /// Lantern Bay (docs/RPG-PROPOSAL.md §3): a summer night over the shallows, warm and safe. A low silver moon lays soft
+    /// caustics and a few faint shafts on moon-blue water and silvered sand; the bay's own life keeps its colours, dimmed,
+    /// and Clementine's tangerine is the brightest thing in it, her light pooling round her wherever she swims. No menace:
+    /// the dark here is gentle, the contrast deep.
+    /// </summary>
+    public static readonly ReefLook Bay = Shallows with
+    {
+        Name = "Lantern Bay",
+        WaterShallow = C("#2C4F80"), WaterDeep = C("#1B3263"), Murk = C("#0A1430"),
+        Sand = C("#7F869E"), Rock = C("#7A8098"),
+        Sun = C("#A9C2F2"), SunEnergy = 0.3f, Ambient = C("#33508F"), AmbientEnergy = 0.14f,
+        Caustics = 0.5f, Rays = 0.3f, Menace = 0f, Saturation = 1f, Vignette = 0.55f, Fog = 0.18f, Contrast = 1.3f,
+        Lantern = 1.15f,
+    };
+
     public static readonly ReefLook Kelp = Shallows with
     {
         Name = "Kelp Jungle",
@@ -150,17 +166,17 @@ public sealed record ReefLook
 
     /// <summary>
     /// A cave (a leak cave, docs/ADVENTURE.md §8): no sun reaches it and nothing of its reef glows on its own. Never black:
-    /// a faint cold shade lets the outlines of its rock and what swims in it show, all but hidden, and the rest is her
-    /// light (the Abyss's lantern), her shots' and its fluorescent plankton. Its reef's colours are the Abyss's, dulled, so
-    /// what her light finds there is stone and dim life, not neon.
+    /// a cool dim shade lets its rock and what swims in it show, and the rest is her light (the Abyss's lantern), her
+    /// shots' and its fluorescent plankton. Its reef's colours are the Abyss's, dulled, so what her light finds there is
+    /// stone and dim life, not neon.
     /// </summary>
     public static readonly ReefLook Cave = Abyss with
     {
         Name = "Cave",
-        WaterShallow = C("#111528"), WaterDeep = C("#0D1020"), Murk = C("#080A16"),
-        Rock = C("#2C2F3E"), Sand = C("#3A3C50"), Coral = C("#7A3A62"), Coral2 = C("#3E4C70"), Algae = C("#2E4A4C"), Sponge = C("#2A6A66"), Butter = C("#8A7440"),
-        Sun = C("#000000"), SunEnergy = 0f, Ambient = C("#4A5688"), AmbientEnergy = 0.32f,
-        Caustics = 0f, Rays = 0f, Menace = 0.6f, Saturation = 0.85f, Vignette = 0.45f, Fog = 0.35f, Lantern = 2f,
+        WaterShallow = C("#1C2340"), WaterDeep = C("#151A33"), Murk = C("#0D1124"),
+        Rock = C("#3C4054"), Sand = C("#4C4F66"), Coral = C("#7A3A62"), Coral2 = C("#3E4C70"), Algae = C("#2E4A4C"), Sponge = C("#2A6A66"), Butter = C("#8A7440"),
+        Sun = C("#000000"), SunEnergy = 0f, Ambient = C("#5A68A0"), AmbientEnergy = 0.6f,
+        Caustics = 0f, Rays = 0f, Menace = 0.6f, Saturation = 0.85f, Vignette = 0.35f, Fog = 0.35f, Lantern = 2f,
         FanA = C("#4A3A6A"), FanB = C("#6A3A5A"), SoftCoral = C("#6A4A64"), HardCoral = C("#6E6450"), Grass = C("#2E4A3A"),
         Dark = true,
     };
@@ -201,9 +217,12 @@ public sealed record ReefLook
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_fog"), Fog);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_dark"), Dark ? 1f : 0f);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_lantern"), Lantern);
-        RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_extent"), new Vector2(LevelMap.Size, LevelMap.Size));
         SetDrop(0f);
     }
+
+    /// <summary>The level's square (metres a side) for the shaders: its rim, and what its sun map covers.</summary>
+    public static void SetExtent(int size) =>
+        RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_extent"), new Vector2(size, size));
 
     /// <summary>
     /// The dive: the world's swim plane is <paramref name="drop"/> metres down (sinking toward the level below), and the

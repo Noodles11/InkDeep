@@ -32,7 +32,6 @@ public static class TopDownGenerator
     /// <summary>Buried coins and sealed pockets a level holds (the validator checks them).</summary>
     public const int CoinsMin = 4, CoinsMax = 7, PocketsMin = 2, PocketsMax = 4;
 
-    const float Size = LevelMap.Size;
     const float Rim = LevelMap.RimWidth;
 
     // Stages 1–2: the cave (CaveLayout) and its places.
@@ -96,7 +95,123 @@ public static class TopDownGenerator
     {
         var map = Generate(new RunStreams(seed), LevelPlan.ForCave(seed, id, menace), null, "", 0f);
         map.CaveLevel = level;
+        // Its way out: an opening in its start chamber's wall, the one she came in by (where that wall has no room, the
+        // nearest wall along the way in that has). One facing the camera is sought first, near the start; at the last,
+        // any wall anywhere along the way in.
+        var path = LevelValidator.ShortestPath(map, map.Start.Position, map.Exit.Position, clearance: 1f);
+        for (int f = 0; f < DoorFacings.Length && map.Way is null; f++)
+        {
+            float far = f == DoorFacings.Length - 1 ? float.MaxValue : DoorFromStart;
+            map.Way = CutDoorway(map, map.Start.Position, StartRadius + DoorReach, DoorFacings[f]);
+            for (int i = 4; i < path.Count && Vector2.Distance(path[i], map.Start.Position) < far && map.Way is null; i += 4)
+                map.Way = CutDoorway(map, path[i], DoorReach, DoorFacings[f]);
+        }
         return map;
+    }
+
+    /// <summary>How far past a chamber's middle (a cave's start) or a drawn mouth's point a wall is looked for to cut an opening in.</summary>
+    const float DoorReach = 10f;
+    /// <summary>
+    /// The ways into the rock an opening is sought by, in turn (the most its Into's Y may be): into a wall north of the
+    /// water first, so its face looks toward the camera; then sideways; then any.
+    /// </summary>
+    static readonly float[] DoorFacings = { -0.45f, 0.3f, 1.01f };
+    /// <summary>A leak cave's way out is sought no further along its way in from its start than this (metres).</summary>
+    const float DoorFromStart = 16f;
+    /// <summary>
+    /// An opening's threshold lies this far into the wall from the water's edge; the rock round its passage is lowered over
+    /// DoorBand beside its open width; rock must stand that wide beside it and DoorBehind past its back; and the rock round
+    /// it is raised into a mound DoorMound over the swim level, falling away over DoorFall past the band.
+    /// </summary>
+    const float DoorNotch = 0.8f, DoorBand = 1.2f, DoorBehind = 1.2f, DoorMound = Doorway.FaceHeight + 0.9f, DoorFall = 2.5f;
+
+    /// <summary>
+    /// A cave's opening cut into a wall (<see cref="Doorway"/>): from a point in the water, the stretch of wall near it
+    /// with rock enough behind it and beside it (a wall north of the point is liked best: its face is toward the camera).
+    /// The rock round it is raised into a mound, so its face stands tall over the water whatever the wall's height; then
+    /// a passage is cut Depth into it from a short notch at the water's edge, the mound's rock over it kept as its roof.
+    /// Only rock is raised, so no water anywhere is closed off. Null where no wall near has room.
+    /// </summary>
+    internal static Doorway? CutDoorway(LevelMap map, Vector2 from, float reach, float facing = 1.01f)
+    {
+        const int ways = 72;
+        const float step = 0.25f;
+        Doorway? best = null;
+        Vector2 bestEdge = default;
+        float bestScore = float.MaxValue;
+        for (int k = 0; k < ways; k++)
+        {
+            float a = k * MathF.Tau / ways;
+            var dir = new Vector2(MathF.Cos(a), MathF.Sin(a));
+            if (dir.Y > facing) continue;
+            float s = 0f;
+            while (s < reach && map.IsOpen(from + dir * s)) s += step;
+            if (s >= reach) continue;
+            var door = new Doorway(from + dir * (s + DoorNotch), dir);
+            if (!DoorRoom(map, door)) continue;
+            // Nearest, and facing the camera: north of the point (dir.Y −1) best, south worst.
+            float score = s + 8f * (1f + dir.Y);
+            if (score >= bestScore) continue;
+            bestScore = score;
+            best = door;
+            bestEdge = from + dir * MathF.Max(s - 0.6f, 0f);
+        }
+        if (best is { } cut) CarveDoorway(map, cut, bestEdge);
+        return best;
+    }
+
+    /// <summary>Rock all round where the passage would go (and behind it), inside the square, and no cave's room or tunnel's roof over it.</summary>
+    static bool DoorRoom(LevelMap map, Doorway door)
+    {
+        float side = Doorway.HalfWidth + DoorBand;
+        for (float along = 0f; along <= Doorway.Depth + DoorBehind; along += 0.5f)
+        for (float across = -side; across <= side; across += 0.5f)
+        {
+            var p = door.At + door.Into * along + door.Across * across;
+            if (!Inside(map, p, 3f) || map.HeightAt(p) < 0.4f) return false;
+            int x = (int)MathF.Round(p.X), y = (int)MathF.Round(p.Y);
+            if (!float.IsNaN(map.LidAt(x, y)) || !float.IsNaN(map.RoofAt(x, y))) return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// The mound raised round the opening (rock only), then the notch and the passage lowered to the floor, the rock either
+    /// side eased down to it, and the mound's rock over the passage kept as its roof.
+    /// </summary>
+    static void CarveDoorway(LevelMap map, Doorway door, Vector2 edge)
+    {
+        int N = map.Samples;
+        float band = Doorway.HalfWidth + DoorBand, mound = band + DoorFall;
+        // (Its line stops short of its back by its half-width: its round end reaches the back.)
+        var back = door.Back - door.Into * Doorway.HalfWidth;
+        var hill = door.Back + door.Into * 0.6f;
+        int x0 = Math.Max(0, (int)(MathF.Min(edge.X, hill.X) - mound - 1f)), x1 = Math.Min(map.Size, (int)(MathF.Max(edge.X, hill.X) + mound + 1f));
+        int y0 = Math.Max(0, (int)(MathF.Min(edge.Y, hill.Y) - mound - 1f)), y1 = Math.Min(map.Size, (int)(MathF.Max(edge.Y, hill.Y) + mound + 1f));
+        for (int y = y0; y <= y1; y++)
+        for (int x = x0; x <= x1; x++)
+        {
+            var p = new Vector2(x, y);
+            int i = y * N + x;
+            float was = map.Heights[i];
+            // Raised: the rock round the face and the passage (never the water, nor the notch's way in), rounded over
+            // its middle and rough, as rock is.
+            float dm = Geo.SegmentDistance(p, door.At - door.Into * 1.2f, hill);
+            if (dm < mound && was > 0.2f)
+            {
+                float top = DoorMound + 0.8f * (1f - Smooth(0f, mound, dm)) + 0.4f * TerrainNoise.Fbm(x * 0.35f, y * 0.35f, (uint)map.Seed ^ 0xD00Au, 2);
+                was = map.Heights[i] = MathF.Max(was, MathUtil.Lerp(was, top, 1f - Smooth(band, mound, dm)));
+            }
+            float d = Geo.SegmentDistance(p, edge, back);
+            if (d >= band) continue;
+            float floor = d <= Doorway.HalfWidth ? -PathDepth : MathUtil.Lerp(-PathDepth, was, Smooth(Doorway.HalfWidth, band, d));
+            if (floor >= was) continue;
+            map.Heights[i] = floor;
+            // Roofed from a little in front of its face (its arch is cut from the face itself), so the roof's edge at the
+            // face stands at full height.
+            if (door.Measure(p).In >= -1.6f) map.Roof[i] = MathF.Max(was, Doorway.FaceHeight + 0.2f);
+        }
+        for (float t = 0f; t <= 1f; t += 0.1f) ClearAround(map, Vector2.Lerp(edge, hill, t), mound);
     }
 
     static LevelMap Generate(RunStreams streams, LevelPlan plan, Action<string>? log, string cosmeticSalt, float luck)
@@ -149,8 +264,11 @@ public static class TopDownGenerator
         var streams = new RunStreams(seed);
         var id = hand.Id;
         Rng Stage(string name) => streams.TopDown(id, 0, name);
-        var map = new LevelMap { Seed = seed.Value, Id = id, Menace = hand.Menace, Haven = hand.Haven, Title = hand.Title, Station = true };
-        foreach (var m in hand.Mouths) map.Mouths.Add(new Vector2(m.X, m.Y));
+        var map = new LevelMap(hand.Size)
+        {
+            Seed = seed.Value, Id = id, Menace = hand.Menace, Title = hand.Title, Station = true, CurrentStation = hand.Station, LookDepth = hand.Look,
+            Haven = hand.Haven is { } h ? (new Vector2(h.X0, h.Y0), new Vector2(h.X1, h.Y1)) : null,
+        };
         Array.Fill(map.Heights, -PathDepth);
         uint noiseSeed = (uint)(Stage("noise").NextU64() >> 32);
         var (cave, why) = CaveLayout.FromHand(hand, Stage("cave"), RadiusOf);
@@ -180,7 +298,48 @@ public static class TopDownGenerator
                     bed.Lengths.RemoveAt(k);
                 }
         map.Kelp.RemoveAll(bed => bed.Roots.Count < KelpLeast);
+        // Its cave mouths: openings cut in the wall nearest each drawn point (one facing the camera if it can be; where
+        // the walls by the point have no room, those a few metres round it).
+        foreach (var m in hand.Mouths)
+        {
+            Doorway? door = null;
+            var at = new Vector2(m.X, m.Y);
+            var froms = new List<Vector2> { at };
+            for (int k = 0; k < 8; k++) froms.Add(at + new Vector2(MathF.Cos(k * MathF.Tau / 8f), MathF.Sin(k * MathF.Tau / 8f)) * 7f);
+            foreach (float facing in DoorFacings)
+            {
+                foreach (var from in froms.Where(map.IsOpen))
+                    if ((door = CutDoorway(map, from, DoorReach, facing)) is not null) break;
+                if (door is not null) break;
+            }
+            map.Mouths.Add(door ?? throw new InvalidOperationException($"The map {hand.Name} cannot be built: no wall near its {m.Name} mouth has room for an opening"));
+        }
+        // The mirror's pool and the Tide Fan's rock stand on bare floor: nothing grows or stands over them.
+        if (hand.Mirror is { } mirror)
+        {
+            map.Mirror = new Vector2(mirror.X, mirror.Y);
+            ClearAround(map, map.Mirror.Value, LevelMap.MirrorRadius + 1.2f);
+        }
+        if (hand.Fan is { } fan)
+        {
+            map.Fan = new Vector2(fan.X, fan.Y);
+            ClearAround(map, map.Fan.Value, LevelMap.FanClear);
+        }
         return map;
+    }
+
+    /// <summary>No decor and no kelp within so far of a point.</summary>
+    static void ClearAround(LevelMap map, Vector2 at, float clear)
+    {
+        map.Decor.RemoveAll(d => Vector2.Distance(d.Position, at) < clear);
+        foreach (var bed in map.Kelp)
+            for (int k = bed.Roots.Count - 1; k >= 0; k--)
+                if (Vector2.Distance(bed.Roots[k], at) < clear)
+                {
+                    bed.Roots.RemoveAt(k);
+                    bed.Lengths.RemoveAt(k);
+                }
+        map.Kelp.RemoveAll(bed => bed.Roots.Count < KelpLeast);
     }
 
     /// <summary>No way down: a shaft off the map, where nothing finds it.</summary>
@@ -223,11 +382,9 @@ public static class TopDownGenerator
 
     // ───────────────────────── helpers ─────────────────────────
 
-    static bool Inside(Vector2 p, float inset) => p.X >= inset && p.Y >= inset && p.X <= Size - inset && p.Y <= Size - inset;
+    static bool Inside(LevelMap map, Vector2 p, float inset) => p.X >= inset && p.Y >= inset && p.X <= map.Size - inset && p.Y <= map.Size - inset;
 
     static Vector2 Round(Vector2 p) => new(MathF.Round(p.X), MathF.Round(p.Y));
-
-    static Vector2 RandomIn(Rng rng, float inset) => new(rng.Range(inset, Size - inset), rng.Range(inset, Size - inset));
 
     static float Smooth(float edge0, float edge1, float x) => MathUtil.Smoothstep(MathUtil.Clamp01((x - edge0) / (edge1 - edge0)));
 
@@ -335,7 +492,7 @@ public static class TopDownGenerator
     /// </summary>
     static float[] RaiseCaveWalls(LevelMap map, bool[] open, string terrainText, Rng rng, WallStrata strata)
     {
-        const int N = LevelMap.Samples;
+        int N = map.Samples;
         var tops = new float[N * N];
         ReefTerrain.Generate(tops, N, terrainText);
         uint dipSeed = (uint)(rng.NextU64() >> 32);
@@ -349,7 +506,7 @@ public static class TopDownGenerator
     /// </summary>
     static void WallProfile(LevelMap map, bool[] open, float[] tops, WallStrata strata, uint dipSeed, float[] heights)
     {
-        const int N = LevelMap.Samples;
+        int N = map.Samples;
         var toWater = CaveLayout.Chamfer(open, true);
         var rift = map.Exit;
         // The raw profile first: the floor, and the rock rising from the water's edge to its warped top.
@@ -379,7 +536,7 @@ public static class TopDownGenerator
             int i = y * N + x;
             // Terraced: rock only, and never down to the swim level.
             float h = open[i] ? raw[i] : MathF.Max(WallFoot, strata.Terrace(raw[i], x, y, RawAt));
-            float e = MathF.Min(MathF.Min(x, y), MathF.Min(Size - x, Size - y));
+            float e = MathF.Min(MathF.Min(x, y), MathF.Min(map.Size - x, map.Size - y));
             float w = ReefTerrain.Falloff(e / (Rim + 1f));
             if (w > 0f) h += w * (ReefTerrain.HMax - h);
             heights[i] = h;
@@ -462,7 +619,7 @@ public static class TopDownGenerator
     static void SealWalls(LevelMap map, float[] tops, WallStrata strata)
     {
         if (map.WeakRocks.Count == 0) return;
-        const int N = LevelMap.Samples;
+        int N = map.Samples;
         var open = new bool[N * N];
         for (int i = 0; i < open.Length; i++) open[i] = map.Heights[i] < WallFoot - 0.2f;
         var closed = (bool[])open.Clone();
@@ -527,7 +684,7 @@ public static class TopDownGenerator
     /// <summary>Whether open water joins a to b (4-way, on the grid).</summary>
     static bool Reaches(bool[] open, Vector2 a, Vector2 b)
     {
-        const int N = LevelMap.Samples;
+        int N = (int)MathF.Round(MathF.Sqrt(open.Length));
         int from = (int)MathF.Round(a.Y) * N + (int)MathF.Round(a.X), to = (int)MathF.Round(b.Y) * N + (int)MathF.Round(b.X);
         if (!open[from] || !open[to]) return false;
         var seen = new bool[N * N];
@@ -569,7 +726,7 @@ public static class TopDownGenerator
     /// <summary>A grid field's bilinear value at a point (clamped to the square).</summary>
     static float Bilinear(float[] f, float x, float y)
     {
-        const int N = LevelMap.Samples;
+        int N = (int)MathF.Round(MathF.Sqrt(f.Length));
         x = Math.Clamp(x, 0f, N - 1.001f);
         y = Math.Clamp(y, 0f, N - 1.001f);
         int ix = (int)x, iy = (int)y;
@@ -662,10 +819,10 @@ public static class TopDownGenerator
     {
         var rift = map.Exit;
         var raise = new List<int>();
-        for (int y = 0; y < LevelMap.Samples; y++)
-        for (int x = 0; x < LevelMap.Samples; x++)
+        for (int y = 0; y < map.Samples; y++)
+        for (int x = 0; x < map.Samples; x++)
         {
-            int i = y * LevelMap.Samples + x;
+            int i = y * map.Samples + x;
             if (map.Heights[i] >= Seabed) continue;
             if ((map.HasBoss || map.Rift) && Vector2.Distance(new Vector2(x, y), rift.Position) < rift.Radius * 0.7f) continue;
             bool under = true;
@@ -673,8 +830,8 @@ public static class TopDownGenerator
             for (int dx = -1; dx <= 1; dx++)
             {
                 int nx = x + dx, ny = y + dy;
-                if (nx < 0 || ny < 0 || nx >= LevelMap.Samples || ny >= LevelMap.Samples) continue;
-                if (map.Heights[ny * LevelMap.Samples + nx] > LevelMap.BlockHeight) { under = false; break; }
+                if (nx < 0 || ny < 0 || nx >= map.Samples || ny >= map.Samples) continue;
+                if (map.Heights[ny * map.Samples + nx] > LevelMap.BlockHeight) { under = false; break; }
             }
             if (under) raise.Add(i);
         }
@@ -691,12 +848,12 @@ public static class TopDownGenerator
     /// </summary>
     static void SoftenSlopes(LevelMap map, Rng rng, WallStrata strata)
     {
-        const int N = LevelMap.Samples;
+        int N = map.Samples;
         // Distance (metres) from every grid point to the nearest open water, and to the nearest roof (an arch's deck,
         // a cave's or an overhang's: the rock under and beside them carries them, so it keeps its height).
-        var d = Chamfer(i => map.Heights[i] <= LevelMap.BlockHeight);
+        var d = Chamfer(map.Samples, i => map.Heights[i] <= LevelMap.BlockHeight);
         // (Cave roofs and the shortcut tunnels' roofs alike: a tunnel keeps the rock it was bored through.)
-        var roof = Chamfer(i => !float.IsNaN(map.Lid[i]) || !float.IsNaN(map.Roof[i]));
+        var roof = Chamfer(map.Samples, i => !float.IsNaN(map.Lid[i]) || !float.IsNaN(map.Roof[i]));
         uint seed = (uint)(rng.NextU64() >> 32);
         var eased = new bool[N * N];
         for (int y = 0; y < N; y++)
@@ -738,9 +895,8 @@ public static class TopDownGenerator
     }
 
     /// <summary>Distance (metres, 8-way chamfer) from every grid point to the nearest point that is <paramref name="source"/>.</summary>
-    static float[] Chamfer(Func<int, bool> source)
+    static float[] Chamfer(int N, Func<int, bool> source)
     {
-        const int N = LevelMap.Samples;
         var d = new float[N * N];
         for (int i = 0; i < d.Length; i++) d[i] = source(i) ? 0f : float.MaxValue;
         const float D1 = 1f, D2 = 1.41421356f;
@@ -771,7 +927,7 @@ public static class TopDownGenerator
     /// </summary>
     static void RoofShortcuts(LevelMap map)
     {
-        const int N = LevelMap.Samples;
+        int N = map.Samples;
         // Each roof laid over the tunnel's water as the rock now stands (the slopes were softened since it was bored): over
         // each open cell of it, from the wall on one side across to the wall on the other — their heights, a little
         // past their edges, met exactly where the water meets the rock, with a gentle arch between — so it follows the
@@ -896,7 +1052,7 @@ public static class TopDownGenerator
     /// </summary>
     static void WearMouths(LevelMap map, List<int> cells, Dictionary<int, float> centre)
     {
-        const int N = LevelMap.Samples;
+        int N = map.Samples;
         const float MouthWear = 1f, MouthArch = 2.5f, MouthRagged = 3f;
         var roofed = new HashSet<int>(cells.Where(k => !float.IsNaN(map.Roof[k])));
         // How far in from the open water each roof cell lies (8-way steps over the roof).
@@ -949,7 +1105,7 @@ public static class TopDownGenerator
     /// </summary>
     static void CleanRoofs(LevelMap map)
     {
-        const int N = LevelMap.Samples;
+        int N = map.Samples;
         bool Roofed(int i) => !float.IsNaN(map.Roof[i]);
         for (int pass = 0; pass < 2; pass++)
         {
@@ -1047,11 +1203,11 @@ public static class TopDownGenerator
     /// </summary>
     static void SinkExitChamber(LevelMap map)
     {
-        const int N = LevelMap.Samples;
+        int N = map.Samples;
         var exit = map.Exit.Position;
         float room = map.Chambers.Count > 0 ? map.Chambers.OrderBy(c => Vector2.Distance(c.At, exit)).First().Radius : ExitChamber;
         // How far each point of the water is from the rock round it.
-        var toRock = Chamfer(i => map.Heights[i] > 0f);
+        var toRock = Chamfer(map.Samples, i => map.Heights[i] > 0f);
         // The chamber: the water within its radius (and a few metres more, for its craggy edge), its tunnels fading out.
         float reach = room + ExitMouth;
         int x0 = Math.Max(0, (int)(exit.X - reach)), x1 = Math.Min(N - 1, (int)(exit.X + reach) + 1);
@@ -1133,8 +1289,8 @@ public static class TopDownGenerator
     /// <summary>Lowers the heightfield to a cave floor under the swim level inside a disc (soft edge).</summary>
     static void CarveDisc(LevelMap map, Vector2 c, float r)
     {
-        int x0 = Math.Max(0, (int)(c.X - r - 2)), x1 = Math.Min(LevelMap.Size, (int)(c.X + r + 2));
-        int y0 = Math.Max(0, (int)(c.Y - r - 2)), y1 = Math.Min(LevelMap.Size, (int)(c.Y + r + 2));
+        int x0 = Math.Max(0, (int)(c.X - r - 2)), x1 = Math.Min(map.Size, (int)(c.X + r + 2));
+        int y0 = Math.Max(0, (int)(c.Y - r - 2)), y1 = Math.Min(map.Size, (int)(c.Y + r + 2));
         for (int y = y0; y <= y1; y++)
         for (int x = x0; x <= x1; x++)
         {
@@ -1156,8 +1312,8 @@ public static class TopDownGenerator
         float minX = cave.Chambers.Min(c => c.Center.X) - reach, maxX = cave.Chambers.Max(c => c.Center.X) + reach;
         float minY = cave.Chambers.Min(c => c.Center.Y) - reach, maxY = cave.Chambers.Max(c => c.Center.Y) + reach;
         uint seed = (uint)map.Seed ^ 0x51ED27u;
-        for (int y = Math.Max(0, (int)minY); y <= Math.Min(LevelMap.Size, (int)maxY); y++)
-        for (int x = Math.Max(0, (int)minX); x <= Math.Min(LevelMap.Size, (int)maxX); x++)
+        for (int y = Math.Max(0, (int)minY); y <= Math.Min(map.Size, (int)maxY); y++)
+        for (int x = Math.Max(0, (int)minX); x <= Math.Min(map.Size, (int)maxX); x++)
         {
             var p = new Vector2(x, y);
             // The prototype's raising brush: a cosine dome over the chambers, summit at the peak.
@@ -1177,14 +1333,14 @@ public static class TopDownGenerator
         float margin = 2f;
         float minX = cave.Chambers.Min(c => c.Center.X - c.Radius) - margin, maxX = cave.Chambers.Max(c => c.Center.X + c.Radius) + margin;
         float minY = cave.Chambers.Min(c => c.Center.Y - c.Radius) - margin, maxY = cave.Chambers.Max(c => c.Center.Y + c.Radius) + margin;
-        for (int y = Math.Max(0, (int)minY); y <= Math.Min(LevelMap.Size, (int)maxY + 1); y++)
-        for (int x = Math.Max(0, (int)minX); x <= Math.Min(LevelMap.Size, (int)maxX + 1); x++)
+        for (int y = Math.Max(0, (int)minY); y <= Math.Min(map.Size, (int)maxY + 1); y++)
+        for (int x = Math.Max(0, (int)minX); x <= Math.Min(map.Size, (int)maxX + 1); x++)
         {
             var p = new Vector2(x, y);
             bool over = cave.Chambers.Any(c => Vector2.Distance(p, c.Center) < c.Radius + margin);
             for (int i = 1; i < cave.Chambers.Count && !over; i++)
                 over = Geo.SegmentDistance(p, cave.Chambers[i - 1].Center, cave.Chambers[i].Center) < 2f + FlatMargin + 3f;
-            if (over && float.IsNaN(map.LidAt(x, y))) map.Lid[y * LevelMap.Samples + x] = map[x, y];
+            if (over && float.IsNaN(map.LidAt(x, y))) map.Lid[y * map.Samples + x] = map[x, y];
         }
     }
 
@@ -1250,8 +1406,8 @@ public static class TopDownGenerator
         uint seed = (uint)(rng.NextU64() >> 32);
         var pts = pass.Points;
         float reach = hw * 1.25f + PassMargin + PassEdge + 1f;
-        int x0 = Math.Max(0, (int)(pts.Min(p => p.X) - reach)), x1 = Math.Min(LevelMap.Size, (int)(pts.Max(p => p.X) + reach) + 1);
-        int y0 = Math.Max(0, (int)(pts.Min(p => p.Y) - reach)), y1 = Math.Min(LevelMap.Size, (int)(pts.Max(p => p.Y) + reach) + 1);
+        int x0 = Math.Max(0, (int)(pts.Min(p => p.X) - reach)), x1 = Math.Min(map.Size, (int)(pts.Max(p => p.X) + reach) + 1);
+        int y0 = Math.Max(0, (int)(pts.Min(p => p.Y) - reach)), y1 = Math.Min(map.Size, (int)(pts.Max(p => p.Y) + reach) + 1);
         var before = new Dictionary<int, float>();
         pass.Bored = new Dictionary<int, float>();
         for (int y = y0; y <= y1; y++)
@@ -1269,7 +1425,7 @@ public static class TopDownGenerator
             float k = 1f - Smooth(half + PassMargin, half + PassMargin + PassEdge, d);
             if (k <= 0f) continue;
             float floor = -PassFloor - 1.2f * FloorDip(x, y, (uint)map.Seed ^ 0x7A55u);
-            int i0 = y * LevelMap.Samples + x;
+            int i0 = y * map.Samples + x;
             float was = map.Heights[i0];
             map.Heights[i0] = MathF.Min(was, MathUtil.Lerp(was, floor, k));
             if (map.Heights[i0] < was) pass.Bored.TryAdd(i0, was);
@@ -1283,8 +1439,8 @@ public static class TopDownGenerator
         float hw = width * 0.5f;
         // Bounds reach past the soft edge (hw + margin + 3), so the cut never ends in a square step.
         float reach = hw + FlatMargin + 4f;
-        int x0 = Math.Max(0, (int)(MathF.Min(a.X, b.X) - reach)), x1 = Math.Min(LevelMap.Size, (int)(MathF.Max(a.X, b.X) + reach) + 1);
-        int y0 = Math.Max(0, (int)(MathF.Min(a.Y, b.Y) - reach)), y1 = Math.Min(LevelMap.Size, (int)(MathF.Max(a.Y, b.Y) + reach) + 1);
+        int x0 = Math.Max(0, (int)(MathF.Min(a.X, b.X) - reach)), x1 = Math.Min(map.Size, (int)(MathF.Max(a.X, b.X) + reach) + 1);
+        int y0 = Math.Max(0, (int)(MathF.Min(a.Y, b.Y) - reach)), y1 = Math.Min(map.Size, (int)(MathF.Max(a.Y, b.Y) + reach) + 1);
         for (int y = y0; y <= y1; y++)
         for (int x = x0; x <= x1; x++)
         {
@@ -1322,7 +1478,7 @@ public static class TopDownGenerator
             cave.Chambers.Add((poi.Position, poi.Radius));
             foreach (var (c, r) in cave.Chambers)
             {
-                if (!Inside(c, Rim + r + 2f)) return $"the {poi.Kind} cave runs into the rim";
+                if (!Inside(map, c, Rim + r + 2f)) return $"the {poi.Kind} cave runs into the rim";
                 foreach (var corridor in map.Corridors)
                     if (corridor.Poi != pi && corridor.DistanceToCentre(c) < r + corridor.HalfWidth + 1.5f)
                         return $"the {poi.Kind} cave breaks into a corridor";
@@ -1553,7 +1709,7 @@ public static class TopDownGenerator
         float bestLength = 0f;
         bool Clear(Vector2 q, List<Vector2> pts)
         {
-            if (!Inside(q, Rim + TunnelHalfWidth + 4f)) return false;
+            if (!Inside(map, q, Rim + TunnelHalfWidth + 4f)) return false;
             if (DistanceToOpen(map, q, pi) < TunnelHalfWidth + TunnelWall) return false;
             // The cave's craggy water strays past its shapes: rock all round (but at the mouth, where its spur ends).
             if (Vector2.Distance(q, mouth) > TunnelWall + 2f && !RockAround(map, q, TunnelHalfWidth + TunnelWall - 1f)) return false;
@@ -1630,8 +1786,8 @@ public static class TopDownGenerator
     static void CarveTunnel(LevelMap map, Vector2 a, Vector2 b, float halfWidth)
     {
         float reach = halfWidth + 3f;
-        int x0 = Math.Max(0, (int)(MathF.Min(a.X, b.X) - reach)), x1 = Math.Min(LevelMap.Size, (int)(MathF.Max(a.X, b.X) + reach) + 1);
-        int y0 = Math.Max(0, (int)(MathF.Min(a.Y, b.Y) - reach)), y1 = Math.Min(LevelMap.Size, (int)(MathF.Max(a.Y, b.Y) + reach) + 1);
+        int x0 = Math.Max(0, (int)(MathF.Min(a.X, b.X) - reach)), x1 = Math.Min(map.Size, (int)(MathF.Max(a.X, b.X) + reach) + 1);
+        int y0 = Math.Max(0, (int)(MathF.Min(a.Y, b.Y) - reach)), y1 = Math.Min(map.Size, (int)(MathF.Max(a.Y, b.Y) + reach) + 1);
         for (int y = y0; y <= y1; y++)
         for (int x = x0; x <= x1; x++)
         {
@@ -1673,7 +1829,7 @@ public static class TopDownGenerator
             Vector2 nrm = Geo.Perp(Geo.Normalize(c.Points[i + 2] - c.Points[i - 2], Vector2.UnitX));
             var shoulders = new[] { p + nrm * (c.HalfWidth + ShoulderRadius), p - nrm * (c.HalfWidth + ShoulderRadius) };
             bool clear = shoulders.All(sh =>
-                Inside(sh, Rim + ShoulderRadius)
+                Inside(map, sh, Rim + ShoulderRadius)
                 && map.Corridors.Where(o => o != c).All(o => o.DistanceToCentre(sh) > o.HalfWidth + ShoulderRadius + 1f)
                 && map.Pois.All(poi => Vector2.Distance(poi.Position, sh) > poi.Radius + ShoulderRadius + 2f)
                 && map.Plazas.All(z => Vector2.Distance(z.Center, sh) > z.Radius + ShoulderRadius + 1f));
@@ -1683,8 +1839,8 @@ public static class TopDownGenerator
             const float reach = ShoulderRadius * 2f;
             foreach (var sh in shoulders)
             {
-                int x0 = Math.Max(0, (int)(sh.X - reach - 1)), x1 = Math.Min(LevelMap.Size, (int)(sh.X + reach + 1) + 1);
-                int y0 = Math.Max(0, (int)(sh.Y - reach - 1)), y1 = Math.Min(LevelMap.Size, (int)(sh.Y + reach + 1) + 1);
+                int x0 = Math.Max(0, (int)(sh.X - reach - 1)), x1 = Math.Min(map.Size, (int)(sh.X + reach + 1) + 1);
+                int y0 = Math.Max(0, (int)(sh.Y - reach - 1)), y1 = Math.Min(map.Size, (int)(sh.Y + reach + 1) + 1);
                 for (int y = y0; y <= y1; y++)
                 for (int x = x0; x <= x1; x++)
                 {
@@ -1719,13 +1875,13 @@ public static class TopDownGenerator
     /// </summary>
     static void PlaceKelp(LevelMap map, Rng rng)
     {
-        const int N = LevelMap.Samples;
+        int N = map.Samples;
         int beds = map.Id.Depth == 2 ? KelpDepthMin + rng.Int(KelpDepthMax - KelpDepthMin + 1) : KelpBedsMin + rng.Int(KelpBedsMax - KelpBedsMin + 1);
-        var toRock = Chamfer(i => map.Heights[i] > LevelMap.BlockHeight - 0.2f);
+        var toRock = Chamfer(map.Samples, i => map.Heights[i] > LevelMap.BlockHeight - 0.2f);
         uint seed = (uint)(rng.NextU64() >> 32);
         for (int tries = 0; tries < 600 && map.Kelp.Count < beds; tries++)
         {
-            var c = new Vector2(rng.Range(LevelMap.RimWidth + 4f, LevelMap.Size - LevelMap.RimWidth - 4f), rng.Range(LevelMap.RimWidth + 4f, LevelMap.Size - LevelMap.RimWidth - 4f));
+            var c = new Vector2(rng.Range(LevelMap.RimWidth + 4f, map.Size - LevelMap.RimWidth - 4f), rng.Range(LevelMap.RimWidth + 4f, map.Size - LevelMap.RimWidth - 4f));
             int ci = (int)MathF.Round(c.Y) * N + (int)MathF.Round(c.X);
             if (toRock[ci] < KelpClear || map.HeightAt(c) > LevelMap.BlockHeight - 0.5f) continue;
             float r = rng.Range(KelpRadiusMin, KelpRadiusMax);
@@ -1757,8 +1913,8 @@ public static class TopDownGenerator
     static void Decorate(LevelMap map, Rng rng, uint seed, WallStrata strata)
     {
         float fanYaw = MathF.Atan2(Current.Y, Current.X);
-        for (float y = 1f; y < Size - 1f; y += 2f)
-        for (float x = 1f; x < Size - 1f; x += 2f)
+        for (float y = 1f; y < map.Size - 1f; y += 2f)
+        for (float x = 1f; x < map.Size - 1f; x += 2f)
         {
             var p = new Vector2(x + rng.Range(0f, 2f), y + rng.Range(0f, 2f));
             float h = map.HeightAt(p);
@@ -1921,7 +2077,7 @@ public static class TopDownGenerator
             float a = rng.Range(0f, MathF.Tau);
             Vector2 dir = new(MathF.Cos(a), MathF.Sin(a));
             Vector2 p = near + dir * (half + rng.Range(8f, 12f));
-            if (!Inside(p, Rim + 1f) || NearBeacon(p) || map.Spawns.Any(s => s.Role == SpawnRole.Ambush && Vector2.Distance(s.Position, p) < 8f)) continue;
+            if (!Inside(map, p, Rim + 1f) || NearBeacon(p) || map.Spawns.Any(s => s.Role == SpawnRole.Ambush && Vector2.Distance(s.Position, p) < 8f)) continue;
             if (map.InsideAnyCorridor(p)) continue;
             Add(SpawnRole.Ambush, rng.NextFloat() < 0.5f ? EnemyKind.SeaUrchin : EnemyKind.Moray, 1, p);
         }

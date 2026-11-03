@@ -18,7 +18,7 @@ public class ReefPearlTests
     static PlaneRun Reef() => new(Catalog.Value, new Tuning()) { Reef = true };
 
     static readonly Lazy<LevelMap> Bay = new(() => TopDownGenerator.FromHand(
-        HandLayout.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "maps", "lantern_bay.json")))));
+        HandLayout.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "maps", "shallows.json")))));
 
     [Fact]
     public void OnlyLevelsChangeHerStats_APearlStillChangesWhatSheDoes()
@@ -54,7 +54,7 @@ public class ReefPearlTests
         var old = new PlaneRun(Catalog.Value, new Tuning());
         Assert.True(old.OfferWeight("coral_crown") > 0f);
         // The shop in the bay sells only pearls that do something.
-        var w = new PlaneWorld(Bay.Value, new Tuning(), Reef());
+        var w = new PlaneWorld(Bay.Value, new Tuning(), Reef(), PlaneOptions.OpenReef);
         foreach (var stand in w.Stands.Where(s => s.Kind == StandKind.Pearl))
             Assert.False(PlaneRun.OnlyStats(Catalog.Value[stand.ItemId]) || Catalog.Value[stand.ItemId].Kind == ItemKind.Active, stand.ItemId);
     }
@@ -70,7 +70,7 @@ public class ReefPearlTests
         Assert.DoesNotContain("tide_pulse", run.Items);
         Assert.Equal(new[] { "tide_pulse", "bubble_shield", "whale_song" }, run.Slots);
         Assert.Equal(4, run.OwnedActives.Count);
-        var w = new PlaneWorld(Bay.Value, new Tuning(), run);
+        var w = new PlaneWorld(Bay.Value, new Tuning(), run, PlaneOptions.OpenReef);
         w.Step(new PlaneInput { UseActive2 = true });
         Assert.Equal(0f, run.Charge(1));
         Assert.Equal(1f, run.Charge(0));
@@ -115,7 +115,7 @@ public class ReefPearlTests
     public void HerLostLightGivesBackHerPearlsAndShellsWhenSheSwimsIntoIt()
     {
         var run = Reef();
-        var w = new PlaneWorld(Bay.Value, new Tuning(), run);
+        var w = new PlaneWorld(Bay.Value, new Tuning(), run, PlaneOptions.OpenReef);
         var at = w.Map.Start.Position + new Vector2(0f, -4f);
         w.Lost = new PlaneLostLight { Position = at, Pearls = { "triple_tentacle", "mitosis" }, Shells = 30 };
         w.Step(default);

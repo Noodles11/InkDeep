@@ -95,7 +95,7 @@ public sealed partial class PlaneWorld
         var reach = Gen.TopDown.LevelValidator.Distances(Map, Map.Start.Position);
         for (int tries = 0; tries < (cast is null ? 400 : 4000) && Thumpsquirts.Count < want; tries++)
         {
-            var at = new Vector2(_blightRng.Range(4f, Gen.TopDown.LevelMap.Size - 4f), _blightRng.Range(4f, Gen.TopDown.LevelMap.Size - 4f));
+            var at = new Vector2(_blightRng.Range(4f, Map.Size - 4f), _blightRng.Range(4f, Map.Size - 4f));
             if (!Clear(at, 1.2f) || Vector2.Distance(at, Map.Start.Position) < ThumpTuning.FromStart) continue;
             if (!Anchored(cast, Thumpsquirts.Count, at)) continue;
             if (Map.HasBoss && Vector2.Distance(at, ArenaCenter) < ArenaRadius + 4f) continue;

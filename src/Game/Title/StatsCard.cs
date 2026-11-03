@@ -6,6 +6,8 @@ using OctoShoots.Core.Gen.TopDown;
 using OctoShoots.Core.Plane;
 using OctoShoots.Core.Saves;
 
+using OctoShoots.Game.Ui;
+
 namespace OctoShoots.Game.Title;
 
 /// <summary>
@@ -29,6 +31,7 @@ public partial class StatsCard : PanelContainer
     public static string CauseName(string id) => id switch
     {
         "puffer_needle" => "A Pufferling's needles",
+        "leak_arm" => "A leak's arm",
         "puffer_spines" => "A Pufferling's spines",
         "boss_pearl" => "Queen Clam's pearls",
         "royal_pearl" => "Queen Clam's royal pearl",
@@ -42,11 +45,7 @@ public partial class StatsCard : PanelContainer
 
     public override void _Ready()
     {
-        var style = TitleStyle.Box(TitleStyle.Pearl, TitleStyle.Coral, 3, 18, 28);
-        style.ShadowColor = new Color(0.04f, 0.1f, 0.12f, 0.45f);
-        style.ShadowSize = 24;
-        style.ShadowOffset = new Vector2(0f, 10f);
-        AddThemeStyleboxOverride("panel", style);
+        AddThemeStyleboxOverride("panel", DrawerStyle.Panel());
         var s = _profile.Stats;
 
         var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
@@ -57,10 +56,10 @@ public partial class StatsCard : PanelContainer
 
         var head = new HBoxContainer();
         box.AddChild(head);
-        var title = TitleStyle.Text("Statistics", 40, TitleStyle.Ink, TitleStyle.Display);
+        var title = DrawerStyle.Title("Statistics");
         title.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         head.AddChild(title);
-        var close = TitleStyle.Pill(TitleStyle.CloseText, primary: false, size: 15);
+        var close = DrawerStyle.Button(TitleStyle.CloseText, 15);
         close.Pressed += _close;
         head.AddChild(close);
 
@@ -77,12 +76,12 @@ public partial class StatsCard : PanelContainer
                  })
         {
             var tile = new PanelContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-            var tb = TitleStyle.Box(new Color(1f, 0.94f, 0.9f), new Color(1f, 0.86f, 0.82f), 2, 14, 14);
+            var tb = DrawerStyle.TileBox();
             tile.AddThemeStyleboxOverride("panel", tb);
             var col = new VBoxContainer();
             col.AddThemeConstantOverride("separation", 0);
-            col.AddChild(TitleStyle.Text(value, value.Length > 10 ? 30 : 44, TitleStyle.Ink, TitleStyle.Display));
-            col.AddChild(TitleStyle.Text(label, 14, TitleStyle.InkSoft, TitleStyle.BodyBold));
+            col.AddChild(TitleStyle.Text(value, value.Length > 10 ? 30 : 44, DrawerStyle.Text, TitleStyle.Display));
+            col.AddChild(TitleStyle.Text(label, 14, DrawerStyle.Soft, TitleStyle.BodyBold));
             tile.AddChild(col);
             tiles.AddChild(tile);
         }
@@ -130,10 +129,10 @@ public partial class StatsCard : PanelContainer
         }));
 
         // How runs ended.
-        box.AddChild(TitleStyle.Text("How runs ended", 22, TitleStyle.Ink, TitleStyle.Display));
+        box.AddChild(TitleStyle.Text("How runs ended", 22, DrawerStyle.Text, TitleStyle.Display));
         if (s.DeathsByCause.Count == 0)
         {
-            box.AddChild(TitleStyle.Text("No run has ended yet. Keep it that way.", 16, TitleStyle.InkSoft));
+            box.AddChild(TitleStyle.Text("No run has ended yet. Keep it that way.", 16, DrawerStyle.Soft));
             return;
         }
         int most = s.DeathsByCause.Values.Max();
@@ -141,11 +140,11 @@ public partial class StatsCard : PanelContainer
         {
             var row = new HBoxContainer();
             row.AddThemeConstantOverride("separation", 12);
-            var name = TitleStyle.Text(CauseName(cause), 15, TitleStyle.Ink, TitleStyle.BodyBold);
+            var name = TitleStyle.Text(CauseName(cause), 15, DrawerStyle.Text, TitleStyle.BodyBold);
             name.CustomMinimumSize = new Vector2(240f, 0f);
             row.AddChild(name);
             row.AddChild(new Bar(count / (float)most) { CustomMinimumSize = new Vector2(520f, 18f), SizeFlagsVertical = SizeFlags.ShrinkCenter });
-            row.AddChild(TitleStyle.Text(count.ToString("N0"), 15, TitleStyle.Ink, TitleStyle.BodyBold));
+            row.AddChild(TitleStyle.Text(count.ToString("N0"), 15, DrawerStyle.Text, TitleStyle.BodyBold));
             box.AddChild(row);
         }
     }
@@ -154,30 +153,30 @@ public partial class StatsCard : PanelContainer
     {
         var col = new VBoxContainer { CustomMinimumSize = new Vector2(450f, 0f) };
         col.AddThemeConstantOverride("separation", 6);
-        col.AddChild(TitleStyle.Text(title.ToUpperInvariant(), 13, TitleStyle.Coral, TitleStyle.BodyBold));
+        col.AddChild(TitleStyle.Text(title.ToUpperInvariant(), 13, DrawerStyle.Gold, TitleStyle.BodyBold));
         foreach (var (label, value, best) in rows)
         {
             var row = new HBoxContainer();
-            var l = TitleStyle.Text(label, 16, TitleStyle.InkSoft);
+            var l = TitleStyle.Text(label, 16, DrawerStyle.Soft);
             l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             row.AddChild(l);
             if (best)
             {
                 var chip = new PanelContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter };
-                var cb = TitleStyle.Box(TitleStyle.Butter, TitleStyle.Butter, 0, 999);
+                var cb = TitleStyle.Box(DrawerStyle.Gold, DrawerStyle.Gold, 0, 999);
                 cb.ContentMarginLeft = cb.ContentMarginRight = 7;
                 chip.AddThemeStyleboxOverride("panel", cb);
-                chip.AddChild(TitleStyle.Text("BEST", 10, TitleStyle.Ink, TitleStyle.BodyBold));
+                chip.AddChild(TitleStyle.Text("BEST", 10, DrawerStyle.OnGold, TitleStyle.BodyBold));
                 row.AddChild(chip);
             }
-            row.AddChild(TitleStyle.Text(value, 16, TitleStyle.Ink, TitleStyle.BodyBold));
+            row.AddChild(TitleStyle.Text(value, 16, DrawerStyle.Text, TitleStyle.BodyBold));
             col.AddChild(row);
-            col.AddChild(new ColorRect { Color = TitleStyle.Rule, CustomMinimumSize = new Vector2(0f, 1f), MouseFilter = MouseFilterEnum.Ignore });
+            col.AddChild(new ColorRect { Color = DrawerStyle.TileRim, CustomMinimumSize = new Vector2(0f, 1f), MouseFilter = MouseFilterEnum.Ignore });
         }
         return col;
     }
 
-    /// <summary>A coral bar on a pale track.</summary>
+    /// <summary>A gold bar on a dark track.</summary>
     partial class Bar : Control
     {
         readonly float _k;
@@ -185,8 +184,8 @@ public partial class StatsCard : PanelContainer
 
         public override void _Draw()
         {
-            DrawRect(new Rect2(Vector2.Zero, Size), new Color(1f, 0.9f, 0.87f));
-            DrawRect(new Rect2(Vector2.Zero, new Vector2(Size.X * _k, Size.Y)), TitleStyle.Coral);
+            DrawRect(new Rect2(Vector2.Zero, Size), DrawerStyle.Tile);
+            DrawRect(new Rect2(Vector2.Zero, new Vector2(Size.X * _k, Size.Y)), DrawerStyle.Gold);
         }
     }
 }

@@ -6,6 +6,8 @@ using OctoShoots.Core.Items;
 using OctoShoots.Core.Plane;
 using OctoShoots.Core.Saves;
 
+using OctoShoots.Game.Ui;
+
 namespace OctoShoots.Game.Title;
 
 /// <summary>
@@ -50,11 +52,7 @@ public partial class SeaPediaCard : PanelContainer
 
     public override void _Ready()
     {
-        var style = TitleStyle.Box(TitleStyle.Pearl, TitleStyle.Coral, 3, 18, 28);
-        style.ShadowColor = new Color(0.04f, 0.1f, 0.12f, 0.45f);
-        style.ShadowSize = 24;
-        style.ShadowOffset = new Vector2(0f, 10f);
-        AddThemeStyleboxOverride("panel", style);
+        AddThemeStyleboxOverride("panel", DrawerStyle.Panel());
 
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 16);
@@ -62,18 +60,18 @@ public partial class SeaPediaCard : PanelContainer
 
         var head = new HBoxContainer();
         box.AddChild(head);
-        var title = TitleStyle.Text("Sea-pedia", 40, TitleStyle.Ink, TitleStyle.Display);
+        var title = DrawerStyle.Title("Sea-pedia");
         title.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         head.AddChild(title);
-        var close = TitleStyle.Pill(TitleStyle.CloseText, primary: false, size: 15);
+        var close = DrawerStyle.Button(TitleStyle.CloseText, 15);
         close.Pressed += _close;
         head.AddChild(close);
 
         var tabs = new HBoxContainer();
         tabs.AddThemeConstantOverride("separation", 10);
         box.AddChild(tabs);
-        _pearlTab = TitleStyle.Pill($"Pearls  {PearlsFound(_profile)} / {PlaneRun.PortedPearls.Length}", size: 16);
-        _creatureTab = TitleStyle.Pill($"Creatures  {CreaturesMet(_profile)} / {Creatures.Count}", primary: false, size: 16);
+        _pearlTab = DrawerStyle.Button($"Pearls  {PearlsFound(_profile)} / {PlaneRun.PortedPearls.Length}", 16);
+        _creatureTab = DrawerStyle.Button($"Creatures  {CreaturesMet(_profile)} / {Creatures.Count}", 16);
         _pearlTab.Pressed += () => ShowTab(true);
         _creatureTab.Pressed += () => ShowTab(false);
         tabs.AddChild(_pearlTab);
@@ -138,13 +136,13 @@ public partial class SeaPediaCard : PanelContainer
 
     static void Restyle(Button tab, bool active)
     {
-        var fill = active ? TitleStyle.Coral : new Color(1f, 1f, 1f, 0f);
-        var box = TitleStyle.Box(fill, TitleStyle.Coral, 2, 999);
+        var fill = active ? DrawerStyle.Gold : new Color(1f, 1f, 1f, 0f);
+        var box = TitleStyle.Box(fill, DrawerStyle.Gold, 2, 999);
         box.ContentMarginLeft = box.ContentMarginRight = 18;
         box.ContentMarginTop = box.ContentMarginBottom = 7;
         tab.AddThemeStyleboxOverride("normal", box);
         foreach (string state in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color" })
-            tab.AddThemeColorOverride(state, active ? TitleStyle.Pearl : TitleStyle.Ink);
+            tab.AddThemeColorOverride(state, active ? DrawerStyle.OnGold : DrawerStyle.Text);
     }
 
     enum Known { Unknown, Seen, Absorbed }
@@ -157,11 +155,11 @@ public partial class SeaPediaCard : PanelContainer
     static Button Tile(Control art, string caption, bool known)
     {
         var tile = new Button { CustomMinimumSize = new Vector2(100f, 124f), FocusMode = FocusModeEnum.All, MouseDefaultCursorShape = CursorShape.PointingHand };
-        var normal = TitleStyle.Box(new Color(1f, 0.93f, 0.9f), new Color(1f, 0.85f, 0.8f), 2, 14);
+        var normal = TitleStyle.Box(DrawerStyle.Tile, DrawerStyle.TileRim, 2, 14);
         tile.AddThemeStyleboxOverride("normal", normal);
-        tile.AddThemeStyleboxOverride("hover", TitleStyle.Box(new Color(1f, 0.9f, 0.86f), TitleStyle.Coral, 2, 14));
-        tile.AddThemeStyleboxOverride("pressed", TitleStyle.Box(new Color(1f, 0.88f, 0.84f), TitleStyle.Coral, 3, 14));
-        tile.AddThemeStyleboxOverride("focus", TitleStyle.Box(new Color(0, 0, 0, 0), TitleStyle.Mint, 3, 14));
+        tile.AddThemeStyleboxOverride("hover", TitleStyle.Box(DrawerStyle.TileHover, DrawerStyle.Gold, 2, 14));
+        tile.AddThemeStyleboxOverride("pressed", TitleStyle.Box(DrawerStyle.TileHover, DrawerStyle.Gold, 3, 14));
+        tile.AddThemeStyleboxOverride("focus", TitleStyle.Box(new Color(0, 0, 0, 0), DrawerStyle.Gold, 3, 14));
         var col = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.Center };
         col.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         col.AddThemeConstantOverride("separation", 4);
@@ -169,7 +167,7 @@ public partial class SeaPediaCard : PanelContainer
         var holder = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
         holder.AddChild(art);
         col.AddChild(holder);
-        var name = TitleStyle.Text(known ? caption : "?", 13, known ? TitleStyle.Ink : TitleStyle.InkSoft, TitleStyle.BodyBold, HorizontalAlignment.Center);
+        var name = TitleStyle.Text(known ? caption : "?", 13, known ? DrawerStyle.Text : DrawerStyle.Soft, TitleStyle.BodyBold, HorizontalAlignment.Center);
         name.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         name.CustomMinimumSize = new Vector2(92f, 0f);
         col.AddChild(name);
@@ -221,15 +219,15 @@ public partial class SeaPediaCard : PanelContainer
         top.AddChild(names);
         if (state == Known.Unknown || item is null)
         {
-            names.AddChild(TitleStyle.Text("Not found yet", 28, TitleStyle.Ink, TitleStyle.Display));
-            names.AddChild(Wrapped("Find it in a clam room, a shop, or on a freed boss.", 15, TitleStyle.InkSoft, width: 230f));
+            names.AddChild(TitleStyle.Text("Not found yet", 28, DrawerStyle.Text, TitleStyle.Display));
+            names.AddChild(Wrapped("Find it in a clam room, a shop, or on a freed boss.", 15, DrawerStyle.Soft, width: 230f));
             return;
         }
-        names.AddChild(TitleStyle.Text(item.Name, 30, TitleStyle.Ink, TitleStyle.Display));
-        names.AddChild(Wrapped(item.Tagline, 16, TitleStyle.InkSoft, width: 230f));
-        if (state == Known.Seen) names.AddChild(Chip("SEEN, NOT TAKEN", new Color(1f, 0.9f, 0.86f), TitleStyle.InkSoft));
-        foreach (string line in ItemCaption.Describe(item)) _detail.AddChild(Wrapped("+ " + line, 16, TitleStyle.Ink, TitleStyle.BodyBold));
-        _detail.AddChild(Wrapped("Found in: " + string.Join(", ", item.Pools.Select(p => p switch { "treasure" => "clam rooms", "shop" => "shops", "boss" => "bosses", _ => p })), 14, TitleStyle.InkSoft));
+        names.AddChild(TitleStyle.Text(item.Name, 30, DrawerStyle.Text, TitleStyle.Display));
+        names.AddChild(Wrapped(item.Tagline, 16, DrawerStyle.Soft, width: 230f));
+        if (state == Known.Seen) names.AddChild(Chip("SEEN, NOT TAKEN", DrawerStyle.TileHover, DrawerStyle.Soft));
+        foreach (string line in ItemCaption.Describe(item)) _detail.AddChild(Wrapped("+ " + line, 16, DrawerStyle.Text, TitleStyle.BodyBold));
+        _detail.AddChild(Wrapped("Found in: " + string.Join(", ", item.Pools.Select(p => p switch { "treasure" => "clam rooms", "shop" => "shops", "boss" => "bosses", _ => p })), 14, DrawerStyle.Soft));
         _detail.AddChild(new HSeparator());
         var r = _profile.Pearls.GetValueOrDefault(id) ?? new PearlRecord();
         _detail.AddChild(Record(("Absorbed", r.Absorbed.ToString("N0")), ("Runs it was in", r.Runs.ToString("N0")),
@@ -248,14 +246,14 @@ public partial class SeaPediaCard : PanelContainer
         top.AddChild(names);
         if (!known)
         {
-            names.AddChild(TitleStyle.Text("Not met yet", 28, TitleStyle.Ink, TitleStyle.Display));
-            names.AddChild(Wrapped(info.Boss ? "Waits somewhere deeper." : "Lurks somewhere in the canyons.", 15, TitleStyle.InkSoft, width: 230f));
+            names.AddChild(TitleStyle.Text("Not met yet", 28, DrawerStyle.Text, TitleStyle.Display));
+            names.AddChild(Wrapped(info.Boss ? "Waits somewhere deeper." : "Lurks somewhere in the canyons.", 15, DrawerStyle.Soft, width: 230f));
             return;
         }
-        names.AddChild(TitleStyle.Text(info.Name, 30, TitleStyle.Ink, TitleStyle.Display));
-        if (info.Boss) names.AddChild(Chip("BOSS", TitleStyle.Butter, TitleStyle.Ink));
-        _detail.AddChild(Wrapped("“" + info.Line + "”", 17, TitleStyle.InkSoft));
-        _detail.AddChild(Wrapped(info.Notes, 15, TitleStyle.Ink));
+        names.AddChild(TitleStyle.Text(info.Name, 30, DrawerStyle.Text, TitleStyle.Display));
+        if (info.Boss) names.AddChild(Chip("BOSS", DrawerStyle.Gold, DrawerStyle.OnGold));
+        _detail.AddChild(Wrapped("“" + info.Line + "”", 17, DrawerStyle.Soft));
+        _detail.AddChild(Wrapped(info.Notes, 15, DrawerStyle.Text));
         _detail.AddChild(new HSeparator());
         var r = _profile.Creatures.GetValueOrDefault(id) ?? new CreatureRecord();
         var cells = new List<(string, string)>
@@ -297,8 +295,8 @@ public partial class SeaPediaCard : PanelContainer
         {
             var cell = new VBoxContainer { CustomMinimumSize = new Vector2(170f, 0f) };
             cell.AddThemeConstantOverride("separation", 0);
-            cell.AddChild(TitleStyle.Text(value, 32, TitleStyle.Ink, TitleStyle.Display));
-            cell.AddChild(TitleStyle.Text(label, 14, TitleStyle.InkSoft));
+            cell.AddChild(TitleStyle.Text(value, 32, DrawerStyle.Text, TitleStyle.Display));
+            cell.AddChild(TitleStyle.Text(label, 14, DrawerStyle.Soft));
             grid.AddChild(cell);
         }
         return grid;

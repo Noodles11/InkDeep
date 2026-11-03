@@ -47,7 +47,7 @@ public static class AbyssReef
 
     public static LevelMap Apply(LevelMap map)
     {
-        int n = LevelMap.Samples;
+        int n = map.Samples;
         var keep = new bool[n * n];
         for (int y = 0; y < n; y++)
         for (int x = 0; x < n; x++)
@@ -178,10 +178,10 @@ public static class AbyssReef
         if (count == 0) return;
         float floor = sum / count;
         int reach = (int)MathF.Ceiling(sh.HalfLength + RiftClear) + 1, cx = (int)sh.Center.X, cy = (int)sh.Center.Y;
-        for (int y = Math.Max(cy - reach, 0); y <= Math.Min(cy + reach, LevelMap.Size); y++)
-        for (int x = Math.Max(cx - reach, 0); x <= Math.Min(cx + reach, LevelMap.Size); x++)
+        for (int y = Math.Max(cy - reach, 0); y <= Math.Min(cy + reach, map.Size); y++)
+        for (int x = Math.Max(cx - reach, 0); x <= Math.Min(cx + reach, map.Size); x++)
         {
-            int i = y * LevelMap.Samples + x;
+            int i = y * map.Samples + x;
             if (sh.Contains(new Vector2(x, y), RiftClear) && map.Heights[i] <= LevelMap.BlockHeight) map.Heights[i] = MathF.Min(map.Heights[i], floor);
         }
     }
@@ -212,7 +212,7 @@ public static class AbyssReef
 
     static void Mark(bool[] keep, Vector2 c, float r)
     {
-        int n = LevelMap.Samples;
+        int n = (int)MathF.Round(MathF.Sqrt(keep.Length));
         int x0 = Math.Max(0, (int)(c.X - r)), x1 = Math.Min(n - 1, (int)MathF.Ceiling(c.X + r));
         int y0 = Math.Max(0, (int)(c.Y - r)), y1 = Math.Min(n - 1, (int)MathF.Ceiling(c.Y + r));
         for (int y = y0; y <= y1; y++)
@@ -222,7 +222,7 @@ public static class AbyssReef
 
     static void Dilate(bool[] keep, int times)
     {
-        int n = LevelMap.Samples;
+        int n = (int)MathF.Round(MathF.Sqrt(keep.Length));
         for (int t = 0; t < times; t++)
         {
             var was = (bool[])keep.Clone();

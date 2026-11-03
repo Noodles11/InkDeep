@@ -394,6 +394,8 @@ public partial class AchievementBanner : Control
 
     void DrawStar(Vector2 at, float r, Color col)
     {
+        // (Shrunk to nothing as a sparkle fades, its points fall on one another: a polygon that cannot be drawn.)
+        if (r < 0.25f) return;
         DrawColoredPolygon(new[] { at + new Vector2(0f, -r * 2f), at + new Vector2(r * 0.5f, 0f), at + new Vector2(0f, r * 2f), at + new Vector2(-r * 0.5f, 0f) }, col);
         DrawColoredPolygon(new[] { at + new Vector2(-r * 2f, 0f), at + new Vector2(0f, r * 0.5f), at + new Vector2(r * 2f, 0f), at + new Vector2(0f, -r * 0.5f) }, col);
     }

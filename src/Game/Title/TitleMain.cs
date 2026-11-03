@@ -86,12 +86,21 @@ public partial class TitleMain : Node3D
     Control? _inline;
     Control? _card;
     /// <summary>
-    /// The jelly card open (her look being set): she is drawn close, on the left of the screen, the card on the right, as
-    /// the pause menu frames her in the game. 0 the ring's view → 1 framed.
+    /// The jellies' slots open (Play): the camera draws in close, Clementine holds still, and the save's jellies float
+    /// side by side in her place, each as herself (SyncSlots). 0 the ring's view → 1 drawn in.
     /// </summary>
     float _dress;
     bool Dressing => _card is JellyCard;
-    const float DressZoom = 0.33f, DressAt = 0.27f, DressIn = 0.5f, DressOut = 0.35f;
+    const float DressZoom = 0.34f, DressIn = 0.5f, DressOut = 0.35f;
+    /// <summary>
+    /// The slots' jellies: each a BellView of her own (wearing her look, Puppet) with a little world of her own to be
+    /// drawn from; how far apart they float (metres), how far up the screen from Clementine's place (so the cards fit
+    /// under them), how far they drift, and how fast one lights up or goes out.
+    /// </summary>
+    readonly BellView[] _slotBells = new BellView[JellyNames.MaxJellies];
+    readonly PlaneWorld?[] _slotWorlds = new PlaneWorld?[JellyNames.MaxJellies];
+    readonly string?[] _slotWorn = new string?[JellyNames.MaxJellies];
+    const float SlotGap = 4.3f, SlotUp = 1.5f, SlotDrift = 0.35f, SlotLight = 3f;
     ColorRect _fade = null!;
     Control _footer = null!;
     LoadingSplash _splash = null!;
@@ -163,6 +172,7 @@ public partial class TitleMain : Node3D
         Engine.MaxFps = _captureDir is null ? _view.MaxFps : 0;
 
         AddChild(TopDownMain.MakeEnvironment(ReefLook.Shallows));
+        ReefLook.SetExtent(LevelMap.Seeded);
         _sun = new SunLight();
         AddChild(_sun);
         _sun.Configure(ReefLook.Shallows.Sun, ReefLook.Shallows.SunEnergy);
@@ -172,6 +182,11 @@ public partial class TitleMain : Node3D
         AddChild(_puffers);
         _bell = new BellView();
         AddChild(_bell);
+        for (int i = 0; i < _slotBells.Length; i++)
+        {
+            _slotBells[i] = new BellView { Puppet = true, Visible = false, Lit = 0f };
+            AddChild(_slotBells[i]);
+        }
         _camera = new CameraRig();
         AddChild(_camera);
         _snow = new MarineSnow(900, new Vector3(22f, 7f, 17f), 0.11f);
@@ -240,6 +255,8 @@ public partial class TitleMain : Node3D
         _level.Show(shape);
         _world = new PlaneWorld(map, _tuning, new PlaneRun(_catalog, _tuning));
         _world.Mobs.Clear();
+        // The slots' jellies are drawn from worlds of their own (never stepped: only where each floats is set).
+        for (int i = 0; i < _slotWorlds.Length; i++) _slotWorlds[i] = new PlaneWorld(map, _tuning, new PlaneRun(_catalog, _tuning), new PlaneOptions { Corruption = false });
         _puffers.Show(_world);
         // Back and forth along the west end of the channel, all of it still clear to the east for when she leaves.
         var (from, length) = LongWayEast(map);
@@ -257,12 +274,12 @@ public partial class TitleMain : Node3D
         const float Room = 2.5f;
         bool Clear(int x, int y) => new[] { -Room, 0f, Room }.All(d => map.IsOpen(new System.Numerics.Vector2(x, y + d)));
         (System.Numerics.Vector2 From, float Length) best = (map.Start.Position, 0f);
-        for (int y = 0; y <= LevelMap.Size; y++)
+        for (int y = 0; y <= map.Size; y++)
         {
             int start = -1;
-            for (int x = 0; x <= LevelMap.Size + 1; x++)
+            for (int x = 0; x <= map.Size + 1; x++)
             {
-                bool clear = x <= LevelMap.Size && Clear(x, y);
+                bool clear = x <= map.Size && Clear(x, y);
                 if (clear && start < 0) start = x;
                 if (clear || start < 0) continue;
                 if (x - start > best.Length) best = (new System.Numerics.Vector2(start, y), x - start);
@@ -358,14 +375,18 @@ public partial class TitleMain : Node3D
             }
             if (steps == 4) _accumulator = 0;
             float alpha = (float)(_accumulator / PlaneWorld.Dt);
-            _bell.Sync(_world, alpha, dt);
+            // Her slots open, the jellies of the save float in her place instead.
+            _bell.Visible = !Dressing;
+            if (_bell.Visible) _bell.Sync(_world, alpha, dt);
+            else RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_glow_strength"), 0f);
+            SyncSlots(dt);
             _puffers.Sync(_world, dt);
             // Swimming off, the camera eases ahead of her, the water she is going to in the shot.
             if (_launching && !Reduced) _lead = Mathf.Lerp(_lead, LaunchLead(), 1f - Mathf.Exp(-2.8f * dt));
             _dress = Dressing ? Mathf.Min(1f, _dress + dt / DressIn) : Mathf.Max(0f, _dress - dt / DressOut);
             float framing = Reduced ? (Dressing ? 1f : 0f) : _dress * _dress * (3f - 2f * _dress);
             _camera.Zoom = Mathf.Lerp(1f, DressZoom, framing);
-            _camera.Track(Focus(alpha), dt, look: new Vector3(_lead + DressShift() * framing, 0f, 0f));
+            _camera.Track(Focus(alpha), dt, look: new Vector3(_lead, 0f, 0f));
             _shoals.Step(new Vector2(_bell.GlobalPosition.X, _bell.GlobalPosition.Z), dt);
             _camera.SetDeepFish(_shoals);
             _snow.Her(_bell.GlobalPosition, new Vector3(_world.Player.Velocity.X, 0f, _world.Player.Velocity.Y));
@@ -424,8 +445,12 @@ public partial class TitleMain : Node3D
         _shots = new MenuShots();
         _shots.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 
-        AddItem("reef", "Lantern Bay", () => OpenCard("jellies"));
-        AddItem("continue", "Continue", () => Launch(LaunchMode.Continue, default));
+        // Continue wakes the jelly played last; Play opens her save slots (pick one, or make a new jelly).
+        AddItem("continue", "Continue", () =>
+        {
+            if (GameSave.Current.Chosen is var last and >= 0 && last < GameSave.Current.Jellies.Count) PlayJelly(last);
+        });
+        AddItem("reef", "Play", () => OpenCard("jellies"));
         AddItem("new", "New run", NewRun);
         AddItem("seeded", "Seeded run", ToggleSeedBox);
         AddItem("pedia", "Sea-pedia", () => OpenCard("pedia"));
@@ -634,10 +659,10 @@ public partial class TitleMain : Node3D
     {
         var save = GameSave.Current;
         var p = save.Profile;
-        Item("reef").Detail.Text = save.Current is { } jelly ? $"{jelly.Name} · level {jelly.Level}" : "make your jelly";
+        Item("reef").Detail.Text = save.Jellies.Count > 0 ? $"{save.Jellies.Count} of {JellyNames.MaxJellies} jellies" : "make your jelly";
         var (cont, contDetail, _) = Item("continue");
-        cont.GetParent<Control>().Visible = save.Run is not null;
-        if (save.Run is { } run) contDetail.Text = $"{run.Where} · {run.Seed} · {TitleStyle.Clock(run.Elapsed)}";
+        cont.GetParent<Control>().Visible = save.Current is not null;
+        if (save.Current is { } jelly) contDetail.Text = $"{jelly.Name} · level {jelly.Level}";
         Item("seeded").Detail.Text = p.RecentSeeds.Count > 0 ? $"last: {p.RecentSeeds[0]}" : "type a seed to share a reef";
         Item("pedia").Detail.Text = $"{SeaPediaCard.PearlsFound(p)} / {PlaneRun.PortedPearls.Length} pearls · {SeaPediaCard.CreaturesMet(p)} / {SeaPediaCard.Creatures.Count} creatures";
         Item("stats").Detail.Text = p.Stats.Runs > 0 ? $"best: {StatsCard.Reach(p.Stats)} · {p.Stats.Runs} runs" : "no runs yet";
@@ -704,6 +729,13 @@ public partial class TitleMain : Node3D
         save.Chosen = index;
         GameSave.Write();
         RunLaunch.Jelly = index;
+        // She is the jelly in that slot: from her place there she swims off, in her own look.
+        if (_card is JellyCard && _world is not null)
+        {
+            var at = SlotAnchor(index);
+            _world.Player.Position = _world.Player.PrevPosition = at;
+        }
+        OctoShoots.Game.Fx.HerColor.SetLook(save.Jellies[index].Look);
         SeedCode.TryParse(save.Jellies[index].Seed, out var seed);
         Launch(LaunchMode.Reef, seed);
     }
@@ -727,8 +759,8 @@ public partial class TitleMain : Node3D
         }
         if (mode == LaunchMode.Reef && GameSave.Current.Current is { } jelly)
         {
-            var bay = TopDownMain.BayId;
-            RunLaunch.Shaping = (seed, bay, 0f, TopDownMain.ShapeBay());
+            var home = TopDownMain.HomeId;
+            RunLaunch.Shaping = (seed, home, 0f, TopDownMain.ShapeHome());
             TopDownMain.FillBaySplash(_splash, jelly);
         }
         else
@@ -755,13 +787,47 @@ public partial class TitleMain : Node3D
         page.TweenProperty(_splash, "modulate:a", 1f, Reduced ? 0.15f : PageFade);
     }
 
-    /// <summary>How far east of her the camera looks to keep her at DressAt across the screen while she is dressed (metres).</summary>
-    float DressShift()
+    /// <summary>Where a slot's jelly floats (on her plane): side by side across Clementine's place, a little up the screen.</summary>
+    System.Numerics.Vector2 SlotAnchor(int slot) =>
+        _world!.Player.Position + new System.Numerics.Vector2((slot - (_slotBells.Length - 1) * 0.5f) * SlotGap, -SlotUp);
+
+    /// <summary>
+    /// Her slots open: each jelly of the save floats in her slot as herself — her look on her own bell, drifting slowly
+    /// about her place — the chosen one shining and the others switched off; a new jelly being made wears the form as it
+    /// is set. Each slot's card is laid out under her on the page. Closed, they go out and are gone.
+    /// </summary>
+    void SyncSlots(float dt)
     {
-        var cam = _camera.Camera;
-        float distance = (cam.GlobalPosition - Focus(1f)).Length();
-        var size = GetViewport().GetVisibleRect().Size;
-        return (0.5f - DressAt) * 2f * distance * Mathf.Tan(Mathf.DegToRad(cam.Fov) * 0.5f) * size.X / Mathf.Max(size.Y, 1f);
+        var slots = _card as JellyCard;
+        var save = GameSave.Current;
+        float time = Time.GetTicksMsec() / 1000f;
+        for (int i = 0; i < _slotBells.Length; i++)
+        {
+            var bell = _slotBells[i];
+            if (_slotWorlds[i] is not { } w) continue;
+            JellyLook? look = slots is null ? null : slots.Making == i ? slots.MakingLook : i < save.Jellies.Count ? save.Jellies[i].Look : null;
+            var anchor = SlotAnchor(i);
+            if (slots is not null) slots.Place(i, _camera.Camera.UnprojectPosition(new Vector3(anchor.X, LevelMap.SwimBand, anchor.Y)) / UiScale);
+            bell.Visible = look is not null;
+            if (look is null) continue;
+            string worn = $"{look.Glow}{look.Arms}{look.Tips}{look.Gonads}";
+            if (worn != _slotWorn[i])
+            {
+                bell.Wear(look);
+                _slotWorn[i] = worn;
+            }
+            // Floating freely: a slow wander about her place, each her own.
+            var drift = new System.Numerics.Vector2(Mathf.Sin(time * 0.37f + i * 2.1f), Mathf.Cos(time * 0.29f + i * 1.3f) * 0.7f) * SlotDrift;
+            var p = w.Player;
+            p.PrevPosition = p.Position;
+            p.Position = anchor + drift;
+            p.Velocity = dt > 0f ? (p.Position - p.PrevPosition) / dt : System.Numerics.Vector2.Zero;
+            p.Aim = new System.Numerics.Vector2(Mathf.Sin(time * 0.21f + i) * 0.4f, 1f);
+            bell.Lit = Mathf.MoveToward(bell.Lit, slots is not null && i == slots.Selected ? 1f : 0f, dt * SlotLight);
+            bell.Sync(w, 1f, dt);
+        }
+        if (slots is null)
+            foreach (var bell in _slotBells) bell.Visible = false;
     }
 
     /// <summary>How far east of her the camera looks to keep her at LaunchAt across the screen (metres).</summary>
@@ -837,21 +903,31 @@ public partial class TitleMain : Node3D
         {
             "stats" => new StatsCard(GameSave.Current.Profile, id => _catalog is not null && _catalog.TryGet(id, out var it) ? it.Name : id, close),
             "pedia" or "creatures" => new SeaPediaCard(GameSave.Current.Profile, _catalog, close),
-            "jellies" => new JellyCard(PlayJelly, close) { Preview = look => OctoShoots.Game.Fx.HerColor.SetLook(look) },
+            "jellies" => new JellyCard(PlayJelly, close),
             "save" => new SaveCard(_catalog, () => Launch(LaunchMode.Continue, default), () => AbandonSavedRun(), Refresh, close),
             _ => new SettingsCard(_view, ApplyView, close),
         };
         var size = PageSize;
-        // The jelly card keeps to the right half: she is framed on the left.
-        var cardSize = which == "jellies" ? new Vector2(Mathf.Min(680f, size.X * 0.45f), Mathf.Min(780f, size.Y - 70f))
-            : new Vector2(Mathf.Min(1060f, size.X - 120f), Mathf.Min(780f, size.Y - 70f));
-        card.CustomMinimumSize = cardSize;
-        card.Size = cardSize;
-        card.Position = new Vector2(size.X - cardSize.X - 56f, (size.Y - cardSize.Y) * 0.5f);
         _ui.AddChild(card);
         _ui.MoveChild(card, _fade.GetIndex());
         _card = card;
-        TitleStyle.Surface(card, 80f, 0.42f, 0f, Reduced);
+        if (card is JellyCard)
+        {
+            // Her slots are no drawer: the jellies float in the sea, their cards under them, all over the page.
+            card.Size = size;
+            card.Modulate = new Color(1f, 1f, 1f, 0f);
+            card.CreateTween().TweenProperty(card, "modulate:a", 1f, Reduced ? 0.01f : 0.35f).SetDelay(Reduced ? 0f : 0.15f);
+        }
+        else
+        {
+            // A drawer as the game's pause menu is (DrawerStyle): the screen's height, against its right edge, sliding in.
+            var cardSize = new Vector2(Mathf.Min(1060f, size.X - 120f), size.Y);
+            card.CustomMinimumSize = cardSize;
+            card.Size = cardSize;
+            card.Position = new Vector2(size.X, 0f);
+            card.CreateTween().TweenProperty(card, "position:x", size.X - cardSize.X, Reduced ? 0.01f : OctoShoots.Game.Ui.DrawerStyle.SlideSeconds)
+                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        }
         _ring.CreateTween().TweenProperty(_ring, "modulate:a", which == "jellies" ? 0f : 0.25f, 0.2f);
         if (which == "creatures" && card is SeaPediaCard pedia) pedia.CallDeferred(SeaPediaCard.MethodName.ShowCreatures);
         // Focus the card's first control, so the keyboard works there.
@@ -861,6 +937,11 @@ public partial class TitleMain : Node3D
     void FocusCard()
     {
         if (_card is null) return;
+        if (_card is JellyCard jellies)
+        {
+            jellies.FocusFirst();
+            return;
+        }
         var first = FindFocusable(_card);
         first?.GrabFocus();
     }
@@ -880,10 +961,21 @@ public partial class TitleMain : Node3D
         if (_card is null) return;
         var card = _card;
         _card = null;
-        // Out of the jelly card she is Clementine again (unless a jelly is on her way to the bay).
-        if (card is JellyCard && !_launching) OctoShoots.Game.Fx.HerColor.Load(force: true);
         if (instant) card.QueueFree();
-        else TitleStyle.Dive(card, card.QueueFree, 0.38f, Reduced);
+        else if (card is JellyCard)
+        {
+            var fade = card.CreateTween();
+            fade.TweenProperty(card, "modulate:a", 0f, Reduced ? 0.01f : 0.25f);
+            fade.TweenCallback(Callable.From(card.QueueFree));
+        }
+        else
+        {
+            // Back out to the right, as it came.
+            var slide = card.CreateTween();
+            slide.TweenProperty(card, "position:x", PageSize.X, Reduced ? 0.01f : OctoShoots.Game.Ui.DrawerStyle.SlideSeconds)
+                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+            slide.TweenCallback(Callable.From(card.QueueFree));
+        }
         _ring.CreateTween().TweenProperty(_ring, "modulate:a", 1f, 0.2f);
         Refresh();
         _items.FirstOrDefault(it => it.Button.GetParent<Control>().Visible).Button?.GrabFocus();
@@ -938,7 +1030,9 @@ public partial class TitleMain : Node3D
     /// <summary>Esc or B: close the open card, or the seed box / prompt under a menu item.</summary>
     void GoBack()
     {
-        if (_card is not null) CloseCard();
+        // In the jelly drawer's form, back to its slots first.
+        if (_card is JellyCard jellies && jellies.Back()) { }
+        else if (_card is not null) CloseCard();
         else if (_inline is not null)
         {
             CloseInline();
@@ -1001,6 +1095,22 @@ public partial class TitleMain : Node3D
                 Hp = 74, Shells = 31, Elapsed = 761, Foes = 41, ShellsCollected = 88,
                 SavedAt = DateTime.Now.AddMinutes(-42).ToString("s", CultureInfo.InvariantCulture),
             },
+            // Two jellies in their slots, the first played last; the third slot empty.
+            Jellies = new List<Jelly>
+            {
+                new()
+                {
+                    Name = "Mira", Seed = "KELP 7Q2Z", Level = 4, Shells = 63, Passives = new List<string> { "triple_tentacle", "mitosis" },
+                    Sealed = new Dictionary<string, int> { ["shallows"] = 5 }, Look = new JellyLook { Glow = "#7FE7FF", Arms = "#B86BFF", Tips = "#7FFFB0", Gonads = "clover" },
+                    Played = DateTime.Now.AddMinutes(-42).ToString("s", CultureInfo.InvariantCulture),
+                },
+                new()
+                {
+                    Name = "Clementine", Seed = "REEF 2SEA", Level = 2, Shells = 12, Sealed = new Dictionary<string, int> { ["shallows"] = 1 },
+                    Played = DateTime.Now.AddDays(-2).ToString("s", CultureInfo.InvariantCulture),
+                },
+            },
+            Chosen = 0,
         };
     }
 }

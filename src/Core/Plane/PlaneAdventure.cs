@@ -10,9 +10,12 @@ namespace OctoShoots.Core.Plane;
 /// <summary>The adventure's numbers (docs/ADVENTURE.md): first guesses, tuned in play.</summary>
 public static class AdventureTuning
 {
-    /// <summary>The ink dots lie on an even grid this far apart, each this big; at most MaxDots on a level.</summary>
+    /// <summary>
+    /// The ink dots lie on an even grid this far apart, each this big, over a seeded level's square (the leaks' levels
+    /// and caves; the open reef's big map has none); at most MaxDots on a level.
+    /// </summary>
     public const float Spacing = 0.8f, DotRadius = 0.135f;
-    public const int Cells = (int)(LevelMap.Size / Spacing), MaxDots = 9000;
+    public const int Cells = (int)(LevelMap.Seeded / Spacing), MaxDots = 9000;
     /// <summary>A dot her light has worn down (but not cleared) fills back at this rate (strength a second) once out of it.</summary>
     public const float Regrow = 0.6f;
     /// <summary>Her shots' pops and the Starburst take this many times their ground strength off a dot.</summary>
@@ -23,17 +26,38 @@ public static class AdventureTuning
     /// </summary>
     public const int LevelLeaks = 5, LeaksToClear = 3;
     public const float LeakSpacing = 30f, LeakFromStart = 24f;
-    /// <summary>A leak's push: out to LeakReach, hardest at its middle (LeakPush + PerMenace × Menace, more than she can swim against), falling away as the square of the distance. No creature comes nearer than LeakClear.</summary>
-    public const float LeakReach = 12f, LeakPush = 9f, LeakPushPerMenace = 1f, LeakClear = 2.5f;
+    /// <summary>No creature comes nearer a leak's disc than LeakClear (it does not push: she must come in among its arms).</summary>
+    public const float LeakClear = 2.5f;
     /// <summary>
-    /// Sealing: her inner light does it, no shots: LeakSeconds (+ LeakSecondsPerMenace × Menace) of her staying within
-    /// LeakSealReach, in Stages: each of the first four ties one of its arms, the last shuts it. LeakHold seconds after
-    /// she leaves it heals, a stage every LeakDrain seconds, each tie snapping as it goes back past it. Each sealed is
-    /// worth LeakXp, and throws LeakShells shells out of it.
+    /// A leak is a brittle star (docs/ADVENTURE.md §1): a disc LeakDisc across and five arms, each LeakArmBase +
+    /// LeakArmPerMenace × Menace long (Menace up to 1), tapering from LeakArmRoot to LeakArmTip (half widths).
     /// </summary>
-    public const int LeakXp = 25, LeakShells = 5, Stages = 5;
-    public const float LeakSeconds = 10f, LeakSecondsPerMenace = 10f, LeakSealReach = 6f, LeakHold = 1.5f, LeakDrain = 1.2f;
-    /// <summary>Her first coming near rouses the fish within RouseReach of it; each tie makes it spit LeakSpit drops at LeakSpitSpeed, LeakSpitHit of a throw's damage each.</summary>
+    public const int LeakArms = 5;
+    public const float LeakDisc = 0.45f, LeakArmBase = 2.5f, LeakArmPerMenace = 3.5f, LeakArmRoot = 0.14f, LeakArmTip = 0.04f;
+    /// <summary>
+    /// Sealing: her inner light does it, no shots, while she stays within LeakSealReach of its disc. It staples its arms
+    /// shut one after another, from the disc out, a staple every StapleSpacing of an arm (at least MinStaples an arm),
+    /// one every StapleSeconds; the last staple seals it. LeakHold seconds after she leaves it heals, a staple snapping
+    /// every StapleDrain. Each sealed is worth LeakXp, and throws LeakShells shells out of it.
+    /// </summary>
+    public const int LeakXp = 25, LeakShells = 5, MinStaples = 3;
+    public const float StapleSpacing = 0.6f, StapleSeconds = 0.5f, StapleDrain = 0.4f, LeakSealReach = 6f, LeakHold = 1.5f;
+    /// <summary>
+    /// Its arms float and wiggle: each joint bends up to LeakWiggle (radians, more toward the tip) on a slow wave
+    /// (LeakWave radians a second, LeakWaveJoint further along each joint). A stapled stretch cannot move. Touching an
+    /// unstapled stretch stings her for LeakSting and throws her off at LeakKnock; a shot that meets one pops on it and
+    /// bends the arm away by LeakKick (radians a second), sprung back (LeakSpring, LeakDamp).
+    /// </summary>
+    public const float LeakWiggle = 0.13f, LeakWave = 0.7f, LeakWaveJoint = 0.9f, LeakEase = 1.5f;
+    public const float LeakSting = 6f, LeakKnock = 7f, LeakKick = 2.4f, LeakSpring = 6f, LeakDamp = 3.5f;
+
+    /// <summary>A leak's arms' length at this Menace.</summary>
+    public static float LeakArmLength(float menace) => LeakArmBase + LeakArmPerMenace * Math.Clamp(menace, 0f, 1f);
+
+    /// <summary>Staples on each arm of this length.</summary>
+    public static int StaplesPerArm(float length) => Math.Max(MinStaples, (int)MathF.Round(length / StapleSpacing));
+
+    /// <summary>Her first coming near rouses the fish within RouseReach of it; each arm stapled shut makes it spit LeakSpit drops at LeakSpitSpeed, LeakSpitHit of a throw's damage each.</summary>
     public const float RouseReach = 14f, LeakSpitSpeed = 5f, LeakSpitHit = 0.6f;
     public const int LeakSpit = 8;
     /// <summary>Sealed, its ink dissolves outward from it at this speed (m/s).</summary>
@@ -274,14 +298,18 @@ public sealed class InkDots
 }
 
 /// <summary>
-/// A leak (docs/ADVENTURE.md §1): an X-shaped tear floating in the water at her plane, where the ink comes through. The
-/// only thing that heals: her light ties it shut arm by arm, and left alone it tears the ties again.
+/// A leak (docs/ADVENTURE.md §1): a brittle star of ink floating at her plane, its disc where the ink comes through, its
+/// five arms adrift round it. The only thing that heals: her light staples its arms still one after another, and left
+/// alone it pulls the staples out again.
 /// </summary>
 public sealed class PlaneLeak
 {
     public Vector2 Position;
-    /// <summary>The seconds of her light it has taken, and those it needs.</summary>
+    /// <summary>The seconds of her light it has taken, and those it needs (a staple every StapleSeconds).</summary>
     public float Light, Needed;
+    /// <summary>Its arms, and the staples each takes.</summary>
+    public LeakArm[] Arms = Array.Empty<LeakArm>();
+    public int StaplesPerArm;
     /// <summary>An Inkwarden guards it this moment.</summary>
     public bool Warded;
     public bool Sealed;
@@ -293,12 +321,30 @@ public sealed class PlaneLeak
     public float Since;
     /// <summary>Sealed: how far out from it the ink has dissolved (negative: none under way).</summary>
     public float Wave = -1f;
-    /// <summary>How much of its outward push is left (it dies with it).</summary>
-    public float Push = 1f;
     /// <summary>How full of her light it is, 0..1.</summary>
     public float Glow => Needed <= 0f ? 1f : Light / Needed;
-    /// <summary>The arms tied now (0..4).</summary>
-    public int Ties => Sealed ? AdventureTuning.Stages - 1 : Math.Min((int)(Glow * AdventureTuning.Stages), AdventureTuning.Stages - 1);
+    public int StapleCount => Arms.Length * StaplesPerArm;
+    /// <summary>The staples in now: all of them once sealed.</summary>
+    public int Staples => Sealed ? StapleCount : Math.Min((int)(Light / AdventureTuning.StapleSeconds + 1e-4f), StapleCount);
+    /// <summary>How many of an arm's staples are in (its arms are stapled one after another, from the disc out).</summary>
+    public int StapledOn(int arm) => Math.Clamp(Staples - arm * StaplesPerArm, 0, StaplesPerArm);
+    /// <summary>Its arms stapled shut all along.</summary>
+    public int ArmsShut => Staples / Math.Max(StaplesPerArm, 1);
+}
+
+/// <summary>
+/// One arm of a leak: its way out from the disc, its joints' bends (one a staple's stretch; a stapled one holds still),
+/// where its joints lie now (the disc's rim, then each joint out to the tip), and how a shot has bent it.
+/// </summary>
+public sealed class LeakArm
+{
+    public float Angle, Seed, Length;
+    public float[] Bends = Array.Empty<float>();
+    public Vector2[] Points = Array.Empty<Vector2>();
+    public float Kick, KickSpeed;
+
+    /// <summary>Its half width this far along it (0 at the disc, 1 at the tip).</summary>
+    public static float HalfWidth(float along) => AdventureTuning.LeakArmRoot + (AdventureTuning.LeakArmTip - AdventureTuning.LeakArmRoot) * along;
 }
 
 public sealed partial class PlaneWorld
@@ -321,6 +367,7 @@ public sealed partial class PlaneWorld
         PlaceLeaks();
         PlaceCurrents();
         PlaceInk(Dots);
+        if (Map.LeakCave) PlaceCaveMurklings();
         ExitOpen = Leaks.Count == 0 && Boss is null;
     }
 
@@ -334,31 +381,48 @@ public sealed partial class PlaneWorld
         if (Map.Station) return;
         if (Map.LeakCave)
         {
-            Leaks.Add(new PlaneLeak { Position = Map.Exit.Position, Needed = AdventureTuning.LeakSeconds + AdventureTuning.LeakSecondsPerMenace * Menace });
+            Leaks.Add(NewLeak(Map.Exit.Position));
             return;
         }
         // Where she can swim with the boss's walls shut: they wait for the leaks, so none may lie behind them.
         var bossWalls = _rocks.Where(r => r.Kind == SealKind.Boss).ToList();
         var reach = LevelValidator.Distances(Map, Map.Start.Position, blocked: q => bossWalls.Exists(r => r.Contains(q)));
         var safes = SafePlaces().ToList();
-        float needed = AdventureTuning.LeakSeconds + AdventureTuning.LeakSecondsPerMenace * Menace;
         var chambers = Map.Plazas.Select(z => z.Center).ToList();
         var sides = new List<Vector2>();
         foreach (var c in Map.Corridors.Where(c => c.Kind == CorridorKind.Side))
             for (int i = 0; i < c.Points.Count; i += 3) sides.Add(c.Points[i]);
         var anywhere = new List<Vector2>();
-        for (int y = 2; y < LevelMap.Size; y += 3)
-            for (int x = 2; x < LevelMap.Size; x += 3) anywhere.Add(new Vector2(x, y));
+        for (int y = 2; y < Map.Size; y += 3)
+            for (int x = 2; x < Map.Size; x += 3) anywhere.Add(new Vector2(x, y));
         foreach (var spots in new[] { chambers, sides, anywhere })
         {
             Shuffle(spots, _inkRng);
-            PlaceLeaks(spots, reach, safes, needed, false);
+            PlaceLeaks(spots, reach, safes, false);
         }
-        PlaceLeaks(anywhere, reach, safes, needed, true);
+        PlaceLeaks(anywhere, reach, safes, true);
+    }
+
+    /// <summary>A leak here: its arms the length its Menace gives, each its own way round (a fifth of a turn apart) and its own wave.</summary>
+    PlaneLeak NewLeak(Vector2 at)
+    {
+        float length = AdventureTuning.LeakArmLength(Menace);
+        int per = AdventureTuning.StaplesPerArm(length);
+        var v = new PlaneLeak { Position = at, StaplesPerArm = per, Needed = AdventureTuning.StapleSeconds * per * AdventureTuning.LeakArms };
+        float turn = _inkRng.Range(0f, MathF.Tau);
+        v.Arms = new LeakArm[AdventureTuning.LeakArms];
+        for (int i = 0; i < v.Arms.Length; i++)
+            v.Arms[i] = new LeakArm
+            {
+                Angle = turn + i * MathF.Tau / AdventureTuning.LeakArms + _inkRng.Range(-0.12f, 0.12f), Seed = _inkRng.Range(0f, 100f),
+                Length = length, Bends = new float[per], Points = new Vector2[per + 1],
+            };
+        LayArms(v);
+        return v;
     }
 
     /// <summary>Opens leaks at these spots, until the level has its number of them.</summary>
-    void PlaceLeaks(List<Vector2> spots, float[] reach, List<(Vector2 Centre, float Radius)> safes, float needed, bool lastResort)
+    void PlaceLeaks(List<Vector2> spots, float[] reach, List<(Vector2 Centre, float Radius)> safes, bool lastResort)
     {
         int want = AdventureTuning.LevelLeaks;
         for (float spacing = AdventureTuning.LeakSpacing; spacing > 3.5f && Leaks.Count < want; spacing *= 0.75f)
@@ -371,7 +435,7 @@ public sealed partial class PlaneWorld
                 if (safes.Any(s => Vector2.Distance(at, s.Centre) < s.Radius + 4f)) continue;
                 if (Leaks.Any(v => Vector2.Distance(v.Position, at) < spacing)) continue;
                 if (!lastResort && MainCurrent.Touches(Map, at, 0f)) continue;
-                Leaks.Add(new PlaneLeak { Position = at, Needed = needed });
+                Leaks.Add(NewLeak(at));
             }
     }
 
@@ -427,6 +491,7 @@ public sealed partial class PlaneWorld
         StepReturn(dots);
         StepGauges(dots);
         StepFlounders(dots);
+        StepCaveMurklings(dots);
         dots.Regrow(Tick, AdventureTuning.Regrow * Dt);
     }
 
@@ -438,11 +503,11 @@ public sealed partial class PlaneWorld
         {
             var v = Leaks[k];
             if (v.Wave >= 0f) Dissolve(dots, v, k);
-            v.Push = MathUtil.MoveToward(v.Push, v.Sealed ? 0f : 1f, Dt / CurrentTuning.LeakFall);
+            StepArms(v);
             if (v.Sealed) continue;
             // Near it, her inner light works on it on its own (an Inkwarden in reach turns it aside).
             if (Tick % 15 == 0) v.Warded = Ward(v, v.Position, 1f) <= 0f;
-            int ties = v.Ties;
+            int staples = v.Staples, shut = v.ArmsShut;
             if (!Defeated && !v.Warded && Vector2.Distance(Player.Position, v.Position) <= AdventureTuning.LeakSealReach)
             {
                 if (!v.Roused) Rouse(v);
@@ -453,18 +518,136 @@ public sealed partial class PlaneWorld
                     SealLeak(v);
                     continue;
                 }
-                if (v.Ties <= ties) continue;
-                Events.Add(new PlaneEvent(PlaneEventType.LeakTied, v.Position, Vector2.UnitY, v.Ties));
-                Spit(v);
+                if (v.Staples <= staples) continue;
+                // A staple in, where it lands; an arm stapled shut all along spits.
+                Events.Add(new PlaneEvent(PlaneEventType.LeakTied, StapleAt(v, v.Staples - 1), Vector2.UnitY, v.Staples));
+                if (v.ArmsShut > shut) Spit(v);
                 continue;
             }
             if (v.Light <= 0f) continue;
-            // Left alone it heals, its ties snapping as it goes back past them.
+            // Left alone it heals, its staples snapping out the way they went in, last first.
             v.Since += Dt;
             if (v.Since < AdventureTuning.LeakHold) continue;
-            v.Light = MathF.Max(0f, v.Light - v.Needed / AdventureTuning.Stages / AdventureTuning.LeakDrain * Dt);
-            if (v.Ties < ties) Events.Add(new PlaneEvent(PlaneEventType.LeakUntied, v.Position, Vector2.UnitY, v.Ties));
+            v.Light = MathF.Max(0f, v.Light - AdventureTuning.StapleSeconds / AdventureTuning.StapleDrain * Dt);
+            if (v.Staples < staples) Events.Add(new PlaneEvent(PlaneEventType.LeakUntied, StapleAt(v, staples - 1), Vector2.UnitY, v.Staples));
         }
+        StepArmContact();
+    }
+
+    /// <summary>Where a leak's staple (by its place in order) sits: the middle of its arm's stretch.</summary>
+    public static Vector2 StapleAt(PlaneLeak v, int staple)
+    {
+        int per = Math.Max(v.StaplesPerArm, 1);
+        var arm = v.Arms[Math.Clamp(staple / per, 0, v.Arms.Length - 1)];
+        int j = staple % per;
+        return (arm.Points[j] + arm.Points[j + 1]) * 0.5f;
+    }
+
+    /// <summary>
+    /// Its arms float and wiggle: each joint not stapled eases toward its wave (and the bend a shot gave it); a stapled
+    /// joint holds where it was stapled. Then the joints are laid out from the disc's rim.
+    /// </summary>
+    void StepArms(PlaneLeak v)
+    {
+        for (int i = 0; i < v.Arms.Length; i++)
+        {
+            var arm = v.Arms[i];
+            arm.KickSpeed += (-AdventureTuning.LeakSpring * arm.Kick - AdventureTuning.LeakDamp * arm.KickSpeed) * Dt;
+            arm.Kick += arm.KickSpeed * Dt;
+            int stapled = v.StapledOn(i), n = arm.Bends.Length;
+            for (int j = stapled; j < n; j++)
+            {
+                float along = (j + 0.5f) / n;
+                float wave = AdventureTuning.LeakWiggle * (0.4f + 0.6f * along) * MathF.Sin(Time * AdventureTuning.LeakWave + arm.Seed + j * AdventureTuning.LeakWaveJoint);
+                float target = wave + arm.Kick / Math.Max(n - stapled, 1);
+                arm.Bends[j] = MathUtil.MoveToward(arm.Bends[j], target, AdventureTuning.LeakEase * Dt + MathF.Abs(arm.KickSpeed) * Dt);
+            }
+        }
+        LayArms(v);
+    }
+
+    /// <summary>Its arms' joints, from the disc's rim out along each arm's way, bending at each.</summary>
+    static void LayArms(PlaneLeak v)
+    {
+        foreach (var arm in v.Arms)
+        {
+            int n = arm.Bends.Length;
+            float seg = arm.Length / Math.Max(n, 1), heading = arm.Angle;
+            var p = v.Position + new Vector2(MathF.Cos(heading), MathF.Sin(heading)) * AdventureTuning.LeakDisc;
+            arm.Points[0] = p;
+            for (int j = 0; j < n; j++)
+            {
+                heading += arm.Bends[j];
+                p += new Vector2(MathF.Cos(heading), MathF.Sin(heading)) * seg;
+                arm.Points[j + 1] = p;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The arms against her and her shots: a stretch not stapled stings her if she touches it and throws her off; a shot
+    /// that meets one pops on it and bends it away (a stapled stretch only stops the shot).
+    /// </summary>
+    void StepArmContact()
+    {
+        var p = Player;
+        foreach (var v in Leaks)
+        {
+            if (v.Sealed) continue;
+            for (int i = 0; i < v.Arms.Length; i++)
+            {
+                var arm = v.Arms[i];
+                int stapled = v.StapledOn(i), n = arm.Bends.Length;
+                for (int j = 0; j < n; j++)
+                {
+                    Vector2 a = arm.Points[j], b = arm.Points[j + 1];
+                    float half = LeakArm.HalfWidth((j + 0.5f) / n);
+                    if (j >= stapled && !Defeated)
+                    {
+                        var near = ClosestOn(a, b, p.Position);
+                        if (Vector2.Distance(near, p.Position) < half + Radius)
+                        {
+                            var away = SafeNormalize(p.Position - near);
+                            if (away == Vector2.Zero) away = SafeNormalize(p.Position - v.Position);
+                            if (HurtPlayer(AdventureTuning.LeakSting, away, DamageSource.Leak)) p.Velocity += away * AdventureTuning.LeakKnock;
+                        }
+                    }
+                    foreach (var shot in Shots)
+                    {
+                        if (!shot.FromPlayer || shot.Life <= 0f || shot.BossPearl) continue;
+                        Vector2 from = float.IsNaN(shot.From.X) ? shot.Position : shot.From;
+                        if (SegmentGap(from, shot.Position, a, b) > half + shot.Radius) continue;
+                        var hit = ClosestOn(a, b, shot.Position);
+                        Pop(shot, hit - shot.Position);
+                        Events.Add(new PlaneEvent(PlaneEventType.LeakArmStruck, hit, SafeNormalize(shot.Velocity), j >= stapled ? 1f : 0f));
+                        if (j < stapled) continue;
+                        // Bent away from the shot: the way round the arm's root that the shot pushes it.
+                        var root = arm.Points[0];
+                        float turn = MathF.Sign(Cross(hit - root, shot.Velocity));
+                        arm.KickSpeed += turn * AdventureTuning.LeakKick;
+                    }
+                }
+            }
+        }
+    }
+
+    static Vector2 ClosestOn(Vector2 a, Vector2 b, Vector2 p)
+    {
+        var ab = b - a;
+        float l2 = ab.LengthSquared();
+        float t = l2 > 1e-9f ? Math.Clamp(Vector2.Dot(p - a, ab) / l2, 0f, 1f) : 0f;
+        return a + ab * t;
+    }
+
+    static float Cross(Vector2 a, Vector2 b) => a.X * b.Y - a.Y * b.X;
+
+    /// <summary>The least distance between two segments.</summary>
+    static float SegmentGap(Vector2 p1, Vector2 p2, Vector2 q1, Vector2 q2)
+    {
+        float d1 = Cross(q2 - q1, p1 - q1), d2 = Cross(q2 - q1, p2 - q1), d3 = Cross(p2 - p1, q1 - p1), d4 = Cross(p2 - p1, q2 - p1);
+        if ((d1 > 0f) != (d2 > 0f) && (d3 > 0f) != (d4 > 0f)) return 0f;
+        return MathF.Min(MathF.Min(Vector2.Distance(ClosestOn(q1, q2, p1), p1), Vector2.Distance(ClosestOn(q1, q2, p2), p2)),
+            MathF.Min(Vector2.Distance(ClosestOn(p1, p2, q1), q1), Vector2.Distance(ClosestOn(p1, p2, q2), q2)));
     }
 
     /// <summary>Sealed: its ink goes, from the leak outward.</summary>
@@ -531,7 +714,7 @@ public sealed partial class PlaneWorld
         v.Light = v.Needed;
         if (!drunk) v.Wave = 0f;
         Events.Add(new PlaneEvent(drunk ? PlaneEventType.LeakDrunk : PlaneEventType.LeakSealed, v.Position, Vector2.UnitY, LeaksLeft));
-        if (wakes && LeaksLeft == 0) Events.Add(new PlaneEvent(PlaneEventType.MainCurrentWoke, v.Position, Vector2.UnitY));
+        if (wakes && LeaksLeft == 0 && Currents.Count > 0) Events.Add(new PlaneEvent(PlaneEventType.MainCurrentWoke, v.Position, Vector2.UnitY));
         if (Map.LeakCave) DissolveAsh(v.Position);
         if (drunk) return;
         // Her reward: shells burst out of it.

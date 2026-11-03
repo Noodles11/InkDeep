@@ -15,8 +15,15 @@ namespace OctoShoots.Core.Gen.TopDown;
 /// </summary>
 public sealed class CaveLayout
 {
-    const int N = LevelMap.Samples;
-    const float Size = LevelMap.Size;
+    /// <summary>Its square (metres a side) and grid points a side: a seeded level's, or a hand-drawn map's own.</summary>
+    readonly int N;
+    readonly float Size;
+
+    CaveLayout(int size = LevelMap.Seeded)
+    {
+        Size = size;
+        N = size + 1;
+    }
     const float Rim = LevelMap.RimWidth;
 
     /// <summary>Reachable water the level aims for (m²), and how far it may stray (the validator's band).</summary>
@@ -123,7 +130,7 @@ public sealed class CaveLayout
         if (g.OpenArea < AreaMin || g.OpenArea > AreaMax) return (null, $"cave water {g.OpenArea} m² (want {AreaMin:0}–{AreaMax:0})");
 
         var fromStart = g.Geodesic(g.Start.At);
-        g.PathToExit = fromStart[Index(g.Exit.At)];
+        g.PathToExit = fromStart[g.Index(g.Exit.At)];
         if (!float.IsFinite(g.PathToExit) || g.PathToExit < MinPath) return (null, $"the way down is {g.PathToExit:0} m from the start along the water");
         if (g.PlaceOpen(kinds, radius) is { } missing) return (null, missing);
         return (g, null);
@@ -136,7 +143,7 @@ public sealed class CaveLayout
     /// </summary>
     public static (CaveLayout? Layout, string? Why) FromHand(HandLayout hand, Rng rng, Func<PoiKind, float> radius)
     {
-        var g = new CaveLayout();
+        var g = new CaveLayout(hand.Size);
         uint seed = (uint)(rng.NextU64() >> 34);
         var byId = new Dictionary<string, Chamber>();
         foreach (var c in hand.Chambers)
@@ -176,7 +183,7 @@ public sealed class CaveLayout
         foreach (var place in hand.Places)
             g.Places.Add(new Place { Kind = place.Kind, At = new Vector2(place.X, place.Y), Radius = place.R });
         g.Rasterise(seed);
-        g.PathToExit = g.Geodesic(g.Start.At)[Index(g.Exit.At)];
+        g.PathToExit = g.Geodesic(g.Start.At)[g.Index(g.Exit.At)];
         if (!float.IsFinite(g.PathToExit)) return (null, "the exit cannot be reached from the start");
         return (g, null);
     }
@@ -185,13 +192,13 @@ public sealed class CaveLayout
 
     static float Pick(Rng rng, (float Lo, float Hi) r) => rng.Range(r.Lo, r.Hi);
 
-    static bool InBounds(Vector2 p, float r)
+    bool InBounds(Vector2 p, float r)
     {
         float m = Rim + r + 4f;
         return p.X >= m && p.Y >= m && p.X <= Size - m && p.Y <= Size - m;
     }
 
-    static Vector2 Clamp(Vector2 p, float r)
+    Vector2 Clamp(Vector2 p, float r)
     {
         float m = Rim + r + 4f;
         return new Vector2(Math.Clamp(p.X, m, Size - m), Math.Clamp(p.Y, m, Size - m));
@@ -243,7 +250,7 @@ public sealed class CaveLayout
         int side = rng.Int(4);
         // The start and the way down lie on opposite sides, 38 m in from the edge: about 62 m apart, or more across.
         float inset = 38f, along = rng.Range(0.33f, 0.67f) * Size, far = rng.Range(0.28f, 0.72f) * Size;
-        static Vector2 P(int s, float t, float d) => s switch
+        Vector2 P(int s, float t, float d) => s switch
         {
             0 => new Vector2(t, d),
             1 => new Vector2(Size - d, t),
@@ -415,7 +422,7 @@ public sealed class CaveLayout
 
     // ───────────────────────── rasterising: the water ─────────────────────────
 
-    static int Index(Vector2 p) => (int)MathF.Round(p.Y) * N + (int)MathF.Round(p.X);
+    int Index(Vector2 p) => (int)MathF.Round(p.Y) * N + (int)MathF.Round(p.X);
 
     /// <summary>
     /// The signed distance to the cave (negative inside) as wobbly blobs and winding tubes whose width breathes along
@@ -554,6 +561,8 @@ public sealed class CaveLayout
     /// <summary>Chamfer distance (metres) from every grid point to the nearest point where <paramref name="source"/> holds.</summary>
     public static float[] Chamfer(bool[] cells, bool source)
     {
+        // (A square grid: its points a side from its length.)
+        int N = (int)MathF.Round(MathF.Sqrt(cells.Length));
         var d = new float[N * N];
         for (int i = 0; i < d.Length; i++) d[i] = cells[i] == source ? 0f : 1e9f;
         const float D = 1.41421356f;

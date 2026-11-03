@@ -47,12 +47,58 @@ public sealed class Jelly
     /// <summary>Per region: the cave behind each of its mouths now, and how many minor leaks she has sealed there (OpenReef).</summary>
     public Dictionary<string, List<int>> Caves { get; set; } = new();
     public Dictionary<string, int> Sealed { get; set; } = new();
+    /// <summary>
+    /// Per region: its mouths shut since she sealed the cave behind them, each with her play time then (PlaySeconds).
+    /// The Leak seeps back in after ReefTuning.Recorrupt of play, and the mouth opens again on a fresh cave.
+    /// </summary>
+    public Dictionary<string, Dictionary<int, double>> Shut { get; set; } = new();
+    /// <summary>Per region: what she has charted of it (its map's fog) and the places in it she has been to.</summary>
+    public Dictionary<string, RegionChart> Charts { get; set; } = new();
+    /// <summary>
+    /// The Tide Fan's requests (docs/QUESTS-PROPOSAL.md): per region, the ribbons tied on it (a place each, null where
+    /// one was taken), the requests she carries, and how many ribbons have ever been tied for each region.
+    /// </summary>
+    public Dictionary<string, List<Request?>> Fan { get; set; } = new();
+    public List<Request> Carried { get; set; } = new();
+    public Dictionary<string, int> Tied { get; set; } = new();
     /// <summary>Her lost light, where she last dimmed (null: none, or she took it back).</summary>
     public LostLight? Lost { get; set; }
     /// <summary>When she was made and last played, as ISO 8601 local times.</summary>
     public string Made { get; set; } = "";
     public string Played { get; set; } = "";
+    /// <summary>Her time played on the open reef (seconds): the clock the shut mouths reopen by.</summary>
     public double PlaySeconds { get; set; }
+}
+
+/// <summary>
+/// One request off the Tide Fan (docs/QUESTS-PROPOSAL.md §3): what it asks (Kind: seal, prime, den or ash), in which
+/// region and (seal, den) behind which mouth, its level, who tied it (an index into its kind's posters), what it pays
+/// (a passive pearl or none, silver shells, experience), and how far along it is.
+/// </summary>
+public sealed class Request
+{
+    public string Kind { get; set; } = "";
+    public string Region { get; set; } = "";
+    public int Mouth { get; set; } = -1;
+    public int Level { get; set; } = 1;
+    public int Poster { get; set; }
+    public string? Pearl { get; set; }
+    public int Shells { get; set; }
+    public int Xp { get; set; }
+    public int Goal { get; set; } = 1;
+    public int Progress { get; set; }
+    /// <summary>Its number among the ribbons ever tied for its region.</summary>
+    public int Number { get; set; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool Done => Progress >= Goal;
+}
+
+/// <summary>A region's map as she has charted it: its fog (a byte a grid point, base64) and the places she has visited.</summary>
+public sealed class RegionChart
+{
+    public string Fog { get; set; } = "";
+    public List<int> Visited { get; set; } = new();
 }
 
 /// <summary>
@@ -85,6 +131,8 @@ public sealed class JellyLook
 public static class JellyNames
 {
     public const int MaxLength = 16;
+    /// <summary>How many jellies (save slots) a machine keeps: one must go before a fourth is made.</summary>
+    public const int MaxJellies = 3;
     public static readonly string[] Symbols = { "horseshoe", "ring", "clover", "crescent", "star" };
 
     /// <summary>Why a name cannot be taken (empty, too long, odd characters, or another jelly's already), or null.</summary>

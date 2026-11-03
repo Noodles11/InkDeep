@@ -8,6 +8,13 @@ render_mode cull_back;
 
 uniform bool debug_normals = false;
 
+// The level's cave openings (LevelView.AddDoors, docs/RPG-PROPOSAL.md §2.3): each one's threshold (xy, map metres) and
+// the way into it (zw), and the passages' depth, open half-width and arch top. The deeper into one, the darker, until
+// its back is black: the dark of the cave beyond.
+uniform vec4 doors[4];
+uniform int door_count = 0;
+uniform vec3 door_size = vec3(4.5, 1.7, 2.8);
+
 varying vec3 world;
 varying vec3 world_normal;
 
@@ -29,12 +36,33 @@ void art(inout ReefSkin s, vec3 local, float hw, float px) {
 	s.caustic = art_caustic(s.caustic);
 }
 
+// How far into an opening's dark a point of the ground lies (0 outside, 1 black): along its passage, under its roof.
+float door_dark(vec3 p) {
+	float dark = 0.0;
+	for (int i = 0; i < door_count; i++) {
+		vec2 d = p.xz - doors[i].xy;
+		vec2 into = doors[i].zw;
+		float inward = dot(d, into);
+		float off = abs(d.x * into.y - d.y * into.x);
+		float k = smoothstep(-0.4, 2.2, inward)
+			* (1.0 - smoothstep(door_size.y + 0.6, door_size.y + 1.4, off))
+			* (1.0 - smoothstep(door_size.z + 0.2, door_size.z + 0.8, p.y))
+			* (1.0 - smoothstep(door_size.x + 1.0, door_size.x + 1.6, inward));
+		dark = max(dark, k);
+	}
+	return dark;
+}
+
 void fragment() {
 	if (lf_portal_cut(world, FRAGCOORD.xy) || lf_see_cut(world, CAMERA_POSITION_WORLD, FRAGCOORD.xy)) discard;
 	vec3 local = lf_local(world);
 	float px = length(fwidth(world.xz));
 	ReefSkin s = reef_surface(local, normalize(world_normal), TIME, px);
 	art(s, local, fwidth(local.y), px);
+	float dark = door_count > 0 ? door_dark(local) : 0.0;
+	s.albedo *= 1.0 - 0.95 * dark;
+	s.emission *= 1.0 - dark;
+	s.caustic *= 1.0 - dark;
 	// The caustics ride to light() in BACKLIGHT (this shader does its own lighting, so nothing else reads it).
 	BACKLIGHT = vec3(s.caustic * 1.5);
 	ALBEDO = s.albedo;

@@ -46,7 +46,7 @@ public class PlaneNavTests
             for (int tries = 0; tries < 4000 && found < 8; tries++)
             {
                 // Her and it a few metres apart as the fish swims, with rock between them.
-                var her = new Vector2(rng.Range(10f, LevelMap.Size - 10f), rng.Range(10f, LevelMap.Size - 10f));
+                var her = new Vector2(rng.Range(10f, LevelMap.Seeded - 10f), rng.Range(10f, LevelMap.Seeded - 10f));
                 var from = her + new Vector2(rng.Range(-9f, 9f), rng.Range(-9f, 9f));
                 if (!w.Clear(her, 0.6f) || !w.Clear(from, 0.5f) || Vector2.Distance(her, from) < 5f || w.LineOfSight(from, her)) continue;
                 w.Player.Position = w.Player.PrevPosition = her;

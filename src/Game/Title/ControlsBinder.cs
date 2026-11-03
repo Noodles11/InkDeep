@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using Godot;
 using OctoShoots.Game.Controls;
 
+using OctoShoots.Game.Ui;
+
 namespace OctoShoots.Game.Title;
 
 /// <summary>
@@ -20,21 +22,21 @@ public partial class ControlsBinder : VBoxContainer
     {
         AddThemeConstantOverride("separation", 6);
         // What is connected and what it really sends: a pad Godot does not recognise numbers its buttons its own way.
-        _pads = TitleStyle.Text("", 14, TitleStyle.Ink);
+        _pads = TitleStyle.Text("", 14, DrawerStyle.Text);
         _pads.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         AddChild(_pads);
-        _last = TitleStyle.Text("", 14, TitleStyle.InkSoft, TitleStyle.Mono);
+        _last = TitleStyle.Text("", 14, DrawerStyle.Soft, TitleStyle.Mono);
         AddChild(_last);
         var grid = new GridContainer { Columns = 3 };
         grid.AddThemeConstantOverride("h_separation", 18);
         grid.AddThemeConstantOverride("v_separation", 6);
         AddChild(grid);
-        grid.AddChild(TitleStyle.Text("Action", 14, TitleStyle.InkSoft, TitleStyle.BodyBold));
-        grid.AddChild(TitleStyle.Text("Keyboard & mouse", 14, TitleStyle.InkSoft, TitleStyle.BodyBold));
-        grid.AddChild(TitleStyle.Text("Controller", 14, TitleStyle.InkSoft, TitleStyle.BodyBold));
+        grid.AddChild(TitleStyle.Text("Action", 14, DrawerStyle.Soft, TitleStyle.BodyBold));
+        grid.AddChild(TitleStyle.Text("Keyboard & mouse", 14, DrawerStyle.Soft, TitleStyle.BodyBold));
+        grid.AddChild(TitleStyle.Text("Controller", 14, DrawerStyle.Soft, TitleStyle.BodyBold));
         foreach (var spec in InputSetup.Bindable)
         {
-            var name = TitleStyle.Text(spec.Name, 16, TitleStyle.Ink);
+            var name = TitleStyle.Text(spec.Name, 16, DrawerStyle.Text);
             name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             grid.AddChild(name);
             grid.AddChild(Slot(spec.Action, pad: false, locked: spec.KeyLocked));
@@ -44,7 +46,7 @@ public partial class ControlsBinder : VBoxContainer
         var foot = new HBoxContainer();
         foot.AddThemeConstantOverride("separation", 16);
         AddChild(foot);
-        var reset = TitleStyle.Pill("Reset to defaults", primary: false, size: 14);
+        var reset = DrawerStyle.Button("Reset to defaults", 14);
         reset.Pressed += () =>
         {
             _capturing = null;
@@ -53,7 +55,7 @@ public partial class ControlsBinder : VBoxContainer
             Refresh();
         };
         foot.AddChild(reset);
-        var help = TitleStyle.Text("Menus: D-pad moves, A confirms, B goes back. Keyboard only: F1 debug menu, F3 debug map, R regenerate, typing a seed.", 13, TitleStyle.InkSoft);
+        var help = TitleStyle.Text("Menus: D-pad moves, A confirms, B goes back. Keyboard only: F1 debug menu, F3 debug map, R regenerate, typing a seed.", 13, DrawerStyle.Soft);
         help.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         help.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         foot.AddChild(help);
@@ -74,15 +76,15 @@ public partial class ControlsBinder : VBoxContainer
         var button = new Button { CustomMinimumSize = new Vector2(190f, 32f), Disabled = locked, TooltipText = locked ? "Fixed on the keyboard" : "Press, then the new binding (Esc cancels, Delete clears)" };
         foreach (string state in new[] { "normal", "hover", "pressed", "focus", "disabled" })
         {
-            var box = TitleStyle.Box(state == "hover" ? new Color(1f, 0.93f, 0.9f) : Colors.White, state == "focus" ? TitleStyle.Mint : TitleStyle.Coral, 2, 10);
+            var box = TitleStyle.Box(state == "hover" ? DrawerStyle.TileHover : DrawerStyle.Tile, state == "focus" ? DrawerStyle.Gold : DrawerStyle.TileRim, 2, 10);
             box.ContentMarginLeft = box.ContentMarginRight = 10;
             box.ContentMarginTop = box.ContentMarginBottom = 4;
             button.AddThemeStyleboxOverride(state, box);
         }
         button.AddThemeFontOverride("font", TitleStyle.Mono);
         button.AddThemeFontSizeOverride("font_size", 14);
-        foreach (string c in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color" }) button.AddThemeColorOverride(c, TitleStyle.Ink);
-        button.AddThemeColorOverride("font_disabled_color", TitleStyle.InkSoft);
+        foreach (string c in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color" }) button.AddThemeColorOverride(c, DrawerStyle.Text);
+        button.AddThemeColorOverride("font_disabled_color", DrawerStyle.Soft);
         button.Pressed += () =>
         {
             _capturing = (action, pad);

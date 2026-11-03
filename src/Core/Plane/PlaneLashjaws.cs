@@ -78,7 +78,7 @@ public sealed partial class PlaneWorld
         var reach = Gen.TopDown.LevelValidator.Distances(Map, Map.Start.Position);
         for (int tries = 0; tries < 4000 && Lashjaws.Count < want; tries++)
         {
-            var at = new Vector2(_blightRng.Range(4f, Gen.TopDown.LevelMap.Size - 4f), _blightRng.Range(4f, Gen.TopDown.LevelMap.Size - 4f));
+            var at = new Vector2(_blightRng.Range(4f, Map.Size - 4f), _blightRng.Range(4f, Map.Size - 4f));
             if (!Clear(at, 0.5f) || Vector2.Distance(at, Map.Start.Position) < LashTuning.FromStart) continue;
             if (!Anchored(cast, Lashjaws.Count, at)) continue;
             if (Map.HasBoss && Vector2.Distance(at, ArenaCenter) < ArenaRadius + 6f) continue;

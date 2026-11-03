@@ -106,7 +106,7 @@ public static class LevelValidator
                 for (float k = -1f; k <= 1.01f; k += 0.5f)
                 {
                     Vector2 p = c.Points[i] + nrm * (k * MathF.Min(PathCore, c.HalfWidth));
-                    if (!InSquare(p)) continue;
+                    if (!InSquare(map, p)) continue;
                     float h = map.HeightAt(p);
                     if (h > -PathClearance) return $"a {c.Kind} corridor rises to {h:0.00} m at ({p.X:0.0}, {p.Y:0.0})";
                 }
@@ -121,7 +121,7 @@ public static class LevelValidator
     /// <summary>The playable area: grid points under the swim level joined (4-way) to the start's, in m².</summary>
     public static int WaterArea(LevelMap map)
     {
-        const int S = LevelMap.Samples;
+        int S = map.Samples;
         var (sx, sy) = ((int)MathF.Round(map.Start.Position.X), (int)MathF.Round(map.Start.Position.Y));
         var seen = new bool[S * S];
         var stack = new Stack<int>();
@@ -146,7 +146,7 @@ public static class LevelValidator
         return area;
     }
 
-    static bool InSquare(Vector2 p) => p.X >= 0f && p.Y >= 0f && p.X <= LevelMap.Size && p.Y <= LevelMap.Size;
+    static bool InSquare(LevelMap map, Vector2 p) => p.X >= 0f && p.Y >= 0f && p.X <= map.Size && p.Y <= map.Size;
 
     /// <summary>The lowest grid point inside the rim.</summary>
     public static Vector2 DeepestPoint(LevelMap map)
@@ -154,8 +154,8 @@ public static class LevelValidator
         float best = float.MaxValue;
         Vector2 at = default;
         int margin = (int)MathF.Ceiling(LevelMap.RimWidth) + 1;
-        for (int y = margin; y <= LevelMap.Size - margin; y++)
-        for (int x = margin; x <= LevelMap.Size - margin; x++)
+        for (int y = margin; y <= map.Size - margin; y++)
+        for (int x = margin; x <= map.Size - margin; x++)
             if (map[x, y] < best)
             {
                 best = map[x, y];
@@ -169,8 +169,8 @@ public static class LevelValidator
     {
         float best = float.MinValue;
         int margin = (int)MathF.Ceiling(LevelMap.RimWidth) + 1;
-        for (int y = margin; y <= LevelMap.Size - margin; y++)
-        for (int x = margin; x <= LevelMap.Size - margin; x++)
+        for (int y = margin; y <= map.Size - margin; y++)
+        for (int x = margin; x <= map.Size - margin; x++)
             best = MathF.Max(best, map[x, y]);
         return best;
     }
@@ -200,10 +200,11 @@ public static class LevelValidator
 
     // ───────────────────────── flood fill ─────────────────────────
 
-    const int N = LevelMap.Size;
+    /// <summary>The cell a position falls in, on a square of <paramref name="n"/> cells a side.</summary>
+    public static (int X, int Y) Cell(Vector2 p, int n = LevelMap.Seeded) => (Math.Clamp((int)p.X, 0, n - 1), Math.Clamp((int)p.Y, 0, n - 1));
 
-    /// <summary>The cell a position falls in.</summary>
-    public static (int X, int Y) Cell(Vector2 p) => (Math.Clamp((int)p.X, 0, N - 1), Math.Clamp((int)p.Y, 0, N - 1));
+    /// <summary>A field of distances' cells a side.</summary>
+    static int Side(float[] field) => (int)MathF.Round(MathF.Sqrt(field.Length));
 
     /// <summary>Half the bell's width (~0.8 m across): the clearance a swimmable cell must have all round.</summary>
     public const float BodyRadius = 0.4f;
@@ -227,13 +228,14 @@ public static class LevelValidator
     /// </summary>
     public static float[] Distances(LevelMap map, Vector2 from, float clearance = BodyRadius, Func<Vector2, bool>? blocked = null)
     {
+        int N = map.Size;
         var open = new bool[N * N];
         for (int y = 0; y < N; y++)
         for (int x = 0; x < N; x++)
             open[y * N + x] = CellOpen(map, x, y, clearance) && blocked?.Invoke(new Vector2(x + 0.5f, y + 0.5f)) != true;
         var dist = new float[N * N];
         Array.Fill(dist, float.PositiveInfinity);
-        var (sx, sy) = Cell(from);
+        var (sx, sy) = Cell(from, N);
         var queue = new PriorityQueue<int, float>();
         dist[sy * N + sx] = 0f;
         queue.Enqueue(sy * N + sx, 0f);
@@ -263,7 +265,8 @@ public static class LevelValidator
 
     public static float DistanceAt(float[] dist, Vector2 p)
     {
-        var (x, y) = Cell(p);
+        int N = Side(dist);
+        var (x, y) = Cell(p, N);
         return dist[y * N + x];
     }
 
@@ -274,8 +277,9 @@ public static class LevelValidator
     /// <summary>The route down a field of distances to where it was measured from, as cell centres (empty if unreachable).</summary>
     public static List<Vector2> Walk(float[] dist, Vector2 from)
     {
+        int N = Side(dist);
         var path = new List<Vector2>();
-        var (x, y) = Cell(from);
+        var (x, y) = Cell(from, N);
         if (float.IsPositiveInfinity(dist[y * N + x])) return path;
         for (int guard = 0; guard < N * N; guard++)
         {

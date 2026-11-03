@@ -8,17 +8,16 @@ namespace OctoShoots.Core.Plane;
 /// <summary>
 /// A cave's corruption on its walls (docs/ADVENTURE.md §8): washed-purple flakes like ash, clinging to the rock like
 /// scraps of torn wallpaper, in patches Spacing apart along every wall, at Layers heights from Low to High about her
-/// plane. Her searchlight clears a patch it falls on (some of it inside the beam, in sight of her) in BeamClear seconds;
-/// a shot of hers clears what lies within ShotReach of where it pops (× √ its share of a plain shot's damage). Sealing
-/// the cave's leak dissolves what is left in a wave out from it at SealWave m/s. Her softened all-round light clears none.
-/// It lies thickest over a secret's sealed wall (and a crab's fake one): patches SealSpacing apart all over its face,
+/// plane. Her light clears a patch within its reach (HerLightTuning.Reach × √ her glow stat, in sight of her) in
+/// LightClear seconds; a shot of hers clears what lies within ShotReach of where it pops (× √ its share of a plain
+/// shot's damage). Sealing the cave's leak dissolves what is left in a wave out from it at SealWave m/s. It lies thickest over a secret's sealed wall (and a crab's fake one): patches SealSpacing apart all over its face,
 /// hiding the carving under them, so clearing the walls is how she finds the ways in.
 /// </summary>
 public static class AshTuning
 {
     public const float Spacing = 0.9f, Low = -1.6f, High = 1.6f, SealSpacing = 0.45f;
     public const int Layers = 3;
-    public const float BeamClear = 0.6f, ShotReach = 0.9f, SealWave = 8f;
+    public const float LightClear = 0.6f, ShotReach = 0.9f, SealWave = 8f;
 }
 
 /// <summary>A patch of ash on a cave wall.</summary>
@@ -58,8 +57,8 @@ public sealed partial class PlaneWorld
         if (!Map.LeakCave) return;
         var rng = new Rng(Map.Seed ^ 0xA5A5A5UL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 28));
         float step = AshTuning.Spacing;
-        for (float y = step * 0.5f; y < LevelMap.Size; y += step)
-        for (float x = step * 0.5f; x < LevelMap.Size; x += step)
+        for (float y = step * 0.5f; y < Map.Size; y += step)
+        for (float x = step * 0.5f; x < Map.Size; x += step)
         {
             var p = new Vector2(x + rng.Range(-0.3f, 0.3f), y + rng.Range(-0.3f, 0.3f));
             if (!Map.IsOpen(p)) continue;
@@ -116,12 +115,12 @@ public sealed partial class PlaneWorld
         }
     }
 
-    /// <summary>Her searchlight clears the ash it falls on; the sealed leak's wave dissolves the rest.</summary>
+    /// <summary>Her light clears the ash within its reach; the sealed leak's wave dissolves the rest.</summary>
     void StepAsh()
     {
         if (Ash.Count == 0) return;
         var her = Player.Position;
-        float reach = BeamReach + 0.5f;
+        float reach = LightReach;
         foreach (var a in Ash)
         {
             if (a.Cover <= 0f) continue;
@@ -131,9 +130,11 @@ public sealed partial class PlaneWorld
                 if (a.Wave < 0f) ClearPatch(a);
                 continue;
             }
-            if (Defeated || Vector2.DistanceSquared(a.Wall, her) > reach * reach || !InBeam(a.Wall, a.Height, 0.25f) || !LineOfSight(her, a.At)) continue;
-            a.Cover -= Dt / AshTuning.BeamClear;
-            if (a.Cover <= 0f) ClearPatch(a);
+            if (Defeated || Vector2.DistanceSquared(a.Wall, her) + a.Height * a.Height > reach * reach || !LineOfSight(her, a.At)) continue;
+            a.Cover -= Dt / AshTuning.LightClear;
+            if (a.Cover > 0f) continue;
+            ClearPatch(a);
+            AshWashed++;
         }
     }
 
@@ -143,7 +144,11 @@ public sealed partial class PlaneWorld
         if (Ash.Count == 0 || !shot.FromPlayer) return;
         float reach = AshTuning.ShotReach * Math.Clamp(MathF.Sqrt(MathF.Max(shot.Damage, 0f) / PlaneCombatTuning.ShotDamage), 0.55f, 2.6f);
         foreach (var a in Ash)
-            if (a.Cover > 0f && Vector2.DistanceSquared(a.Wall, shot.Position) + a.Height * a.Height <= reach * reach) ClearPatch(a);
+            if (a.Cover > 0f && Vector2.DistanceSquared(a.Wall, shot.Position) + a.Height * a.Height <= reach * reach)
+            {
+                ClearPatch(a);
+                AshWashed++;
+            }
     }
 
     /// <summary>The cave's leak is sealed: its ash dissolves in a wave out from it.</summary>

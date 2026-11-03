@@ -31,12 +31,6 @@ public sealed class PlaneOptions
 
     public static PlaneOptions Default { get; set; } = new() { Adventure = true };
 
-    /// <summary>
-    /// A haven's (LevelMap.Haven): the open reef's own rules (so she, her arm and the HUD are as everywhere), but nothing
-    /// of the Leak in it: a hand-drawn map holds no leaks, so no ink.
-    /// </summary>
-    public static PlaneOptions Haven => OpenReef;
-
     /// <summary>The open reef's regions and leak caves.</summary>
     public static PlaneOptions OpenReef => new() { Adventure = true, Reef = true };
 }
@@ -44,9 +38,9 @@ public sealed class PlaneOptions
 /// <summary>The corruption's numbers (docs/CORRUPTION.md). Provisional, like the rest of plane combat.</summary>
 public static class CorruptionTuning
 {
-    /// <summary>The field's cells: half a metre.</summary>
+    /// <summary>The field's cells: half a metre, over a seeded level's square (a leak cave's; the open reef's big map has no ink on its floor).</summary>
     public const float Cell = 0.5f, CellArea = Cell * Cell;
-    public const int Cells = (int)(LevelMap.Size / Cell);
+    public const int Cells = (int)(LevelMap.Seeded / Cell);
 
     /// <summary>Her light cleanses the ground under her: this far, this fast (density per second at her centre).</summary>
     public const float HerRadius = 2.4f, HerRate = 3.2f;
@@ -157,7 +151,7 @@ public sealed class CorruptionField
             Guard[i] = guard;
             // Patchy noise, lifted toward the focus: thick there, scattered patches and glades elsewhere.
             float n = Noise(c.X * 0.09f + seed, c.Y * 0.09f - seed) * 0.65f + Noise(c.X * 0.23f - seed, c.Y * 0.23f + seed * 0.5f) * 0.35f;
-            float near = focus is { } f ? 1f - Math.Clamp(Vector2.Distance(c, f) / (LevelMap.Size * 0.75f), 0f, 1f) : 0.5f;
+            float near = focus is { } f ? 1f - Math.Clamp(Vector2.Distance(c, f) / (map.Size * 0.75f), 0f, 1f) : 0.5f;
             score[i] = n * (1f - CorruptionTuning.Condense) + near * CorruptionTuning.Condense;
             if (guard > 0f) open.Add(score[i]);
         }
@@ -220,7 +214,7 @@ public sealed class CorruptionField
         float got = 0f, weighted = 0f;
         var ring = new List<(float D, int I)>();
         // Outward in rings (2 m at a time), each taken nearest first.
-        float maxReach = LevelMap.Size * 1.5f;
+        float maxReach = LevelMap.Seeded * 1.5f;
         for (float inner = -1f, outer = 2f; got < want - 1e-4f && inner < maxReach; inner = outer, outer += 2f)
         {
             ring.Clear();

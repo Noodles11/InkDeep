@@ -51,7 +51,7 @@ public partial class CurrentView : Node3D
     {
         _world = world;
         Array.Clear(_rolled);
-        int n = LevelMap.Size * PerMetre;
+        int n = world.Map.Size * PerMetre;
         var cells = new float[n * n * 4];
         var nearest = new float[n * n];
         var own = new float[n * n * 3];

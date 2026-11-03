@@ -36,13 +36,15 @@ public static class LightSprings
         Shuffle(candidates, rng);
         // Failing those, anywhere there is water for it.
         var anywhere = new List<Vector2>();
-        for (int y = 6; y < LevelMap.Size; y += 3)
-            for (int x = 6; x < LevelMap.Size; x += 3) anywhere.Add(new Vector2(x, y));
+        for (int y = 6; y < map.Size; y += 3)
+            for (int x = 6; x < map.Size; x += 3) anywhere.Add(new Vector2(x, y));
         Shuffle(anywhere, rng);
         candidates.AddRange(anywhere);
         var places = map.Pois.Where(p => p.Kind is not (PoiKind.Start or PoiKind.Exit)).ToList();
         foreach (var at in candidates)
         {
+            // None in a haven's water: coming home to it heals her whole.
+            if (map.InHaven(at, SpringTuning.FromStart)) continue;
             if (Vector2.Distance(at, map.Start.Position) < SpringTuning.FromStart) continue;
             if (Vector2.Distance(at, map.Exit.Position) < map.Exit.Radius + SpringTuning.FromExit) continue;
             if (map.Shaft.Contains(at, 4f) || places.Any(p => Vector2.Distance(at, p.Position) < p.Radius + 5f)) continue;

@@ -1,20 +1,21 @@
-// Her searchlight burning the corrupted (docs/ADVENTURE.md §8; PlaneHerLight.cs), shared by every shader of a corrupted
+// Her shots' light burning the corrupted (docs/ADVENTURE.md §8; PlaneHerLight.cs), shared by every shader of a corrupted
 // body.
 //
-// Where her beam falls on a corrupted body — inside its cone and its reach, the side of the body facing her bell, nothing
-// of the reef in between — the ink sears. Not fire (it is under water): the ink bleaches and boils off. Its black thins to a pale,
-// glassy crust lit in her own colour from within, crazed by a crawling net of white-hot seams, fizzing with tiny
-// boiling specks; where the burn ends the crust meets the dark ink in one hard bright seam, its edge torn a little,
-// with a scorched dark band just past it. A body half in her beam shows the beam's edge across it so; a body wholly
-// in it shows it where its lit side turns away from her.
-//   her_burn   the beam's start, her bell's opening (world xyz), and how far it burns (w; 0: it burns nothing)
-//   her_beam   the way it shines (xyz, unit) and the cosine of its half-angle (w)
-//   her_light  her light's colour (HerColor)
+// Where a shot's light reaches a corrupted body — within its reach, the side of the body facing the shot — the ink sears.
+// Not fire (it is under water): the ink bleaches and boils off. Its black thins to a pale, glassy crust lit in her own
+// colour from within, crazed by a crawling net of white-hot seams, fizzing with tiny boiling specks; where the burn
+// ends the crust meets the dark ink in one hard bright seam, its edge torn a little, with a scorched dark band just past
+// it. A body half in a shot's light shows the light's edge across it so; a body wholly in it shows it where its lit side
+// turns away from the shot. (The sim lights only what is in sight of a shot; the game sends only shots burning something.)
+//   her_burn0…3  a burning shot's light (world xyz), and how far it reaches (w; 0: none)
+//   her_light    her light's colour (HerColor)
 
 #include "res://assets/shaders/light_field.gdshaderinc"
 
-global uniform vec4 her_burn;
-global uniform vec4 her_beam;
+global uniform vec4 her_burn0;
+global uniform vec4 her_burn1;
+global uniform vec4 her_burn2;
+global uniform vec4 her_burn3;
 global uniform vec3 her_light;
 
 float hb_hash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
@@ -43,31 +44,45 @@ float hb_craze(vec3 p) {
 	return 1.0 - smoothstep(0.0, 0.09, d2 - d1);
 }
 
+// One shot's light on a point (world position, normal n): how much of it is lit, its seam and its scorch, and how
+// squarely it faces the light; the strongest light kept.
+void hb_light(vec4 light, vec3 world, vec3 n, float spot, inout float lit, inout float seam, inout float scorch, inout float facing_out) {
+	if (light.w <= 0.0) return;
+	vec3 to = light.xyz - world;
+	float d = length(to);
+	// The light's edge: how far (metres) the point lies past its reach, torn a little and wavering.
+	float torn = (hb_noise(world * 4.0 + vec3(0.0, TIME * 0.8, spot)) - 0.5) * 0.12;
+	float past = d - light.w + torn;
+	float inside = 1.0 - smoothstep(-0.012, 0.012, past);
+	// Its side facing the shot (a little more from above, so a body is lit over its top, where the camera sees it); the
+	// line where it turns away torn the same.
+	vec3 from_light = normalize(to / max(d, 1e-3) + vec3(0.0, 0.35, 0.0));
+	float facing = dot(normalize(n), from_light) + (hb_noise(world * 7.0 + spot) - 0.5) * 0.14;
+	float front = smoothstep(-0.015, 0.03, facing);
+	float l = inside * front;
+	if (l > lit) facing_out = facing;
+	lit = max(lit, l);
+	// The seam: where the burn ends, across the reach's edge or round the turn of its body.
+	seam = max(seam, max((1.0 - smoothstep(0.0, 0.03, abs(past))) * front, (1.0 - smoothstep(0.0, 0.05, abs(facing - 0.008))) * inside));
+	// Just past it, on the dark side, the ink scorched darker.
+	scorch = max(scorch, max(smoothstep(0.0, 0.03, past) * (1.0 - smoothstep(0.03, 0.12, past)) * front,
+		(1.0 - smoothstep(-0.12, -0.02, facing)) * smoothstep(-0.3, -0.12, facing) * inside));
+}
+
 // The burn on a point of a corrupted body (world position and normal), as much of it as amount allows (0..1).
 void her_burn_paint(vec3 world, vec3 n, float spot, float amount, inout vec3 albedo, inout vec3 emission, inout float roughness) {
-	if (her_burn.w <= 0.0 || amount <= 0.0) return;
-	vec3 to = her_burn.xyz - world;
-	float d = length(to);
-	// The beam's edge: how far (metres, across the beam) the point lies outside its cone, or past its reach, torn a
-	// little and wavering.
-	float torn = (hb_noise(world * 4.0 + vec3(0.0, TIME * 0.8, spot)) - 0.5) * 0.12;
-	// (A fan, taller than wide: up and down count half, as PlaneHerLight's BeamFlat.)
-	vec3 flat_ = vec3(1.0, 0.5, 1.0);
-	float off = acos(clamp(dot(normalize(-to * flat_), normalize(her_beam.xyz * flat_)), -1.0, 1.0)) - acos(clamp(her_beam.w, -1.0, 1.0));
-	float past = max(off * d, d - her_burn.w) + torn;
-	float inside = 1.0 - smoothstep(-0.012, 0.012, past);
-	// Its side facing her bell (a little more from above, so a body is lit over its top, where the camera sees it); the
-	// line where it turns away torn the same.
-	vec3 from_her = normalize(to / max(d, 1e-3) + vec3(0.0, 0.35, 0.0));
-	float facing = dot(normalize(n), from_her) + (hb_noise(world * 7.0 + spot) - 0.5) * 0.14;
-	float front = smoothstep(-0.015, 0.03, facing);
-	float sight = smoothstep(0.35, 0.65, her_sight(world));
-	float lit = inside * front * sight * amount;
-	// The seam: where the burn ends, across the reach's edge or round the turn of its body.
-	float seam = max((1.0 - smoothstep(0.0, 0.03, abs(past))) * front, (1.0 - smoothstep(0.0, 0.05, abs(facing - 0.008))) * inside) * sight * amount;
-	// Just past it, on the dark side, the ink scorched darker.
-	float scorch = max(smoothstep(0.0, 0.03, past) * (1.0 - smoothstep(0.03, 0.12, past)) * front,
-		(1.0 - smoothstep(-0.12, -0.02, facing)) * smoothstep(-0.3, -0.12, facing) * inside) * sight * amount;
+	if (amount <= 0.0 || her_burn0.w + her_burn1.w + her_burn2.w + her_burn3.w <= 0.0) return;
+	float lit = 0.0, seam = 0.0, scorch = 0.0, facing = -1.0;
+	hb_light(her_burn0, world, n, spot, lit, seam, scorch, facing);
+	hb_light(her_burn1, world, n, spot, lit, seam, scorch, facing);
+	hb_light(her_burn2, world, n, spot, lit, seam, scorch, facing);
+	hb_light(her_burn3, world, n, spot, lit, seam, scorch, facing);
+	// Where one light's burn overlaps another's edge, no scorch shows inside the burn.
+	scorch *= 1.0 - lit;
+	lit *= amount;
+	seam *= amount;
+	scorch *= amount;
+	if (lit + seam + scorch <= 0.0) return;
 	vec3 c = her_light;
 	vec3 hot = mix(c, vec3(1.0), 0.35) * 1.2;
 	vec3 p = world * 3.4 + vec3(spot * 3.1);

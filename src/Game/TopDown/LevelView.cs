@@ -24,6 +24,8 @@ public sealed class LevelShape
     public Dictionary<int, Surface> OpenLids { get; } = new();
     /// <summary>Per roofed corridor (a shortcut tunnel), by its index, its roof.</summary>
     public Dictionary<int, Surface> TunnelRoofs { get; } = new();
+    /// <summary>Per cave opening (a region's mouths in order, then a leak cave's way out), its rock: roof, face and plug.</summary>
+    public List<LevelView.DoorRock> Doors { get; } = new();
     public List<FloraItem> Flora { get; } = new();
     public List<Transform3D> Rocks { get; } = new();
     public List<Transform3D> Glows { get; } = new();
@@ -33,13 +35,13 @@ public sealed class LevelShape
     {
         var shape = new LevelShape { Map = map };
         const int chunk = 32;
-        for (int cy = 0; cy < LevelMap.Size; cy += chunk)
-        for (int cx = 0; cx < LevelMap.Size; cx += chunk)
-            shape.Ground.Add(LevelView.ChunkSurface(map, cx, cy, Math.Min(cx + chunk, LevelMap.Size), Math.Min(cy + chunk, LevelMap.Size))!);
+        for (int cy = 0; cy < map.Size; cy += chunk)
+        for (int cx = 0; cx < map.Size; cx += chunk)
+            shape.Ground.Add(LevelView.ChunkSurface(map, cx, cy, Math.Min(cx + chunk, map.Size), Math.Min(cy + chunk, map.Size))!);
         // The reef carries on past the rim, so swimming along the edge never shows the void beyond the square.
         var spans = new List<(int A, int B, bool Inside)> { (-LevelView.Skirt, 0, false) };
-        for (int c = 0; c < LevelMap.Size; c += chunk) spans.Add((c, Math.Min(c + chunk, LevelMap.Size), true));
-        spans.Add((LevelMap.Size, LevelMap.Size + LevelView.Skirt, false));
+        for (int c = 0; c < map.Size; c += chunk) spans.Add((c, Math.Min(c + chunk, map.Size), true));
+        spans.Add((map.Size, map.Size + LevelView.Skirt, false));
         foreach (var sy in spans)
         foreach (var sx in spans)
             if (!sx.Inside || !sy.Inside) shape.Ground.Add(LevelView.SkirtSurface(map, sx.A, sy.A, sx.B, sy.B)!);
@@ -48,6 +50,8 @@ public sealed class LevelShape
             if (rock.Kind == SealKind.Secret && rock.Cave >= 0 && LevelView.LidSurface(map, map.Caves[rock.Cave], opened: true) is { } open) shape.OpenLids[rock.Cave] = open;
         for (int c = 0; c < map.Corridors.Count; c++)
             if (map.Corridors[c].Roofed && LevelView.TunnelRoofSurface(map, map.Corridors[c]) is { } roof) shape.TunnelRoofs[c] = roof;
+        foreach (var door in map.Mouths) shape.Doors.Add(LevelView.DoorSurfaces(map, door));
+        if (map.Way is { } way) shape.Doors.Add(LevelView.DoorSurfaces(map, way));
         if (!OS.GetCmdlineUserArgs().Contains("--dbg-nodecor")) LevelView.DecorItems(map, shape.Flora, shape.Rocks, shape.Glows);
         return shape;
     }
@@ -229,6 +233,7 @@ public partial class LevelView : Node3D
         }
         foreach (var canopy in map.Canopies) AddCanopy(canopy);
         AddShopGates(map);
+        AddDoors(map, shape);
         // Sealed walls: the reef wall carried on across their passage (LevelMap.Sealed), in the reef's own ground, so each is
         // one more stretch of wall. SealView carves its emblem; Slide brings it down.
         _seals.Clear();
@@ -401,7 +406,7 @@ public partial class LevelView : Node3D
     /// Colour by height: the seabed under the swim level by depth (sand shallows, sea-green mid water, blue-black deeps),
     /// the reef wall breaking the swim level, steep reef rock, coralline peaks, the dark rim.
     /// </summary>
-    static Color Band(float h, float x, float y)
+    static Color Band(float h, float x, float y, int size)
     {
         Color c;
         if (h < 0f)
@@ -414,7 +419,7 @@ public partial class LevelView : Node3D
         else if (h <= 6f) c = new Color(0.5f, 0.54f, 0.36f).Lerp(new Color(0.43f, 0.4f, 0.33f), h / 6f);
         else if (h <= 10f) c = new Color(0.43f, 0.4f, 0.33f).Lerp(new Color(0.4f, 0.36f, 0.32f), (h - 6f) / 4f);
         else c = new Color(0.4f, 0.36f, 0.32f).Lerp(new Color(0.66f, 0.43f, 0.52f), Mathf.Clamp((h - 10f) / 4f, 0f, 1f));
-        float e = Mathf.Max(Mathf.Min(Mathf.Min(x, y), Mathf.Min(LevelMap.Size - x, LevelMap.Size - y)), 0f);
+        float e = Mathf.Max(Mathf.Min(Mathf.Min(x, y), Mathf.Min(size - x, size - y)), 0f);
         if (e < LevelMap.RimWidth) c = c.Lerp(new Color(0.24f, 0.23f, 0.26f), 1f - e / LevelMap.RimWidth);
         // A little grain so flat colour reads as ground.
         uint hash = unchecked((uint)((int)(x * Sub) * 73856093 ^ (int)(y * Sub) * 19349663));
@@ -429,29 +434,29 @@ public partial class LevelView : Node3D
     /// smooth all through: no seam rings it.)
     /// </summary>
     static float SmoothHeight(LevelMap map, float x, float y) =>
-        map.HasBoss && map.Shaft.Contains(new System.Numerics.Vector2(x, y), 3f) ? map.HeightAt(new System.Numerics.Vector2(x, y)) : SmoothSample((i, j) => map[i, j], x, y);
+        map.HasBoss && map.Shaft.Contains(new System.Numerics.Vector2(x, y), 3f) ? map.HeightAt(new System.Numerics.Vector2(x, y)) : SmoothSample((i, j) => map[i, j], x, y, map.Size);
 
     /// <summary>A tunnel's roof where there is one, the terrain elsewhere (so its edge meets the ground exactly).</summary>
-    static float SmoothTunnelRoof(LevelMap map, float x, float y) => SmoothSample((i, j) => float.IsNaN(map.RoofAt(i, j)) ? map[i, j] : map.RoofAt(i, j), x, y);
+    static float SmoothTunnelRoof(LevelMap map, float x, float y) => SmoothSample((i, j) => float.IsNaN(map.RoofAt(i, j)) ? map[i, j] : map.RoofAt(i, j), x, y, map.Size);
 
     /// <summary>The cave roof where there is one, the terrain elsewhere (so a roof's edge meets the ground exactly).</summary>
-    static float SmoothRoof(LevelMap map, float x, float y) => SmoothSample((i, j) => float.IsNaN(map.LidAt(i, j)) ? map[i, j] : map.LidAt(i, j), x, y);
+    static float SmoothRoof(LevelMap map, float x, float y) => SmoothSample((i, j) => float.IsNaN(map.LidAt(i, j)) ? map[i, j] : map.LidAt(i, j), x, y, map.Size);
 
-    static float SmoothSample(Func<int, int, float> grid, float x, float y)
+    static float SmoothSample(Func<int, int, float> grid, float x, float y, int size)
     {
-        x = Mathf.Clamp(x, 0f, LevelMap.Size);
-        y = Mathf.Clamp(y, 0f, LevelMap.Size);
-        int ix = Math.Min((int)x, LevelMap.Size - 1), iy = Math.Min((int)y, LevelMap.Size - 1);
+        x = Mathf.Clamp(x, 0f, size);
+        y = Mathf.Clamp(y, 0f, size);
+        int ix = Math.Min((int)x, size - 1), iy = Math.Min((int)y, size - 1);
         float fx = x - ix, fy = y - iy;
         float Row(int j)
         {
-            int yy = Math.Clamp(j, 0, LevelMap.Size);
-            float H(int i) => grid(Math.Clamp(i, 0, LevelMap.Size), yy);
+            int yy = Math.Clamp(j, 0, size);
+            float H(int i) => grid(Math.Clamp(i, 0, size), yy);
             return CatmullRom(H(ix - 1), H(ix), H(ix + 1), H(ix + 2), fx);
         }
         float v = CatmullRom(Row(iy - 1), Row(iy), Row(iy + 1), Row(iy + 2), fy);
         // Never past the cell's own corners: over a big drop the spline would ring (ridges and pits along a cliff).
-        float c00 = grid(ix, iy), c10 = grid(Math.Min(ix + 1, LevelMap.Size), iy), c01 = grid(ix, Math.Min(iy + 1, LevelMap.Size)), c11 = grid(Math.Min(ix + 1, LevelMap.Size), Math.Min(iy + 1, LevelMap.Size));
+        float c00 = grid(ix, iy), c10 = grid(Math.Min(ix + 1, size), iy), c01 = grid(ix, Math.Min(iy + 1, size)), c11 = grid(Math.Min(ix + 1, size), Math.Min(iy + 1, size));
         return Mathf.Clamp(v, Mathf.Min(Mathf.Min(c00, c10), Mathf.Min(c01, c11)), Mathf.Max(Mathf.Max(c00, c10), Mathf.Max(c01, c11)));
     }
 
@@ -475,19 +480,19 @@ public partial class LevelView : Node3D
 
     /// <summary>The terrain with this sealed wall standing in it (LevelMap.Sealed where it stands, the ground elsewhere), smooth.</summary>
     public static float SealHeight(LevelMap map, WeakRock rock, float x, float y) =>
-        SmoothSample((i, j) => float.IsNaN(map.SealedAt(i, j)) || !OfSeal(map, rock, i, j) ? map[i, j] : map.SealedAt(i, j), x, y);
+        SmoothSample((i, j) => float.IsNaN(map.SealedAt(i, j)) || !OfSeal(map, rock, i, j) ? map[i, j] : map.SealedAt(i, j), x, y, map.Size);
 
     /// <summary>The terrain with what a long sealed wall leaves standing once its gate is open (LevelMap.SealedOpen), smooth.</summary>
     public static float RemainsHeight(LevelMap map, WeakRock rock, float x, float y) =>
-        SmoothSample((i, j) => float.IsNaN(map.SealedOpenAt(i, j)) || !OfSeal(map, rock, i, j) ? map[i, j] : map.SealedOpenAt(i, j), x, y);
+        SmoothSample((i, j) => float.IsNaN(map.SealedOpenAt(i, j)) || !OfSeal(map, rock, i, j) ? map[i, j] : map.SealedOpenAt(i, j), x, y, map.Size);
 
     /// <summary>A long sealed wall's remains: only where they stand above the ground.</summary>
     internal static LevelShape.Surface? RemainsSurface(LevelMap map, WeakRock rock)
     {
         int reach = (int)(rock.Radius + rock.Thick) + 10;
-        int x0 = Math.Max(0, (int)rock.Center.X - reach), x1 = Math.Min(LevelMap.Size, (int)rock.Center.X + reach);
-        int y0 = Math.Max(0, (int)rock.Center.Y - reach), y1 = Math.Min(LevelMap.Size, (int)rock.Center.Y + reach);
-        return SurfaceMesh((x, y) => RemainsHeight(map, rock, x, y) + 0.02f, x0, y0, x1, y1, (x, y) => RemainsHeight(map, rock, x, y) > SmoothHeight(map, x, y) + 0.04f);
+        int x0 = Math.Max(0, (int)rock.Center.X - reach), x1 = Math.Min(map.Size, (int)rock.Center.X + reach);
+        int y0 = Math.Max(0, (int)rock.Center.Y - reach), y1 = Math.Min(map.Size, (int)rock.Center.Y + reach);
+        return SurfaceMesh(map.Size, (x, y) => RemainsHeight(map, rock, x, y) + 0.02f, x0, y0, x1, y1, (x, y) => RemainsHeight(map, rock, x, y) > SmoothHeight(map, x, y) + 0.04f);
     }
 
     /// <summary>How far the sealed wall stands over the ground at its tallest (how far it has to slide down, below its remains too).</summary>
@@ -495,8 +500,8 @@ public partial class LevelView : Node3D
     {
         float most = 0f;
         int r = (int)(rock.Radius + rock.Thick) + 10;
-        for (int y = Math.Max(0, (int)rock.Center.Y - r); y <= Math.Min(LevelMap.Size, (int)rock.Center.Y + r); y++)
-        for (int x = Math.Max(0, (int)rock.Center.X - r); x <= Math.Min(LevelMap.Size, (int)rock.Center.X + r); x++)
+        for (int y = Math.Max(0, (int)rock.Center.Y - r); y <= Math.Min(map.Size, (int)rock.Center.Y + r); y++)
+        for (int x = Math.Max(0, (int)rock.Center.X - r); x <= Math.Min(map.Size, (int)rock.Center.X + r); x++)
             if (!float.IsNaN(map.SealedAt(x, y)) && OfSeal(map, rock, x, y)) most = Mathf.Max(most, map.SealedAt(x, y) - map[x, y]);
         return most;
     }
@@ -509,8 +514,8 @@ public partial class LevelView : Node3D
     {
         var feet = new List<Vector3>();
         int r = (int)(rock.Radius + rock.Thick) + 4;
-        for (int y = Math.Max(1, (int)rock.Center.Y - r); y <= Math.Min(LevelMap.Size - 1, (int)rock.Center.Y + r); y++)
-        for (int x = Math.Max(1, (int)rock.Center.X - r); x <= Math.Min(LevelMap.Size - 1, (int)rock.Center.X + r); x++)
+        for (int y = Math.Max(1, (int)rock.Center.Y - r); y <= Math.Min(map.Size - 1, (int)rock.Center.Y + r); y++)
+        for (int x = Math.Max(1, (int)rock.Center.X - r); x <= Math.Min(map.Size - 1, (int)rock.Center.X + r); x++)
         {
             float s0 = map.SealedAt(x, y);
             if (float.IsNaN(s0) || s0 - map[x, y] < 0.4f || map[x, y] > LevelMap.BlockHeight || !OfSeal(map, rock, x, y)) continue;
@@ -532,9 +537,9 @@ public partial class LevelView : Node3D
     internal static LevelShape.Surface? SealSurface(LevelMap map, WeakRock rock)
     {
         int reach = (int)(rock.Radius + rock.Thick) + 10;
-        int x0 = Math.Max(0, (int)rock.Center.X - reach), x1 = Math.Min(LevelMap.Size, (int)rock.Center.X + reach);
-        int y0 = Math.Max(0, (int)rock.Center.Y - reach), y1 = Math.Min(LevelMap.Size, (int)rock.Center.Y + reach);
-        return SurfaceMesh((x, y) => SealHeight(map, rock, x, y) + 0.01f, x0, y0, x1, y1, (x, y) => SealHeight(map, rock, x, y) > SmoothHeight(map, x, y) + 0.04f);
+        int x0 = Math.Max(0, (int)rock.Center.X - reach), x1 = Math.Min(map.Size, (int)rock.Center.X + reach);
+        int y0 = Math.Max(0, (int)rock.Center.Y - reach), y1 = Math.Min(map.Size, (int)rock.Center.Y + reach);
+        return SurfaceMesh(map.Size, (x, y) => SealHeight(map, rock, x, y) + 0.01f, x0, y0, x1, y1, (x, y) => SealHeight(map, rock, x, y) > SmoothHeight(map, x, y) + 0.04f);
     }
 
     /// <summary>
@@ -542,7 +547,7 @@ public partial class LevelView : Node3D
     /// drawn all the way down, so the water's murk takes it smoothly rather than at a cut edge.)
     /// </summary>
     internal static LevelShape.Surface? ChunkSurface(LevelMap map, int x0, int y0, int x1, int y1) =>
-        SurfaceMesh((x, y) => SmoothHeight(map, x, y), x0, y0, x1, y1,
+        SurfaceMesh(map.Size, (x, y) => SmoothHeight(map, x, y), x0, y0, x1, y1,
             (x, y) => SmoothHeight(map, x, y) > LevelMap.ShaftBottom + 0.3f || map.Abyss && !map.Shaft.Contains(new System.Numerics.Vector2(x, y), 3f));
 
 
@@ -554,11 +559,11 @@ public partial class LevelView : Node3D
     /// into a ragged ridge at about the rim's top, so the edge reads as more reef rather than a cliff into nothing.
     /// </summary>
     internal static LevelShape.Surface? SkirtSurface(LevelMap map, int x0, int y0, int x1, int y1) =>
-        SurfaceMesh((x, y) => SkirtHeight(map, x, y), x0, y0, x1, y1, null);
+        SurfaceMesh(map.Size, (x, y) => SkirtHeight(map, x, y), x0, y0, x1, y1, null);
 
     static float SkirtHeight(LevelMap map, float x, float y)
     {
-        float cx = Mathf.Clamp(x, 0f, LevelMap.Size), cy = Mathf.Clamp(y, 0f, LevelMap.Size);
+        float cx = Mathf.Clamp(x, 0f, map.Size), cy = Mathf.Clamp(y, 0f, map.Size);
         float edge = SmoothHeight(map, cx, cy);
         float d = Mathf.Sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy));
         if (d <= 0f) return edge;
@@ -600,8 +605,8 @@ public partial class LevelView : Node3D
         var points = cave.Chambers.Select(c => c.Center).ToList();
         if (end is { } e0) points.Add(e0);
         float pad = cave.Chambers.Max(c => c.Radius) + 6f;
-        int x0 = Math.Max(0, (int)(points.Min(p => p.X) - pad)), x1 = Math.Min(LevelMap.Size, (int)(points.Max(p => p.X) + pad));
-        int y0 = Math.Max(0, (int)(points.Min(p => p.Y) - pad)), y1 = Math.Min(LevelMap.Size, (int)(points.Max(p => p.Y) + pad));
+        int x0 = Math.Max(0, (int)(points.Min(p => p.X) - pad)), x1 = Math.Min(map.Size, (int)(points.Max(p => p.X) + pad));
+        int y0 = Math.Max(0, (int)(points.Min(p => p.Y) - pad)), y1 = Math.Min(map.Size, (int)(points.Max(p => p.Y) + pad));
         int w = x1 - x0 + 1, h = y1 - y0 + 1;
         bool Under(int x, int y)
         {
@@ -657,8 +662,8 @@ public partial class LevelView : Node3D
             int i = x - x0, j = y - y0;
             return i >= 0 && j >= 0 && i < w && j < h && under[j * w + i] ? roof[j * w + i] : Around(x, y);
         }
-        float Height(float x, float y) => SmoothSample(Grid, x, y);
-        return SurfaceMesh((x, y) => Height(x, y) + 0.03f, x0, y0, x1, y1, (x, y) => Height(x, y) > SmoothHeight(map, x, y) + 0.05f);
+        float Height(float x, float y) => SmoothSample(Grid, x, y, map.Size);
+        return SurfaceMesh(map.Size, (x, y) => Height(x, y) + 0.03f, x0, y0, x1, y1, (x, y) => Height(x, y) > SmoothHeight(map, x, y) + 0.05f);
     }
 
     /// <summary>
@@ -668,8 +673,8 @@ public partial class LevelView : Node3D
     internal static LevelShape.Surface? TunnelRoofSurface(LevelMap map, Corridor corridor)
     {
         float reach = corridor.HalfWidth + 5f;
-        int x0 = Math.Max(0, (int)(corridor.Points.Min(p => p.X) - reach)), x1 = Math.Min(LevelMap.Size, (int)(corridor.Points.Max(p => p.X) + reach) + 1);
-        int y0 = Math.Max(0, (int)(corridor.Points.Min(p => p.Y) - reach)), y1 = Math.Min(LevelMap.Size, (int)(corridor.Points.Max(p => p.Y) + reach) + 1);
+        int x0 = Math.Max(0, (int)(corridor.Points.Min(p => p.X) - reach)), x1 = Math.Min(map.Size, (int)(corridor.Points.Max(p => p.X) + reach) + 1);
+        int y0 = Math.Max(0, (int)(corridor.Points.Min(p => p.Y) - reach)), y1 = Math.Min(map.Size, (int)(corridor.Points.Max(p => p.Y) + reach) + 1);
         bool Along(float x, float y)
         {
             var q = new System.Numerics.Vector2(x, y);
@@ -677,12 +682,12 @@ public partial class LevelView : Node3D
                 if (Geo.SegmentDistance(q, corridor.Points[i - 1], corridor.Points[i]) < reach) return true;
             return false;
         }
-        return SurfaceMesh((x, y) => SmoothTunnelRoof(map, x, y) + 0.03f, x0, y0, x1, y1,
+        return SurfaceMesh(map.Size, (x, y) => SmoothTunnelRoof(map, x, y) + 0.03f, x0, y0, x1, y1,
             (x, y) => Along(x, y) && SmoothTunnelRoof(map, x, y) > SmoothHeight(map, x, y) + 0.05f);
     }
 
     /// <summary>A triangle is kept when any of its corners passes <paramref name="keep"/>.</summary>
-    static LevelShape.Surface? SurfaceMesh(Func<float, float, float> height, int x0, int y0, int x1, int y1, Func<float, float, bool>? keep)
+    static LevelShape.Surface? SurfaceMesh(int size, Func<float, float, float> height, int x0, int y0, int x1, int y1, Func<float, float, bool>? keep)
     {
         int w = (x1 - x0) * Sub + 1, h = (y1 - y0) * Sub + 1;
         var verts = new Vector3[w * h];
@@ -698,7 +703,7 @@ public partial class LevelView : Node3D
             float hl = height(x - e, y), hr = height(x + e, y);
             float hd = height(x, y - e), hu = height(x, y + e);
             normals[j * w + i] = new Vector3(hl - hr, 2f * e, hd - hu).Normalized();
-            colors[j * w + i] = Band(hgt, x, y);
+            colors[j * w + i] = Band(hgt, x, y, size);
         }
         var indices = new List<int>((w - 1) * (h - 1) * 6);
         for (int j = 0; j + 1 < h; j++)
@@ -828,6 +833,161 @@ public partial class LevelView : Node3D
             _canopies.Add((gate, material, 1f));
             _gates.Add((gate, inlay));
         }
+    }
+
+    // ───────────────────────── cave openings ─────────────────────────
+
+    /// <summary>A cave opening's rock: the roof over its passage, the face its arch is cut in, and the plug that closes it.</summary>
+    public sealed record DoorRock(LevelShape.Surface? Roof, LevelShape.Surface? Face, LevelShape.Surface? Plug);
+
+    /// <summary>The opening's arch: its half-span (its jambs stand on the passage's sides) and the height its round top springs from.</summary>
+    public const float DoorArchHalf = Doorway.HalfWidth + 0.15f, DoorSpring = Doorway.ArchTop - DoorArchHalf;
+    /// <summary>The roof's reach beside the passage, and past its back.</summary>
+    const float DoorSide = Doorway.HalfWidth + 1.6f, DoorPast = 1f;
+
+    /// <summary>The arch's underside over the swim level at this far off its middle (only within its half-span).</summary>
+    public static float DoorArch(float off) => DoorSpring + Mathf.Sqrt(Mathf.Max(DoorArchHalf * DoorArchHalf - off * off, 0f));
+
+    /// <summary>
+    /// A cave opening's rock (docs/RPG-PROPOSAL.md §2.3), worked out in the opening's own frame (in along Into, off
+    /// across it): its roof, the rock that stood over the passage (LevelMap.Roof) from its face back; its face, the
+    /// rock standing at its threshold from the ground (or the arch) up to the roof's edge, with the round-topped
+    /// arch cut in it; and its plug, rock filling the arch, for a mouth shut once its cave is sealed.
+    /// </summary>
+    internal static DoorRock DoorSurfaces(LevelMap map, Doorway door)
+    {
+        var into = door.Into;
+        var across = door.Across;
+        System.Numerics.Vector2 At(float u, float v) => door.At + into * u + across * v;
+        float Ground(float u, float v)
+        {
+            var p = At(u, v);
+            return SmoothHeight(map, p.X, p.Y);
+        }
+        float Top(float u, float v)
+        {
+            var p = At(u, v);
+            return TopAt(map, p.X, p.Y);
+        }
+        var outward = new Vector3(-into.X, 0f, -into.Y);
+        const float step = 0.25f;
+
+        // The roof: a sheet over the passage, kept where there is water under it.
+        int nu = (int)((Doorway.Depth + DoorPast) / step) + 1, nv = (int)(2f * DoorSide / step) + 1;
+        var verts = new List<Vector3>();
+        var normals = new List<Vector3>();
+        var colors = new List<Color>();
+        var indices = new List<int>();
+        const float e = 0.35f;
+        for (int j = 0; j < nv; j++)
+        for (int i = 0; i < nu; i++)
+        {
+            float u = i * step, v = -DoorSide + j * step;
+            var p = At(u, v);
+            float h = Top(u, v) + 0.03f;
+            verts.Add(new Vector3(p.X, h, p.Y));
+            float hx = TopAt(map, p.X - e, p.Y) - TopAt(map, p.X + e, p.Y), hz = TopAt(map, p.X, p.Y - e) - TopAt(map, p.X, p.Y + e);
+            normals.Add(new Vector3(hx, 2f * e, hz).Normalized());
+            colors.Add(Band(h, p.X, p.Y, map.Size));
+        }
+        bool Over(int k) => verts[k].Y > SmoothHeight(map, verts[k].X, verts[k].Z) + 0.08f;
+        for (int j = 0; j + 1 < nv; j++)
+        for (int i = 0; i + 1 < nu; i++)
+        {
+            int a = j * nu + i, b = a + 1, c = a + nu, d = c + 1;
+            if (!Over(a) && !Over(b) && !Over(c) && !Over(d)) continue;
+            Tri(verts, indices, a, b, d, Vector3.Up);
+            Tri(verts, indices, a, d, c, Vector3.Up);
+        }
+        var roof = indices.Count > 0 ? new LevelShape.Surface(verts.ToArray(), normals.ToArray(), colors.ToArray(), indices.ToArray()) : null;
+
+        // The face: columns across the threshold, from the arch (or the ground beside it) up to the roof's edge.
+        LevelShape.Surface? Sheet(float u, float half, Func<float, float> bottom, Func<float, float> top)
+        {
+            var fv = new List<Vector3>();
+            var fn = new List<Vector3>();
+            var fc = new List<Color>();
+            var fi = new List<int>();
+            int columns = (int)(2f * half / 0.125f);
+            for (int k = 0; k <= columns; k++)
+            {
+                float v = -half + k * (2f * half / columns);
+                var p = At(u, v);
+                float lo = bottom(v), hi = Mathf.Max(top(v), lo);
+                fv.Add(new Vector3(p.X, lo, p.Y));
+                fv.Add(new Vector3(p.X, hi, p.Y));
+                fn.Add(outward);
+                fn.Add(outward);
+                fc.Add(Band(lo, p.X, p.Y, map.Size));
+                fc.Add(Band(hi, p.X, p.Y, map.Size));
+                if (k == 0) continue;
+                int a0 = (k - 1) * 2, a1 = a0 + 1, b0 = k * 2, b1 = b0 + 1;
+                if (fv[a1].Y - fv[a0].Y < 0.02f && fv[b1].Y - fv[b0].Y < 0.02f) continue;
+                Tri(fv, fi, a0, a1, b1, outward);
+                Tri(fv, fi, a0, b1, b0, outward);
+            }
+            return fi.Count > 0 ? new LevelShape.Surface(fv.ToArray(), fn.ToArray(), fc.ToArray(), fi.ToArray()) : null;
+        }
+        var face = Sheet(0f, DoorSide, v => Mathf.Abs(v) < DoorArchHalf ? DoorArch(v) : Ground(0f, v) - 0.4f, v => Top(0.01f, v));
+        var plug = Sheet(0.3f, DoorArchHalf + 0.05f, v => Ground(0.3f, v) - 0.4f, v => (Mathf.Abs(v) < DoorArchHalf ? DoorArch(v) : DoorSpring) + 0.1f);
+        return new DoorRock(roof, face, plug);
+    }
+
+    /// <summary>The rock's top at a point: a roof over it where there is one, else the ground.</summary>
+    static float TopAt(LevelMap map, float x, float y) => Mathf.Max(SmoothTunnelRoof(map, x, y), SmoothHeight(map, x, y));
+
+    /// <summary>A triangle wound to face <paramref name="toward"/> (Godot's front face: clockwise seen from that side).</summary>
+    static void Tri(List<Vector3> verts, List<int> indices, int a, int b, int c, Vector3 toward)
+    {
+        var n = (verts[b] - verts[a]).Cross(verts[c] - verts[a]);
+        if (n.Dot(toward) < 0f) indices.AddRange(new[] { a, b, c });
+        else indices.AddRange(new[] { a, c, b });
+    }
+
+    /// <summary>Each region mouth's plug, by its index: shown while that mouth is shut.</summary>
+    readonly List<MeshInstance3D> _doorPlugs = new();
+
+    /// <summary>
+    /// The cave openings' rock: each one's roof and face in the reef's own ground, a rough rim of rock round its arch,
+    /// and (a region's mouths) its plug, hidden till it shuts.
+    /// </summary>
+    void AddDoors(LevelMap map, LevelShape shape)
+    {
+        _doorPlugs.Clear();
+        var doors = map.Mouths.ToList();
+        if (map.Way is { } way) doors.Add(way);
+        // The ground darkens into each passage (topdown_ground's door_dark).
+        var dark = new Vector4[4];
+        for (int k = 0; k < doors.Count && k < dark.Length; k++) dark[k] = new Vector4(doors[k].At.X, doors[k].At.Y, doors[k].Into.X, doors[k].Into.Y);
+        _ground.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("doors"), dark);
+        _ground.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("door_count"), Math.Min(doors.Count, dark.Length));
+        _ground.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("door_size"), new Vector3(Doorway.Depth, Doorway.HalfWidth, Doorway.ArchTop));
+        for (int k = 0; k < doors.Count && k < shape.Doors.Count; k++)
+        {
+            var door = doors[k];
+            var rock = shape.Doors[k];
+            // In the reef's own ground, so the rock over it is one with the wall it is cut in.
+            var skin = _ground;
+            if (rock.Roof is { } roof) AddChild(new MeshInstance3D { Mesh = ToMesh(roof), MaterialOverride = skin });
+            if (rock.Face is { } face) AddChild(new MeshInstance3D { Mesh = ToMesh(face), MaterialOverride = skin });
+            var at = door.At + door.Into * 0.1f;
+            var side = new Vector3(door.Across.X, 0f, door.Across.Y);
+            var fwd = new Vector3(door.Into.X, 0f, door.Into.Y);
+            float floor = SmoothHeight(map, at.X, at.Y) - 0.4f;
+            AddChild(new MeshInstance3D { Mesh = GateMesh(new Vector3(at.X, 0f, at.Y), side, fwd, DoorArchHalf + 0.1f, floor, DoorSpring), MaterialOverride = Rock(0.25f) });
+            if (k >= map.Mouths.Count || rock.Plug is not { } plug) continue;
+            var shut = new MeshInstance3D { Mesh = ToMesh(plug), MaterialOverride = skin, Visible = false };
+            AddChild(shut);
+            while (_doorPlugs.Count < k) _doorPlugs.Add(null!);
+            _doorPlugs.Add(shut);
+        }
+    }
+
+    /// <summary>A region's shut mouths stand closed with rock (their plugs shown); the open ones stand open.</summary>
+    public void ShutDoors(IReadOnlySet<int> shut)
+    {
+        for (int i = 0; i < _doorPlugs.Count; i++)
+            if (_doorPlugs[i] is { } plug) plug.Visible = shut.Contains(i);
     }
 
     /// <summary>The nautilus coated in gold (its silver and its tarnish warmed): the shells set in a shop's gateway.</summary>
@@ -1285,7 +1445,7 @@ public partial class LevelView : Node3D
         PoiKind.Exit when map.LeakCave => "The leak",
         PoiKind.Exit when map.HasBoss => "The Crack",
         PoiKind.Start when map.LeakCave => "Cave mouth",
-        PoiKind.Start when map.Haven => "Lantern post",
+        PoiKind.Start when map.Haven is not null => "Lantern post",
         _ => PlaceName(kind),
     };
 
@@ -1372,8 +1532,8 @@ public partial class LevelView : Node3D
         }
         var rift = map.Exit;
         const float step = 1.1f;
-        for (float y = LevelMap.RimWidth + 1f; y < LevelMap.Size - LevelMap.RimWidth - 1f; y += step)
-        for (float x = LevelMap.RimWidth + 1f; x < LevelMap.Size - LevelMap.RimWidth - 1f; x += step)
+        for (float y = LevelMap.RimWidth + 1f; y < map.Size - LevelMap.RimWidth - 1f; y += step)
+        for (float x = LevelMap.RimWidth + 1f; x < map.Size - LevelMap.RimWidth - 1f; x += step)
         {
             var p = new System.Numerics.Vector2(x + Hash(x, y, 1) * step, y + Hash(x, y, 2) * step);
             float h = map.HeightAt(p);

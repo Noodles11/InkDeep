@@ -200,10 +200,17 @@ public partial class MinimapView : Control
         foreach (var sp in world.Springs)
             if (!sp.Spent) map.Springs.Add((sp.Position, sp.Bathing));
         // The main current shows once it runs (Sea Chart Nautilus remembers every current).
-        map.Current = world.Currents.Find(c => c.Strength > 0f)?.Course;
+        map.Current = world.Currents.Find(c => c.Strength > 0f && !c.Holds)?.Course;
     }
 
     public void SetVisited(IReadOnlySet<int> visited) => _map.Visited = visited;
+
+    /// <summary>What her requests name, ringed on the map.</summary>
+    public void SetMarks(IEnumerable<(System.Numerics.Vector2 At, Color Colour)> marks)
+    {
+        _map.Marks.Clear();
+        _map.Marks.AddRange(marks);
+    }
 
     /// <summary>Brass Compass: every place on the map, visited or not (secret rooms excepted).</summary>
     public bool Landmarks

@@ -81,9 +81,6 @@ uniform vec4 deep_fish_ways[16];
 uniform int deep_fish_count = 0;
 /// How much a fish's shadow darkens what lies under it.
 uniform float deep_fish_shade = 0.65;
-/// Her bubbles in flight as lenses (CombatView.Lenses): x, height, z (world) and radius.
-uniform vec4 lenses[12];
-uniform int lens_count = 0;
 /// Swells in the water where she set off, turned or dashed (WaterSwells): x, z (world), age 0 → 1, strength; and the
 /// way she was going (x, z; none for a ring) and its reach (a share of 2.6 m; 0 for 1). A faint spreading ring of
 /// refraction at her plane, strongest behind her.
@@ -249,13 +246,12 @@ void fragment() {
 		// Metres on her plane to the screen (east is right, south, +z, is down): the framing shows about 25.6 m top to
 		// bottom.
 		suv += bend * 2.5 / 25.6 * vec2(VIEWPORT_SIZE.y / VIEWPORT_SIZE.x, 1.0) * wobble;
-		// The leaks: hot air in the shape of an X, facing the camera (the framing's 60° tilt taken out of its height).
+		// The leaks: hot air over each one's disc, where the ink comes through (the framing's 60° tilt taken out of its
+		// height).
 		for (int i = 0; i < leak_count; i++) {
 			vec2 d = (sp.xz - leaks[i].xy) * vec2(1.0, 0.866);
 			if (dot(d, d) > 4.0) continue;
-			vec2 r = vec2(d.x + d.y, d.x - d.y) * 0.7071;
-			float arm = min(max(abs(r.x) - 0.26, abs(r.y) - 1.3), max(abs(r.y) - 0.26, abs(r.x) - 1.3));
-			float hot = (1.0 - smoothstep(-0.12, 0.34, arm)) * leaks[i].z;
+			float hot = (1.0 - smoothstep(0.35, 1.1, length(d))) * leaks[i].z;
 			suv += (eddy * 0.9 + vec2(0.0, sin(TIME * 5.0 + sp.x * 3.0) * 0.12)) * hot * 0.6 / 25.6 * vec2(VIEWPORT_SIZE.y / VIEWPORT_SIZE.x, 1.0);
 		}
 		// The currents: the picture wavers, like the air over a hot road, bent by eddies of denser water rolling down the
@@ -374,33 +370,6 @@ void fragment() {
 		float shadow = (1.0 - smoothstep(0.1, 0.62, d)) * k * (1.0 - smoothstep(2.0, 5.0, gap));
 		col *= 1.0 - 0.6 * shadow;
 	}
-	// Her bubbles are lenses too: the light through each (the sun's from above in the lit depths, hers from her lantern)
-	// is gathered into a soft bright spot on what lies below it, a little wider and softer the farther it falls.
-	if (lens_count > 0 && !open_deep) {
-		vec3 sl = normalize(sun_dir);
-		float sun_k = reef_caustics * light_strength * sun_lit(world);
-		for (int i = 0; i < lens_count; i++) {
-			vec4 b = lenses[i];
-			float fall_h = b.y - world.y;
-			if (fall_h < 0.3) continue;
-			float reach = smoothstep(0.3, 1.2, fall_h);
-			// The sun's rays through it, parallel: where this point's ray crossed the bubble's height.
-			vec3 q = world - sl * (fall_h / -sl.y);
-			float spot_r = b.w * (0.7 + fall_h * 0.12);
-			float ds = distance(q.xz, b.xz);
-			col += reef_sun * exp(-pow(ds / spot_r, 2.0)) * sun_k * 0.3 * reach;
-			// Her light's rays through it, from her lantern: the spot lands farther out and spreads with the throw.
-			vec3 lh = her_light_at.xyz;
-			vec3 lp = world - lh;
-			float t = (b.y - lh.y) / min(lp.y, -1e-3);
-			if (t > 0.0 && t < 1.0) {
-				float dh = distance((lh + lp * t).xz, b.xz) / max(t, 0.2);
-				float r = b.w / max(t, 0.2) * 0.8;
-				col += her_warm * exp(-pow(dh / r, 2.0)) * her_reach(world) * her_lantern * 0.3 * reach;
-			}
-		}
-	}
-
 	vec3 cam = CAMERA_POSITION_WORLD;
 	vec3 ray = normalize(world - cam);
 
@@ -460,7 +429,7 @@ void fragment() {
 	float wl = max(dot(reef_water_deep, vec3(0.299, 0.587, 0.114)), 0.01);
 	// (Not what her own light falls on: her warmth reaches the eye.)
 	col = mix(col, reef_water_deep / wl * luma, (1.0 - smoothstep(0.0, 0.3, luma)) * 0.45 * (1.0 - lit));
-	col = mix(col, col * (reef_sun * 0.2 + 0.82), smoothstep(0.5, 1.0, luma) * 0.3);
+	col = mix(col, col * (reef_sun * 0.2 + 0.82), smoothstep(0.5, 1.0, luma) * 0.3 * (1.0 - lit));
 
 	// A cave's dark is never black: where the depth breaks (an edge of rock, a ledge, a creature's rim) a faint cool line
 	// shows what is there, all but hidden; not where her light already shows it.

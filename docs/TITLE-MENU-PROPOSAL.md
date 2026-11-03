@@ -54,8 +54,7 @@ The title renders the real game behind the menu.
   Clementine. Each freed boss adds itself the same way, so the screen shows progress (DESIGN-2D §13.2).
 
 **Mood**
-- It is calm, bright and underwater: teal water, warm Clementine light, pearl-white cards.
-- It uses the same bright language as the achievement banner, so the meta screens feel like one family.
+- It is calm, bright and underwater: teal water and warm Clementine light, with the game's own dark drawers.
 
 ### 3.2 Type and colour
 
@@ -69,14 +68,24 @@ The title renders the real game behind the menu.
 
 **Colours**
 
+On the water (the ring, the seed box, prompts under an item):
+
 | Token | Use |
 |---|---|
-| Pearl `#fffaf4` | card faces |
-| Coral `#ff7a6b` | rims, the focused item, primary buttons |
-| Mint `#6fe3c1` | positive values, "new" chips, the seed box when valid |
-| Butter `#ffd166` | records and highlights ("best") |
-| Ink `#3b1f2b` | text on cards |
-| Deep `#0e3237` | text on the water, panel shadows |
+| Pearl `#fffaf4` | the items, the seed box's face |
+| Coral `#ff7a6b` | the focused item, the seed box's rim and buttons |
+| Mint `#6fe3c1` | the seed box when valid |
+| Deep `#0e3237` | text on the water |
+
+In the drawers (`DrawerStyle`, shared with the game's pause menu and the bay's mirror):
+
+| Token | Use |
+|---|---|
+| Panel `#081217` at 94% | the drawer's face, its left edge ruled in gold |
+| Gold `#ffd173` | titles, headings, rims, chips ("best", "boss", the chosen tab) |
+| Soft `#bfd9e0` | summaries, labels, muted values |
+| Text `#ffedd9` | names and values |
+| Tile `#122129` at 95% | tiles, fields and slots on the panel |
 
 ### 3.3 Layout (1600 × 900 reference; scales to the window, safe-area aware)
 
@@ -110,13 +119,16 @@ The title renders the real game behind the menu.
   - **Sea-pedia:** how much you have found.
   - **Statistics:** your best room.
 - **The focused item** turns coral and moves 12 px right.
-- **Continue** appears only when there is a suspended run. When it is there, it is first and focused by default;
-  otherwise **New run** is.
+- **Continue** wakes the jelly played last (`SaveFile.Chosen`) in Lantern Bay; it shows only when there is one, and
+  is then first and focused. **Play** shows her save slots, the jellies floating side by side in the sea with a card
+  under each (no drawer: docs/RPG-PROPOSAL.md, "Jellies").
+  A suspended run of the old mode is continued from Save & load.
 
-**Sub-screens** open as a large pearl card that rises from the bottom right:
-- 1040 × 720 px, with an 18 px radius and a 3 px coral rim;
-- the menu column stays visible but dims to 40%;
-- the backdrop keeps moving behind it.
+**Sub-screens** open as drawers, as the game's pause menu does (`DrawerStyle`):
+- the screen's height, against its right edge, sliding in from the right in 0.35 s and back out the same way;
+- a dark face with a gold rule down its left edge, a gold title, and the game's plain buttons;
+- up to 1060 px wide;
+- the ring dims behind it, and the backdrop keeps moving.
 
 ## 4. The screens
 

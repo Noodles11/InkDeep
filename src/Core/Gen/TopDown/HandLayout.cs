@@ -20,19 +20,29 @@ public sealed class HandLayout
     public string Seed { get; set; } = "";
     /// <summary>Its biome, as a depth (ReefLook): 1 the Shallows.</summary>
     public int Depth { get; set; } = 1;
+    /// <summary>The depth whose look (ReefLook) it takes, when not its own (the Sunlit Shallows region: the Sunken Galleon's).</summary>
+    public int? Look { get; set; }
     public float Menace { get; set; }
-    /// <summary>A safe place (Lantern Bay): no ink, no leaks, nothing corrupted, and no way down; its exit is a current station.</summary>
-    public bool Haven { get; set; }
+    /// <summary>A haven's water (Lantern Bay, in a corner of the reef): the box it fills, where nothing harms her (LevelMap.Haven).</summary>
+    public HandBox? Haven { get; set; }
+    /// <summary>Its exit chamber is a current station, where the ride to another map starts.</summary>
+    public bool Station { get; set; }
     public List<HandChamber> Chambers { get; set; } = new();
     public List<HandTunnel> Tunnels { get; set; } = new();
     /// <summary>Places in caves (the shop): each off a chamber, its tunnel ending at the cave's mouth.</summary>
     public List<HandRoom> Rooms { get; set; } = new();
     /// <summary>Open places: clearings in the water.</summary>
     public List<HandPlace> Places { get; set; } = new();
-    /// <summary>A region's cave mouths, each leading down into a leak cave.</summary>
+    /// <summary>A region's cave mouths, each leading into a leak cave: an opening is cut in the wall nearest each point (LevelMap.Mouths).</summary>
     public List<HandPoint> Mouths { get; set; } = new();
+    /// <summary>The bay's mirror (docs/RPG-PROPOSAL.md §8): a still pool of nacre where she changes her look.</summary>
+    public HandPoint? Mirror { get; set; }
+    /// <summary>The bay's Tide Fan (docs/QUESTS-PROPOSAL.md §2): the great sea fan where the bay ties its requests.</summary>
+    public HandPoint? Fan { get; set; }
     /// <summary>A region's tier: its caves' first level.</summary>
     public int Tier { get; set; } = 1;
+    /// <summary>Its square, metres a side (a seeded level's unless it asks for more).</summary>
+    public int Size { get; set; } = LevelMap.Seeded;
 
     /// <summary>Its number among the hand-drawn maps (the bay 0): with its depth, which level it counts as.</summary>
     public int Number { get; set; }
@@ -89,9 +99,20 @@ public sealed class HandPlace
     public float R { get; set; } = 6f;
 }
 
+/// <summary>A box on the map, from (X0, Y0) to (X1, Y1).</summary>
+public sealed class HandBox
+{
+    public float X0 { get; set; }
+    public float Y0 { get; set; }
+    public float X1 { get; set; }
+    public float Y1 { get; set; }
+}
+
 /// <summary>A point on the map.</summary>
 public sealed class HandPoint
 {
     public float X { get; set; }
     public float Y { get; set; }
+    /// <summary>What the bay calls it (a region's cave mouth: "the east mouth"), if anything.</summary>
+    public string Name { get; set; } = "";
 }

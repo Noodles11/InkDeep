@@ -79,7 +79,7 @@ public class PlaneWorldTests
         var w = World();
         // Straight at the nearest edge of the square: the rim stops her.
         Vector2 start = w.Map.Start.Position;
-        float[] edges = { start.Y, LevelMap.Size - start.X, LevelMap.Size - start.Y, start.X };
+        float[] edges = { start.Y, LevelMap.Seeded - start.X, LevelMap.Seeded - start.Y, start.X };
         int side = Array.IndexOf(edges, edges.Min());
         Vector2 outward = side switch { 0 => -Vector2.UnitY, 1 => Vector2.UnitX, 2 => Vector2.UnitY, _ => -Vector2.UnitX };
         for (int i = 0; i < 180; i++)

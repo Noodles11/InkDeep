@@ -78,8 +78,13 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     BattleBegan, BossLanded, BossVolley, BossTelegraph, BossPulse, BossSacBurst, BossExposed, BossMutates, BossClosed, BossHit, BossStagger, BossSnapWarning, BossSnap, BossDefeated, BossFreed,
     /// <summary>Experience: gained (Size: how much), and a level reached (Size: the new level).</summary>
     XpGained, LevelUp,
-    /// <summary>The adventure: an ink dot cleared by her light or eaten by a fish; a leak lit (Size: its glow) or sealed (Size: leaks still open); the way down opened; an anemone turned (Size: its scale).</summary>
-    DotCleared, DotEaten, DotGathered, LeakTied, LeakUntied, LeakSealed, LeakDrunk, MainCurrentWoke, DealRefused, DealStruck, ClawCut, LastLight, ExitOpened, AnemoneTurned, LostLightTaken,
+    /// <summary>
+    /// The adventure: an ink dot cleared by her light or eaten by a fish; a leak's staple in or snapped out (at it; Size:
+    /// the staples in now) or the leak sealed (Size: leaks still open); a shot meeting a leak's arm (Direction: the shot's
+    /// way; Size: 1 where the arm was free to bend, 0 stapled); a murkling prime freed (Size: the school it let out); the
+    /// way down opened; an anemone turned (Size: its scale).
+    /// </summary>
+    DotCleared, DotEaten, DotGathered, LeakTied, LeakUntied, LeakSealed, LeakDrunk, LeakArmStruck, PrimeFreed, HavenEntered, HavenLeft, MainCurrentWoke, DealRefused, DealStruck, ClawCut, LastLight, ExitOpened, AnemoneTurned, LostLightTaken,
     /// <summary>The adventure's Inkwarden: struck, it rouses (rolls its spikes out); it fires a spike (Direction: its way).</summary>
     WardenRoused, WardenSpike,
     /// <summary>Drippus Prime: a murkling born out of it (Direction: its way out); its near side dimpling to bounce her (Direction: toward her); the bounce (at its skin; Direction: the way she is flung).</summary>
@@ -100,7 +105,7 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     AshCleared }
 
 /// <summary>What hurt Clementine (the killing blow names what ended a run; saved by number, so Gloomvine stays though nothing deals it now).</summary>
-public enum DamageSource { None, PufferNeedle, PufferSpines, BossPearl, RoyalPearl, BossSnap, BossContact, Murkling, MurkShot, Gloomvine, Blightroot, Blotter, Thumpsquirt, Lashjaw, Curse, Hearthguard }
+public enum DamageSource { None, PufferNeedle, PufferSpines, BossPearl, RoyalPearl, BossSnap, BossContact, Murkling, MurkShot, Gloomvine, Blightroot, Blotter, Thumpsquirt, Lashjaw, Curse, Hearthguard, Leak }
 
 /// <summary>
 /// Direction: for ShotPopped, the unit direction from the bubble's centre to where its film gave way. Size: a popped
@@ -129,12 +134,14 @@ public sealed partial class PlaneWorld
     {
         Map = map;
         // A haven (Lantern Bay) runs without the corruption and the adventure: clean water, healthy fish, its shop.
-        Options = map.Haven ? PlaneOptions.Haven : options ?? PlaneOptions.Default;
+        Options = options ?? PlaneOptions.Default;
         Tuning = tuning;
         Run = run ?? new PlaneRun(null, tuning);
         Run.Reef = Options.Reef;
-        Player.Position = Player.PrevPosition = map.Start.Position;
+        // In a leak cave she comes in by its way out, from the dark at its back.
+        Player.Position = Player.PrevPosition = map.Way?.Inside ?? map.Start.Position;
         Player.Hp = Run.Hp;
+        _wasInHaven = map.InHaven(Player.Position);
         _rocks = new List<WeakRock>(map.WeakRocks);
         _bubbleRng = new Rng(map.Seed ^ 0xB0BB1EUL ^ ((ulong)map.Level << 24) ^ ((ulong)map.Depth << 32) ^ ((ulong)map.Attempt << 48));
         Director = new ReefDirector(map);
@@ -294,6 +301,7 @@ public sealed partial class PlaneWorld
         StepExperience();
         StepPushWave();
         StepLostLight();
+        StepHaven();
         // Murklings made during the step (a prime's pieces) join the others now, never while a loop walks them.
         Murklings.AddRange(_madeLater);
         _madeLater.Clear();
@@ -369,6 +377,7 @@ public sealed partial class PlaneWorld
         }
         foreach (var rock in _rocks)
             if (rock.Contains(p, radius)) return false;
+        if (ShutMouths.Count > 0 && Plug(p, radius) is not null) return false;
         return VaseAt(p, radius) is null;
     }
 
@@ -379,6 +388,7 @@ public sealed partial class PlaneWorld
             if (rock.Contains(p, radius))
                 return rock.Inward(p);
         if (VaseAt(p, radius) is { } vase) return SafeNormalize(vase.Position - p);
+        if (ShutMouths.Count > 0 && Plug(p, radius) is { } plug) return plug;
         // The wall lies where the rim of the circle meets high ground (a trench's downhill slope beside it must not count).
         Vector2 blocked = Vector2.Zero;
         for (int i = 0; i < 16; i++)

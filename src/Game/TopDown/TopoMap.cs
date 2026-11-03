@@ -24,9 +24,9 @@ public partial class TopoMap : Control
     readonly List<(System.Numerics.Vector2 At, float Height)> _soundings = new();
 
     /// <summary>The world point (metres) at the middle of the control.</summary>
-    public System.Numerics.Vector2 Center = new(LevelMap.Size / 2f);
+    public System.Numerics.Vector2 Center = new(LevelMap.Seeded / 2f);
     /// <summary>How many metres the control's width spans.</summary>
-    public float MetresAcross = LevelMap.Size;
+    public float MetresAcross = LevelMap.Seeded;
     public System.Numerics.Vector2 Player;
     public System.Numerics.Vector2 PlayerHeading = new(0f, -1f);
     public bool ShowLegend;
@@ -55,6 +55,8 @@ public partial class TopoMap : Control
     public FogOfWar? Seen;
     /// <summary>Light springs (docs/CORRUPTION.md), and whether she is bathing in one.</summary>
     public readonly List<(System.Numerics.Vector2 At, bool Bathing)> Springs = new();
+    /// <summary>Places the requests she carries name (a cave mouth, the Tide Fan with one to untie): ringed in its colour.</summary>
+    public readonly List<(System.Numerics.Vector2 At, Color Colour)> Marks = new();
     /// <summary>The main current's course while it runs: a faint line to the way down.</summary>
     public IReadOnlyList<System.Numerics.Vector2>? Current;
     /// <summary>The places' emblems' size (the Tab map draws them larger than the minimap).</summary>
@@ -80,7 +82,7 @@ public partial class TopoMap : Control
     public void SetMap(LevelMap map, IEnumerable<int>? sealedCaves = null)
     {
         _map = map;
-        const int N = LevelMap.Samples;
+        int N = map.Samples;
         // The outline's box: all its open water.
         var lo = new System.Numerics.Vector2(float.MaxValue);
         var hi = new System.Numerics.Vector2(float.MinValue);
@@ -91,7 +93,7 @@ public partial class TopoMap : Control
                 lo = System.Numerics.Vector2.Min(lo, new System.Numerics.Vector2(x, y));
                 hi = System.Numerics.Vector2.Max(hi, new System.Numerics.Vector2(x, y));
             }
-        _outline = lo.X <= hi.X ? (lo, hi) : (System.Numerics.Vector2.Zero, new System.Numerics.Vector2(LevelMap.Size));
+        _outline = lo.X <= hi.X ? (lo, hi) : (System.Numerics.Vector2.Zero, new System.Numerics.Vector2(LevelMap.Seeded));
         var shown = new float[N * N];
         for (int y = 0; y < N; y++)
         for (int x = 0; x < N; x++)
@@ -102,8 +104,8 @@ public partial class TopoMap : Control
                 if (c < 0 || c >= map.Caves.Count) continue;
                 var cave = map.Caves[c];
                 var plug = map.WeakRocks.Find(r => r.Cave == c);
-                for (int y = 0; y < LevelMap.Samples; y++)
-                for (int x = 0; x < LevelMap.Samples; x++)
+                for (int y = 0; y < map.Samples; y++)
+                for (int x = 0; x < map.Samples; x++)
                 {
                     var p = new System.Numerics.Vector2(x, y);
                     bool hidden = plug.Radius > 0f && System.Numerics.Vector2.Distance(p, plug.Center) < plug.Radius + 1.5f
@@ -133,7 +135,7 @@ public partial class TopoMap : Control
         _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("deep_col"), look.Murk);
         _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("rock_col"), RockTone(look));
         _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("heights"), ImageTexture.CreateFromImage(image));
-        _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("samples"), (float)LevelMap.Samples);
+        _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("samples"), (float)map.Samples);
         _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("shore"), LevelMap.BlockHeight);
         Extremes(map, _peaks, 8f, 14f, 1f);
         Extremes(map, _soundings, 6f, 18f, -1f);
@@ -151,7 +153,7 @@ public partial class TopoMap : Control
     {
         into.Clear();
         var candidates = new List<(System.Numerics.Vector2, float)>();
-        int lo = (int)LevelMap.RimWidth + 2, hi = LevelMap.Size - lo;
+        int lo = (int)LevelMap.RimWidth + 2, hi = map.Size - lo;
         for (int y = lo; y <= hi; y++)
         for (int x = lo; x <= hi; x++)
         {
@@ -162,7 +164,7 @@ public partial class TopoMap : Control
             for (int dx = -5; dx <= 5 && top; dx++)
             {
                 int nx = x + dx, ny = y + dy;
-                if (nx < 0 || ny < 0 || nx > LevelMap.Size || ny > LevelMap.Size || (dx == 0 && dy == 0)) continue;
+                if (nx < 0 || ny < 0 || nx > map.Size || ny > map.Size || (dx == 0 && dy == 0)) continue;
                 float o = map[nx, ny] * sign;
                 // Ties (a flat summit or floor) go to the first cell in scan order.
                 if (o > h || (o == h && (dy < 0 || (dy == 0 && dx < 0)))) top = false;
@@ -265,6 +267,12 @@ public partial class TopoMap : Control
             bool shown = Visited.Contains(i) || Landmarks && poi.Kind is not (PoiKind.Secret or PoiKind.CrabDeal);
             if (!shown) continue;
             Vector2 p = P(poi.Position);
+            // A leak cave's dead end is its leak, not a way down: the leak's purple asterisk.
+            if (poi.Kind == PoiKind.Exit && map.LeakCave)
+            {
+                DrawLeakMark(p, EmblemScale);
+                continue;
+            }
             if (poi.Kind == PoiKind.Exit && ShowDetail)
             {
                 Color col = LevelView.PoiColor(poi.Kind);
@@ -272,6 +280,14 @@ public partial class TopoMap : Control
                 DrawArc(p, poi.Radius * ppm, 0f, Mathf.Tau, 48, col, 2f, true);
             }
             DrawEmblem(poi.Kind, p, font, EmblemScale);
+        }
+
+        // What her requests name: a ring in the request's colour, ink-edged.
+        foreach (var (at, colour) in Marks)
+        {
+            Vector2 q = P(at);
+            DrawArc(q, 13f * EmblemScale, 0f, Mathf.Tau, 32, Ink, 5f * EmblemScale, true);
+            DrawArc(q, 13f * EmblemScale, 0f, Mathf.Tau, 32, colour, 2.6f * EmblemScale, true);
         }
 
         // A light spring, once seen: a pool of clear aqua with a gold heart (brighter while she bathes).
@@ -329,7 +345,7 @@ public partial class TopoMap : Control
 
     /// <summary>The Tab map's room for its title at the top (pixels).</summary>
     public const float TitleRoom = 145f;
-    (System.Numerics.Vector2 Min, System.Numerics.Vector2 Max) _outline = (System.Numerics.Vector2.Zero, new System.Numerics.Vector2(LevelMap.Size));
+    (System.Numerics.Vector2 Min, System.Numerics.Vector2 Max) _outline = (System.Numerics.Vector2.Zero, new System.Numerics.Vector2(LevelMap.Seeded));
 
     /// <summary>
     /// Fits the chart to the screen: this rect, framing the level's outline (its open water, a margin round it) as large
@@ -357,6 +373,21 @@ public partial class TopoMap : Control
     /// the evacuation sign (a figure running out of a door, on a green plate), the shop a dollar, a clam room a pearl in
     /// an open clam, a shell cache a shell, a curse den a spider, a secret a question mark.
     /// </summary>
+    /// <summary>A leak on the map: a purple five-armed star (a brittle star's), ink-edged, with a pale heart.</summary>
+    void DrawLeakMark(Vector2 p, float k)
+    {
+        var purple = new Color(0.72f, 0.36f, 1f);
+        for (int pass = 0; pass < 2; pass++)
+            for (int i = 0; i < 5; i++)
+            {
+                float a = -Mathf.Pi * 0.5f + i * Mathf.Tau / 5f;
+                var d = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 9f * k;
+                DrawLine(p, p + d, pass == 0 ? Ink : purple, (pass == 0 ? 5.5f : 3f) * k, true);
+            }
+        DrawCircle(p, 3f * k, Ink);
+        DrawCircle(p, 2.2f * k, new Color(0.92f, 0.82f, 1f));
+    }
+
     void DrawEmblem(PoiKind kind, Vector2 p, Font font, float k)
     {
         if (kind == PoiKind.Exit)

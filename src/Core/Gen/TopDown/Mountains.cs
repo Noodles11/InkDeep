@@ -26,8 +26,8 @@ public static class Mountains
     public static int Fill(LevelMap map)
     {
         if (!Enabled) return 0;
-        const int N = LevelMap.Samples;
-        int cells = LevelMap.Size;
+        int N = map.Samples;
+        int cells = map.Size;
         // Where she can swim, at her own size (weak rock counts as open: secret rooms are hers to find).
         var dist = LevelValidator.Distances(map, map.Start.Position);
         var reach = new bool[N * N];

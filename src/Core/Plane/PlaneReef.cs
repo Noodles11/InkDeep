@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using OctoShoots.Core.Gen.TopDown;
 using OctoShoots.Core.Saves;
@@ -9,16 +10,36 @@ namespace OctoShoots.Core.Plane;
 /// <summary>The open reef's numbers (docs/RPG-PROPOSAL.md): first guesses, tuned in play.</summary>
 public static class ReefTuning
 {
-    /// <summary>How near a current station's middle, or a cave mouth, she must swim to be taken through it (metres).</summary>
-    public const float StationReach = 3.5f, MouthReach = 3f;
+    /// <summary>How near a current station's middle she must swim to be taken through it (metres).</summary>
+    public const float StationReach = 3.5f;
+    /// <summary>How far into a cave's opening (past its threshold, Doorway) she must swim to be taken through it.</summary>
+    public const float MouthIn = 1.4f;
+    /// <summary>How near the bay mirror's middle she must swim for it to show her (metres: well inside its pool).</summary>
+    public const float MirrorReach = 1.3f;
     /// <summary>A leak cave's mouth takes her back out only once she has been this far into the cave.</summary>
     public const float LeaveAfter = 10f;
     /// <summary>A leak cave is the Leak's own: at least this share of its water starts inked.</summary>
     public const float CaveInk = 0.9f;
+    /// <summary>
+    /// A leak cave's murklings (no fish live in it, so nothing turns): CaveMurklings + CaveMurklingsPerMenace × Menace wait
+    /// along its path at the start, CaveMurkSpacing apart and at least CaveMurkFromStart from its mouth, and a prime waits
+    /// CavePrimeBeforeLeak short of the leak.
+    /// </summary>
+    public const int CaveMurklings = 4;
+    public const float CaveMurklingsPerMenace = 3f, CaveMurkSpacing = 9f, CaveMurkFromStart = 14f, CavePrimeBeforeLeak = 9f;
+    /// <summary>
+    /// While its leak is open, one buds out of its ink every CaveBudEvery s ÷ (1 + 0.6 × Menace), CaveBudNear–CaveBudFar
+    /// from her, while fewer than CaveCap + CaveCapPerMenace × Menace are within CaveCapReach of her; now and then a prime
+    /// (BlightTuning's chance, at most PrimePerLevel a cave, the waiting one counted). Sealed, it buds no more.
+    /// </summary>
+    public const float CaveBudEvery = 10f, CaveBudNear = 8f, CaveBudFar = 18f, CaveCapPerMenace = 2f, CaveCapReach = 24f;
+    public const int CaveCap = 4;
     /// <summary>A minor leak is worth LeakXpBase × its cave's level^LeakXpPower experience.</summary>
     public const float LeakXpBase = 25f, LeakXpPower = 0.8f;
     /// <summary>A region's caves go up a level every CavesPerLevel sealed in it.</summary>
     public const int CavesPerLevel = 3;
+    /// <summary>A sealed cave's mouth stays shut this long of her play time (s); then the Leak seeps back and it opens on a fresh cave.</summary>
+    public const double Recorrupt = 15 * 60;
 
     public static int LeakXp(int caveLevel) => (int)MathF.Round(LeakXpBase * MathF.Pow(Math.Max(caveLevel, 1), LeakXpPower));
 
@@ -43,17 +64,17 @@ public sealed class PlaneLostLight
 }
 
 /// <summary>
-/// The open reef's places (docs/RPG-PROPOSAL.md §2): Lantern Bay, the regions (each a hand-drawn map), and behind each
-/// region's cave mouths a leak cave, seeded from her own world seed. Each mouth always leads to a cave: sealing it puts a
-/// fresh one behind the same mouth (mouth i holds caves i, i + mouths, i + 2·mouths…), so a region never runs out.
+/// The open reef's places (docs/RPG-PROPOSAL.md §2): the regions (each a hand-drawn map; the first holds Lantern Bay in
+/// its corner, her home water), and behind each region's cave mouths a leak cave, seeded from her own world seed.
+/// Sealing a cave shuts its mouth; after ReefTuning.Recorrupt of her play time the Leak seeps back and the mouth opens
+/// again on a fresh cave (mouth i holds caves i, i + mouths, i + 2·mouths…), so a region never runs out.
 /// </summary>
 public static class OpenReef
 {
-    /// <summary>The bay's map, and the regions' maps in their order (a region's number is its place here, from 1).</summary>
-    public const string Bay = "lantern_bay";
+    /// <summary>The regions' maps in their order (a region's number is its place here, from 1).</summary>
     public static readonly string[] Regions = { "shallows" };
 
-    /// <summary>The region a current station of the bay leads to first.</summary>
+    /// <summary>The region she wakes in: the one Lantern Bay lies in.</summary>
     public static string FirstRegion => Regions[0];
 
     public static int RegionNumber(string region) => Array.IndexOf(Regions, region) + 1;
@@ -66,12 +87,28 @@ public static class OpenReef
         return caves[mouth];
     }
 
-    /// <summary>She sealed the cave behind this mouth: a fresh one waits there now, and the region counts one more.</summary>
+    /// <summary>
+    /// She sealed the cave behind this mouth: the mouth shuts (from her play time now), a fresh cave waits behind it for
+    /// when it opens again, and the region counts one more.
+    /// </summary>
     public static void Sealed(Jelly jelly, string region, int mouth, int mouths)
     {
         int now = CaveBehind(jelly, region, mouth);
         CavesOf(jelly, region)[mouth] = now + Math.Max(mouths, 1);
         jelly.Sealed[region] = SealedIn(jelly, region) + 1;
+        if (!jelly.Shut.TryGetValue(region, out var shut)) jelly.Shut[region] = shut = new Dictionary<int, double>();
+        shut[mouth] = jelly.PlaySeconds;
+    }
+
+    /// <summary>The region's mouths shut now (the cave behind each sealed, its corruption not yet back); those whose time is up open again.</summary>
+    public static HashSet<int> ShutMouths(Jelly jelly, string region)
+    {
+        var closed = new HashSet<int>();
+        if (!jelly.Shut.TryGetValue(region, out var shut)) return closed;
+        foreach (var (mouth, at) in shut.ToList())
+            if (jelly.PlaySeconds - at >= ReefTuning.Recorrupt) shut.Remove(mouth);
+            else closed.Add(mouth);
+        return closed;
     }
 
     public static int SealedIn(Jelly jelly, string region) => jelly.Sealed.TryGetValue(region, out int n) ? n : 0;
@@ -83,15 +120,10 @@ public static class OpenReef
     public static LevelId CaveId(string region, int depth, int cave) => new(1000 + RegionNumber(region), depth, cave + 1);
 
     /// <summary>
-    /// A place's key, for where her lost light lies: the bay, a region, or a region's cave by its number (a cave sealed
-    /// since is gone, and the light with it).
+    /// A place's key, for where her lost light lies: a region, or a region's cave by its number (a cave sealed since is
+    /// gone, and the light with it).
     /// </summary>
-    public static string PlaceKey(string kind, string region, int cave = -1) => kind switch
-    {
-        "cave" => $"cave:{region}:{cave}",
-        "region" => $"region:{region}",
-        _ => "bay",
-    };
+    public static string PlaceKey(string kind, string region, int cave = -1) => kind == "cave" ? $"cave:{region}:{cave}" : $"region:{region}";
 
     static List<int> CavesOf(Jelly jelly, string region) =>
         jelly.Caves.TryGetValue(region, out var list) ? list : jelly.Caves[region] = new List<int>();
@@ -99,29 +131,174 @@ public static class OpenReef
 
 public sealed partial class PlaneWorld
 {
-    /// <summary>She is in a hand-drawn map's current station (the bay's, a region's), where the ride starts.</summary>
-    public bool AtStation => Map.Station && !Defeated && Vector2.Distance(Player.Position, Map.Exit.Position) < ReefTuning.StationReach;
+    /// <summary>She is in a hand-drawn map's current station, where the ride starts.</summary>
+    public bool AtStation => Map.CurrentStation && !Defeated && Vector2.Distance(Player.Position, Map.Exit.Position) < ReefTuning.StationReach;
 
-    /// <summary>The region's cave mouth she is in (its index), or −1.</summary>
+    /// <summary>She is in a haven's water (Lantern Bay): nothing harms her there.</summary>
+    public bool InHaven => Map.InHaven(Player.Position);
+
+    bool _wasInHaven;
+
+    /// <summary>She was set down somewhere new (not swum there): in the haven or out of it, nothing is news.</summary>
+    public void SettleHaven() => _wasInHaven = InHaven;
+
+    /// <summary>
+    /// The haven's edge: swimming back into its water she is healed whole (HavenEntered), and leaving it she is out on the
+    /// open reef again (HavenLeft).
+    /// </summary>
+    void StepHaven()
+    {
+        if (Map.Haven is null || Defeated) return;
+        bool inside = InHaven;
+        if (inside == _wasInHaven) return;
+        _wasInHaven = inside;
+        if (inside)
+        {
+            Run.Hp = Player.Hp = Run.MaxHp;
+            Events.Add(new PlaneEvent(PlaneEventType.HavenEntered, Player.Position, Vector2.Zero));
+        }
+        else Events.Add(new PlaneEvent(PlaneEventType.HavenLeft, Player.Position, Vector2.Zero));
+    }
+
+    /// <summary>She is over the bay's mirror, where she changes her look (docs/RPG-PROPOSAL.md §8).</summary>
+    public bool AtMirror => Map.Mirror is { } mirror && !Defeated && Vector2.Distance(Player.Position, mirror) < ReefTuning.MirrorReach;
+
+    /// <summary>
+    /// The region's mouths shut now (their caves sealed, not yet corrupted again): each opening stands closed with rock
+    /// (Plugged), no way in (the game sets them from her jelly).
+    /// </summary>
+    public HashSet<int> ShutMouths { get; set; } = new();
+
+    /// <summary>The region's open cave mouth she has swum into (its index), or −1.</summary>
     public int AtMouth()
     {
         if (Defeated) return -1;
         for (int i = 0; i < Map.Mouths.Count; i++)
-            if (Vector2.Distance(Player.Position, Map.Mouths[i]) < ReefTuning.MouthReach) return i;
+            if (!ShutMouths.Contains(i) && Map.Mouths[i].Holds(Player.Position, ReefTuning.MouthIn)) return i;
         return -1;
+    }
+
+    /// <summary>
+    /// The shut mouth whose rock a circle at p runs into (it closes the opening at its threshold): the way into it (the
+    /// wall's uphill), or null.
+    /// </summary>
+    Vector2? Plug(Vector2 p, float radius)
+    {
+        foreach (int i in ShutMouths)
+        {
+            if (i >= Map.Mouths.Count) continue;
+            var door = Map.Mouths[i];
+            var (inward, off) = door.Measure(p);
+            if (inward + radius > 0.1f && inward < Doorway.Depth + 1f && off < Doorway.HalfWidth + 1.8f) return door.Into;
+        }
+        return null;
     }
 
     bool _wentIn;
 
-    /// <summary>Back at a leak cave's mouth, having been into it: she leaves the cave.</summary>
-    public bool LeavingCave
+    /// <summary>Back at a leak cave's way out (at its threshold or in it), having been out into the cave.</summary>
+    public bool AtCaveMouth
     {
         get
         {
-            if (!Map.LeakCave || Defeated) return false;
-            float d = Vector2.Distance(Player.Position, Map.Start.Position);
-            if (d > ReefTuning.LeaveAfter) _wentIn = true;
-            return _wentIn && d < ReefTuning.MouthReach + 1f;
+            if (!Map.LeakCave || Defeated || Map.Way is not { } way) return false;
+            if (Vector2.Distance(Player.Position, way.At) > ReefTuning.LeaveAfter) _wentIn = true;
+            return _wentIn && way.Holds(Player.Position, -1f);
+        }
+    }
+
+    /// <summary>
+    /// Into a leak cave's way out with its leak sealed: she leaves the cave. Till then its current (PlaneCurrent.Holds)
+    /// pushes her back in.
+    /// </summary>
+    public bool LeavingCave => AtCaveMouth && LeaksOpen == 0 && Map.Way is { } way && way.Holds(Player.Position, ReefTuning.MouthIn);
+
+    float _caveBud;
+
+    /// <summary>The school a freed prime of a leak cave swallowed: chromis, healthy, bursting out of it.</summary>
+    public const int SwallowedSchool = 18;
+
+    /// <summary>
+    /// A freed prime lets its swallowed school out: healthy chromis burst from where it was, scatter, and stream away
+    /// toward the cave's way out, going home (gone once far off). Returns how many.
+    /// </summary>
+    int ReleaseSchool(Vector2 at)
+    {
+        int id = ReefFish.Count == 0 ? 0 : ReefFish.Max(f => f.Id) + 1;
+        var home = SafeNormalize((Map.Way?.At ?? Map.Start.Position) - at);
+        if (home == Vector2.Zero) home = -Vector2.UnitY;
+        for (int i = 0; i < SwallowedSchool; i++)
+        {
+            float a = _blightRng.Range(0f, MathF.Tau), r = MathF.Sqrt(_blightRng.NextFloat()) * 1.2f;
+            var from = at + new Vector2(MathF.Cos(a), MathF.Sin(a)) * r;
+            if (!Clear(from, ReefFishTuning.ChromisRadius)) from = at;
+            var dir = Rotate(home, _blightRng.Range(-0.5f, 0.5f));
+            ReefFish.Add(new PlaneReefFish
+            {
+                Kind = ReefFishKind.Chromis, Id = id++, Position = from, Home = from, Heading = MathF.Atan2(dir.Y, dir.X), Freed = true, Leaving = dir,
+                Velocity = new Vector2(MathF.Cos(a), MathF.Sin(a)) * _blightRng.Range(3f, 6f), Rng = new Rng(_blightRng.NextU64()),
+            });
+        }
+        return SwallowedSchool;
+    }
+
+    /// <summary>The Tide Fan's requests: ash patches her light or shots have cleared on this level (not the sealed leak's wave).</summary>
+    public int AshWashed { get; private set; }
+
+    /// <summary>Experience given (an untied request's), paid with the step's own: shown and levelled as a leak's is.</summary>
+    public void GiveXp(int xp) => _givenXp += Math.Max(xp, 0);
+    int _givenXp;
+
+    /// <summary>She is at the bay's Tide Fan (its foot), where requests are taken and untied.</summary>
+    public bool AtFan => Map.Fan is { } fan && !Defeated && Vector2.Distance(Player.Position, fan) < RequestTuning.FanReach;
+
+    /// <summary>A leak cave's murklings at its start: a few along its path, and a prime short of its leak.</summary>
+    void PlaceCaveMurklings()
+    {
+        var path = LevelValidator.ShortestPath(Map, Map.Start.Position, Map.Exit.Position, clearance: 1f);
+        if (path.Count == 0) return;
+        var guard = path.LastOrDefault(q => Vector2.Distance(q, Map.Exit.Position) >= ReefTuning.CavePrimeBeforeLeak && Clear(q, BlightTuning.PrimeBody));
+        if (guard != default) Bud(guard, -1, prime: true, drink: false, born: true);
+        int want = ReefTuning.CaveMurklings + (int)MathF.Round(ReefTuning.CaveMurklingsPerMenace * Menace);
+        var spots = path.Where(q => Vector2.Distance(q, Map.Start.Position) >= ReefTuning.CaveMurkFromStart).ToList();
+        Shuffle(spots, _blightRng);
+        int placed = 0;
+        foreach (var on in spots)
+        {
+            if (placed >= want) break;
+            // A little off the path, where there is room.
+            var at = on + new Vector2(_blightRng.Range(-2f, 2f), _blightRng.Range(-2f, 2f));
+            if (!Clear(at, BlightTuning.MurkRadius)) at = on;
+            if (!Clear(at, BlightTuning.MurkRadius) || Murklings.Any(m => Vector2.Distance(m.Position, at) < ReefTuning.CaveMurkSpacing)) continue;
+            Bud(at, -1, drink: false, born: true);
+            placed++;
+        }
+        _caveBud = ReefTuning.CaveBudEvery * 0.5f;
+    }
+
+    /// <summary>While its leak is open, a leak cave buds murklings out of its ink near her (and now and then a prime).</summary>
+    void StepCaveMurklings(InkDots dots)
+    {
+        if (!Map.LeakCave || LeaksOpen == 0 || Defeated) return;
+        _caveBud -= Dt;
+        if (_caveBud > 0f) return;
+        _caveBud = ReefTuning.CaveBudEvery / (1f + 0.6f * Menace);
+        int cap = ReefTuning.CaveCap + (int)MathF.Round(ReefTuning.CaveCapPerMenace * Menace);
+        var her = Player.Position;
+        if (Murklings.Count(m => m.Alive && Vector2.Distance(m.Position, her) < ReefTuning.CaveCapReach) >= cap || dots.Live.Count == 0) return;
+        for (int tries = 0; tries < 16; tries++)
+        {
+            var at = InkDots.Centre(dots.Live[_blightRng.Int(dots.Live.Count)]);
+            float d = Vector2.Distance(at, her);
+            if (d < ReefTuning.CaveBudNear || d > ReefTuning.CaveBudFar || !Clear(at, BlightTuning.MurkRadius)) continue;
+            bool prime = _primesBorn < BlightTuning.PrimePerLevel && !Murklings.Any(x => x.Alive && x.Prime)
+                && _blightRng.NextFloat() < BlightTuning.PrimeChance + BlightTuning.PrimeChancePerMenace * Menace
+                && d > BlightTuning.PrimeClearance && Clear(at, BlightTuning.PrimeBody);
+            Bud(at, -1, prime, drink: false);
+            // It is made of the cave's ink: the dots round it go into it (a prime's twelve murklings' worth).
+            float r = BlightTuning.GatherRadius * (prime ? MathF.Sqrt(BlightTuning.PrimeInk / BlightTuning.Ink) : 1f);
+            foreach (int cell in dots.Live.Where(c => Vector2.Distance(InkDots.Centre(c), at) < r).ToList()) dots.Remove(cell);
+            return;
         }
     }
 

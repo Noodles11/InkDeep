@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using OctoShoots.Core.Gen.TopDown;
 using OctoShoots.Core.Items;
 using OctoShoots.Core.Plane;
@@ -9,48 +10,64 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>Lantern Bay (docs/RPG-PROPOSAL.md §2.1): a map drawn by hand, a haven, and the jellies the player makes.</summary>
+/// <summary>
+/// Lantern Bay (docs/RPG-PROPOSAL.md §2.1): the haven in the Sunlit Shallows' south-west corner, drawn by hand on the
+/// reef's one map, and the jellies the player makes.
+/// </summary>
 public class LanternBayTests
 {
-    static readonly Lazy<HandLayout> Bay = new(() =>
-        HandLayout.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "maps", "lantern_bay.json"))));
+    static readonly Lazy<HandLayout> Reef = new(() =>
+        HandLayout.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "maps", "shallows.json"))));
 
-    static readonly Lazy<LevelMap> BayMap = new(() => TopDownGenerator.FromHand(Bay.Value));
+    static readonly Lazy<LevelMap> ReefMap = new(() => TopDownGenerator.FromHand(Reef.Value));
 
     static readonly Lazy<ItemCatalog> Catalog = new(() =>
         ItemCatalog.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "items.json"))));
 
+    static PlaneWorld World(LevelMap map) => new(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), PlaneOptions.OpenReef);
+
     [Fact]
-    public void TheBayIsBuiltAsDrawn_AHavenWithItsShopInACave()
+    public void TheReefIsBuiltAsDrawn_NineTimesTheBay_WithTheBayAsAHavenInItsCorner()
     {
-        var map = BayMap.Value;
-        Assert.True(map.Haven);
-        Assert.Equal("Lantern Bay", map.Title);
-        var hand = Bay.Value;
+        var map = ReefMap.Value;
+        Assert.Equal(420, map.Size);
+        Assert.Equal("Sunlit Shallows", map.Title);
+        var haven = Assert.NotNull(map.Haven);
+        Assert.Equal(new Vector2(0f, 280f), haven.Min);
+        Assert.Equal(new Vector2(140f, 420f), haven.Max);
+        Assert.Equal(9f, map.Size * map.Size / ((haven.Max.X - haven.Min.X) * (haven.Max.Y - haven.Min.Y)), 2);
+        var hand = Reef.Value;
         var post = hand.Chambers.Single(c => c.Role == CaveLayout.Role.Start);
-        var station = hand.Chambers.Single(c => c.Role == CaveLayout.Role.Exit);
-        Assert.Equal(new System.Numerics.Vector2(post.X, post.Y), map.Start.Position);
-        Assert.Equal(new System.Numerics.Vector2(station.X, station.Y), map.Exit.Position);
+        Assert.Equal(new Vector2(post.X, post.Y), map.Start.Position);
+        Assert.True(map.InHaven(map.Start.Position));
+        // The shop is the bay's, in a cave; the mirror and the Tide Fan are the bay's too.
         var shop = map.Pois.Single(p => p.Kind == PoiKind.Shop);
         Assert.True(shop.Cave >= 0);
+        Assert.True(map.InHaven(shop.Position));
+        Assert.True(map.InHaven(Assert.NotNull(map.Mirror)));
+        Assert.True(map.InHaven(Assert.NotNull(map.Fan)));
         Assert.Empty(map.Spawns);
         Assert.Empty(map.WeakRocks);
-        // Every chamber is open water, and the station is reached from the post.
-        foreach (var c in hand.Chambers) Assert.True(map.IsOpen(new System.Numerics.Vector2(c.X, c.Y)), c.Id);
-        Assert.NotEmpty(LevelValidator.ShortestPath(map, map.Start.Position, map.Exit.Position, clearance: 1f));
-        // No shaft: nothing on the map is over it.
+        // Every chamber is open water, and all of the reef is reached from the post.
+        foreach (var c in hand.Chambers) Assert.True(map.IsOpen(new Vector2(c.X, c.Y)), c.Id);
+        var fromPost = LevelValidator.Distances(map, map.Start.Position, clearance: 1f);
+        foreach (var c in hand.Chambers) Assert.True(float.IsFinite(LevelValidator.DistanceAt(fromPost, new Vector2(c.X, c.Y))), $"{c.Id} cannot be reached from the post");
+        // The cave mouths are out on the reef, none in the bay; there is no current station and no shaft.
+        Assert.Equal(hand.Mouths.Count, map.Mouths.Count);
+        Assert.All(map.Mouths, m => Assert.False(map.InHaven(m.At, 10f)));
+        Assert.False(map.CurrentStation);
         Assert.False(map.Shaft.Contains(map.Exit.Position, 4f));
     }
 
     [Fact]
-    public void TheBayIsTheSameEveryTime() =>
-        Assert.Equal(BayMap.Value.ToBytes(), TopDownGenerator.FromHand(Bay.Value).ToBytes());
+    public void TheReefIsTheSameEveryTime() =>
+        Assert.Equal(ReefMap.Value.ToBytes(), TopDownGenerator.FromHand(Reef.Value).ToBytes());
 
     [Fact]
-    public void ItsWaterIsClean_NoLeaksNoInkNothingCorrupted_AndTheStationTakesHerOut()
+    public void ItsWaterIsClean_NoLeaksNoInkNothingCorrupted_AndNoStationTakesHerAnywhere()
     {
-        var map = BayMap.Value;
-        var w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), new PlaneOptions { Corruption = true, Pufferlings = true });
+        var map = ReefMap.Value;
+        var w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), PlaneOptions.OpenReef);
         Assert.True(w.Options.Reef);
         Assert.False(w.Options.Pufferlings);
         Assert.Empty(w.Leaks);
@@ -62,10 +79,51 @@ public class LanternBayTests
         Assert.All(w.ReefFish, f => Assert.False(f.Corrupted));
         Assert.Empty(w.Murklings);
         Assert.False(w.Defeated);
-        Assert.False(w.AtStation);
         Assert.False(w.CanDive);
         w.Player.Position = w.Player.PrevPosition = map.Exit.Position;
-        Assert.True(w.AtStation);
+        Assert.False(w.AtStation);
+        // No light spring in the bay: coming home heals her whole.
+        Assert.All(w.Springs, s => Assert.False(map.InHaven(s.Position)));
+    }
+
+    [Fact]
+    public void InTheBaySheIsSafe_LeavingItSheIsOnTheOpenReef_AndComingHomeHealsHerWhole()
+    {
+        var map = ReefMap.Value;
+        var w = World(map);
+        Assert.True(w.InHaven);
+        var landing = Reef.Value.Chambers.Single(c => c.Id == "landing");
+        var outside = new Vector2(landing.X, landing.Y);
+        Assert.False(map.InHaven(outside));
+        Assert.True(map.OutOfHaven(outside) > 30f);
+        Assert.Equal(0f, map.OutOfHaven(map.Start.Position));
+        // Out on the reef: she has left the haven.
+        w.Player.Position = w.Player.PrevPosition = outside;
+        w.Step(default);
+        Assert.False(w.InHaven);
+        Assert.Contains(w.Events, e => e.Type == PlaneEventType.HavenLeft);
+        // Hurt out there, then home: whole again.
+        w.Player.Hp = w.Run.Hp = w.Run.MaxHp * 0.3f;
+        w.Player.Position = w.Player.PrevPosition = map.Start.Position;
+        w.Step(default);
+        Assert.True(w.InHaven);
+        Assert.Contains(w.Events, e => e.Type == PlaneEventType.HavenEntered);
+        Assert.Equal(w.Run.MaxHp, w.Player.Hp);
+    }
+
+    [Fact]
+    public void TheMirrorLiesOnBareOpenFloorAndShowsHerWhenSheSwimsOntoIt()
+    {
+        var map = ReefMap.Value;
+        var mirror = Assert.NotNull(map.Mirror);
+        var w = World(map);
+        Assert.True(w.Clear(mirror, LevelMap.MirrorRadius));
+        Assert.DoesNotContain(map.Decor, d => Vector2.Distance(d.Position, mirror) < LevelMap.MirrorRadius);
+        Assert.DoesNotContain(map.Kelp.SelectMany(k => k.Roots), r => Vector2.Distance(r, mirror) < LevelMap.MirrorRadius);
+        Assert.NotEmpty(LevelValidator.ShortestPath(map, map.Start.Position, mirror, clearance: 1f));
+        Assert.False(w.AtMirror);
+        w.Player.Position = w.Player.PrevPosition = mirror;
+        Assert.True(w.AtMirror);
     }
 
     [Fact]

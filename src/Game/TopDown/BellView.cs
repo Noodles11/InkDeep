@@ -48,18 +48,13 @@ public partial class BellView : Node3D
     float _outline;
     ImmediateMesh _strandMesh = null!;
     /// <summary>
-    /// Her light is a lamp in her bell, as a standing lamp's in its shade: out of the bell's opening a beam, her searchlight
-    /// (_beam), intense, and only it burns (PlaneHerLight.cs); through the top of the bell, softened, all the rest of the
-    /// way round (_light, smooth as a bulb's, cast from the top of the bell and masked where the beam shines: LampShade).
-    /// Both turn with her bell as it tips. A faint glow round the bell itself.
+    /// Her light is a lamp in her bell (_light): one sphere of it all round her, smooth as a bulb's, from her bell's heart.
+    /// It burns nothing (her shots' light does: PlaneHerLight.cs). A faint glow round the bell itself.
     /// </summary>
     OmniLight3D _light = null!;
-    SpotLight3D _beam = null!;
     OmniLight3D _halo = null!;
-    /// <summary>How far her softened light reaches and how strong it is (before Lantern, glow, her breath and pulse).</summary>
-    const float BulbRange = 9f, BulbEnergy = 0.45f;
-    /// <summary>Her searchlight's strength (before Lantern, her breath and pulse), and how far past its burning reach it still shows.</summary>
-    const float BeamEnergy = 2.4f, BeamShows = 1.5f;
+    /// <summary>How far her light reaches and how strong it is (before Lantern, glow, her breath and pulse).</summary>
+    const float BulbRange = 11f, BulbEnergy = 1.3f;
     /// <summary>How much of her light gets through (1 all; the curse den's dark fades it).</summary>
     public float Dim = 1f;
     /// <summary>The depth's lantern (ReefLook.Lantern): her light's strength and reach against the dark.</summary>
@@ -70,8 +65,6 @@ public partial class BellView : Node3D
     public Vector3 LightPosition => _light.GlobalPosition;
     public float LightRange => _light.OmniRange;
     public float LightEnergy => _light.Visible ? _light.LightEnergy : 0f;
-    /// <summary>Where her searchlight leaves her bell (world): its opening.</summary>
-    public Vector3 BeamPosition => _beam.GlobalPosition;
     /// <summary>Her light's heart, over the bell's origin (inside the dome).</summary>
     public const float LightHeight = 1.2f;
     StandardMaterial3D _inkMaterial = null!;
@@ -198,21 +191,12 @@ public partial class BellView : Node3D
         // black.
         _light = new OmniLight3D
         {
-            LightColor = Glow, LightEnergy = BulbEnergy, OmniRange = BulbRange, OmniAttenuation = 1f, OmniShadowMode = OmniLight3D.ShadowMode.DualParaboloid,
+            LightColor = Glow, LightEnergy = BulbEnergy, OmniRange = BulbRange, OmniAttenuation = 1.4f, OmniShadowMode = OmniLight3D.ShadowMode.DualParaboloid,
             ShadowEnabled = OctoShoots.Game.Settings.ViewOptions.Shadows, ShadowBias = 0.06f, ShadowNormalBias = 1.2f,
-            LightSize = 0.3f, ShadowBlur = 1f, LightSpecular = 0.8f, TopLevel = true,
+            LightSize = 0.3f, ShadowBlur = 1f, LightSpecular = 0.8f, Position = new Vector3(0f, LightHeight, 0f),
         };
         _halo = new OmniLight3D { LightColor = Glow, LightEnergy = 0.5f, OmniRange = 3f, OmniAttenuation = 1.6f, ShadowEnabled = false, Position = new Vector3(0f, LightHeight, 0f) };
         AddChild(_halo);
-        // Her searchlight: a focused beam out of her bell's opening, the way the sim's beam shines (down at rest, out
-        // behind her as she swims), casting soft shadows as her softened light does.
-        _beam = new SpotLight3D
-        {
-            LightColor = Glow, LightEnergy = BeamEnergy, SpotAngle = HerLightTuning.BeamAngle * 1.4f, SpotAngleAttenuation = 0.6f, SpotAttenuation = 0.9f,
-            ShadowEnabled = OctoShoots.Game.Settings.ViewOptions.Shadows, ShadowBias = 0.06f, ShadowNormalBias = 1.2f,
-            LightSize = 0.3f, ShadowBlur = 1f, LightSpecular = 0.8f, TopLevel = true,
-        };
-        AddChild(_beam);
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--dbg-lantern="))
             {
@@ -225,8 +209,6 @@ public partial class BellView : Node3D
                     _dbgFalloff = true;
                 }
             }
-        // Cast from the top of the bell, every way but down through its opening (the beam's): the shade turns with her.
-        if (!OS.GetCmdlineUserArgs().Contains("--dbg-noshade")) _light.LightProjector = LampShade();
         AddChild(_light);
         var sphere = new SphereMesh { Radius = 1f, Height = 2f, RadialSegments = 32, Rings = 16 };
         var shieldMaterial = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/plane_bubble.gdshader"), RenderPriority = 3 };
@@ -326,34 +308,6 @@ public partial class BellView : Node3D
         }
     }
 
-    /// <summary>How far round from straight down her bell's opening the shade lets no soft light out (the beam's, degrees), and how softly it fades in past that.</summary>
-    const float ShadeOpen = 30f, ShadeSoft = 14f;
-
-    /// <summary>
-    /// The lamp's shade for her soft light (an omni light's projector: two paraboloids stacked, each a hemisphere about the
-    /// light's own Z, the way Godot maps it): bright every way but within ShadeOpen of the light's own −Y, the bell's
-    /// opening, where the beam shines instead.
-    /// </summary>
-    static ImageTexture LampShade()
-    {
-        const int size = 64;
-        var image = Image.CreateEmpty(size, size * 2, false, Image.Format.L8);
-        float open = Mathf.Cos(Mathf.DegToRad(ShadeOpen)), soft = Mathf.Cos(Mathf.DegToRad(ShadeOpen + ShadeSoft));
-        for (int half = 0; half < 2; half++)
-            for (int y = 0; y < size; y++)
-                for (int x = 0; x < size; x++)
-                {
-                    float u = (x + 0.5f) / size * 2f - 1f, v = (y + 0.5f) / size * 2f - 1f;
-                    float r2 = u * u + v * v;
-                    // The paraboloid's direction for this texel (its y the way down the bell's axis is −1).
-                    float dy = 2f * v / (1f + r2);
-                    float down = -dy;
-                    float lit = 1f - Mathf.SmoothStep(soft, open, down);
-                    image.SetPixel(x, half * size + y, new Color(lit, lit, lit));
-                }
-        return ImageTexture.CreateFromImage(image);
-    }
-
     /// <summary>The shield turned a hit away: it wobbles.</summary>
     public void ShieldRipple() => _ripple = 1f;
 
@@ -399,6 +353,36 @@ public partial class BellView : Node3D
     /// and the floor's glow left to her.
     /// </summary>
     public int Part { get; init; } = -1;
+    /// <summary>
+    /// The title's save slots: a jelly of the save drawn as herself, wearing her own look on this bell alone (Wear), her
+    /// light unshadowed and no warm pool cast on the floor (that is the game's own Clementine's). Lit 1 shines; 0 is
+    /// switched off like a lamp: her light out, her bell and strands dim.
+    /// </summary>
+    public bool Puppet { get; init; }
+    public float Lit = 1f;
+    Color? _ownGlow;
+
+    /// <summary>A jelly's look on this bell and its strands only (not the shared colours every other view follows).</summary>
+    public void Wear(OctoShoots.Core.Saves.JellyLook look)
+    {
+        var (body, light, glow) = OctoShoots.Game.Fx.HerColor.Of(look);
+        _ownGlow = glow;
+        var b = new Vector4(body.R, body.G, body.B, 1f);
+        var l = new Vector4(light.R, light.G, light.B, 1f);
+        bool tipsSet = Color.HtmlIsValid(look.Tips);
+        var tips = tipsSet ? Color.FromHtml(look.Tips) : Colors.White;
+        int gonads = Mathf.Max(0, System.Array.IndexOf(OctoShoots.Core.Saves.JellyNames.Symbols, look.Gonads));
+        foreach (var m in new[] { _bellMaterial, _strandMaterial })
+        {
+            m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("own_body"), b);
+            m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("own_light"), l);
+        }
+        _strandMaterial.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("own_tips"), new Vector4(tips.R, tips.G, tips.B, tipsSet ? 1f : 0f));
+        _bellMaterial.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("own_gonads"), gonads);
+    }
+
+    Color GlowNow => _ownGlow ?? Glow;
+
     /// <summary>How far she is split now (0 whole → 1), and the colour this one wears (herself: the green).</summary>
     float _prism;
     Color PrismColour => Part switch { 0 => CombatView.LightOf(PrismHue.Red), 1 => CombatView.LightOf(PrismHue.Blue), _ => CombatView.LightOf(PrismHue.Green) };
@@ -523,29 +507,16 @@ public partial class BellView : Node3D
         // swims over.
         float deep = Mathf.Clamp((Lantern - 1f) / 0.85f, 0f, 1f);
         _light.OmniRange = BulbRange * Mathf.Sqrt(glow * Lantern);
-        if (!_dbgFalloff) _light.OmniAttenuation = Mathf.Lerp(1f, 0.6f, deep);
+        if (!_dbgFalloff) _light.OmniAttenuation = Mathf.Lerp(1.4f, 0.8f, deep);
         _light.LightEnergy = BulbEnergy * _dbgEnergy * Mathf.Pow(Lantern, 1.8f) * (0.94f + 0.12f * _pulse) * (0.7f + 0.3f * _breath);
-        _light.LightColor = Glow.Lerp(PrismColour, _prism).Lerp(new Color(1f, 0.3f, 0.55f), _hurt * 0.5f);
-        // The red and the blue: lighter lanterns, unshadowed (her own casts the reef's shadows).
-        if (Part >= 0)
+        _light.LightColor = GlowNow.Lerp(PrismColour, _prism).Lerp(new Color(1f, 0.3f, 0.55f), _hurt * 0.5f);
+        // The red and the blue, and the title's save slots: lighter lanterns, unshadowed (her own casts the reef's shadows).
+        if (Part >= 0 || Puppet)
         {
             _light.ShadowEnabled = false;
             _light.LightEnergy *= 0.5f;
         }
         _halo.LightColor = _light.LightColor;
-        // From the top of her bell, turned as her bell is (its shade's opening down her bell's axis).
-        var bellBasis = _body.GlobalBasis.Orthonormalized();
-        _light.GlobalTransform = new Transform3D(bellBasis, _body.GlobalPosition + bellBasis.Y * BellHeight * 0.85f * Scale.X);
-        // The beam: out of her bell's opening, the way the sim has it shine (only hers: the red and the blue cast none).
-        _beam.Visible = Part < 0 && !OS.GetCmdlineUserArgs().Contains("--dbg-nobeam");
-        _beam.LightColor = _light.LightColor;
-        _beam.SpotRange = world.BeamReach * BeamShows * Mathf.Sqrt(Lantern);
-        if (!_dbgFalloff) _beam.SpotAttenuation = Mathf.Lerp(0.9f, 0.6f, deep);
-        _beam.LightEnergy = BeamEnergy * _dbgEnergy * Mathf.Pow(Lantern, 1.8f) * (0.94f + 0.12f * _pulse) * (0.7f + 0.3f * _breath);
-        var way = world.BeamDirection;
-        var shine = new Vector3(way.X, way.Y, way.Z);
-        var opening = _body.GlobalPosition - _body.GlobalBasis.Y.Normalized() * 0.05f;
-        _beam.GlobalTransform = new Transform3D(Basis.LookingAt(shine, Mathf.Abs(shine.Y) > 0.99f ? Vector3.Back : Vector3.Up), opening);
 
         if (speed > 0.3f) _across = new Vector3(-vel.Y, 0f, vel.X) / speed;
         _calm = Mathf.Lerp(_calm, 1f - 0.85f * Mathf.Min(pace, 1f), 1f - Mathf.Exp(-3f * h));
@@ -563,7 +534,7 @@ public partial class BellView : Node3D
         }
         SyncShield(p, h);
         SyncCharge(p);
-        if (Part < 0) SyncGlowPool(world);
+        if (Part < 0 && !Puppet) SyncGlowPool(world);
     }
 
     /// <summary>
@@ -662,11 +633,20 @@ public partial class BellView : Node3D
         // The pulse of light: her glow flares far out and falls back.
         _light.LightEnergy *= (1f + 4f * _burst + 0.4f * _mimic) * Dim;
         _light.OmniRange *= (1f + 0.8f * _burst) * (0.4f + 0.6f * Dim);
-        _beam.LightEnergy *= (1f + 2f * _burst + 0.4f * _mimic) * Dim;
         _halo.LightEnergy = 0.5f * Mathf.Pow(Lantern, 1.2f) * (1f + 2f * _burst) * Dim;
+        // Switched off like a lamp (the title's save slots): her light all but out, her bell and strands dim.
+        // (A puppet lit shines a little brighter than she swims, so the one chosen stands out from those switched off.)
+        float lit = Mathf.Clamp(Lit, 0f, 1f), on = Puppet ? 1.35f : 1f;
+        _light.LightEnergy *= Mathf.Lerp(0.03f, Puppet ? 1.6f * on : 1f, lit);
+        _halo.LightEnergy *= lit * on * on;
+        _bellMaterial.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("glow"), Mathf.Lerp(0.28f, on, lit));
+        _strandMaterial.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("glow"), Mathf.Lerp(0.2f, on, lit));
     }
 
-    public override void _ExitTree() => RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_glow_strength"), 0f);
+    public override void _ExitTree()
+    {
+        if (!Puppet) RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_glow_strength"), 0f);
+    }
 
     /// <summary>
     /// Health into the gonad rings (draining at most 0.8 of her max a second, healing back faster) and the active pearl's

@@ -168,8 +168,8 @@ public class TopDownGenTests
             Assert.True(map.Shaft.Contains(map.Exit.Position));
             // The Crack drops sheer from the arena; an ordinary exit's whole chamber slopes down to its dive zone.
             float room = map.HasBoss ? 1.5f : map.Chambers.OrderBy(c => Vector2.Distance(c.At, map.Exit.Position)).First().Radius + 4.5f;
-            for (int y = 0; y <= LevelMap.Size; y++)
-            for (int x = 0; x <= LevelMap.Size; x++)
+            for (int y = 0; y <= LevelMap.Seeded; y++)
+            for (int x = 0; x <= LevelMap.Seeded; x++)
             {
                 var p = new Vector2(x, y);
                 bool way = map.HasBoss ? map.Shaft.Contains(p, room) : Vector2.Distance(p, map.Exit.Position) < room + map.Shaft.HalfLength;
@@ -188,8 +188,8 @@ public class TopDownGenTests
             {
                 // A real wall: it stands well over her plane somewhere across its passage.
                 float tallest = 0f;
-                for (int y = 0; y <= LevelMap.Size; y++)
-                for (int x = 0; x <= LevelMap.Size; x++)
+                for (int y = 0; y <= LevelMap.Seeded; y++)
+                for (int x = 0; x <= LevelMap.Seeded; x++)
                     if (!float.IsNaN(map.SealedAt(x, y)) && rock.Contains(new Vector2(x, y))) tallest = MathF.Max(tallest, map.SealedAt(x, y));
                 Assert.True(tallest > LevelMap.SwimBand + 2f, $"{rock.Kind} wall only {tallest:0.0} m high");
                 // Nothing was left inside it.
@@ -198,7 +198,7 @@ public class TopDownGenTests
             if (!map.HasBoss || map.Rift) continue;
             Assert.Contains(map.WeakRocks, r => r.Kind == SealKind.Boss);
             // With its walls standing, the arena cannot be reached from the start.
-            const int N = LevelMap.Samples;
+            const int N = (LevelMap.Seeded + 1);
             bool Open(int x, int y) => map[x, y] < 0.2f && !map.WeakRocks.Any(r => r.Contains(new Vector2(x, y)));
             var seen = new bool[N * N];
             var queue = new System.Collections.Generic.Queue<(int X, int Y)>();
@@ -387,12 +387,12 @@ public class TopDownGenTests
         var map = Map(seed);
         Assert.InRange(LevelValidator.InteriorPeak(map), 3f, 14f);
         // The rim is impassable all the way round.
-        for (int i = 0; i <= LevelMap.Size; i++)
+        for (int i = 0; i <= LevelMap.Seeded; i++)
         {
             Assert.False(map.IsOpen(new Vector2(i, 1f)));
             Assert.False(map.IsOpen(new Vector2(1f, i)));
-            Assert.False(map.IsOpen(new Vector2(i, LevelMap.Size - 1f)));
-            Assert.False(map.IsOpen(new Vector2(LevelMap.Size - 1f, i)));
+            Assert.False(map.IsOpen(new Vector2(i, LevelMap.Seeded - 1f)));
+            Assert.False(map.IsOpen(new Vector2(LevelMap.Seeded - 1f, i)));
         }
     }
 
@@ -510,7 +510,7 @@ public class TopDownGenTests
                 Assert.Equal(CaveKind.Pocket, cave.Kind);
                 Assert.Single(cave.Chambers);
                 // With its own spur shut, nothing else reaches it.
-                const int N = LevelMap.Size;
+                const int N = LevelMap.Seeded;
                 var seen = new bool[N * N];
                 var queue = new System.Collections.Generic.Queue<(int X, int Y)>();
                 var start = LevelValidator.Cell(map.Start.Position);

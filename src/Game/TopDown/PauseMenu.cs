@@ -27,15 +27,18 @@ public partial class PauseMenu : Control
     /// <summary>The open reef, in Lantern Bay: the next pearl into a slot, and a pearl sold at the shell shop.</summary>
     public event Action<int>? SlotCycled;
     public event Action<string>? PearlSold;
+    /// <summary>The open reef's requests: one she carries let go (back to the Tide Fan), and the HUD's ribbons shown or hidden.</summary>
+    public event Action<int>? RequestLetGo;
+    public event Action<bool>? RibbonsToggled;
 
 
-    const float Width = 640f, SlideSeconds = 0.35f;
+    const float Width = 640f, SlideSeconds = OctoShoots.Game.Ui.DrawerStyle.SlideSeconds;
     /// <summary>The right stick scrolls the list (pixels a second, pushed all the way).</summary>
     const float ScrollSpeed = 900f;
-    const int LevelTab = 0, StatTab = 1, Tabs = 4;
+    const int LevelTab = 0, StatTab = 1, RequestTab = 4, Tabs = 5;
 
-    static readonly Color Gold = new(1f, 0.82f, 0.45f);
-    static readonly Color Soft = new(0.75f, 0.85f, 0.88f);
+    static readonly Color Gold = OctoShoots.Game.Ui.DrawerStyle.Gold;
+    static readonly Color Soft = OctoShoots.Game.Ui.DrawerStyle.Soft;
 
     /// <summary>The stat sheet's name for each modifier (its values are read from there).</summary>
     static readonly Dictionary<Stat, string> SheetName = new()
@@ -46,7 +49,7 @@ public partial class PauseMenu : Control
 
     PanelContainer _panel = null!;
     ScrollContainer _scroll = null!;
-    VBoxContainer _levelUp = null!, _rows = null!, _pearls = null!, _achievements = null!;
+    VBoxContainer _levelUp = null!, _rows = null!, _pearls = null!, _achievements = null!, _requests = null!;
     GridContainer _stats = null!;
     readonly Button[] _tabs = new Button[Tabs];
     Label _summary = null!, _hint = null!, _tabLeft = null!, _tabRight = null!;
@@ -65,15 +68,7 @@ public partial class PauseMenu : Control
         Visible = false;
 
         _panel = new PanelContainer { CustomMinimumSize = new Vector2(Width, 0f) };
-        _panel.AddThemeStyleboxOverride("panel", new StyleBoxFlat
-        {
-            BgColor = new Color(0.03f, 0.07f, 0.09f, 0.94f),
-            BorderColor = new Color(Gold, 0.6f),
-            BorderWidthLeft = 3,
-            CornerRadiusTopLeft = 14, CornerRadiusBottomLeft = 14,
-            ContentMarginLeft = 30, ContentMarginRight = 26, ContentMarginTop = 32, ContentMarginBottom = 24,
-            ShadowColor = new Color(0f, 0f, 0f, 0.5f), ShadowSize = 18,
-        });
+        _panel.AddThemeStyleboxOverride("panel", OctoShoots.Game.Ui.DrawerStyle.Panel());
         AddChild(_panel);
 
         var box = new VBoxContainer();
@@ -95,7 +90,7 @@ public partial class PauseMenu : Control
         box.AddChild(tabs);
         _tabLeft = TabHint();
         tabs.AddChild(_tabLeft);
-        string[] names = { "Level up", "Stats", "Pearls", "Achievements" };
+        string[] names = { "Level up", "Stats", "Pearls", "Achievements", "Requests" };
         for (int i = 0; i < Tabs; i++)
         {
             int tab = i;
@@ -131,6 +126,9 @@ public partial class PauseMenu : Control
         _achievements = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, Visible = false };
         _achievements.AddThemeConstantOverride("separation", 14);
         lists.AddChild(_achievements);
+        _requests = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, Visible = false };
+        _requests.AddThemeConstantOverride("separation", 12);
+        lists.AddChild(_requests);
 
         box.AddChild(new HSeparator());
         _resume = new Button { CustomMinimumSize = new Vector2(0f, 40f) };
@@ -159,7 +157,7 @@ public partial class PauseMenu : Control
     /// <summary>Verification: opens on a tab.</summary>
     public void ShowTab(int tab) => ShowList(Math.Clamp(tab, 0, Tabs - 1));
 
-    /// <summary>0 the level-up, 1 her stats, 2 the absorbed pearls, 3 the achievements.</summary>
+    /// <summary>0 the level-up, 1 her stats, 2 the absorbed pearls, 3 the achievements, 4 the requests she carries.</summary>
     void ShowList(int tab)
     {
         _tab = tab;
@@ -167,6 +165,7 @@ public partial class PauseMenu : Control
         _stats.Visible = tab == StatTab;
         _pearls.Visible = tab == 2;
         _achievements.Visible = tab == 3;
+        _requests.Visible = tab == RequestTab;
         for (int i = 0; i < Tabs; i++) _tabs[i].ButtonPressed = tab == i;
         _scroll.ScrollVertical = 0;
         if (_opening && InputSetup.UsingPad) FocusFirst();
@@ -309,6 +308,53 @@ public partial class PauseMenu : Control
         _opening = true;
         Visible = true;
         ShowList(run.Points > 0 ? LevelTab : StatTab);
+    }
+
+    /// <summary>
+    /// The Requests tab (docs/QUESTS-PROPOSAL.md §6): the requests she carries off the Tide Fan, each its poster's line,
+    /// what it asks and how far along, what it pays, and Let go; and whether the HUD shows them as ribbons. On a run,
+    /// only a line saying there are none.
+    /// </summary>
+    public void FillRequests(IReadOnlyList<FanMenu.Entry> carried, bool ribbons, bool reef)
+    {
+        Empty(_requests);
+        _tabs[RequestTab].Text = carried.Count > 0 ? $"Requests  {carried.Count}" : "Requests";
+        if (!reef)
+        {
+            _requests.AddChild(Note("Requests are tied to the Tide Fan in Lantern Bay, on the open reef."));
+            return;
+        }
+        var toggle = new Button { Text = $"Ribbons on the HUD: {(ribbons ? "On" : "Off")}", CustomMinimumSize = new Vector2(0f, 38f), ToggleMode = true, ButtonPressed = ribbons };
+        toggle.Toggled += on =>
+        {
+            toggle.Text = $"Ribbons on the HUD: {(on ? "On" : "Off")}";
+            RibbonsToggled?.Invoke(on);
+        };
+        _requests.AddChild(toggle);
+        if (carried.Count == 0) _requests.AddChild(Note("You carry none. Take a ribbon off the Tide Fan in the bay's commune."));
+        for (int i = 0; i < carried.Count; i++)
+        {
+            var e = carried[i];
+            var col = new VBoxContainer();
+            col.AddThemeConstantOverride("separation", 3);
+            var who = new Label { Text = e.Who };
+            who.AddThemeColorOverride("font_color", Gold);
+            col.AddChild(who);
+            var line = new Label { Text = $"“{e.Line}”", AutowrapMode = TextServer.AutowrapMode.WordSmart };
+            line.AddThemeColorOverride("font_color", new Color(1f, 0.93f, 0.85f));
+            col.AddChild(line);
+            col.AddChild(Note(e.Caption));
+            if (e.Pearl is { } pearl) col.AddChild(Row(pearl));
+            var pays = new Label { Text = $"{e.Shells} silver shells · {e.Xp} experience" };
+            pays.AddThemeColorOverride("font_color", Gold);
+            col.AddChild(pays);
+            int index = i;
+            var go = new Button { Text = e.Enabled ? "Done · untie it at the Tide Fan" : "Let go", Disabled = e.Enabled, SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
+            go.Pressed += () => RequestLetGo?.Invoke(index);
+            col.AddChild(go);
+            _requests.AddChild(col);
+            _requests.AddChild(new HSeparator());
+        }
     }
 
     /// <summary>The open reef: whether pearls can be slotted and sold here (in Lantern Bay).</summary>

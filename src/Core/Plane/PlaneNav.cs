@@ -23,7 +23,8 @@ public static class NavTuning
 
 public sealed partial class PlaneWorld
 {
-    const int NavN = (int)(LevelMap.Size / NavTuning.Cell);
+    /// <summary>The nav grid's cells a side (the map's square in NavTuning.Cell steps).</summary>
+    int NavN => (int)(Map.Size / NavTuning.Cell);
     const int NavUnreached = int.MaxValue;
     bool[]? _navOpen;
     int[]? _navSteps;
@@ -214,11 +215,11 @@ public sealed partial class PlaneWorld
 
     bool NavOpenAt(Vector2 p) => NavCellOf(p) is var c and >= 0 && _navOpen![c];
 
-    static int NavCellOf(Vector2 p)
+    int NavCellOf(Vector2 p)
     {
         int x = (int)MathF.Floor(p.X / NavTuning.Cell), y = (int)MathF.Floor(p.Y / NavTuning.Cell);
         return x < 0 || y < 0 || x >= NavN || y >= NavN ? -1 : y * NavN + x;
     }
 
-    static Vector2 NavCentre(int i) => new((i % NavN + 0.5f) * NavTuning.Cell, (i / NavN + 0.5f) * NavTuning.Cell);
+    Vector2 NavCentre(int i) => new((i % NavN + 0.5f) * NavTuning.Cell, (i / NavN + 0.5f) * NavTuning.Cell);
 }

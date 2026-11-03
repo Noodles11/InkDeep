@@ -110,22 +110,6 @@ public partial class CameraRig : Node3D
 
     readonly float[] _lights = new float[CombatView.MaxLights * 4];
 
-    /// <summary>Her bubbles as lenses (x, height, z, radius): the rings of light they throw on the floor.</summary>
-    public void SetLenses(Vector4[] lenses, int count)
-    {
-        for (int i = 0; i < count && i < lenses.Length; i++)
-        {
-            _lenses[i * 4] = lenses[i].X;
-            _lenses[i * 4 + 1] = lenses[i].Y;
-            _lenses[i * 4 + 2] = lenses[i].Z;
-            _lenses[i * 4 + 3] = lenses[i].W;
-        }
-        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("lenses"), _lenses);
-        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("lens_count"), Mathf.Min(count, lenses.Length));
-    }
-
-    readonly float[] _lenses = new float[CombatView.MaxLenses * 4];
-
     /// <summary>A way down's opening, where the ground gives way to water (strength 0: none).</summary>
     public void SetHole(System.Numerics.Vector2 at, float radius, float strength) =>
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("hole"), new Vector4(at.X, at.Y, radius, strength));

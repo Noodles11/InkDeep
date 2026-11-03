@@ -105,6 +105,8 @@ public sealed partial class PlaneWorld
             }
         }
         bool hurt = false;
+        gained += _givenXp;
+        _givenXp = 0;
         foreach (var e in Events)
         {
             // On the open reef only a sealed leak counts, for its cave's level.

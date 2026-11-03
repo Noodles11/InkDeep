@@ -89,14 +89,14 @@ public partial class AbyssView : Node3D
 
     /// <summary>Whether the abyss floor lies fully dropped at a point (nothing above it but water).</summary>
     bool Deep(LevelMap map, System.Numerics.Vector2 p, float below) =>
-        p.X > 2f && p.Y > 2f && p.X < LevelMap.Size - 2f && p.Y < LevelMap.Size - 2f && map.HeightAt(p) < below;
+        p.X > 2f && p.Y > 2f && p.X < map.Size - 2f && p.Y < map.Size - 2f && map.HeightAt(p) < below;
 
     ArrayMesh? GrowKelp(LevelMap map)
     {
         // Where fields can grow: the deep floor, clear of the way down, apart from each other; some of it left bare.
         var spots = new List<System.Numerics.Vector2>();
-        for (float y = 4f; y < LevelMap.Size - 4f; y += 4f)
-        for (float x = 4f; x < LevelMap.Size - 4f; x += 4f)
+        for (float y = 4f; y < map.Size - 4f; y += 4f)
+        for (float x = 4f; x < map.Size - 4f; x += 4f)
         {
             var p = new System.Numerics.Vector2(x + _rng.RandfRange(-1.5f, 1.5f), y + _rng.RandfRange(-1.5f, 1.5f));
             if (Deep(map, p, FieldFloor) && System.Numerics.Vector2.Distance(p, map.Shaft.Center) > ShaftClear) spots.Add(p);

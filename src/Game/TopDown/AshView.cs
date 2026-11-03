@@ -8,7 +8,7 @@ namespace OctoShoots.Game.TopDown;
 /// <summary>
 /// A cave's wall ash on screen (docs/ADVENTURE.md §8; the sim's PlaneAsh.cs): each patch a few scraps of washed-purple ash
 /// stuck flat to the rock like torn wallpaper (ash_flake.gdshader, one MultiMesh), seen only where light falls on them. As
-/// her searchlight wears a patch away its scraps go one by one, each peeling off in a twirl of magic particles (the
+/// her light wears a patch away its scraps go one by one, each peeling off in a twirl of magic particles (the
 /// pearls' "+" and "*") and a flake of ash drifting down and fading.
 /// </summary>
 public partial class AshView : Node3D
@@ -43,7 +43,7 @@ public partial class AshView : Node3D
         {
             Multimesh = _multimesh,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-            CustomAabb = new Aabb(new Vector3(-10, -40, -10), new Vector3(LevelMap.Size + 20, 80, LevelMap.Size + 20)),
+            CustomAabb = new Aabb(new Vector3(-10, -40, -10), new Vector3(LevelMap.Seeded + 20, 80, LevelMap.Seeded + 20)),
         });
         _magic = new MagicParticles(1024);
         AddChild(_magic);

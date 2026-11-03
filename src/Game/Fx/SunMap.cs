@@ -60,7 +60,7 @@ public static class SunMap
 
     static byte[] Cast(LevelMap map, Vector3 sunDir)
     {
-        int n = LevelMap.Samples;
+        int n = map.Samples;
         // What overhangs each metre of the reef: a cave roof (its old mountain), a tunnel's roof, or an arch or overhang's span.
         var roof = new float[n * n];
         var canopyBottom = new float[n * n];
@@ -91,7 +91,7 @@ public static class SunMap
 
         var l = sunDir.Normalized();
         float step = 0.5f;
-        float extent = LevelMap.Size;
+        float extent = map.Size;
         var data = new float[Size * Size];
         for (int v = 0; v < Size; v++)
         for (int u = 0; u < Size; u++)
@@ -127,9 +127,9 @@ public static class SunMap
     /// <summary>The terrain's height at (x, z): bilinear on the grid, read directly.</summary>
     static float Height(float[] heights, float x, float z)
     {
-        const int n = LevelMap.Samples;
-        x = Math.Clamp(x, 0f, LevelMap.Size - 0.0001f);
-        z = Math.Clamp(z, 0f, LevelMap.Size - 0.0001f);
+        int n = (int)MathF.Round(MathF.Sqrt(heights.Length));
+        x = Math.Clamp(x, 0f, n - 1.0001f);
+        z = Math.Clamp(z, 0f, n - 1.0001f);
         int ix = (int)x, iz = (int)z;
         float tx = x - ix, tz = z - iz;
         int i = iz * n + ix;

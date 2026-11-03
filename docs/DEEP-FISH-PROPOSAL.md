@@ -129,7 +129,7 @@ when she comes close. Its numbers and behaviour are in docs/ADVENTURE.md §3–�
 - **Corrupted:** their photophores gone black, swollen into little ink sacs; the school a cloud of ash-grey fish with
   violet rims.
 - **Behaviour:** the school drifts toward her and hangs round her 4–7 m out. Each Dimmer within 7 m **drinks her
-  light**: her lantern's reach (her searchlight and the clearing of the water round her) shrinks 4% for each, down to
+  light**: her lantern's reach (her light and the clearing of the water round her) shrinks 4% for each, down to
   half at most, never out (Pillar 1). They brush her for 2 damage on contact, nothing more. The danger is what they
   hide: everything else in the Trench comes out of the dark.
 - **Counter:** clear them and her light comes back. Freed, each lanternfish's specks glow blue again: the school

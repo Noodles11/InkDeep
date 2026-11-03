@@ -96,8 +96,8 @@ What changes is the protagonist's skin:
   Presentation only — but in the adventure the sim keeps her oral arm too, as a
   line along the way she swam, and it stings the corrupted creatures it brushes
   (docs/ADVENTURE.md §6).
-- **Bioluminescence**: a lamp in her bell: softened through the bell all round her, as a bulb's (§5.3), and an
-  intense searchlight out of the bell's opening (docs/ADVENTURE.md §8), and a faint glow round the bell itself; the player's light is the primary light source in dark
+- **Bioluminescence**: a lamp in her bell, shining all round her as a bulb's (§5.3; docs/ADVENTURE.md §8), and a
+  faint glow round the bell itself; the player's light is the primary light source in dark
   depths (inherited rule: *Clementine is
   always the warm light in the scene*).
 - **The Absorbent:** one of her kind. A pearl swallowed is a skill absorbed —
@@ -863,16 +863,14 @@ Deterministic and cheap: the same level always schedules the same events.
   so that it holds a rider round a bend: left to itself, it carries her all the way. Sealing the leaks heals the reef's
   water, and this is what that looks like. It replaces any pointer to the way down, no light spring lies on it, and once it runs Sea Chart Nautilus
   draws it on both maps.
-- **The leaks' push** (docs/ADVENTURE.md §1): each open leak pushes outward out to 12 m, harder the nearer.
-- **What they carry:** Clementine (sliding along rock), every shot and ink clouds. The creatures live in this water and
+- **What it carries:** Clementine (sliding along rock), every shot and ink clouds. The creatures live in this water and
   hold their ground in it, and shells, hearts and pearls stay where they lie: a current that never stops would sweep
   them all to the way down.
 - **Seen** as the moving water shimmering like the air over a hot road seen from afar, with no
   colour and no change to the water's brightness: `CurrentView` bakes the level's currents into a map over her plane and
   the post pass bends the finished picture by it, so one soft band lies along the course, spilling 5 m past the channel
   (only seen there, not felt, and fainter), eddies rolling down it with the flow and boiling as they go, fine shivers
-  riding slow swirls, patchy, with no lines or edges, fading out at its sides and ends. Kelp leans with it. A leak's push
-  (not the main current) hums in the controller while it shoves her.
+  riding slow swirls, patchy, with no lines or edges, fading out at its sides and ends. Kelp leans with it.
 
 ## 5. Lighting & Atmosphere — the core pillar
 
@@ -932,11 +930,9 @@ stream only — never touches gameplay physics. Quality presets inherited.
 Every light that matters reaches only where it can: the reef is a heightfield, so visibility is worked out on it
 exactly and cheaply, and the water glows where light passes through it.
 
-- **Her lantern** (BellView): a **lamp in a shade**: a smooth soft light from the top of her bell, softened by it,
-  shining every way but down through the bell's opening (a projector on the light masks that cone, `BellView.LampShade`),
-  turning with her bell as she tips, with no streaks and no filaments, its soft shadows from a light the size of her
-  heart (her own bell and strands cast none). Out of the opening her searchlight shines instead (docs/ADVENTURE.md §8). A
-  faint short glow round the bell (3 m) keeps what swims right beside her from going black. Its strength follows the
+- **Her lantern** (BellView): a **bulb**: one smooth soft sphere of light from her bell's heart, all round her, with no
+  streaks and no filaments, its soft shadows from a light the size of her heart (her own bell and strands cast none).
+  It burns nothing: her shots' light does (docs/ADVENTURE.md §8). A faint short glow round the bell (3 m) keeps what swims right beside her from going black. Its strength follows the
   depth's **Lantern** (`ReefLook.Lantern`, §5.1): 1 in the Shallows, 1.1 Kelp, 1.35 Galleon, 1.5 Carnival, 1.85 Trench, 2
   Abyss, 0.6 Tank; it is 0.45 × Lantern^1.8 strong (`BellView.BulbEnergy`), reaches 9 m × √(Lantern × Lantern Pearl's glow; the pearl makes it no stronger)
   and falls off more gently the deeper she is. Her glow in the water is even all round her and nothing cuts it, and the
@@ -981,9 +977,8 @@ exactly and cheaply, and the water glows where light passes through it.
   light falls in beams past the walls and through the holes in arches; creatures, flora and marine snow lose their
   caustics in the reef's shade. Off during the dive (the sea surface moves), back when the next level's map is ready.
 - **Refraction**: her bell is a lens, gathering her light into bright caustic filaments that play over the floor below
-  her (wider and softer the farther the floor). Her bubbles are lenses too: the sun's light through each (in the lit
-  depths) and her lantern's (thrown outward from her) fall on the floor as soft bright spots, wider the farther they fall.
-  The sea surface's own caustics are §5.1's.
+  her (wider and softer the farther the floor). Her shots throw nothing on the floor below them: no spot, no shadow,
+  only their own lamps' light. The sea surface's own caustics are §5.1's.
 - **Glints**: wet rock and sand catch her light and the reef's other lights in soft specular glints.
 - **The reef's other lights** cast shadows too: a light spring's god ray (a spotlight), a clam room's inner light and
   the Crack's (dual-paraboloid, cheaper than hers). Her bubbles' small lights do not.
@@ -1257,10 +1252,12 @@ The FP staging ("look up through the surface") is replaced:
 - Music: post-v1 (inherited decision). The soundtrack is off for now (`MusicManager.SoundtrackOn`): nothing plays.
 - **Heard through water** (`Sfx`): every game sound goes through the Sfx bus, whose low-pass filter takes the treble off
   as water does — 7 kHz in the Shallows, falling off to 1.5 kHz at the deepest (`SetDepth`, by the depth shown).
-- **Her attacks are lightning under water** (`Sfx.PlayZap`, on every volley): a short, sharp electric crackle — 0.26 s
-  of the discharge recording (audio/sfx/electric_discharge.mp3), from a random point in it, its pitch a little apart
-  each time — muffled by the water, and 0.05 s after it a quieter sizzle of bubbles (audio/sfx/big_bubble.mp3) trailing
-  off over 0.42 s. A stronger volley is a little louder.
+- **Her light thrown pops** (`Sfx.PlayThrow`, on every volley): one of ten recorded pops (audio/sfx/pop1–pop10.wav)
+  at random, never the same twice running, its pitch a little apart each time, muffled by the water. A stronger volley
+  is a little louder.
+- **Her light striking pops squishily** (`Sfx.PlayStrike`): whenever a shot of hers hits anything it can harm (a
+  creature, a boss, a vase), the squishy pop (audio/sfx/squishpop.mp3), once a step however many it struck, through
+  the same water.
 - **Every explosion is felt** (`TopDownMain.Explode`): hers (a Starburst burst — only a subtle tremor, since it comes
   with nearly every shot; a Pistol Shrimp's bang),
   the creatures' (a Blotter's bomb, a creature of ink bursting — a prime far more than a murkling — a Blightroot bursting
@@ -1369,8 +1366,8 @@ at mist distance (inherited fade rule).
   dead: thrown at 20 m/s, it slows steadily at first, as if to stop at the end of her range, then — once the water's
   drag (6 × its speed, per second) is the gentler — eases off exponentially. Slower than 0.9 m/s it floats, still
   drifting and slowing, each shot for its own time (0.12–0.22 s, rolled as it is thrown, times her **bubble hover**
-  stat, which pearls can change; with Bubble Coral 0.8–1.2 s × 1.5); then it pops near the end of her range, 6.4 m
-  (a quarter of the screen's height at the 100% camera zoom), however near her the pointer is (only its way from her
+  stat, which pearls can change; with Bubble Coral 0.8–1.2 s × 1.5); then it pops near the end of her range, 8.3 m
+  (about a third of the screen's height at the 100% camera zoom), however near her the pointer is (only its way from her
   counts; what is in the way is struck anyway). Where it pops it clears a little of the ground's corruption. It only ever comes to rest by popping. They always pop on a mob (piercing and boomerang bubbles fly on through mobs). A bubble that bumps into rock
   pops 40% of the time and otherwise bounces off (Mirror Scale's bounces are sure). Two of her bubbles that touch
   (bubbles of one volley never do) bounce off each other: pushed apart, the bigger moving less, and turned off each

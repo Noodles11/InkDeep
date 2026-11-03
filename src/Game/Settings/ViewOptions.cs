@@ -16,6 +16,8 @@ public sealed class ViewOptions
     [Tune("View", 10f, 80f)] public float MinimapRange = 32f;
     /// <summary>The run's clock on the HUD (top left); off, it shows in the pause menu and on the Tab map only.</summary>
     [Tune("View")] public bool ShowClock = false;
+    /// <summary>The requests she carries, as kelp ribbons on the HUD under the minimap (the pause menu's Requests tab toggles it).</summary>
+    [Tune("View")] public bool RequestRibbons = true;
     /// <summary>Frame-rate cap (0 = uncapped). Keeps the GPU cool; vsync caps it further on slower screens.</summary>
     [Tune("View", 0f, 240f)] public int MaxFps = 60;
     /// <summary>

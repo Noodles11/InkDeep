@@ -411,7 +411,7 @@ public partial class KelpView : Node3D
             arrays[(int)Mesh.ArrayType.TexUV] = _uvs;
             arrays[(int)Mesh.ArrayType.Index] = _indices;
             _mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-            _mesh.CustomAabb = new Aabb(new Vector3(-10f, -12f, -10f), new Vector3(LevelMap.Size + 20f, 30f, LevelMap.Size + 20f));
+            _mesh.CustomAabb = new Aabb(new Vector3(-10f, -12f, -10f), new Vector3(_map!.Size + 20f, 30f, _map.Size + 20f));
             _built = true;
             return;
         }

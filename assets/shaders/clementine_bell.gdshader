@@ -31,8 +31,11 @@ uniform float spin = 0.0;       // the bell's turn about its axis (she faces her
 // Her colours (HerColor.cs, data/clementine_color.cfg): body is the bell and tentacles, gold her light.
 global uniform vec3 her_body;
 global uniform vec3 her_light;
-#define body her_body
-#define gold her_light
+// A bell wearing a jelly's own look (BellView.Wear: the title's save slots): its colours instead of hers (a: 1 worn).
+uniform vec4 own_body = vec4(0.0);
+uniform vec4 own_light = vec4(0.0);
+#define body (own_body.a > 0.5 ? own_body.rgb : her_body)
+#define gold (own_body.a > 0.5 ? own_light.rgb : her_light)
 uniform vec3 flash : source_color = vec3(1.0, 0.239, 0.498);  // hurt magenta #FF3D7F
 // The absorbing ritual (docs/PEARLS.md): `mimic` 0..1 is how far she has taken on the pearl's look (its three colours
 // with its icon engraved, mimic_icon as PearlIcon), like a chameleon; `burst` 1 → 0 is the light pulse as she

@@ -78,7 +78,6 @@ public class PlaneCurrentTests
         for (int i = 0; i < AdventureTuning.LeaksToClear; i++) w.DebugSealLeak();
         Run(w, CurrentTuning.MainRise);
         foreach (var c in w.Currents) c.Strength = 1f;
-        foreach (var v in w.Leaks) v.Push = 0f;
         w.Clouds.Clear();
         w.Player.Position = w.Player.PrevPosition = w.Map.Start.Position;
         float seconds = Main(w).Length / CurrentTuning.MainSpeed * 1.5f + 5f;
@@ -95,18 +94,12 @@ public class PlaneCurrentTests
     }
 
     [Fact]
-    public void ALeakPushesHarderTheNearer_MoreThanSheCanSwimAgainstAtItsMiddle()
+    public void ALeakDoesNotPush()
     {
         var w = World();
         var v = w.Leaks[0];
-        foreach (var o in w.Leaks.Skip(1)) o.Push = 0f;
-        float At(float d) => w.CurrentAt(v.Position + new Vector2(d, 0f), main: false).X;
-        Assert.True(At(0.5f) > 6f + 1f, $"{At(0.5f)}");
-        Assert.True(At(0.5f) > At(3f) && At(3f) > At(8f) && At(8f) > 0f);
-        Assert.Equal(Vector2.Zero, w.CurrentAt(v.Position + new Vector2(AdventureTuning.LeakReach + 1f, 0f), main: false));
-        w.DebugSealLeak(v);
-        Run(w, CurrentTuning.LeakFall + 0.1f);
-        Assert.Equal(Vector2.Zero, w.CurrentAt(v.Position + new Vector2(2f, 0f), main: false));
+        foreach (float d in new[] { 0.5f, 3f, 8f })
+            Assert.Equal(Vector2.Zero, w.CurrentAt(v.Position + new Vector2(d, 0f), main: false));
     }
 
     [Fact]

@@ -64,11 +64,6 @@ public partial class CombatView : Node3D
     /// <summary>The swim-layer lights this frame, brightest first, for the post pass.</summary>
     public Vector4[] Lights { get; } = new Vector4[MaxLights];
     public int LightCount { get; private set; }
-    /// <summary>Her bubbles in flight as lenses (x, height, z, radius): the light through them falls on the floor in rings.</summary>
-    public const int MaxLenses = 12;
-    public Vector4[] Lenses { get; } = new Vector4[MaxLenses];
-    public int LensCount { get; private set; }
-
     sealed class Bloom
     {
         public System.Numerics.Vector2 At;
@@ -974,7 +969,6 @@ void fragment() {
             _lamps.Add(lamp);
         }
         _candidates.Clear();
-        LensCount = 0;
         _seenNext.Clear();
         for (int i = 0; i < _shots.Count; i++)
         {
@@ -1073,11 +1067,6 @@ void fragment() {
                 lamp.OmniRange = LampReach * Mathf.Clamp(share, 0.55f, 2.6f);
                 lamp.LightEnergy = LampEnergy * Mathf.Clamp(share, 0.6f, 1.8f) * ember * shot.Dim * (1f + 0.5f * pulse);
                 lamp.LightColor = LightOf(shot.Hue).Lerp(new Color(1f, 0.95f, 0.84f), shot.Hue == PrismHue.None ? warmth * 0.6f : warmth * 0.2f);
-                if (LensCount < MaxLenses)
-                {
-                    var at = _shots[i].GlobalPosition;
-                    Lenses[LensCount++] = new Vector4(at.X, at.Y, at.Z, shot.Radius * 1.2f);
-                }
             }
             else if (shot.BossPearl)
             {

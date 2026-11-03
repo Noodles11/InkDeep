@@ -217,6 +217,40 @@ public readonly record struct DecorSpot(DecorKind Kind, Vector2 Position, float 
 public readonly record struct SealedPocket(Vector2 Position, float Radius);
 
 /// <summary>
+/// A cave's opening in a wall (docs/RPG-PROPOSAL.md §2.3): a passage cut into the rock where it stands tall at a
+/// chamber's edge, roofed by the rock that stood there (LevelMap.Roof). At is its threshold, under the arch of its
+/// face; Into, the way into the rock; its back lies Depth in, in the dark. A notch leads up to it through the wall's
+/// foot from the water.
+/// </summary>
+public readonly record struct Doorway(Vector2 At, Vector2 Into)
+{
+    /// <summary>How deep the passage runs into the rock, and its open half-width (metres).</summary>
+    public const float Depth = 4.5f, HalfWidth = 1.7f;
+    /// <summary>The arch's crown over the swim level, and the rock the face must stand over the swim level where it is cut.</summary>
+    public const float ArchTop = 2.8f, FaceHeight = 3.4f;
+
+    /// <summary>The way across it (Into turned a quarter).</summary>
+    public Vector2 Across => new(-Into.Y, Into.X);
+    public Vector2 Back => At + Into * Depth;
+    /// <summary>Where one comes through it: just short of its back, in the dark.</summary>
+    public Vector2 Inside => Back - Into * 0.8f;
+
+    /// <summary>How far in a point lies (from the threshold, along Into) and how far off its middle.</summary>
+    public (float In, float Off) Measure(Vector2 p)
+    {
+        var d = p - At;
+        return (Vector2.Dot(d, Into), MathF.Abs(Vector2.Dot(d, Across)));
+    }
+
+    /// <summary>Whether a point lies in the passage, at least this far in from its threshold.</summary>
+    public bool Holds(Vector2 p, float past = 0f)
+    {
+        var (inward, off) = Measure(p);
+        return inward >= past && inward <= Depth + 0.5f && off <= HalfWidth + 0.3f;
+    }
+}
+
+/// <summary>
 /// A kelp bed (DESIGN-TOPDOWN §4.1 stage 5): a dense patch of tall seaweed rooted on the open floor, its strands' roots
 /// and lengths (metres). Cosmetic in the sim (it neither blocks nor slows); the view sways it in the water everything
 /// stirs, and it can hide what swims in it.
@@ -253,13 +287,28 @@ public sealed class SpawnEntry
 }
 
 /// <summary>
-/// One generated level (DESIGN-TOPDOWN §4): a 140×140 m heightfield on a 1 m grid plus everything the generator
-/// decided. Produced only by <see cref="TopDownGenerator"/>; the game reads it and never generates or scatters.
+/// One generated level (DESIGN-TOPDOWN §4): a square heightfield on a 1 m grid (140 m a side for a seeded level or a
+/// leak cave, larger for a hand-drawn map that asks for it) plus everything the generator decided. Produced only by
+/// <see cref="TopDownGenerator"/>; the game reads it and never generates or scatters.
 /// </summary>
 public sealed class LevelMap
 {
-    public const int Size = 140;
-    public const int Samples = Size + 1;
+    /// <summary>A seeded level's square (and a leak cave's, and a hand-drawn map's unless it says otherwise), metres a side.</summary>
+    public const int Seeded = 140;
+
+    public LevelMap(int size = Seeded)
+    {
+        Size = size;
+        Heights = new float[Samples * Samples];
+        Lid = NewLid(Samples);
+        Roof = NewLid(Samples);
+        Sealed = NewLid(Samples);
+        SealedOpen = NewLid(Samples);
+    }
+
+    /// <summary>Its square, metres a side, and its grid points a side.</summary>
+    public int Size { get; }
+    public int Samples => Size + 1;
 
     /// <summary>Where the bell is drawn: floating just above the swim level (0), which every height is measured from.</summary>
     public const float SwimBand = 0.7f;
@@ -287,23 +336,47 @@ public sealed class LevelMap
     public bool Rift;
     public float Menace;
     /// <summary>
-    /// A safe place drawn by hand (HandLayout.Haven: Lantern Bay): no ink, no leaks, nothing corrupted, no shaft; its
-    /// exit is a current station.
+    /// A haven's water on a hand-drawn map (HandLayout.Haven: Lantern Bay, in a corner of the reef), the box it fills:
+    /// nothing harms her in it, and coming into it heals her whole. Null where there is none.
     /// </summary>
-    public bool Haven;
+    public (Vector2 Min, Vector2 Max)? Haven;
+    /// <summary>Whether a point lies in the haven's water (or within <paramref name="margin"/> of it).</summary>
+    public bool InHaven(Vector2 p, float margin = 0f) =>
+        Haven is { } h && p.X >= h.Min.X - margin && p.Y >= h.Min.Y - margin && p.X <= h.Max.X + margin && p.Y <= h.Max.Y + margin;
+    /// <summary>How far outside the haven's water a point lies (0 inside it, ∞ where there is none).</summary>
+    public float OutOfHaven(Vector2 p)
+    {
+        if (Haven is not { } h) return float.PositiveInfinity;
+        float dx = MathF.Max(MathF.Max(h.Min.X - p.X, p.X - h.Max.X), 0f), dy = MathF.Max(MathF.Max(h.Min.Y - p.Y, p.Y - h.Max.Y), 0f);
+        return MathF.Sqrt(dx * dx + dy * dy);
+    }
     /// <summary>A hand-drawn map's name (HandLayout.Title), or empty for a seeded level.</summary>
     public string Title = "";
-    /// <summary>A hand-drawn map (the bay, a region): its exit is a current station, and it holds no leaks of its own.</summary>
+    /// <summary>A hand-drawn map (the reef): it holds no leaks and no main current of its own.</summary>
     public bool Station;
+    /// <summary>A hand-drawn map whose exit is a current station, where the ride to another map starts (HandLayout.Station).</summary>
+    public bool CurrentStation;
+    /// <summary>The depth whose look it takes, when not its own depth's (HandLayout.Look).</summary>
+    public int? LookDepth;
     /// <summary>
     /// A leak cave (docs/RPG-PROPOSAL.md §2.3): one leak, at the dead end of its main path where a way down would be;
-    /// no shaft; sealed, its return current runs back to the mouth she came in by (its start).
+    /// no shaft; its way out (Way) in its start chamber's wall.
     /// </summary>
     public bool LeakCave;
     /// <summary>A leak cave's level (what its leak is worth, how strong its creatures are); 0 elsewhere.</summary>
     public int CaveLevel;
-    /// <summary>A region's cave mouths: swimming into one takes her down into its leak cave.</summary>
-    public List<Vector2> Mouths = new();
+    /// <summary>A region's cave mouths, openings in its walls: swimming into one takes her into its leak cave.</summary>
+    public List<Doorway> Mouths = new();
+    /// <summary>A leak cave's way out, the opening she came in by (in its start chamber's wall); null elsewhere.</summary>
+    public Doorway? Way;
+    /// <summary>The bay's mirror (HandLayout.Mirror): swimming onto it, she changes her look. Null elsewhere.</summary>
+    public Vector2? Mirror;
+    /// <summary>The mirror's pool (metres across its middle to its rim).</summary>
+    public const float MirrorRadius = 1.7f;
+    /// <summary>The bay's Tide Fan (HandLayout.Fan): where it stands, at the foot of its rock. Null elsewhere.</summary>
+    public Vector2? Fan;
+    /// <summary>The floor kept bare round the fan's rock (metres).</summary>
+    public const float FanClear = 3.5f;
     public ulong EntryStampSeed, ExitStampSeed;
     public bool EntryFromArena;
     /// <summary>Where the floor gives way to the level below.</summary>
@@ -315,18 +388,18 @@ public sealed class LevelMap
     /// <summary>An abyss reef's shelves (AbyssReef): ledges just under the plane, jutting from the walls, where anemones grow.</summary>
     public List<Vector2> Shelves = new();
 
-    /// <summary>Heights in metres at the 141×141 grid points, row-major (index = y * Samples + x).</summary>
-    public float[] Heights = new float[Samples * Samples];
+    /// <summary>Heights in metres at the grid points (Samples × Samples), row-major (index = y * Samples + x).</summary>
+    public float[] Heights;
 
     /// <summary>
     /// The mountain over each cave as it stood before the chambers were hollowed out (NaN elsewhere): the cave's roof,
     /// drawn as intact rock until Clementine swims inside.
     /// </summary>
-    public float[] Lid = NewLid();
+    public float[] Lid;
 
-    static float[] NewLid()
+    static float[] NewLid(int samples)
     {
-        var lid = new float[Samples * Samples];
+        var lid = new float[samples * samples];
         Array.Fill(lid, float.NaN);
         return lid;
     }
@@ -338,7 +411,7 @@ public sealed class LevelMap
     /// The rock over the shortcut tunnels (NaN elsewhere): over a pass, the ridge it was cut through as it stood; over a
     /// route shortcut, the rock either side carried on over it. Drawn as rock until Clementine is near.
     /// </summary>
-    public float[] Roof = NewLid();
+    public float[] Roof;
 
     public float RoofAt(int x, int y) => Roof[y * Samples + x];
 
@@ -357,9 +430,9 @@ public sealed class LevelMap
     public List<Canopy> Canopies = new();
     public List<WeakRock> WeakRocks = new();
     /// <summary>The terrain the sealed walls stand as (NaN where no wall stands): the walls raised as if their slab of passage were rock.</summary>
-    public float[] Sealed = NewLid();
+    public float[] Sealed;
     /// <summary>The terrain a long sealed wall leaves standing once its gate has opened (NaN where none stands).</summary>
-    public float[] SealedOpen = NewLid();
+    public float[] SealedOpen;
     public float SealedOpenAt(int x, int y) => SealedOpen[y * Samples + x];
     public float SealedAt(int x, int y) => Sealed[y * Samples + x];
     public List<DecorSpot> Decor = new();

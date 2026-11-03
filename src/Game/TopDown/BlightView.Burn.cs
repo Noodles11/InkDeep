@@ -6,16 +6,13 @@ using OctoShoots.Game.Fx;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// Her light burning the corrupted (docs/ADVENTURE.md §8; the searing itself is her_burn.gdshaderinc), the particles:
-/// from the side of every burning body facing her, tiny bright specks boil off and rise like the fizz off a dissolving
-/// tablet, flakes of bleached ink peel away and sink, and now and then a pale wisp of it rises and thins. A creature her
-/// light dazzles gives one sharp glint and a ring of sparks.
+/// Her shots' light burning the corrupted (docs/ADVENTURE.md §8; the searing itself is her_burn.gdshaderinc), the
+/// particles: from the side of every burning body facing the shot lighting it, tiny bright specks boil off and rise like
+/// the fizz off a dissolving tablet, flakes of bleached ink peel away and sink, and now and then a pale wisp of it rises
+/// and thins. A creature a shot's light dazzles gives one sharp glint and a ring of sparks.
 /// </summary>
 public partial class BlightView
 {
-    /// <summary>Her light's heart (world), where the burning bodies' lit sides face.</summary>
-    public Vector3 HerLight { get; set; }
-
     /// <summary>Specks boiled off a burning body a second, for a body of a murkling's size (bigger bodies more).</summary>
     const float SizzleRate = 34f;
 
@@ -24,18 +21,18 @@ public partial class BlightView
         for (int i = 0; i < _murks.Count && i < world.Murklings.Count; i++)
         {
             var m = world.Murklings[i];
-            if (m.Alive && world.InHerLight(m)) Sizzle(_murks[i].GlobalPosition, _murks[i].Scale.X, dt);
+            if (m.Alive && world.LitFrom(m) is { } from) Sizzle(_murks[i].GlobalPosition, _murks[i].Scale.X, from, dt);
         }
         foreach (var (w, view) in _wardens)
-            if (w.Alive && world.InHerLight(w)) Sizzle(view.Node.GlobalPosition + (w.Puffer ? Vector3.Zero : Vector3.Up * 0.5f), WardenTuning.Radius, dt);
+            if (w.Alive && world.LitFrom(w) is { } from) Sizzle(view.Node.GlobalPosition + (w.Puffer ? Vector3.Zero : Vector3.Up * 0.5f), WardenTuning.Radius, from, dt);
         foreach (var (f, view) in _flounders)
-            if (f.Corrupted && world.InHerLight(f)) Sizzle(view.Node.GlobalPosition + Vector3.Up * 0.1f, FlounderTuning.Radius, dt);
+            if (f.Corrupted && world.LitFrom(f) is { } from) Sizzle(view.Node.GlobalPosition + Vector3.Up * 0.1f, FlounderTuning.Radius, from, dt);
     }
 
-    /// <summary>A burning body (its middle and radius): what boils off its lit side this frame.</summary>
-    void Sizzle(Vector3 at, float radius, float dt)
+    /// <summary>A burning body (its middle and radius), lit by a shot there (on her plane): what boils off its lit side this frame.</summary>
+    void Sizzle(Vector3 at, float radius, System.Numerics.Vector2 shot, float dt)
     {
-        var toLight = HerLight - at;
+        var toLight = new Vector3(shot.X, LevelMap.SwimBand + 0.35f, shot.Y) - at;
         if (toLight.LengthSquared() < 1e-4f) return;
         toLight = toLight.Normalized();
         float rate = SizzleRate * Mathf.Clamp(radius / BlightTuning.MurkRadius, 0.5f, 3f);
@@ -63,12 +60,12 @@ public partial class BlightView
         }
     }
 
-    /// <summary>A creature comes into her light, dazzled: one sharp glint on the side facing her and a ring of sparks off it.</summary>
+    /// <summary>A creature comes into a shot's light, dazzled: one sharp glint on the side facing it and a ring of sparks off it.</summary>
     void Dazzle(in PlaneEvent e)
     {
         var at = new Vector3(e.Position.X, LevelMap.SwimBand, e.Position.Y);
-        var toHer = new Vector3(-e.Direction.X, 0.3f, -e.Direction.Y).Normalized();
-        var glint = at + toHer * Mathf.Max(e.Size, 0.2f);
+        var toLight = new Vector3(-e.Direction.X, 0.3f, -e.Direction.Y).Normalized();
+        var glint = at + toLight * Mathf.Max(e.Size, 0.2f);
         var light = HerColor.Light;
         var white = new Color(2.2f, 2.1f, 1.9f, 1f);
         _motes.Emit(glint, Vector3.Zero, 0.22f, 0.5f, 0.05f, white, new Color(light.R, light.G, light.B, 0f), drag: 0f);

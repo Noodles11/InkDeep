@@ -34,6 +34,7 @@ public sealed class PlaneProfileRecorder
         DamageSource.RoyalPearl => "royal_pearl",
         DamageSource.BossSnap => "boss_snap",
         DamageSource.BossContact => "boss_contact",
+        DamageSource.Leak => "leak_arm",
         _ => "unknown",
     };
 

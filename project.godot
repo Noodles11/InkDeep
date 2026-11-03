@@ -175,13 +175,21 @@ her_lantern={
 "type": "float",
 "value": 1.0
 }
-her_burn={
+her_burn0={
 "type": "vec4",
 "value": Vector4(0, -1000, 0, 0)
 }
-her_beam={
+her_burn1={
 "type": "vec4",
-"value": Vector4(0, -1, 0, 0.9)
+"value": Vector4(0, -1000, 0, 0)
+}
+her_burn2={
+"type": "vec4",
+"value": Vector4(0, -1000, 0, 0)
+}
+her_burn3={
+"type": "vec4",
+"value": Vector4(0, -1000, 0, 0)
 }
 her_light_at={
 "type": "vec4",

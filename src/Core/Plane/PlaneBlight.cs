@@ -459,7 +459,7 @@ public sealed partial class PlaneWorld
     void Drain(float amount, DamageSource source)
     {
         var p = Player;
-        if (Defeated || amount <= 0f || p.ShieldTimer > 0f || p.DashInvulnerableTimer > 0f) return;
+        if (Defeated || InHaven || amount <= 0f || p.ShieldTimer > 0f || p.DashInvulnerableTimer > 0f) return;
         // (The curse den's dark drains the same at any depth.)
         if (source != DamageSource.Curse) amount *= HurtScale;
         p.Hp -= amount;
@@ -482,6 +482,9 @@ public sealed partial class PlaneWorld
     /// </summary>
     /// <summary>Tests: a burst of her light here (as the Starburst Gland's).</summary>
     public void DebugBurst(Vector2 at, float reach, float light) => BurstOnCorruption(at, reach, light);
+
+    /// <summary>Verification and tests: a murkling (or a prime) freed now.</summary>
+    public void DebugFreeMurkling(Murkling m) => BurstMurkling(m, ember: true);
 
     void BurstOnCorruption(Vector2 at, float reach, float light, bool cleanse = true)
     {
@@ -1119,6 +1122,9 @@ public sealed partial class PlaneWorld
                 piece.ThrowTimer = BlightTuning.ThrowEvery * _blightRng.Range(0.6f, 1.2f);
             }
             Corruption?.Release(matter);
+            // In a leak cave, the school it swallowed comes out with it and swims home (docs/QUESTS-PROPOSAL.md §3.2).
+            int school = Map.LeakCave ? ReleaseSchool(m.Position) : 0;
+            Events.Add(new PlaneEvent(PlaneEventType.PrimeFreed, m.Position, Vector2.Zero, school));
             if (damage > 0f) Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, m.Position, Vector2.Zero, damage));
             return;
         }

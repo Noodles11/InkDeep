@@ -25,9 +25,9 @@ public class MountainsTests
             var map = TopDownGenerator.Generate(new RunStreams(SeedCode.Parse(seed)), id, log: s => { if (s.Contains("mountains")) _out.WriteLine(s); });
             var dist = LevelValidator.Distances(map, map.Start.Position);
             int stranded = 0, raised = 0;
-            const int N = LevelMap.Samples;
-            for (int y = 0; y < LevelMap.Size; y++)
-            for (int x = 0; x < LevelMap.Size; x++)
+            const int N = (LevelMap.Seeded + 1);
+            for (int y = 0; y < LevelMap.Seeded; y++)
+            for (int x = 0; x < LevelMap.Seeded; x++)
             {
                 var c = new Vector2(x + 0.5f, y + 0.5f);
                 bool open = map.IsOpen(c);
@@ -36,7 +36,7 @@ public class MountainsTests
                 for (int dx = -Mountains.Keep - 1; dx <= Mountains.Keep + 1 && !near; dx++)
                 {
                     int nx = x + dx, ny = y + dy;
-                    near = nx >= 0 && ny >= 0 && nx < LevelMap.Size && ny < LevelMap.Size && float.IsFinite(dist[ny * LevelMap.Size + nx]);
+                    near = nx >= 0 && ny >= 0 && nx < LevelMap.Seeded && ny < LevelMap.Seeded && float.IsFinite(dist[ny * LevelMap.Seeded + nx]);
                 }
                 if (open && !near && !map.Shaft.Contains(c, 3f)) stranded++;
                 if (map.Heights[y * N + x] > 4f && !open) raised++;

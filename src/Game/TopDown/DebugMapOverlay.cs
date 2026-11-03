@@ -25,9 +25,9 @@ public partial class DebugMapOverlay : Control
     public void SetMap(LevelMap map)
     {
         _map = map;
-        var image = Image.CreateEmpty(LevelMap.Size, LevelMap.Size, false, Image.Format.Rgba8);
-        for (int y = 0; y < LevelMap.Size; y++)
-        for (int x = 0; x < LevelMap.Size; x++)
+        var image = Image.CreateEmpty(map.Size, map.Size, false, Image.Format.Rgba8);
+        for (int y = 0; y < map.Size; y++)
+        for (int x = 0; x < map.Size; x++)
         {
             float h = map.HeightAt(new System.Numerics.Vector2(x + 0.5f, y + 0.5f));
             Color c = h < -0.5f ? new Color(0.1f, 0.2f, 0.35f).Lerp(new Color(0.02f, 0.05f, 0.15f), Mathf.Clamp(-h / 8f, 0f, 1f))
@@ -45,7 +45,8 @@ public partial class DebugMapOverlay : Control
         if (Visible) QueueRedraw();
     }
 
-    Vector2 Origin => new((Size.X - LevelMap.Size * Scale) * 0.5f, (Size.Y - LevelMap.Size * Scale) * 0.5f);
+    Vector2 Origin => new((Size.X - MapSize * Scale) * 0.5f, (Size.Y - MapSize * Scale) * 0.5f);
+    int MapSize => _map?.Size ?? LevelMap.Seeded;
 
     Vector2 P(System.Numerics.Vector2 p) => Origin + new Vector2(p.X, p.Y) * Scale;
 
@@ -54,8 +55,8 @@ public partial class DebugMapOverlay : Control
         if (_map is null || _texture is null) return;
         var map = _map;
         var o = Origin;
-        DrawRect(new Rect2(o - Vector2.One * 6f, Vector2.One * (LevelMap.Size * Scale + 12f)), new Color(0f, 0f, 0f, 0.75f));
-        DrawTextureRect(_texture, new Rect2(o, Vector2.One * LevelMap.Size * Scale), false);
+        DrawRect(new Rect2(o - Vector2.One * 6f, Vector2.One * (map.Size * Scale + 12f)), new Color(0f, 0f, 0f, 0.75f));
+        DrawTextureRect(_texture, new Rect2(o, Vector2.One * map.Size * Scale), false);
 
         foreach (var c in map.Corridors)
         {

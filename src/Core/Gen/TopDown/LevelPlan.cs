@@ -276,8 +276,9 @@ public sealed class LevelPlan
     }
 
     /// <summary>
-    /// A leak cave's plan (docs/RPG-PROPOSAL.md §2.3): the general level's shape, no shop, no crab, no boss; now and then a
-    /// clam room, a secret or a shell cache for what lies off its main path; the Menace its region gives it.
+    /// A leak cave's plan (docs/RPG-PROPOSAL.md §2.3): the general level's shape, no shop, no crab, no boss, no clam room
+    /// and no shell cache; now and then a secret or a curse den off its main path (and, as on any level, maybe a light
+    /// spring); the Menace its region gives it.
     /// </summary>
     public static LevelPlan ForCave(SeedCode seed, LevelId id, float menace)
     {
@@ -286,9 +287,8 @@ public sealed class LevelPlan
         return new LevelPlan
         {
             Id = id,
-            Treasures = rng.NextFloat() < CaveTreasure ? 1 : 0,
             Secrets = rng.NextFloat() < LevelStocking.Secret ? 1 : 0,
-            Caches = rng.NextFloat() < LevelStocking.Cache ? 1 : 0,
+            Curses = rng.NextFloat() < CaveCurse ? 1 : 0,
             EntryStamp = streams.StampSeed(id),
             ExitStamp = streams.StampSeed(id with { Level = id.Level + 1 }),
             Menace = menace,
@@ -298,8 +298,8 @@ public sealed class LevelPlan
         };
     }
 
-    /// <summary>How often a leak cave holds a clam room.</summary>
-    public const float CaveTreasure = 0.35f;
+    /// <summary>How often a leak cave holds a curse den.</summary>
+    public const float CaveCurse = 0.35f;
 
     /// <summary>The tutorial's levels: every kind of place between its two, set rather than rolled.</summary>
     static LevelPlan Tutorial_(SeedCode seed, RunStreams streams, LevelId id)

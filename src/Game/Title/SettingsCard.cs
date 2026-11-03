@@ -2,6 +2,8 @@ using System;
 using Godot;
 using OctoShoots.Game.Settings;
 
+using OctoShoots.Game.Ui;
+
 namespace OctoShoots.Game.Title;
 
 /// <summary>Settings (proposal §4.6): the view options that exist today, reduced motion, and the controls (rebindable).</summary>
@@ -20,21 +22,17 @@ public partial class SettingsCard : PanelContainer
 
     public override void _Ready()
     {
-        var style = TitleStyle.Box(TitleStyle.Pearl, TitleStyle.Coral, 3, 18, 28);
-        style.ShadowColor = new Color(0.04f, 0.1f, 0.12f, 0.45f);
-        style.ShadowSize = 24;
-        style.ShadowOffset = new Vector2(0f, 10f);
-        AddThemeStyleboxOverride("panel", style);
+        AddThemeStyleboxOverride("panel", DrawerStyle.Panel());
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 16);
         AddChild(box);
 
         var head = new HBoxContainer();
         box.AddChild(head);
-        var title = TitleStyle.Text("Settings", 40, TitleStyle.Ink, TitleStyle.Display);
+        var title = DrawerStyle.Title("Settings");
         title.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         head.AddChild(title);
-        var close = TitleStyle.Pill(TitleStyle.CloseText, primary: false, size: 15);
+        var close = DrawerStyle.Button(TitleStyle.CloseText, 15);
         close.Pressed += _close;
         head.AddChild(close);
 
@@ -120,7 +118,7 @@ public partial class SettingsCard : PanelContainer
         _applied(_view);
     }
 
-    static Label Heading(string text) => TitleStyle.Text(text.ToUpperInvariant(), 13, TitleStyle.Coral, TitleStyle.BodyBold);
+    static Label Heading(string text) => TitleStyle.Text(text.ToUpperInvariant(), 13, DrawerStyle.Gold, TitleStyle.BodyBold);
 
     static Control Row(string name, string help, Control control)
     {
@@ -128,8 +126,8 @@ public partial class SettingsCard : PanelContainer
         row.AddThemeConstantOverride("separation", 24);
         var text = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         text.AddThemeConstantOverride("separation", 0);
-        text.AddChild(TitleStyle.Text(name, 18, TitleStyle.Ink, TitleStyle.BodyBold));
-        var h = TitleStyle.Text(help, 14, TitleStyle.InkSoft);
+        text.AddChild(TitleStyle.Text(name, 18, DrawerStyle.Text, TitleStyle.BodyBold));
+        var h = TitleStyle.Text(help, 14, DrawerStyle.Soft);
         h.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         h.CustomMinimumSize = new Vector2(520f, 0f);
         text.AddChild(h);
@@ -150,7 +148,7 @@ public partial class SettingsCard : PanelContainer
             CustomMinimumSize = new Vector2(200f, 24f), SizeFlagsVertical = SizeFlags.ShrinkCenter,
         };
         var label = new Label { Text = Percent(value), CustomMinimumSize = new Vector2(52f, 0f) };
-        label.AddThemeColorOverride("font_color", text ?? TitleStyle.Ink);
+        label.AddThemeColorOverride("font_color", text ?? DrawerStyle.Text);
         slider.ValueChanged += v =>
         {
             label.Text = Percent((float)v);
@@ -181,7 +179,7 @@ public partial class SettingsCard : PanelContainer
         {
             foreach (string state in new[] { "normal", "hover", "pressed", "focus" })
             {
-                var box = TitleStyle.Box(state == "hover" ? new Color(1f, 0.93f, 0.9f) : Colors.White, state == "focus" ? TitleStyle.Mint : TitleStyle.Coral, 2, 12);
+                var box = TitleStyle.Box(state == "hover" ? DrawerStyle.TileHover : DrawerStyle.Tile, state == "focus" ? DrawerStyle.Gold : DrawerStyle.TileRim, 2, 12);
                 box.ContentMarginLeft = 14;
                 box.ContentMarginRight = 30;
                 box.ContentMarginTop = box.ContentMarginBottom = 6;
@@ -190,9 +188,9 @@ public partial class SettingsCard : PanelContainer
         }
         c.AddThemeFontOverride("font", TitleStyle.BodyBold);
         c.AddThemeFontSizeOverride("font_size", 16);
-        c.AddThemeColorOverride("font_color", TitleStyle.Ink);
-        c.AddThemeColorOverride("font_hover_color", TitleStyle.Ink);
-        c.AddThemeColorOverride("font_pressed_color", TitleStyle.Ink);
-        c.AddThemeColorOverride("font_focus_color", TitleStyle.Ink);
+        c.AddThemeColorOverride("font_color", DrawerStyle.Text);
+        c.AddThemeColorOverride("font_hover_color", DrawerStyle.Text);
+        c.AddThemeColorOverride("font_pressed_color", DrawerStyle.Text);
+        c.AddThemeColorOverride("font_focus_color", DrawerStyle.Text);
     }
 }

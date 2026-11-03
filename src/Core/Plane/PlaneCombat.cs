@@ -23,12 +23,12 @@ public static class PlaneCombatTuning
     /// if to stop at the end of her range (how near the pointer is to her does not matter: what is in the way is hit
     /// anyway), then gentler in the water's drag (LingerDrag), floats a moment (PopHoverMin–Max seconds × her bubble
     /// hover stat) and pops, its light going with it, clearing a little of the ground's corruption where it does.
-    /// BubbleRange is her range with no pearls: a quarter of the screen's height at the 100% camera zoom (the framing
+    /// BubbleRange is her range with no pearls: about a third of the screen's height at the 100% camera zoom (the framing
     /// shows 25.6 m of the swim band top to bottom). ShotLife is only a safety net. With Bubble Coral her light lingers
     /// longer (BubbleHoverMin–Max) and settles nearer (LingerRange), so later shots catch up and merge with it.
     /// </summary>
     public const float ShotSpeed = 20f;
-    public const float BubbleRange = 6.4f, LightSettle = 8f;
+    public const float BubbleRange = 8.3f, LightSettle = 8f;
     /// <summary>
     /// Below this speed a bubble hovers: still drifting and slowing, each bubble for its own time (PopHoverMin–Max, or
     /// with Bubble Coral BubbleHoverMin–Max, seconds times her bubble hover stat), then it pops.
@@ -303,8 +303,8 @@ public sealed partial class PlaneWorld
         var reach = LevelValidator.Distances(Map, Map.Start.Position);
         var spots = Map.Spawns.Select(s => s.Position).ToList();
         var extra = new List<Vector2>();
-        for (float y = LevelMap.RimWidth + 2f; y < LevelMap.Size - LevelMap.RimWidth - 2f; y += 4f)
-        for (float x = LevelMap.RimWidth + 2f; x < LevelMap.Size - LevelMap.RimWidth - 2f; x += 4f)
+        for (float y = LevelMap.RimWidth + 2f; y < Map.Size - LevelMap.RimWidth - 2f; y += 4f)
+        for (float x = LevelMap.RimWidth + 2f; x < Map.Size - LevelMap.RimWidth - 2f; x += 4f)
             extra.Add(new Vector2(x, y));
         var rng = new Rng(Map.Seed ^ 0x6D0B5UL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 28) ^ ((ulong)Map.Attempt << 44));
         for (int i = extra.Count - 1; i > 0; i--)
@@ -664,7 +664,8 @@ public sealed partial class PlaneWorld
     bool HurtPlayer(float damage, Vector2 dir, DamageSource source, Vector2? at = null)
     {
         var p = Player;
-        if (Defeated) return false;
+        // In a haven's water nothing harms her.
+        if (Defeated || InHaven) return false;
         if (p.ShieldTimer > 0f)
         {
             if (_shieldPing <= 0f) Events.Add(new PlaneEvent(PlaneEventType.ShieldBlocked, p.Position, dir));
