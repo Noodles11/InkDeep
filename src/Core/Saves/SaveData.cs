@@ -47,10 +47,25 @@ public sealed class Jelly
     /// <summary>Per region: the cave behind each of its mouths now, and how many minor leaks she has sealed there (OpenReef).</summary>
     public Dictionary<string, List<int>> Caves { get; set; } = new();
     public Dictionary<string, int> Sealed { get; set; } = new();
+    /// <summary>Her lost light, where she last dimmed (null: none, or she took it back).</summary>
+    public LostLight? Lost { get; set; }
     /// <summary>When she was made and last played, as ISO 8601 local times.</summary>
     public string Made { get; set; } = "";
     public string Played { get; set; } = "";
     public double PlaySeconds { get; set; }
+}
+
+/// <summary>
+/// What death took from a jelly (docs/RPG-PROPOSAL.md §5.1): her passive pearls and the shells on her, left glowing where
+/// she dimmed — the place (OpenReef.PlaceKey) and the spot in it.
+/// </summary>
+public sealed class LostLight
+{
+    public string Place { get; set; } = "";
+    public float X { get; set; }
+    public float Y { get; set; }
+    public List<string> Pearls { get; set; } = new();
+    public int Shells { get; set; }
 }
 
 /// <summary>How she looks (docs/RPG-PROPOSAL.md §8): every colour as #RRGGBB, any colour the player likes.</summary>

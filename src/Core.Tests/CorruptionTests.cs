@@ -440,7 +440,7 @@ public class CorruptionTests
         var near = new Murkling { Position = at + new Vector2(1.2f, 0f), Bud = 0f };
         w.Murklings.Add(near);
         // A burst where the shot goes out: no direct hit, but its light floods round it.
-        w.Shots.Add(new PlaneShot { Position = at, Line = at, Velocity = Vector2.UnitX * 0.01f, Life = 1f, FromPlayer = true, Damage = 10f, Explosive = true, Range = 1f, Traveled = 2f });
+        w.Shots.Add(new PlaneShot { Position = at, Line = at, Velocity = Vector2.UnitX * 0.01f, Life = 1f, FromPlayer = true, Damage = 10f, Explosive = true, Range = 1f, Traveled = 2f, Hover = 0.1f, Rest = 0.1f });
         w.Step(default);
         Assert.Contains(w.Events, e => e.Type == PlaneEventType.LightBurst);
         Assert.True(near.Corruption.Value < near.Corruption.Max);
@@ -669,15 +669,16 @@ public class CorruptionTests
         var from = w.Player.Position;
         var aim = Enumerable.Range(0, 32).Select(i => new Vector2(MathF.Cos(i * MathF.Tau / 32f), MathF.Sin(i * MathF.Tau / 32f)))
             .OrderByDescending(d => Enumerable.Range(0, 40).TakeWhile(k => w.Map.IsOpen(from + d * (k * 0.5f))).Count()).First();
-        // She throws it 1.5 m a step: a small murkling half a step past one of them is never where the light is at a
-        // step's end.
-        float step = PlaneCombatTuning.ShotSpeed * PlaneWorld.Dt;
-        Assert.True(step >= 1.4f);
+        // A shot thrown 1.5 m a step: a small murkling half a step past one of them is never where the light is at a
+        // step's end. (Her light's own burn is off: only the shot may strike it.)
+        w.LightBurns = false;
+        const float speed = 90f;
+        float step = speed * PlaneWorld.Dt;
         var m = BudAt(w, from + aim * (0.25f + step * 2.5f), prime: false, drink: false)!;
         m.Bud = 0f;
         m.Radius = 0.08f;
         m.Corruption.Max = m.Corruption.Value = 1000f;
-        w.Step(new PlaneInput { Aim = aim, Fire = true });
+        w.Shots.Add(new PlaneShot { Position = from, Line = from, Velocity = aim * speed, Speed0 = speed, Range = 12f, Life = 3f, FromPlayer = true, Damage = 10f });
         for (int i = 0; i < 20; i++) w.Step(new PlaneInput { Aim = aim });
         Assert.True(m.Corruption.Value < 1000f, "her light struck it");
     }

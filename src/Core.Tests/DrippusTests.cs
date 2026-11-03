@@ -61,6 +61,8 @@ public class DrippusTests
     {
         var w = World();
         var boss = Begin(w);
+        // (Her light's burn off: only its births cost it meter here.)
+        w.LightBurns = false;
         float start = boss.Hp;
         int births = 0;
         for (int i = 0; i < 60 * 240 && boss.Mass > DrippusTuning.Floor; i++)

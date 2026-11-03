@@ -297,7 +297,7 @@ public class PlaneCombatTests
     }
 
     [Fact]
-    public void HerLightFliesAtFullSpeedAndGoesOutAtTheEndOfItsRange()
+    public void HerLightEasesOutFloatsAMomentAndPopsAtTheEndOfItsRange()
     {
         var w = World();
         foreach (var m in w.Mobs) m.Hp = 0f;
@@ -314,21 +314,27 @@ public class PlaneCombatTests
         }
         w.Step(new PlaneInput { Aim = best, Fire = true });
         var bubble = w.Shots.Single(s => s.FromPlayer);
-        float first = bubble.Velocity.Length();
+        float last = bubble.Velocity.Length(), floated = 0f;
+        Assert.True(last > PlaneCombatTuning.ShotSpeed - 1f, "thrown at her shot speed");
         bool gone = false, popped = false;
         for (int i = 0; i < 400 && !gone; i++)
         {
             w.Step(new PlaneInput { Aim = best });
             popped |= w.Events.Any(e => e.Type == PlaneEventType.ShotPopped);
             gone = !w.Shots.Contains(bubble);
-            if (!gone) Assert.Equal(first, bubble.Velocity.Length(), 2);
+            if (gone) break;
+            float v = bubble.Velocity.Length();
+            Assert.True(v <= last + 1e-3f, "it only slows");
+            last = v;
+            if (v < PlaneCombatTuning.BubbleStop) floated += PlaneWorld.Dt;
         }
         Assert.True(gone);
         if (bestRun >= PlaneCombatTuning.BubbleRange + 2f)
         {
-            // Out like a match at its range: no burst.
-            Assert.False(popped);
-            Assert.InRange(bubble.Traveled, PlaneCombatTuning.BubbleRange - 0.1f, PlaneCombatTuning.BubbleRange + 0.6f);
+            // Eased out to about its range, it floats a moment and pops.
+            Assert.True(popped);
+            Assert.InRange(bubble.Traveled, PlaneCombatTuning.BubbleRange - 0.3f, PlaneCombatTuning.BubbleRange + 1f);
+            Assert.InRange(floated, PlaneCombatTuning.PopHoverMin - 0.02f, PlaneCombatTuning.PopHoverMax + 0.02f);
         }
     }
 
@@ -436,17 +442,18 @@ public class PlaneCombatTests
     }
 
     [Fact]
-    public void ASpentShotGoesOutWithoutBurstingOrCleansing()
+    public void AShotThatHasFloatedItsTimePops()
     {
         var w = World();
         foreach (var m in w.Mobs) m.Hp = 0f;
         var bubble = Bubble(w.Player.Position, 1);
-        bubble.Traveled = bubble.Range;
+        bubble.Velocity = Vector2.UnitX * 0.1f;
+        bubble.Hover = 0.15f;
+        bubble.Rest = 0.15f;
         w.Shots.Add(bubble);
         w.Step(default);
         Assert.DoesNotContain(bubble, w.Shots);
-        Assert.Contains(w.Events, e => e.Type == PlaneEventType.ShotOut);
-        Assert.DoesNotContain(w.Events, e => e.Type == PlaneEventType.ShotPopped);
+        Assert.Contains(w.Events, e => e.Type == PlaneEventType.ShotPopped);
     }
 
     [Fact]
@@ -468,7 +475,7 @@ public class PlaneCombatTests
                 into.Add(w.Shots.Single(s => s.FromPlayer).Hover);
             }
         }
-        Assert.All(hovers, h => Assert.InRange(h, PlaneCombatTuning.BubbleHoverMin, PlaneCombatTuning.BubbleHoverMax));
+        Assert.All(hovers, h => Assert.InRange(h, PlaneCombatTuning.PopHoverMin, PlaneCombatTuning.PopHoverMax));
         Assert.True(hovers.Distinct().Count() > 6, "each bubble its own");
         Assert.All(longer, h => Assert.InRange(h, PlaneCombatTuning.BubbleHoverMin * 1.5f, PlaneCombatTuning.BubbleHoverMax * 1.5f));
     }
@@ -609,7 +616,7 @@ public class PlaneCombatTests
             else
             {
                 Assert.Equal(1, most);
-                Assert.True(slowest >= PlaneCombatTuning.ShotSpeed - 0.01f, "plain light never slows");
+                Assert.True(slowest < PlaneCombatTuning.BubbleStop, "plain light eases out too");
             }
         }
     }

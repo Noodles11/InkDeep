@@ -146,6 +146,17 @@ public sealed class CorruptionMeter
         return Empty;
     }
 
+    /// <summary>
+    /// Her light's steady burn (PlaneHerLight.cs): this much off, not counted as a hit (no flash, no rousing, its clock
+    /// running on). True when it empties the meter.
+    /// </summary>
+    public bool Sear(float light)
+    {
+        if (Empty || light <= 0f) return false;
+        Value = MathF.Max(0f, Value - light);
+        return Empty;
+    }
+
     /// <summary>The clock since its last hit.</summary>
     public void Step(float dt) => Since += dt;
 }
@@ -539,6 +550,7 @@ public sealed partial class PlaneWorld
     /// <summary>One of her bubbles popped: its light cleanses after combat.</summary>
     void LightReleased(PlaneShot shot)
     {
+        ClearAsh(shot);
         if (Corruption is null || !shot.FromPlayer) return;
         _pops.Add((shot.Position, shot.Bubbles, shot.Dim));
     }
@@ -797,6 +809,14 @@ public sealed partial class PlaneWorld
                 m.Windup = 0f;
                 m.Velocity = MoveToward(m.Velocity, Vector2.Zero, BlightTuning.ShakeSpeed * 1.2f * Dt);
                 Move(ref m.Position, ref m.Velocity, m.Body, report: false);
+                continue;
+            }
+            // Dazzled by her light: it stops dead, and lets go of a throw it was winding up.
+            if (Dazzled(m))
+            {
+                m.Windup = 0f;
+                m.WindupPrey = null;
+                m.Velocity = Vector2.Zero;
                 continue;
             }
             if (m.Lesser)

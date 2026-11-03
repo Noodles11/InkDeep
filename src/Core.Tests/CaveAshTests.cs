@@ -1,0 +1,123 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Numerics;
+using OctoShoots.Core.Gen.TopDown;
+using OctoShoots.Core.Items;
+using OctoShoots.Core.Plane;
+using OctoShoots.Core.Run;
+using Xunit;
+
+namespace OctoShoots.Core.Tests;
+
+/// <summary>A cave's wall ash (docs/ADVENTURE.md §8; PlaneAsh.cs): her searchlight and her shots clear it.</summary>
+public class CaveAshTests
+{
+    static readonly Lazy<HandLayout> Shallows = new(() =>
+        HandLayout.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "maps", "shallows.json"))));
+
+    static readonly SeedCode Seed = SeedCode.TryParse("KELP7Q2Z", out var s) ? s : default;
+
+    static readonly Lazy<LevelMap> Cave = new(() =>
+        TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("shallows", Shallows.Value.Depth, 0), 0f, 2));
+
+    static readonly Lazy<ItemCatalog> Catalog = new(() =>
+        ItemCatalog.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "items.json"))));
+
+    static PlaneWorld World(LevelMap map) => new(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), PlaneOptions.OpenReef);
+
+    [Fact]
+    public void A_caves_walls_carry_ash_and_open_water_carries_none()
+    {
+        var w = World(Cave.Value);
+        Assert.True(w.Ash.Count > 200, $"{w.Ash.Count} patches");
+        Assert.All(w.Ash, a =>
+        {
+            Assert.True(w.Map.IsOpen(a.At));
+            Assert.True(w.Map.HeightAt(a.Wall + a.Normal * 0.03f) <= LevelMap.SwimBand + a.Height + 0.05f);
+            Assert.InRange(a.Height, AshTuning.Low, AshTuning.High);
+            Assert.Equal(1f, a.Cover);
+        });
+        // Outside caves there is none.
+        Assert.Empty(World(TopDownGenerator.FromHand(Shallows.Value)).Ash);
+    }
+
+    [Fact]
+    public void Her_beam_clears_the_ash_it_falls_on_and_her_soft_light_clears_none()
+    {
+        var w = World(Cave.Value);
+        w.Murklings.Clear();
+        // A patch near her plane, and a spot in front of it, in sight of it, to swim on the spot from (her beam out behind her, onto it).
+        foreach (var a in w.Ash.Where(a => MathF.Abs(a.Height) < 0.6f))
+        {
+            var her = a.At + a.Normal * 2.5f;
+            if (!w.Clear(her, 0.6f) || !w.LineOfSight(her, a.At)) continue;
+            // Still, her beam shines down: the patch stays.
+            for (int i = 0; i < PlaneWorld.TickRate; i++) Step(w, her, Vector2.Zero);
+            Assert.Equal(1f, a.Cover);
+            // Swimming away from the wall, her beam streams back onto it: cleared.
+            for (int i = 0; i < 2 * PlaneWorld.TickRate && a.Cover > 0f; i++) Step(w, her, a.Normal);
+            Assert.Equal(0f, a.Cover);
+            Assert.Contains(w.Ash, x => x.Cover == 1f);
+            return;
+        }
+        Assert.Fail("no patch to shine on");
+    }
+
+    [Fact]
+    public void A_shot_popping_by_a_wall_clears_a_little_ash()
+    {
+        var w = World(Cave.Value);
+        var a = w.Ash.First(x => MathF.Abs(x.Height) < 0.5f);
+        var at = a.Wall + a.Normal * 0.3f;
+        w.Shots.Add(new PlaneShot { Position = at, Line = at, Velocity = Vector2.UnitX * 0.01f, Life = 1f, FromPlayer = true, Damage = 10f, Range = 1f, Hover = 0.05f, Rest = 0.05f });
+        w.Step(default);
+        Assert.Equal(0f, a.Cover);
+        // Only a little: the patches more than its reach away are untouched.
+        Assert.All(w.Ash.Where(x => Vector2.Distance(x.Wall, at) > AshTuning.ShotReach + 0.1f), x => Assert.Equal(1f, x.Cover));
+    }
+
+    [Fact]
+    public void Sealing_the_caves_leak_dissolves_its_ash_in_a_wave()
+    {
+        var w = World(Cave.Value);
+        var leak = w.Leaks.Single();
+        w.DebugSealLeak(leak);
+        for (int i = 0; i < 2; i++) w.Step(default);
+        var near = w.Ash.Where(x => Vector2.Distance(x.Wall, leak.Position) < 4f).ToList();
+        var far = w.Ash.Where(x => Vector2.Distance(x.Wall, leak.Position) > 40f).ToList();
+        Assert.All(near, x => Assert.Equal(0f, x.Cover));
+        Assert.All(far, x => Assert.True(x.Cover > 0f));
+        for (int i = 0; i < 40 * PlaneWorld.TickRate; i++) w.Step(default);
+        Assert.All(w.Ash, x => Assert.Equal(0f, x.Cover));
+    }
+
+    [Fact]
+    public void Ash_lies_thick_over_a_secrets_sealed_wall_and_hides_it_until_cleared()
+    {
+        // The first of the region's caves that has a secret behind a sealed wall.
+        for (int k = 0; k < 24; k++)
+        {
+            var map = TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("shallows", Shallows.Value.Depth, k), 0f, 2);
+            var w = World(map);
+            int seal = w.Seals.FindIndex(x => x.Kind == SealKind.Secret && !x.Open);
+            if (seal < 0) continue;
+            var over = w.Ash.Where(a => a.Seal == seal).ToList();
+            Assert.True(over.Count >= 12, $"{over.Count} patches over it");
+            Assert.All(over, a => Assert.True(w.Map.IsOpen(a.At)));
+            Assert.Equal(1f, w.SealAsh(seal));
+            foreach (var a in over) a.Cover = 0f;
+            Assert.Equal(0f, w.SealAsh(seal));
+            return;
+        }
+        Assert.Fail("no cave with a sealed secret");
+    }
+
+    static void Step(PlaneWorld w, Vector2 her, Vector2 swim)
+    {
+        w.Player.Position = w.Player.PrevPosition = her;
+        w.Player.Velocity = swim * w.CruiseSpeed;
+        w.Player.Hp = w.Run.MaxHp;
+        w.Step(default);
+    }
+}

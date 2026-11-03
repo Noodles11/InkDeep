@@ -97,6 +97,7 @@ public partial class BlightView : Node3D
         SyncWardens(world, dt, camera);
         SyncLashjaws(world, dt, camera);
         SyncFlounders(world, dt);
+        SyncBurns(world, dt);
         SyncKinLights(world);
         SyncOutlines(world);
         // (Her light's hit outline, SyncHitGlows, is off for now.)
@@ -399,6 +400,9 @@ public partial class BlightView : Node3D
                 break;
             case PlaneEventType.Warded:
                 if (_lastWorld is not null) OnWarded(_lastWorld, e);
+                break;
+            case PlaneEventType.Dazzled:
+                Dazzle(e);
                 break;
             case PlaneEventType.WardenFreed:
                 // Freed: its ink pops off it, showering out violet and evaporating, and a healthy anemone is left.

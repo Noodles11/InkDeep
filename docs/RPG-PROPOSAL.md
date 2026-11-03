@@ -130,7 +130,7 @@ This covers ideas 7 and 9.
   and so on.
 - **Where they come from.** Shops, bosses, secret rooms, Crab Deals and treasure chambers in caves.
 - **No limit.** She can absorb as many as she finds. The bell shows 16 motifs, and the rest glow inside, as now.
-- **The stat pearls have to go or change.** About 22 of the 64 passives today only change stats (Coral Crown, Squid
+- **The stat pearls have to go or change.** 25 of the 64 passives today only change stats (Coral Crown, Squid
   Ink Espresso, Shark Tooth, Dolphin Fin, Cuttlebone and others). Each one either becomes a behaviour or is dropped.
   The transformations (Shark Mode, Pirate and the rest) lose their stat parts the same way.
 - **Lost on death.** When she dims, every passive she has absorbed comes out of her bell as **lost light**, a single
@@ -284,7 +284,7 @@ Each step is playable on its own:
    - The region cleanse and the current network.
 7. **The ending:** the Crack as the last great leak, and the Tank.
 
-**What steps 1 and 2 have so far:**
+**What steps 1 to 3 have so far:**
 
 - **Hand-drawn maps.** `data/maps/<name>.json` (`HandLayout`) names chambers, tunnels, cave rooms, open places and a
   region's cave mouths. `TopDownGenerator.FromHand` builds the level with the seeded level's own stages (rock, rooms,
@@ -299,6 +299,9 @@ Each step is playable on its own:
   - **Shape:** a seeded level with its one leak at the dead end of the main path where the way down would be, and no
     shaft. Now and then it has a clam room, a secret or a shell cache off the path.
   - **Ink:** at least 90% of the water starts inked (`ReefTuning.CaveInk`).
+  - **Dark:** no light reaches it but hers, her shots' and its fluorescent plankton (docs/ADVENTURE.md §8).
+  - **Ash:** its corruption clings to its walls as washed-purple ash, cleared by her searchlight and her shots, and
+    dissolved by sealing its leak (docs/ADVENTURE.md §8).
   - **Sealed:** its return current wakes and runs from the leak back to the mouth (`MainCurrent.Course`). Swimming
     back to the mouth, once she has been 10 m in, takes her out to the region at that mouth (`PlaneWorld.LeavingCave`).
 - **Behind each mouth** (`OpenReef`): there is always a cave, grown from her jelly's own seed. Sealing one puts a
@@ -325,10 +328,26 @@ Each step is playable on its own:
   - **Her look** (`HerColor.SetLook`): her arm colour is her bell and arms; her glow is her light, shots and the glow
     she casts; her tips glow their colour (Clementine's twinkle in random hues); her gonads take their shape on her bell
     and on the HUD's gauge (`gonad_shape.gdshaderinc`).
-- **Dimming:** when she dims on the open reef, her passive pearls and the shells on her are lost; her level, actives
-  and name are kept. She wakes at the lantern post. (Lost light, to win them back, is step 3.)
-- **Verification starts:** `--reef=bay|shallows|cave` starts there with a jelly that is never saved, and
-  `--at=mouth` puts her by a region's first mouth.
+- **Stats from levels only** (`PlaneRun.Reef`, `Loadout.Build(pearlStats: false)`): on the open reef no pearl changes
+  a stat, only what she does. The pearls that do nothing but change stats (`PlaneRun.OnlyStats`: 25 of them, such as
+  Coral Crown, Dolphin Fin, Shark Tooth and Cuttlebone) are not offered there at all, and nor are actives (they come
+  from key quests). Reworking the stat pearls into behaviours is still a design pass to do.
+- **Three active slots** (`PlaneRun.Slots`, `OwnedActives`): an active pearl is owned, not absorbed, and goes into the
+  first empty slot. Each slot has its own charge and button: F, Q and E (Y, LB and RB on a controller). The first
+  slot's pearl fills her HUD bell as before; the second and third show as small pearls beside it, their charge round
+  them and their key under.
+- **The Pearls tab** of the pause menu, on the open reef: her three slots, the actives in her stash (owned but in no
+  slot), and the passives in her bell. In Lantern Bay a slot's Change button cycles through the actives she owns
+  (`CycleSlot`), and any pearl can be sold to the shell shop for silver shells (`PlaneRun.Sell`): an active for its
+  worth, `20 + 20 × quality` (`ReefTuning.PearlWorth`), a passive for half. Elsewhere the tab only shows them.
+- **Dimming and lost light** (`Jelly.Lost`, `PlaneLostLight`, `LostLightView`): when she dims, her passive pearls and
+  the shells on her are left where she fell as her lost light, a cluster of small lights in her glow; her level,
+  actives and name are kept, and she wakes at the lantern post. Swimming into it gives everything back. Dimming again
+  first, it is gone (only the newest is kept). In a cave she had already sealed, it waits at that cave's mouth in the
+  region instead.
+- **Verification starts:** `--reef=bay|shallows|cave` starts there with a jelly that is never saved, `--at=mouth`
+  puts her by a region's first mouth, `--dbg-lost` lays a lost light 5 m north of her start, and `--pause-tab=2`
+  opens the pause menu on the Pearls tab.
 
 **Static-map authoring.** This needs a tool. I recommend extending the cave generator page (`tools/cavegen/`) into an
 editor: place chambers, tunnels and places by hand, and save to JSON that the game loads.

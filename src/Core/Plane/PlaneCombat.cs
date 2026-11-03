@@ -18,28 +18,28 @@ public static class PlaneCombatTuning
     public const float PlayerHurtGrace = 0.6f;
 
     /// <summary>
-    /// Her shots are light (docs/LIGHT-BUBBLES.md; the rules still call them bubbles): thrown hard at ShotSpeed, light
-    /// has no friction, so it flies on undimmed at full speed the way she aims, always to the end of her range (how near
-    /// the pointer is to her does not matter: what is in the way is hit anyway), and goes out there like a match (no
-    /// hovering, no burst), clearing a little of the ground's corruption where it does. BubbleRange is her
-    /// range with no pearls: half the screen's height at the 100% camera zoom (the framing shows 25.6 m of the swim
-    /// band top to bottom). ShotLife is only a safety net. With Bubble Coral her light lingers instead (see
-    /// LingerDrag): it slows to a hover near the end of its range, so later shots catch up and merge with it.
+    /// Her shots are light (docs/LIGHT-BUBBLES.md; the rules still call them bubbles), each a small lantern lighting the
+    /// water round it (docs/ADVENTURE.md §8). Thrown at ShotSpeed the way she aims, it eases out: it slows steadily, as
+    /// if to stop at the end of her range (how near the pointer is to her does not matter: what is in the way is hit
+    /// anyway), then gentler in the water's drag (LingerDrag), floats a moment (PopHoverMin–Max seconds × her bubble
+    /// hover stat) and pops, its light going with it, clearing a little of the ground's corruption where it does.
+    /// BubbleRange is her range with no pearls: a quarter of the screen's height at the 100% camera zoom (the framing
+    /// shows 25.6 m of the swim band top to bottom). ShotLife is only a safety net. With Bubble Coral her light lingers
+    /// longer (BubbleHoverMin–Max) and settles nearer (LingerRange), so later shots catch up and merge with it.
     /// </summary>
-    public const float ShotSpeed = 90f;
-    public const float BubbleRange = 12.8f, LightSettle = 8f;
+    public const float ShotSpeed = 20f;
+    public const float BubbleRange = 6.4f, LightSettle = 8f;
     /// <summary>
-    /// Below this speed a bubble hovers: still drifting and slowing, each bubble for its own time between BubbleHoverMin
-    /// and BubbleHoverMax seconds (times her bubble hover stat), then it pops.
+    /// Below this speed a bubble hovers: still drifting and slowing, each bubble for its own time (PopHoverMin–Max, or
+    /// with Bubble Coral BubbleHoverMin–Max, seconds times her bubble hover stat), then it pops.
     /// </summary>
     public const float BubbleStop = 0.9f;
+    public const float PopHoverMin = 0.12f, PopHoverMax = 0.22f;
     public const float BubbleHoverMin = 0.8f, BubbleHoverMax = 1.2f;
     /// <summary>
-    /// Bubble Coral: lingering light. Thrown at ShotSpeed, it slows steadily (the deceleration that would stop it at
-    /// LingerRange), then — once the water's drag (LingerDrag × its speed, per second) is the gentler — eases off.
-    /// Slower than BubbleStop it hovers (still drifting, still slowing) for its own hover time (BubbleHoverMin–Max × her
-    /// bubble hover stat: Bubble Coral ×1.5), then goes out. It settles about 6 m from her, well inside the view, so
-    /// the shots behind visibly catch up and merge with it.
+    /// The ease out: thrown at ShotSpeed, a shot slows steadily (the deceleration that would stop it at its range, or with
+    /// Bubble Coral at LingerRange), then — once the water's drag (LingerDrag × its speed, per second) is the gentler —
+    /// eases off. Slower than BubbleStop it hovers (still drifting, still slowing) for its own hover time, then pops.
     /// </summary>
     public const float LingerDrag = 6f, LingerRange = 5.5f;
     /// <summary>
@@ -603,21 +603,29 @@ public sealed partial class PlaneWorld
     }
 
     /// <summary>
-    /// The active pearl (F): it recharges over its listed time (faster with her recharge stat), and when charged, F uses
-    /// it. Bubble Shield: untouchable for its duration. Whale Song: heals (not at full HP). Tide Pulse: three waves push
-    /// everything loose away from her (PlanePushWave.cs).
+    /// The active pearls (F; on the open reef F, Q and E for her three slots): each recharges over its listed time (faster
+    /// with her recharge stat), and when charged, its button uses it. Bubble Shield: untouchable for its duration. Whale
+    /// Song: heals (not at full HP). Tide Pulse: three waves push everything loose away from her (PlanePushWave.cs). The
+    /// events' Direction.X says which slot.
     /// </summary>
     void StepActive(in PlaneInput input)
     {
+        Player.ShieldTimer -= Dt;
+        for (int slot = 0; slot < PlaneRun.SlotCount; slot++)
+            StepSlot(slot, slot switch { 0 => input.UseActive, 1 => input.UseActive2, _ => input.UseActive3 });
+    }
+
+    void StepSlot(int slot, bool use)
+    {
         var p = Player;
-        p.ShieldTimer -= Dt;
-        if (Run.Active?.Active is not { } spec) return;
-        if (Run.ActiveCharge < 1f)
-            Run.ActiveCharge = MathF.Min(1f, Run.ActiveCharge + Dt * Run.Loadout.Stats[Stat.ActiveRecharge] / MathF.Max(spec.Recharge, 0.1f));
-        if (!input.UseActive) return;
-        if (Run.ActiveCharge < 1f)
+        if (Run.SlotActive(slot)?.Active is not { } spec) return;
+        float charge = Run.Charge(slot);
+        if (charge < 1f) Run.SetCharge(slot, MathF.Min(1f, charge + Dt * Run.Loadout.Stats[Stat.ActiveRecharge] / MathF.Max(spec.Recharge, 0.1f)));
+        if (!use) return;
+        var which = new Vector2(slot, 0f);
+        if (Run.Charge(slot) < 1f)
         {
-            Events.Add(new PlaneEvent(PlaneEventType.ActiveNotReady, p.Position, Vector2.Zero));
+            Events.Add(new PlaneEvent(PlaneEventType.ActiveNotReady, p.Position, which));
             return;
         }
         float size = 0f;
@@ -635,7 +643,7 @@ public sealed partial class PlaneWorld
             case ActiveAction.WhaleSong:
                 if (p.Hp >= Run.MaxHp)
                 {
-                    Events.Add(new PlaneEvent(PlaneEventType.ActiveDenied, p.Position, Vector2.Zero));
+                    Events.Add(new PlaneEvent(PlaneEventType.ActiveDenied, p.Position, which));
                     return;
                 }
                 size = MathF.Min(spec.Value, Run.MaxHp - p.Hp);
@@ -645,8 +653,8 @@ public sealed partial class PlaneWorld
             default:
                 return;
         }
-        Run.ActiveCharge = 0f;
-        Events.Add(new PlaneEvent(PlaneEventType.ActiveUsed, p.Position, Vector2.Zero, size));
+        Run.SetCharge(slot, 0f);
+        Events.Add(new PlaneEvent(PlaneEventType.ActiveUsed, p.Position, which, size));
     }
 
     /// <summary>Bubble Shield turned a hit away: told at most this often.</summary>
@@ -722,7 +730,8 @@ public sealed partial class PlaneWorld
             Vector2 dir = spec.Wave || count == 1 ? aim : Rotate(aim, (i - (count - 1) * 0.5f) * spread * MathUtil.Deg2Rad);
             // It leaves from a little inside her bell's rim, as if born in it.
             Vector2 at = (from ?? p.Position) + dir * (Radius * (Prism ? PrismTuning.Size : 1f) * 0.6f);
-            float hover = _bubbleRng.Range(PlaneCombatTuning.BubbleHoverMin, PlaneCombatTuning.BubbleHoverMax) * Run.Loadout.Stats[Stat.BubbleHover];
+            bool lingers = Run.Loadout.Flags.Contains("mergeBubbles");
+            float hover = Hover(lingers);
             var shot = new PlaneShot
             {
                 Position = at,
@@ -740,7 +749,7 @@ public sealed partial class PlaneWorld
                 Explosive = spec.Explosive,
                 Cavitation = cavitation,
                 Split = spec.Split,
-                Lingers = Run.Loadout.Flags.Contains("mergeBubbles"),
+                Lingers = lingers,
                 Charged = charge,
                 Hover = hover,
                 Volley = _volleys,
@@ -757,6 +766,11 @@ public sealed partial class PlaneWorld
         }
         return count;
     }
+
+    /// <summary>How long a shot floats before it pops (her bubble hover stat's share; Bubble Coral's lingers longer).</summary>
+    float Hover(bool lingers) => (lingers
+        ? _bubbleRng.Range(PlaneCombatTuning.BubbleHoverMin, PlaneCombatTuning.BubbleHoverMax)
+        : _bubbleRng.Range(PlaneCombatTuning.PopHoverMin, PlaneCombatTuning.PopHoverMax)) * Run.Loadout.Stats[Stat.BubbleHover];
 
     /// <summary>The damage of every shot in her last volley, added up (the controller's kick on firing scales with it).</summary>
     public float LastVolleyDamage { get; private set; }
@@ -907,7 +921,7 @@ public sealed partial class PlaneWorld
                 Explosive = shot.Explosive,
                 Cavitation = shot.Cavitation,
                 Lingers = shot.Lingers,
-                Hover = _bubbleRng.Range(PlaneCombatTuning.BubbleHoverMin, PlaneCombatTuning.BubbleHoverMax) * Run.Loadout.Stats[Stat.BubbleHover],
+                Hover = Hover(shot.Lingers),
             };
             if (spare is not null) half.Hit = new HashSet<PlaneMob> { spare };
             _spawned.Add(half);
@@ -971,25 +985,23 @@ public sealed partial class PlaneWorld
         shot.Age += Dt;
         shot.Life -= Dt;
         float speed = shot.Velocity.Length();
-        // Light has no friction: it flies at full speed to the end of its range and goes out there, like a match, and
-        // it does not burst (unless a pearl makes it: the Starburst Gland's burst). With Bubble Coral it lingers instead.
-        bool lingers = shot.Lingers && shot.Range > 0f && !shot.Boomerang;
-        if (shot.Life <= 0f || !lingers && shot.Range > 0f && !shot.Boomerang && shot.Traveled >= shot.Range - 1e-3f)
+        if (shot.Life <= 0f)
         {
-            Extinguish(shot);
+            Pop(shot);
             return;
         }
-        if (lingers)
+        // It eases out (a boomerang flies out and back at its speed instead): steady slowing while fast, the water's drag
+        // once that is gentler; slow, it floats its own time, then pops.
+        if (shot.Range > 0f && !shot.Boomerang)
         {
-            // Steady slowing while fast, the water's drag once that is gentler; slow, it hovers its own time, then goes out.
-            float decel = shot.Speed0 * shot.Speed0 / (2f * MathF.Min(shot.Range, PlaneCombatTuning.LingerRange));
+            float decel = shot.Speed0 * shot.Speed0 / (2f * (shot.Lingers ? MathF.Min(shot.Range, PlaneCombatTuning.LingerRange) : shot.Range));
             speed = MathF.Max(speed - MathF.Min(decel, PlaneCombatTuning.LingerDrag * speed) * Dt, 0f);
             if (speed < PlaneCombatTuning.BubbleStop)
             {
                 shot.Rest += Dt;
                 if (shot.Rest >= shot.Hover)
                 {
-                    Extinguish(shot);
+                    Pop(shot);
                     return;
                 }
             }
@@ -1049,10 +1061,7 @@ public sealed partial class PlaneWorld
         }
         shot.Velocity = dir * speed;
 
-        // It never flies past the end of its range (where it goes out), however far a step would carry it.
         Vector2 step = shot.Velocity * Dt;
-        float left = shot.Range - shot.Traveled;
-        if (!lingers && shot.Range > 0f && !shot.Boomerang && step.Length() > left) step = SafeNormalize(step) * MathF.Max(left, 0f);
         Vector2 next = FirstBlocked(shot.Line, shot.Line + step, shot.Radius);
         // A pot in the way: broken if the bubble is strong enough, else it rocks and the bubble pops or bounces off.
         if (VaseAt(next, shot.Radius) is { } vase && !(shot.Boomerang && shot.Returning))
@@ -1105,24 +1114,6 @@ public sealed partial class PlaneWorld
     /// A bubble bursts where it is (on a mob, on rock, or where it hovered); a Starburst Gland one bursts into light. toward: from
     /// its centre to where it was struck (the film tears open there first); none, it gives way at a random spot.
     /// </summary>
-    /// <summary>
-    /// A shot of her light at the end of its flight goes out like a match: no burst, only a wisp (the view), but its last
-    /// light still clears a little of the ground's corruption there (as a pop does). With the Starburst Gland it still
-    /// bursts into light, over a wider reach.
-    /// </summary>
-    void Extinguish(PlaneShot shot)
-    {
-        if (shot.Life < -100f) return;
-        if (shot.Explosive || shot.Cavitation && shot.FromPlayer)
-        {
-            Pop(shot);
-            return;
-        }
-        shot.Life = -1000f;
-        Events.Add(new PlaneEvent(PlaneEventType.ShotOut, shot.Position, SafeNormalize(shot.Velocity), shot.Radius));
-        LightReleased(shot);
-    }
-
     void Pop(PlaneShot shot, Vector2? toward = null)
     {
         if (shot.Life < -100f) return;

@@ -102,6 +102,17 @@ public partial class TopDownMain : Node3D
     bool _dbgSealLeak;
     /// <summary>Verification (the adventure): every Inkwarden is struck two seconds in (it rouses and fires its spikes).</summary>
     bool _dbgRouse;
+    /// <summary>
+    /// Verification (--dbg-burn): she swims on the spot where she starts, her searchlight streaming out behind her, with
+    /// murklings round her — one in the beam, one ahead of her, and a prime across the beam's edge (half of it burning) —
+    /// so the beam's burn and dazzle show.
+    /// </summary>
+    bool _dbgBurn;
+    (System.Numerics.Vector2 At, System.Numerics.Vector2 Swim)? _dbgBurnHold;
+    /// <summary>Verification (--dbg-lost): her lost light lies 5 m north of where she starts, two pearls and 20 shells in it.</summary>
+    bool _dbgLost;
+    /// <summary>Verification (--pause-tab=n): the pause menu opens on that tab.</summary>
+    int _pauseTab = -1;
     bool _autoFire, _autoActive, _dbgPop, _startPaused, _dbgBossLevel, _dbgGeyser, _dbgShells, _dbgMurkFish, _dbgThrow;
     /// <summary>Verification: `--boss=<Concept>` (or `queen`, or `drippus`) names the boss to meet; `--boss-level` starts on the depth's boss level.</summary>
     string? _dbgBoss;
@@ -184,6 +195,8 @@ public partial class TopDownMain : Node3D
     // The corruption (docs/CORRUPTION.md): its shards and creatures, the live texture, and the shards being laid out.
     CorruptionView _corruption = null!;
     BlightView _blight = null!;
+    /// <summary>A cave's wall ash (docs/ADVENTURE.md §8).</summary>
+    AshView _ash = null!;
     AdventureView _adventure = null!;
     readonly OctoShoots.Game.Fx.WaterSwells _swells = new();
     readonly OctoShoots.Game.Fx.DeepShoals _shoals = new();
@@ -217,7 +230,7 @@ public partial class TopDownMain : Node3D
     Vector3 _belowOffset;
     /// <summary>The absolute position (xz) of the world's origin: each dive moves the world back by the hole's offset.</summary>
     Vector2 _origin;
-    bool _diving, _diveLatched, _activeLatched;
+    bool _diving, _diveLatched, _activeLatched, _active2Latched, _active3Latched;
     float _diveTime;
     System.Numerics.Vector2 _diveFrom;
     ReefLook _lookFrom = ReefLook.Shallows, _lookTo = ReefLook.Shallows;
@@ -260,6 +273,7 @@ public partial class TopDownMain : Node3D
     bool _jellySaved;
     bool Reef => _place != ReefPlace.Run;
     PortalView _portals = null!;
+    LostLightView _lostLight = null!;
     // The ride on a current (docs/RPG-PROPOSAL.md §3): she is swept off and up as the place dissolves round her, the next
     // being made meanwhile; then she comes down into it from above and settles in its water.
     bool _riding, _arriving, _portalsArmed;
@@ -337,12 +351,16 @@ public partial class TopDownMain : Node3D
         AddChild(_corruption);
         _blight = new BlightView { Swells = _swells };
         AddChild(_blight);
+        _ash = new AshView();
+        AddChild(_ash);
         _adventure = new AdventureView { Steam = (at, dir, radius, k) => _combat.Steam(at, dir, radius, k) };
         AddChild(_adventure);
         _springs = new SpringView();
         AddChild(_springs);
         _portals = new PortalView();
         AddChild(_portals);
+        _lostLight = new LostLightView();
+        AddChild(_lostLight);
         _vapour = new InkVapour();
         AddChild(_vapour);
         _blight.Vapour = _vapour;
@@ -350,8 +368,11 @@ public partial class TopDownMain : Node3D
         AddChild(_camera);
         _snow = new MarineSnow(900, new Vector3(22f, 7f, 17f), 0.11f);
         AddChild(_snow);
+        _plankton = new GlowPlankton { Visible = false };
+        AddChild(_plankton);
         _camera.ShakeEnabled = view.CameraShake;
-        _damage = new DamageNumbers();
+        // The floating numbers are hidden: a hit on her shows as ink splattering off her bell instead (BellView.Splatter).
+        _damage = new DamageNumbers { Visible = false };
         AddChild(_damage);
         _sfx = new Sfx();
         _crab.Click = () => _sfx.PlayPitched("pop", 2.6f, -16f);
@@ -438,6 +459,13 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--dbg-slowmo=") && float.TryParse(Value("--dbg-slowmo="), NumberStyles.Float, CultureInfo.InvariantCulture, out float slow))
                 Engine.TimeScale = Math.Clamp(slow, 0.02f, 1f);
             else if (arg == "--paused") _startPaused = true;
+            else if (arg == "--dbg-lost") _dbgLost = true;
+            else if (arg == "--dbg-burn") _dbgBurn = true;
+            else if (arg.StartsWith("--pause-tab=") && int.TryParse(Value("--pause-tab="), out int pauseTab))
+            {
+                _startPaused = true;
+                _pauseTab = pauseTab;
+            }
             // Verification: as on a controller from the start (its key hints).
             else if (arg == "--dbg-pad") InputSetup.UsingPad = _pad = true;
             else if (arg.StartsWith("--xp=") && int.TryParse(Value("--xp="), out int xp)) _startXp = xp;
@@ -741,6 +769,8 @@ public partial class TopDownMain : Node3D
 
     WorldEnvironment _environment = null!;
     MarineSnow _snow = null!;
+    /// <summary>A cave's fluorescent plankton (shown only where the look is Dark).</summary>
+    GlowPlankton _plankton = null!;
     SunLight _sunLight = null!;
 
     /// <summary>Debug (F1, --dbg-nofog): the floor's fog — the depth focus pass's murk and blur, and the water's fog.</summary>
@@ -760,7 +790,12 @@ public partial class TopDownMain : Node3D
     }
 
     /// <summary>The depth's look on the water, the sun and every reef shader.</summary>
-    void ApplyLook() => ApplyLook(ReefLook.For(_id.Depth));
+    void ApplyLook() => ApplyLook(Look);
+
+    /// <summary>This level's look: its depth's, or a cave's dark.</summary>
+    ReefLook Look => _map is { } map ? LookOf(map) : ReefLook.For(_id.Depth);
+
+    static ReefLook LookOf(LevelMap map) => map.LeakCave ? ReefLook.Cave : ReefLook.For(map.Id.Depth);
 
     void ApplyLook(ReefLook look)
     {
@@ -770,6 +805,9 @@ public partial class TopDownMain : Node3D
         _sunLight.Configure(look.Sun, look.SunEnergy);
         _bell.Lantern = look.Lantern;
         BlightView.Lantern = look.Lantern;
+        // A cave: its fluorescent plankton instead of the water's plain motes (unlit, they would show in the dark).
+        _plankton.Visible = look.Dark;
+        _snow.Visible = !look.Dark;
     }
 
     /// <summary>The water: shared with the title screen's backdrop.</summary>
@@ -888,6 +926,21 @@ public partial class TopDownMain : Node3D
         pauseLayer.AddChild(_pause);
         _pause.ResumePressed += Resume;
         _pause.SkillChosen += ChooseSkill;
+        // The open reef, in Lantern Bay: her slots changed, a pearl sold; her jelly keeps it at once.
+        _pause.SlotCycled += slot =>
+        {
+            _world.Run.CycleSlot(slot);
+            SaveJelly();
+            _pause.FillPearls(_world.Run, _catalog);
+        };
+        _pause.PearlSold += id =>
+        {
+            if (!_world.Run.Sell(id)) return;
+            _world.Player.Hp = Mathf.Min(_world.Player.Hp, _world.Run.MaxHp);
+            _sfx.PlayPitched("pop", 1.4f, -10f);
+            SaveJelly();
+            _pause.FillPearls(_world.Run, _catalog);
+        };
         _splash = new LoadingSplash();
         pauseLayer.AddChild(_splash);
         _pause.RestartPressed += () =>
@@ -1087,6 +1140,25 @@ public partial class TopDownMain : Node3D
                 if (k++ % 2 == 0) f.Turning = MurkFishTuning.TurnSeconds;
             _dbgMurkFish = false;
         }
+        if (_dbgBurn)
+        {
+            var her = _world.Player.Position;
+            for (int k = 0; k < 32; k++)
+            {
+                float a = k * Mathf.Tau / 32f;
+                var swim = new System.Numerics.Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                var across = new System.Numerics.Vector2(-swim.Y, swim.X);
+                System.Numerics.Vector2 behind = her - swim * 3f + across * 1.5f, ahead = her + swim * 3f, edge = her - swim * 6.5f;
+                if (!_world.Clear(behind, 0.6f) || !_world.Clear(ahead, 0.6f) || !_world.Clear(edge, BlightTuning.PrimeBody + 0.3f)
+                    || !_world.LineOfSight(her, behind) || !_world.LineOfSight(her, edge)) continue;
+                _world.DebugBud(behind, false).Bud = 0f;
+                _world.DebugBud(ahead, false).Bud = 0f;
+                _world.DebugBud(edge, true).Bud = 0f;
+                _dbgBurnHold = (her, swim);
+                break;
+            }
+            _dbgBurn = false;
+        }
         if (_dbgBud is not null && _world.Corruption is { } ink)
         {
             // A spot of dense ink with room round it, and her 7 m off it in sight, so its gathering shows.
@@ -1202,6 +1274,8 @@ public partial class TopDownMain : Node3D
         _run.Level = _id;
         _world = new PlaneWorld(_map, _tuning, _run, Reef ? PlaneOptions.OpenReef : DebugBoss());
         _portals.Show(map);
+        if (Reef) PlaceLostLight();
+        _lostLight.Show(_world);
         // A flounder's patch is open sand: no coral head of the view's scatter on it.
         _level.KeepClear(_world.Flounders.Select(f => f.Home), 2.2f);
         _anchors = _world.SaveAnchors(_recorder.Profile, _achievements, _recorder);
@@ -1237,8 +1311,8 @@ public partial class TopDownMain : Node3D
         _combat.Show(_world, _catalog, fresh);
         _currents.Clear(_camera);
         _swells.Clear();
-        _kelp.Build(map, ReefLook.For(map.Id.Depth));
-        _abyss.Build(map, ReefLook.For(map.Id.Depth));
+        _kelp.Build(map, LookOf(map));
+        _abyss.Build(map, LookOf(map));
         _vases.Show(_world);
         _puffers.Show(_world);
         _reefFish.Show(_world);
@@ -1306,10 +1380,15 @@ public partial class TopDownMain : Node3D
     {
         // Her look: her bell and arms, her glow (her light, her shots), her tentacle tips, her gonads' shape.
         OctoShoots.Game.Fx.HerColor.SetLook(jelly.Look);
+        _run!.Reef = true;
         bool fresh = jelly.Played.Length == 0 && jelly.Passives.Count == 0 && jelly.Actives.Count == 0;
         foreach (string id in fresh ? PlaneRun.StartingPearls : jelly.Passives.Concat(jelly.Actives))
-            if (_catalog?.Contains(id) == true && !_run!.Items.Contains(id)) _run.Add(id);
-        _run!.Xp = jelly.Xp;
+            if (_catalog?.Contains(id) == true) _run.Add(id);
+        // Her slots as she left them (a pearl she no longer owns leaves its slot empty).
+        if (!fresh && jelly.Slots.Any(id => id is not null))
+            for (int i = 0; i < PlaneRun.SlotCount; i++)
+                _run.Slots[i] = i < jelly.Slots.Count && jelly.Slots[i] is { } held && _run.OwnedActives.Contains(held) ? held : null;
+        _run.Xp = jelly.Xp;
         _run.XpLevel = Math.Max(jelly.Level, 1);
         _run.Points = jelly.Points;
         foreach (var (name, n) in jelly.Skills)
@@ -1323,16 +1402,14 @@ public partial class TopDownMain : Node3D
     void SaveJelly()
     {
         if (_jelly is not { } jelly || _run is null) return;
-        bool Active(string id) => _catalog is not null && _catalog.TryGet(id, out var item) && item.Kind == OctoShoots.Core.Items.ItemKind.Active;
         jelly.Level = _run.XpLevel;
         jelly.Xp = _run.Xp;
         jelly.Points = _run.Points;
         jelly.Skills = _run.Skills.ToDictionary(k => k.Key.ToString(), k => k.Value);
         jelly.Shells = _run.Shells;
-        jelly.Passives = _run.Items.Where(id => !Active(id)).ToList();
-        foreach (string id in _run.Items.Where(Active))
-            if (!jelly.Actives.Contains(id)) jelly.Actives.Add(id);
-        if (_run.Items.FirstOrDefault(Active) is { } held) jelly.Slots[0] = held;
+        jelly.Passives = _run.Items.ToList();
+        jelly.Actives = _run.OwnedActives.ToList();
+        jelly.Slots = _run.Slots.ToList();
         jelly.Played = DateTime.Now.ToString("s", CultureInfo.InvariantCulture);
         if (_jellySaved && !_debugRun) GameSave.Write();
     }
@@ -1363,12 +1440,60 @@ public partial class TopDownMain : Node3D
         return null;
     }
 
+    /// <summary>The key of the place she is in (OpenReef.PlaceKey), as it was when she came in, and a cave's mouth on its region's map.</summary>
+    string _placeKey = "";
+    System.Numerics.Vector2 _mouthAt;
+
+    string PlaceKeyNow() => _place switch
+    {
+        ReefPlace.Cave when _jelly is { } j => OpenReef.PlaceKey("cave", _region, OpenReef.CaveBehind(j, _region, Math.Max(_mouth, 0))),
+        ReefPlace.Region => OpenReef.PlaceKey("region", _region),
+        _ => OpenReef.PlaceKey("bay", ""),
+    };
+
+    /// <summary>Her lost light, if it lies in the place she has come into: it glows where she dimmed.</summary>
+    void PlaceLostLight()
+    {
+        _placeKey = PlaceKeyNow();
+        if (_dbgLost && _jelly is { } debug)
+        {
+            var at = _map.Start.Position + new System.Numerics.Vector2(0f, -5f);
+            debug.Lost = new LostLight { Place = _placeKey, X = at.X, Y = at.Y, Pearls = { "triple_tentacle", "mitosis" }, Shells = 20 };
+            _dbgLost = false;
+        }
+        if (_jelly?.Lost is not { } lost || lost.Place != _placeKey) return;
+        _world.Lost = new PlaneLostLight { Position = new System.Numerics.Vector2(lost.X, lost.Y), Pearls = lost.Pearls.ToList(), Shells = lost.Shells };
+        Say("Your lost light glows where you dimmed");
+    }
+
+    /// <summary>
+    /// She dimmed: her passive pearls and the shells on her stay where she fell, as her lost light (any older one is gone).
+    /// In a cave she had sealed, it waits at the cave's mouth in the region instead (that cave is gone).
+    /// </summary>
+    void LeaveLostLight(Jelly jelly)
+    {
+        if (_run is null || _run.Items.Count == 0 && _run.Shells == 0)
+        {
+            jelly.Lost = null;
+            return;
+        }
+        var at = _world.Player.Position;
+        string place = _placeKey;
+        if (_place == ReefPlace.Cave && _world.LeaksOpen == 0)
+        {
+            place = OpenReef.PlaceKey("region", _region);
+            at = _mouthAt + new System.Numerics.Vector2(0f, 2f);
+        }
+        jelly.Lost = new LostLight { Place = place, X = at.X, Y = at.Y, Pearls = _run.Items.ToList(), Shells = _run.Shells };
+    }
+
     /// <summary>She is swept off on the current: the next place starts being made.</summary>
     void BeginRide(ReefPlace to, string region, int mouth, Func<LevelMap, System.Numerics.Vector2?> arrive)
     {
         _accumulator = 0;
         AddToRun();
         SaveJelly();
+        if (to == ReefPlace.Cave && mouth >= 0 && mouth < _map.Mouths.Count) _mouthAt = _map.Mouths[mouth];
         _rideTo = to;
         _rideRegion = region;
         _rideMouth = mouth;
@@ -1406,6 +1531,7 @@ public partial class TopDownMain : Node3D
         var focus = new Vector3(p.Position.X, LevelMap.SwimBand + lift, p.Position.Y);
         _camera.Track(focus, dt);
         _snow.Tick(dt, focus + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
+        _plankton.Tick(dt, focus + Vector3.Up * 2f, _camera.Camera.GlobalBasis);
         var from = new Vector2(_rideFrom.X, _rideFrom.Y);
         float radius = Mathf.Lerp(-3f, 160f, Mathf.Pow(Ease(t / 1.6f), 1.5f));
         _level.SetPortal(from, radius, 1);
@@ -1458,6 +1584,7 @@ public partial class TopDownMain : Node3D
         SyncLantern();
         _camera.Track(Focus(1f) + Vector3.Up * (LevelMap.LevelDrop * (1f - k) * 0.5f), dt);
         _snow.Tick(dt, Focus(1f) + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
+        _plankton.Tick(dt, Focus(1f) + Vector3.Up * 2f, _camera.Camera.GlobalBasis);
         _level.SetPortal(new Vector2(p.Position.X, p.Position.Y), Mathf.Lerp(0f, 160f, Mathf.Pow(Ease(_arriveTime / ArriveSeconds), 1.5f)), 2);
         _hud.Elapsed = _elapsed;
         _hud.Track(_world, _catalog, dt);
@@ -1527,6 +1654,7 @@ public partial class TopDownMain : Node3D
             _level.SetCorruption(null);
             _corruption.Show(null, null);
             _blight.Show(_world);
+            _ash.Show(_world);
             _adventure.Show(_world);
             _crab.Show(_world);
             _springs.Show(_world);
@@ -1535,6 +1663,7 @@ public partial class TopDownMain : Node3D
         _corruptTex = new CorruptionTexture(field);
         _level.SetCorruption(_corruptTex.Texture);
         _blight.Show(_world);
+        _ash.Show(_world);
         _adventure.Show(_world);
         _crab.Show(_world);
         _springs.Show(_world);
@@ -1568,9 +1697,12 @@ public partial class TopDownMain : Node3D
         if (_lastHp >= 0f && hp > _lastHp && max > 0f) _vapour.FromHer(Focus(alpha), (hp - _lastHp) / max);
         _lastHp = hp;
         _vapour.Tick(dt, _camera.Camera);
+        _blight.HerLight = _bell.BeamPosition;
         _blight.Sync(_world, dt, _camera.Camera);
+        _ash.Sync(_world, dt, _camera.Camera);
         _adventure.Sync(_world, dt, _camera);
         _crab.Sync(_world, dt);
+        _lostLight.Sync(_world, dt);
         // A regular way down has no seabed; on the dive itself the level below takes over.
         _holeShown = Mathf.MoveToward(_holeShown, _map.HasBoss || _diving ? 0f : 1f, dt * 2f);
         _camera.SetHole(_map.Exit.Position, _map.Exit.Radius, _holeShown);
@@ -1778,7 +1910,13 @@ public partial class TopDownMain : Node3D
         float range = _bell.LightRange;
         _lantern.Update(_map, at, range);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_light_at"), new Vector4(at.X, at.Y, at.Z, range));
-        float murk = 0.5f + ReefLook.For(_id.Depth).Fog;
+        // Where her searchlight burns the corrupted (her_burn.gdshaderinc): its opening, its reach, its way and width.
+        var opening = _bell.BeamPosition;
+        float burns = _world is { LightBurns: true, Defeated: false } ? _world.BeamReach * (1f - _bell.DiveTurn) : 0f;
+        RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_burn"), new Vector4(opening.X, opening.Y, opening.Z, burns));
+        var beam = _world?.BeamDirection ?? -System.Numerics.Vector3.UnitY;
+        RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_beam"), new Vector4(beam.X, beam.Y, beam.Z, Mathf.Cos(Mathf.DegToRad(HerLightTuning.BeamAngle))));
+        float murk = 0.5f + Look.Fog;
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_scatter"), OS.GetCmdlineUserArgs().Contains("--dbg-noscatter") ? 0f : 0.016f * _bell.LightEnergy / Mathf.Pow(_bell.Lantern, 1.3f) * murk * (1f - _bell.DiveTurn));
     }
 
@@ -2038,6 +2176,14 @@ public partial class TopDownMain : Node3D
                 CorruptionEvent(e);
                 CurseEvent(e);
                 if (e.Type == PlaneEventType.Dived) dived = true;
+                // Her lost light, taken back.
+                else if (e.Type == PlaneEventType.LostLightTaken && _jelly is { } found)
+                {
+                    found.Lost = null;
+                    SaveJelly();
+                    Say("Your light is yours again");
+                    _sfx.PlayPitched("bell_ring", 1.3f, -8f);
+                }
                 // A leak cave sealed: a fresh one waits behind its mouth, and the region counts it.
                 else if (e.Type == PlaneEventType.LeakSealed && _place == ReefPlace.Cave && _jelly is { } sealer)
                 {
@@ -2116,6 +2262,7 @@ public partial class TopDownMain : Node3D
                 else if (e.Type == PlaneEventType.PlayerHit)
                 {
                     _damage.Show(e);
+                    _bell.Splatter(e.Direction, e.Size / Mathf.Max(_world.Run.MaxHp, 1f));
                     // Being hurt thuds: harder hits, harder thuds.
                     _haptics.Pulse(0.5f, Mathf.Clamp(0.45f + e.Size * 0.02f, 0.45f, 0.9f), 0.28f);
                     // Harder hits jolt more: a mob shot (10) ~0.42, the boss's snap (18) ~0.5.
@@ -2141,7 +2288,6 @@ public partial class TopDownMain : Node3D
                 }
                 else if (e.Type is PlaneEventType.MobHit or PlaneEventType.BossHit) _damage.Show(e);
                 else if (e.Type == PlaneEventType.ShotPopped) _combat.Pop(e.Position, e.Size * 1.7f, e.Direction);
-                else if (e.Type == PlaneEventType.ShotOut) _combat.Extinguish(e.Position, e.Direction);
                 else if (e.Type == PlaneEventType.LightBurst)
                 {
                     _combat.LightBurst(e.Position, e.Size);
@@ -2332,6 +2478,7 @@ public partial class TopDownMain : Node3D
         _minimap.Blackout = _dark.Amount;
         _snow.Her(_bell.GlobalPosition, new Vector3(_world.Player.Velocity.X, 0f, _world.Player.Velocity.Y));
         _snow.Tick(dt, Focus(alpha) + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
+        _plankton.Tick(dt, Focus(alpha) + Vector3.Up * 2f, _camera.Camera.GlobalBasis);
         _level.UpdateCanopy(_world.Player.Position, dt, _camera.Camera.GlobalPosition);
         // The Crack opens: the sand over it sags, turns and drains away into the dark, and its glow comes up.
         if (_map.HasBoss && _world.ExitOpen && _crackOpen < 1f)
@@ -2436,6 +2583,7 @@ public partial class TopDownMain : Node3D
         if (_lookFrom != _lookTo) ApplyLook(look);
         look.SetDrop(drop);
         _snow.Tick(dt, focus + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
+        _plankton.Tick(dt, focus + Vector3.Up * 2f, _camera.Camera.GlobalBasis);
 
         // The iris: the level above is cut away from the hole outward; the level below shows inside the same ring.
         var hole = new Vector2(_map.Exit.Position.X, _map.Exit.Position.Y);
@@ -2482,6 +2630,7 @@ public partial class TopDownMain : Node3D
         _camera.SetSwimLevel(0f);
         _camera.Zoom = 1f;
         _snow.Shift(shift);
+        _plankton.Shift(shift);
         _bell.Shift(shift);
         _bell.DiveDepth = 0f;
         _bell.DiveTurn = 0f;
@@ -2600,14 +2749,15 @@ public partial class TopDownMain : Node3D
         _deathSplash = true;
         if (Reef && _jelly is { } lost)
         {
-            // Her pearls and the shells on her stay where she fell; her level, her actives and her name are hers.
+            // Her pearls and the shells on her stay where she fell, as her lost light; her level, her actives and her name are hers.
             SaveJelly();
             int pearls = lost.Passives.Count, shells = lost.Shells;
+            LeaveLostLight(lost);
             lost.Passives.Clear();
             lost.Shells = 0;
             if (_jellySaved) GameSave.Write();
             _splash.Fill($"The Leak dimmed {lost.Name}", new List<(string, string)> { ("Lost", $"{pearls} pearls · {shells} shells"), ("Kept", $"level {lost.Level} · {lost.Actives.Count} active pearls") },
-                "She wakes at the lantern post in Lantern Bay.");
+                pearls + shells > 0 ? "She wakes at the lantern post. Her lost light waits where she fell: reach it before she dims again." : "She wakes at the lantern post in Lantern Bay.");
             _place = ReefPlace.Bay;
             _mouth = -1;
         }
@@ -2732,8 +2882,10 @@ public partial class TopDownMain : Node3D
         if (_pause.IsOpen) Resume();
         else if (!_debug.Visible)
         {
-            _pause.Open(_world.Run, _catalog, _seed.ToString(), $"{_id} · {HudView.Clock(_elapsed)}", _world.Player.Hp, _achievementData);
+            _pause.Trade = _place == ReefPlace.Bay;
+            _pause.Open(_world.Run, _catalog, _seed.ToString(), Reef ? $"{_map.Title}{(_map.LeakCave ? $"Leak cave · level {_map.CaveLevel}" : "")}" : $"{_id} · {HudView.Clock(_elapsed)}", _world.Player.Hp, _achievementData);
             if (_pad) _pause.FocusFirst();
+            if (_pauseTab >= 0) _pause.ShowTab(_pauseTab);
         }
     }
 
@@ -3257,6 +3409,14 @@ public partial class TopDownMain : Node3D
             _world.DebugFreeBoss();
             _dbgFree = 0f;
         }
+        // Verification (--dbg-burn): she swims on the spot, her beam out behind her.
+        if (_dbgBurnHold is { } hold)
+        {
+            _world.Player.Position = _world.Player.PrevPosition = hold.At;
+            input.Move = hold.Swim;
+            AutoFire(ref input);
+            return input;
+        }
         if (_dbgSteer is { } steerTo && !(_dbgSteerFight && _world.Boss is not { Stage: BossStage.Fight }))
         {
             input.Move = new System.Numerics.Vector2(steerTo.X, steerTo.Y);
@@ -3284,6 +3444,11 @@ public partial class TopDownMain : Node3D
         bool dive = Input.IsActionPressed(InputSetup.Dive);
         input.Dive = dive && !_diveLatched || _autoDive && _world.CanDive;
         _diveLatched = dive;
+        bool use2 = Input.IsActionPressed(InputSetup.Active2), use3 = Input.IsActionPressed(InputSetup.Active3);
+        input.UseActive2 = use2 && !_active2Latched;
+        input.UseActive3 = use3 && !_active3Latched;
+        _active2Latched = use2;
+        _active3Latched = use3;
         bool use = Input.IsActionPressed(InputSetup.Active);
         input.UseActive = use && !_activeLatched || _autoActive && _world.Run.ActiveCharge >= 1f;
         _activeLatched = use;

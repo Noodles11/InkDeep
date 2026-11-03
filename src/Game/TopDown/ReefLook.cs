@@ -45,6 +45,8 @@ public sealed record ReefLook
     public float Lantern { get; init; } = 1f;
     /// <summary>Contrast after tone mapping (1 neutral): the Shallows want punchy light and shade.</summary>
     public float Contrast { get; init; } = 1f;
+    /// <summary>A cave's: no light in it but hers, her shots' and its few motes of fluorescent plankton (GlowPlankton).</summary>
+    public bool Dark { get; init; }
     /// <summary>The flora's palette: low and high ends for each of two variants per species group.</summary>
     public required Color FanA { get; init; }
     public required Color FanB { get; init; }
@@ -68,6 +70,7 @@ public sealed record ReefLook
             Sun = L(a.Sun, b.Sun), SunEnergy = F(a.SunEnergy, b.SunEnergy), Ambient = L(a.Ambient, b.Ambient), AmbientEnergy = F(a.AmbientEnergy, b.AmbientEnergy),
             Caustics = F(a.Caustics, b.Caustics), Rays = F(a.Rays, b.Rays), Menace = F(a.Menace, b.Menace), Saturation = F(a.Saturation, b.Saturation),
             Vignette = F(a.Vignette, b.Vignette), Fog = F(a.Fog, b.Fog), Contrast = F(a.Contrast, b.Contrast), Lantern = F(a.Lantern, b.Lantern),
+            Dark = t < 0.5f ? a.Dark : b.Dark,
             FanA = L(a.FanA, b.FanA), FanB = L(a.FanB, b.FanB), SoftCoral = L(a.SoftCoral, b.SoftCoral), HardCoral = L(a.HardCoral, b.HardCoral), Grass = L(a.Grass, b.Grass),
         };
     }
@@ -145,6 +148,23 @@ public sealed record ReefLook
         Menace = 0.6f, Saturation = 0.8f, Vignette = 0.66f, Fog = 0.66f, Lantern = 2f,
     };
 
+    /// <summary>
+    /// A cave (a leak cave, docs/ADVENTURE.md §8): no sun reaches it and nothing of its reef glows on its own. Never black:
+    /// a faint cold shade lets the outlines of its rock and what swims in it show, all but hidden, and the rest is her
+    /// light (the Abyss's lantern), her shots' and its fluorescent plankton. Its reef's colours are the Abyss's, dulled, so
+    /// what her light finds there is stone and dim life, not neon.
+    /// </summary>
+    public static readonly ReefLook Cave = Abyss with
+    {
+        Name = "Cave",
+        WaterShallow = C("#111528"), WaterDeep = C("#0D1020"), Murk = C("#080A16"),
+        Rock = C("#2C2F3E"), Sand = C("#3A3C50"), Coral = C("#7A3A62"), Coral2 = C("#3E4C70"), Algae = C("#2E4A4C"), Sponge = C("#2A6A66"), Butter = C("#8A7440"),
+        Sun = C("#000000"), SunEnergy = 0f, Ambient = C("#4A5688"), AmbientEnergy = 0.32f,
+        Caustics = 0f, Rays = 0f, Menace = 0.6f, Saturation = 0.85f, Vignette = 0.45f, Fog = 0.35f, Lantern = 2f,
+        FanA = C("#4A3A6A"), FanB = C("#6A3A5A"), SoftCoral = C("#6A4A64"), HardCoral = C("#6E6450"), Grass = C("#2E4A3A"),
+        Dark = true,
+    };
+
     public static readonly ReefLook Tank = Shallows with
     {
         Name = "The Tank",
@@ -179,6 +199,7 @@ public sealed record ReefLook
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_saturation"), Saturation);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_vignette"), Vignette);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_fog"), Fog);
+        RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_dark"), Dark ? 1f : 0f);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_lantern"), Lantern);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_extent"), new Vector2(LevelMap.Size, LevelMap.Size));
         SetDrop(0f);

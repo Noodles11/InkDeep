@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using OctoShoots.Core.Gen.TopDown;
 using OctoShoots.Core.Plane;
@@ -46,11 +47,19 @@ public partial class BellView : Node3D
     public bool Covered { get; set; }
     float _outline;
     ImmediateMesh _strandMesh = null!;
-    /// <summary>Her light, smooth all round her as a bulb's, and a faint glow round the bell itself.</summary>
+    /// <summary>
+    /// Her light is a lamp in her bell, as a standing lamp's in its shade: out of the bell's opening a beam, her searchlight
+    /// (_beam), intense, and only it burns (PlaneHerLight.cs); through the top of the bell, softened, all the rest of the
+    /// way round (_light, smooth as a bulb's, cast from the top of the bell and masked where the beam shines: LampShade).
+    /// Both turn with her bell as it tips. A faint glow round the bell itself.
+    /// </summary>
     OmniLight3D _light = null!;
+    SpotLight3D _beam = null!;
     OmniLight3D _halo = null!;
-    /// <summary>How far her light reaches and how strong it is (before Lantern, glow, her breath and pulse).</summary>
-    const float BulbRange = 9f, BulbEnergy = 0.7f;
+    /// <summary>How far her softened light reaches and how strong it is (before Lantern, glow, her breath and pulse).</summary>
+    const float BulbRange = 9f, BulbEnergy = 0.45f;
+    /// <summary>Her searchlight's strength (before Lantern, her breath and pulse), and how far past its burning reach it still shows.</summary>
+    const float BeamEnergy = 2.4f, BeamShows = 1.5f;
     /// <summary>How much of her light gets through (1 all; the curse den's dark fades it).</summary>
     public float Dim = 1f;
     /// <summary>The depth's lantern (ReefLook.Lantern): her light's strength and reach against the dark.</summary>
@@ -61,9 +70,18 @@ public partial class BellView : Node3D
     public Vector3 LightPosition => _light.GlobalPosition;
     public float LightRange => _light.OmniRange;
     public float LightEnergy => _light.Visible ? _light.LightEnergy : 0f;
+    /// <summary>Where her searchlight leaves her bell (world): its opening.</summary>
+    public Vector3 BeamPosition => _beam.GlobalPosition;
     /// <summary>Her light's heart, over the bell's origin (inside the dome).</summary>
     public const float LightHeight = 1.2f;
     StandardMaterial3D _inkMaterial = null!;
+    /// <summary>
+    /// The corruption a hit knocks out of her (Splatter): dark ink drops, violet-edged motes and a puff of ink mist off
+    /// her bell where she was struck, as many as the hit took of her max health (SplatterPerHealth for all of it).
+    /// </summary>
+    OctoShoots.Game.Fx.FxParticles _splatter = null!, _splatterGlow = null!;
+    const float SplatterPerHealth = 250f;
+    readonly RandomNumberGenerator _splatRng = new();
     readonly List<MeshInstance3D> _ink = new();
     readonly List<Strand> _strands = new();
     bool _strandsReady;
@@ -186,6 +204,15 @@ public partial class BellView : Node3D
         };
         _halo = new OmniLight3D { LightColor = Glow, LightEnergy = 0.5f, OmniRange = 3f, OmniAttenuation = 1.6f, ShadowEnabled = false, Position = new Vector3(0f, LightHeight, 0f) };
         AddChild(_halo);
+        // Her searchlight: a focused beam out of her bell's opening, the way the sim's beam shines (down at rest, out
+        // behind her as she swims), casting soft shadows as her softened light does.
+        _beam = new SpotLight3D
+        {
+            LightColor = Glow, LightEnergy = BeamEnergy, SpotAngle = HerLightTuning.BeamAngle * 1.4f, SpotAngleAttenuation = 0.6f, SpotAttenuation = 0.9f,
+            ShadowEnabled = OctoShoots.Game.Settings.ViewOptions.Shadows, ShadowBias = 0.06f, ShadowNormalBias = 1.2f,
+            LightSize = 0.3f, ShadowBlur = 1f, LightSpecular = 0.8f, TopLevel = true,
+        };
+        AddChild(_beam);
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--dbg-lantern="))
             {
@@ -198,6 +225,8 @@ public partial class BellView : Node3D
                     _dbgFalloff = true;
                 }
             }
+        // Cast from the top of the bell, every way but down through its opening (the beam's): the shade turns with her.
+        if (!OS.GetCmdlineUserArgs().Contains("--dbg-noshade")) _light.LightProjector = LampShade();
         AddChild(_light);
         var sphere = new SphereMesh { Radius = 1f, Height = 2f, RadialSegments = 32, Rings = 16 };
         var shieldMaterial = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/plane_bubble.gdshader"), RenderPriority = 3 };
@@ -208,6 +237,10 @@ public partial class BellView : Node3D
         _chargeMaterial = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/light_shot.gdshader"), RenderPriority = 3 };
         _chargeOrb = new MeshInstance3D { Mesh = new QuadMesh { Size = Vector2.One }, MaterialOverride = _chargeMaterial, Visible = false, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
         AddChild(_chargeOrb);
+        _splatter = new OctoShoots.Game.Fx.FxParticles(640, additive: false) { TopLevel = true };
+        AddChild(_splatter);
+        _splatterGlow = new OctoShoots.Game.Fx.FxParticles(256, additive: true) { TopLevel = true };
+        AddChild(_splatterGlow);
         _inkMaterial = new StandardMaterial3D
         {
             AlbedoColor = new Color(0.06f, 0.04f, 0.12f, 0.55f),
@@ -234,6 +267,92 @@ public partial class BellView : Node3D
         Emission = new Color(1f, 0.85f, 0.9f),
         EmissionEnergyMultiplier = 0.8f,
     };
+
+    /// <summary>
+    /// A hit on her (the way it travelled; how much of her max health it took): the corruption it drove into her splatters
+    /// off her bell on the side it struck, like blood — dark ink drops flung back out toward what hit her and spreading,
+    /// sinking a little as they slow, a few violet-edged motes among them and a puff of ink mist.
+    /// </summary>
+    public void Splatter(System.Numerics.Vector2 hit, float share)
+    {
+        var way = new Vector3(-hit.X, 0f, -hit.Y);
+        if (way.LengthSquared() < 1e-6f)
+        {
+            float a = _splatRng.RandfRange(0f, Mathf.Tau);
+            way = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+        }
+        way = way.Normalized();
+        int n = Mathf.Clamp(Mathf.RoundToInt(SplatterPerHealth * share), 3, 120);
+        Spray(way, n, Mathf.Clamp(share * 4f, 0.4f, 1.6f), mist: true);
+    }
+
+    /// <summary>Drops of ink off her bell on one side (out that way), this many, this hard.</summary>
+    void Spray(Vector3 way, int n, float force, bool mist)
+    {
+        var at = _body.GlobalPosition + Vector3.Up * 0.12f + way * BellRadius * Scale.X;
+        var across = new Vector3(-way.Z, 0f, way.X);
+        var ink = new Color(0.12f, 0.03f, 0.2f, 1f);
+        var inkFade = new Color(0.36f, 0.12f, 0.6f, 0f);
+        var violet = new Color(0.9f, 0.5f, 1.5f, 1f);
+        for (int i = 0; i < n; i++)
+        {
+            // Out from the wound, fanning wide across it and up a little; the first drops the fastest.
+            var dir = (way + across * _splatRng.RandfRange(-0.9f, 0.9f) + Vector3.Up * _splatRng.RandfRange(-0.2f, 0.6f)).Normalized();
+            float speed = _splatRng.RandfRange(1.5f, 5f) * force * (i < n / 4 ? 1.3f : 1f);
+            float size = _splatRng.RandfRange(0.08f, 0.2f) * (0.8f + 0.3f * force);
+            _splatter.Emit(at + dir * 0.05f, dir * speed, _splatRng.RandfRange(0.55f, 1.05f), size, size * 0.3f, ink, inkFade, drag: 3.2f, buoyancy: -0.7f);
+            // A smaller drop just behind it on the same way: the splash's streak.
+            _splatter.Emit(at, dir * speed * 0.75f, _splatRng.RandfRange(0.4f, 0.7f), size * 0.55f, size * 0.15f, ink, inkFade, drag: 3.2f, buoyancy: -0.7f);
+            if (i % 2 == 0)
+                _splatterGlow.Emit(at, dir * speed * 0.8f, _splatRng.RandfRange(0.25f, 0.5f), size * 0.6f, 0.01f, violet, inkFade, drag: 4f);
+        }
+        if (!mist) return;
+        for (int i = 0; i < 2 + n / 12; i++)
+            _splatter.Emit(at, way * _splatRng.RandfRange(0.3f, 0.8f) * force + Vector3.Up * 0.2f, _splatRng.RandfRange(0.7f, 1.1f), 0.2f, 0.5f * force,
+                new Color(0.12f, 0.05f, 0.2f, 0.35f), new Color(0.3f, 0.12f, 0.5f, 0f), drag: 2f, buoyancy: 0.2f);
+    }
+
+    /// <summary>Murklings clinging to her drink her light: ink oozes off her bell where each one clings, as fast as it drains her.</summary>
+    void SyncDrains(PlaneWorld world, float h)
+    {
+        float maxHp = Mathf.Max(world.Run.MaxHp, 1f);
+        foreach (var m in world.Murklings)
+        {
+            if (!m.Alive || !m.Clinging) continue;
+            float rate = SplatterPerHealth * m.ClingDrain / maxHp;
+            if (_splatRng.Randf() >= rate * h) continue;
+            var way = new Vector3(m.ClingOffset.X, 0f, m.ClingOffset.Y);
+            Spray(way.LengthSquared() > 1e-6f ? way.Normalized() : Vector3.Right, 1, 0.35f, mist: false);
+        }
+    }
+
+    /// <summary>How far round from straight down her bell's opening the shade lets no soft light out (the beam's, degrees), and how softly it fades in past that.</summary>
+    const float ShadeOpen = 30f, ShadeSoft = 14f;
+
+    /// <summary>
+    /// The lamp's shade for her soft light (an omni light's projector: two paraboloids stacked, each a hemisphere about the
+    /// light's own Z, the way Godot maps it): bright every way but within ShadeOpen of the light's own −Y, the bell's
+    /// opening, where the beam shines instead.
+    /// </summary>
+    static ImageTexture LampShade()
+    {
+        const int size = 64;
+        var image = Image.CreateEmpty(size, size * 2, false, Image.Format.L8);
+        float open = Mathf.Cos(Mathf.DegToRad(ShadeOpen)), soft = Mathf.Cos(Mathf.DegToRad(ShadeOpen + ShadeSoft));
+        for (int half = 0; half < 2; half++)
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float u = (x + 0.5f) / size * 2f - 1f, v = (y + 0.5f) / size * 2f - 1f;
+                    float r2 = u * u + v * v;
+                    // The paraboloid's direction for this texel (its y the way down the bell's axis is −1).
+                    float dy = 2f * v / (1f + r2);
+                    float down = -dy;
+                    float lit = 1f - Mathf.SmoothStep(soft, open, down);
+                    image.SetPixel(x, half * size + y, new Color(lit, lit, lit));
+                }
+        return ImageTexture.CreateFromImage(image);
+    }
 
     /// <summary>The shield turned a hit away: it wobbles.</summary>
     public void ShieldRipple() => _ripple = 1f;
@@ -414,7 +533,19 @@ public partial class BellView : Node3D
             _light.LightEnergy *= 0.5f;
         }
         _halo.LightColor = _light.LightColor;
-        _light.GlobalPosition = _body.GlobalPosition;
+        // From the top of her bell, turned as her bell is (its shade's opening down her bell's axis).
+        var bellBasis = _body.GlobalBasis.Orthonormalized();
+        _light.GlobalTransform = new Transform3D(bellBasis, _body.GlobalPosition + bellBasis.Y * BellHeight * 0.85f * Scale.X);
+        // The beam: out of her bell's opening, the way the sim has it shine (only hers: the red and the blue cast none).
+        _beam.Visible = Part < 0 && !OS.GetCmdlineUserArgs().Contains("--dbg-nobeam");
+        _beam.LightColor = _light.LightColor;
+        _beam.SpotRange = world.BeamReach * BeamShows * Mathf.Sqrt(Lantern);
+        if (!_dbgFalloff) _beam.SpotAttenuation = Mathf.Lerp(0.9f, 0.6f, deep);
+        _beam.LightEnergy = BeamEnergy * _dbgEnergy * Mathf.Pow(Lantern, 1.8f) * (0.94f + 0.12f * _pulse) * (0.7f + 0.3f * _breath);
+        var way = world.BeamDirection;
+        var shine = new Vector3(way.X, way.Y, way.Z);
+        var opening = _body.GlobalPosition - _body.GlobalBasis.Y.Normalized() * 0.05f;
+        _beam.GlobalTransform = new Transform3D(Basis.LookingAt(shine, Mathf.Abs(shine.Y) > 0.99f ? Vector3.Back : Vector3.Up), opening);
 
         if (speed > 0.3f) _across = new Vector3(-vel.Y, 0f, vel.X) / speed;
         _calm = Mathf.Lerp(_calm, 1f - 0.85f * Mathf.Min(pace, 1f), 1f - Mathf.Exp(-3f * h));
@@ -423,6 +554,13 @@ public partial class BellView : Node3D
         var camera = GetViewport().GetCamera3D();
         if (camera != null) DrawStrands(camera.GlobalPosition);
         SyncInk(world);
+        if (Part < 0) SyncDrains(world, h);
+        var cam = GetViewport().GetCamera3D();
+        if (cam != null)
+        {
+            _splatter.Tick(dt, cam.GlobalBasis);
+            _splatterGlow.Tick(dt, cam.GlobalBasis);
+        }
         SyncShield(p, h);
         SyncCharge(p);
         if (Part < 0) SyncGlowPool(world);
@@ -524,6 +662,7 @@ public partial class BellView : Node3D
         // The pulse of light: her glow flares far out and falls back.
         _light.LightEnergy *= (1f + 4f * _burst + 0.4f * _mimic) * Dim;
         _light.OmniRange *= (1f + 0.8f * _burst) * (0.4f + 0.6f * Dim);
+        _beam.LightEnergy *= (1f + 2f * _burst + 0.4f * _mimic) * Dim;
         _halo.LightEnergy = 0.5f * Mathf.Pow(Lantern, 1.2f) * (1f + 2f * _burst) * Dim;
     }
 

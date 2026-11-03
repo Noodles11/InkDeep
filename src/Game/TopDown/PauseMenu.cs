@@ -24,6 +24,9 @@ public partial class PauseMenu : Control
     public event Action? QuitPressed;
     /// <summary>A skill point was put on a modifier.</summary>
     public event Action<Stat>? SkillChosen;
+    /// <summary>The open reef, in Lantern Bay: the next pearl into a slot, and a pearl sold at the shell shop.</summary>
+    public event Action<int>? SlotCycled;
+    public event Action<string>? PearlSold;
 
 
     const float Width = 640f, SlideSeconds = 0.35f;
@@ -47,7 +50,7 @@ public partial class PauseMenu : Control
     GridContainer _stats = null!;
     readonly Button[] _tabs = new Button[Tabs];
     Label _summary = null!, _hint = null!, _tabLeft = null!, _tabRight = null!;
-    Button _resume = null!;
+    Button _resume = null!, _restart = null!;
     int _tab = StatTab, _points;
     float _open;
     bool _opening;
@@ -136,7 +139,7 @@ public partial class PauseMenu : Control
         var buttons = new HBoxContainer();
         buttons.AddThemeConstantOverride("separation", 10);
         box.AddChild(buttons);
-        var restart = new Button { Text = "Restart run", CustomMinimumSize = new Vector2(0f, 40f), SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        var restart = _restart = new Button { Text = "Restart run", CustomMinimumSize = new Vector2(0f, 40f), SizeFlagsHorizontal = SizeFlags.ExpandFill };
         restart.Pressed += () => RestartPressed?.Invoke();
         buttons.AddChild(restart);
         var quit = new Button { Text = "Save & quit to title", CustomMinimumSize = new Vector2(0f, 40f), SizeFlagsHorizontal = SizeFlags.ExpandFill, TooltipText = "You'll resume right where you are." };
@@ -152,6 +155,9 @@ public partial class PauseMenu : Control
         hint.AddThemeColorOverride("font_color", Gold);
         return hint;
     }
+
+    /// <summary>Verification: opens on a tab.</summary>
+    public void ShowTab(int tab) => ShowList(Math.Clamp(tab, 0, Tabs - 1));
 
     /// <summary>0 the level-up, 1 her stats, 2 the absorbed pearls, 3 the achievements.</summary>
     void ShowList(int tab)
@@ -297,22 +303,86 @@ public partial class PauseMenu : Control
         FillAchievements(achievements, run.Unlocked, catalog);
         FillStats(run);
         _summary.Text = $"Seed {seed} · {where} · {Mathf.RoundToInt(Mathf.Clamp(1f - hp / Mathf.Max(run.MaxHp, 1f), 0f, 1f) * 100f)}% corrupted · {run.Items.Count} pearl{(run.Items.Count == 1 ? "" : "s")}";
-        Empty(_pearls);
-        if (run.Items.Count == 0 || catalog is null)
-        {
-            var none = new Label { Text = "None yet — clam rooms hold them.", AutowrapMode = TextServer.AutowrapMode.WordSmart };
-            none.AddThemeColorOverride("font_color", new Color(0.6f, 0.7f, 0.72f));
-            _pearls.AddChild(none);
-        }
-        else
-        {
-            // Newest first.
-            foreach (string id in Enumerable.Reverse(run.Items))
-                if (catalog.TryGet(id, out var item)) _pearls.AddChild(Row(item));
-        }
+        FillPearls(run, catalog);
+        // The open reef has no run to restart.
+        _restart.Visible = !run.Reef;
         _opening = true;
         Visible = true;
         ShowList(run.Points > 0 ? LevelTab : StatTab);
+    }
+
+    /// <summary>The open reef: whether pearls can be slotted and sold here (in Lantern Bay).</summary>
+    public bool Trade { get; set; }
+
+    /// <summary>
+    /// The pearls tab. On a run: every pearl she has absorbed, newest first. On the open reef: her three active slots (each
+    /// with its key), the actives she keeps in her stash, and the passives in her bell; in Lantern Bay a slot can be
+    /// changed and a pearl sold to the shell shop for silver shells (an active its worth, a passive half).
+    /// </summary>
+    public void FillPearls(PlaneRun run, ItemCatalog? catalog)
+    {
+        Empty(_pearls);
+        if (catalog is null) return;
+        if (!run.Reef)
+        {
+            if (run.Items.Count == 0) _pearls.AddChild(Note("None yet — clam rooms hold them."));
+            // Newest first.
+            foreach (string id in Enumerable.Reverse(run.Items))
+                if (catalog.TryGet(id, out var item)) _pearls.AddChild(Row(item));
+            return;
+        }
+        _pearls.AddChild(Note(Trade ? $"{run.Shells} silver shells. The shell shop buys any pearl: an active for its worth, a passive for half." : "Change your slots and sell pearls in Lantern Bay."));
+        _pearls.AddChild(Heading("Active slots"));
+        string[] keys = { InputSetup.Active, InputSetup.Active2, InputSetup.Active3 };
+        for (int i = 0; i < PlaneRun.SlotCount; i++)
+        {
+            var held = run.SlotActive(i);
+            int slot = i;
+            var row = held is not null ? Row(held) : Note("Empty");
+            var change = new Button { Text = $"[{InputSetup.Hint(keys[i])}]  Change", Disabled = !Trade || run.OwnedActives.Count == 0, SizeFlagsVertical = SizeFlags.ShrinkCenter };
+            change.Pressed += () => SlotCycled?.Invoke(slot);
+            _pearls.AddChild(WithButton(row, change));
+        }
+        var stash = run.OwnedActives.Where(id => !run.Slots.Contains(id)).ToList();
+        if (stash.Count > 0) _pearls.AddChild(Heading("Stash"));
+        foreach (string id in stash)
+            if (catalog.TryGet(id, out var item)) _pearls.AddChild(WithButton(Row(item), SellButton(run, id)));
+        _pearls.AddChild(Heading("In her bell"));
+        if (run.Items.Count == 0) _pearls.AddChild(Note("None yet. Shops, secret places and bosses hold them; if she dims, they are left where she fell."));
+        foreach (string id in Enumerable.Reverse(run.Items).Distinct())
+            if (catalog.TryGet(id, out var item)) _pearls.AddChild(WithButton(Row(item), SellButton(run, id)));
+    }
+
+    Button SellButton(PlaneRun run, string id)
+    {
+        var sell = new Button { Text = $"Sell · {run.SellPrice(id)}", Disabled = !Trade, SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        sell.Pressed += () => PearlSold?.Invoke(id);
+        return sell;
+    }
+
+    static Control WithButton(Control row, Button button)
+    {
+        var line = new HBoxContainer();
+        line.AddThemeConstantOverride("separation", 10);
+        row.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        line.AddChild(row);
+        line.AddChild(button);
+        return line;
+    }
+
+    static Label Heading(string text)
+    {
+        var l = new Label { Text = text.ToUpperInvariant() };
+        l.AddThemeFontSizeOverride("font_size", 14);
+        l.AddThemeColorOverride("font_color", Gold);
+        return l;
+    }
+
+    static Label Note(string text)
+    {
+        var l = new Label { Text = text, AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        l.AddThemeColorOverride("font_color", new Color(0.6f, 0.7f, 0.72f));
+        return l;
     }
 
     /// <summary>Slides away.</summary>

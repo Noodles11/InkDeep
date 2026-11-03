@@ -14,8 +14,10 @@ public struct PlaneInput
     public Vector2 Aim;
     /// <summary>Held: shoot along Aim (with Pearl Diver, held charges a pearl and letting go throws it).</summary>
     public bool Fire;
-    /// <summary>Pressed: use the active pearl (F).</summary>
+    /// <summary>Pressed: use the active pearl (F; on the open reef, the first slot's).</summary>
     public bool UseActive;
+    /// <summary>Pressed: use the open reef's second and third slots' pearls (Q, E).</summary>
+    public bool UseActive2, UseActive3;
     /// <summary>Pressed: dive down the shaft (when she is over it and the way is open).</summary>
     public bool Dive;
 }
@@ -77,7 +79,7 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     /// <summary>Experience: gained (Size: how much), and a level reached (Size: the new level).</summary>
     XpGained, LevelUp,
     /// <summary>The adventure: an ink dot cleared by her light or eaten by a fish; a leak lit (Size: its glow) or sealed (Size: leaks still open); the way down opened; an anemone turned (Size: its scale).</summary>
-    DotCleared, DotEaten, DotGathered, LeakTied, LeakUntied, LeakSealed, LeakDrunk, MainCurrentWoke, DealRefused, DealStruck, ClawCut, LastLight, ExitOpened, AnemoneTurned,
+    DotCleared, DotEaten, DotGathered, LeakTied, LeakUntied, LeakSealed, LeakDrunk, MainCurrentWoke, DealRefused, DealStruck, ClawCut, LastLight, ExitOpened, AnemoneTurned, LostLightTaken,
     /// <summary>The adventure's Inkwarden: struck, it rouses (rolls its spikes out); it fires a spike (Direction: its way).</summary>
     WardenRoused, WardenSpike,
     /// <summary>Drippus Prime: a murkling born out of it (Direction: its way out); its near side dimpling to bounce her (Direction: toward her); the bounce (at its skin; Direction: the way she is flung).</summary>
@@ -91,7 +93,11 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     /// <summary>Tide Pulse: one of its waves leaves her (Size: which, 0–2).</summary>
     PushWave,
     /// <summary>Her light on the boss's sealed wall while leaks stand open: it takes none (at the carving; Size: the leaks left).</summary>
-    SealRefused }
+    SealRefused,
+    /// <summary>A corrupted creature comes into her light and is dazzled (Direction: from her to it; Size: its radius).</summary>
+    Dazzled,
+    /// <summary>A patch of a cave's wall ash cleared (at the wall; Direction: the way the wall faces; Size: its height over her plane).</summary>
+    AshCleared }
 
 /// <summary>What hurt Clementine (the killing blow names what ended a run; saved by number, so Gloomvine stays though nothing deals it now).</summary>
 public enum DamageSource { None, PufferNeedle, PufferSpines, BossPearl, RoyalPearl, BossSnap, BossContact, Murkling, MurkShot, Gloomvine, Blightroot, Blotter, Thumpsquirt, Lashjaw, Curse, Hearthguard }
@@ -126,6 +132,7 @@ public sealed partial class PlaneWorld
         Options = map.Haven ? PlaneOptions.Haven : options ?? PlaneOptions.Default;
         Tuning = tuning;
         Run = run ?? new PlaneRun(null, tuning);
+        Run.Reef = Options.Reef;
         Player.Position = Player.PrevPosition = map.Start.Position;
         Player.Hp = Run.Hp;
         _rocks = new List<WeakRock>(map.WeakRocks);
@@ -146,6 +153,7 @@ public sealed partial class PlaneWorld
         PlaceSeals();
         if (Options.Corruption || adventure) PlaceCorruption();
         if (adventure) PlaceAdventure();
+        PlaceAsh();
         PlaceExperience();
     }
 
@@ -273,6 +281,8 @@ public sealed partial class PlaneWorld
 
         StepBoss();
         StepCombat(input);
+        StepHerLight();
+        StepAsh();
         StepCorruption();
         if (Options.Adventure) StepAdventure();
         StepKnocks();
@@ -283,6 +293,7 @@ public sealed partial class PlaneWorld
         StepEconomy();
         StepExperience();
         StepPushWave();
+        StepLostLight();
         // Murklings made during the step (a prime's pieces) join the others now, never while a loop walks them.
         Murklings.AddRange(_madeLater);
         _madeLater.Clear();

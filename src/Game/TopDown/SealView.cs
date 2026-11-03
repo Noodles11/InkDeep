@@ -159,7 +159,9 @@ public partial class SealView : Node3D
             e.Mesh.Visible = e.Fade > 0.001f;
             e.Material.SetShaderParameter(SN.Of("fill"), e.Fill);
             e.Material.SetShaderParameter(SN.Of("flash"), e.Flash);
-            e.Material.SetShaderParameter(SN.Of("fade"), e.Fade);
+            // A cave's ash over the wall hides its carving until her light clears it away.
+            float bare = 1f - Mathf.Clamp(world.SealAsh(i) * 1.3f, 0f, 1f);
+            e.Material.SetShaderParameter(SN.Of("fade"), e.Fade * bare);
         }
         // The inner swords burn crimson while the fight holds the way shut.
         foreach (var (i, e) in _inner)

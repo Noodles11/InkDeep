@@ -5,11 +5,12 @@
 // their pupils dark slots. It moves as a flatfish does: the fringe ripples back along both sides; swimming, a wave runs
 // down its body and tail, up and down; bend curls it sideways (its shimmy into the sand).
 // Per instance: phase (its stroke), swim (0 lying still → 1 swimming), bend (its sideways curl, radians), ink (turning:
-// 0 → 1, ink creeping in from its edges), seed.
+// 0 → 1, ink creeping in from its edges), seed. A Hearthguard's ink burns where her light falls on it (her_burn.gdshaderinc).
 shader_type spatial;
 render_mode cull_disabled;
 
 #include "res://assets/shaders/sunlight.gdshaderinc"
+#include "res://assets/shaders/her_burn.gdshaderinc"
 
 instance uniform float phase = 0.0;
 instance uniform float swim = 0.0;
@@ -158,6 +159,8 @@ void fragment() {
 		col = mix(col, vec3(0.01, 0.006, 0.02), k);
 		glow = mix(glow, vec3(0.3, 0.09, 0.6) * 0.5, k);
 	}
+	// A Hearthguard: her light burns its ink.
+	if (ink > 0.99) her_burn_paint((INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz, (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz, seed, 1.0, col, glow, rough);
 	ALBEDO = col;
 	ROUGHNESS = rough;
 	SPECULAR = spec;

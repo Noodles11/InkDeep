@@ -19,6 +19,8 @@ render_mode unshaded, depth_test_disabled, depth_draw_never, cull_disabled, fog_
 
 global uniform vec3 reef_water_deep;
 global uniform vec3 reef_murk;
+// A cave's dark (ReefLook.Dark): never black, the outlines of what is there drawn faintly.
+global uniform float reef_dark;
 global uniform vec3 reef_sun;
 global uniform float reef_rays;
 global uniform float reef_caustics;
@@ -167,6 +169,12 @@ float fish_shadow(vec2 p, vec4 fish, vec4 way) {
 	float fan = 0.05 + 0.4 * max(-t, 0.0);
 	float tail = exp(-(v * v) / (fan * fan * soft)) * smoothstep(-0.44, -0.16, t) * (1.0 - smoothstep(-0.06, 0.08, t));
 	return max(body, tail * 0.8) / sqrt(way.w);
+}
+
+// How far into the view this pixel's surface lies (metres).
+float view_depth(vec2 at, mat4 inv_projection) {
+	vec4 v = inv_projection * vec4(at * 2.0 - 1.0, texture(depth_tex, at).r, 1.0);
+	return -v.z / v.w;
 }
 
 void fragment() {
@@ -453,6 +461,17 @@ void fragment() {
 	// (Not what her own light falls on: her warmth reaches the eye.)
 	col = mix(col, reef_water_deep / wl * luma, (1.0 - smoothstep(0.0, 0.3, luma)) * 0.45 * (1.0 - lit));
 	col = mix(col, col * (reef_sun * 0.2 + 0.82), smoothstep(0.5, 1.0, luma) * 0.3);
+
+	// A cave's dark is never black: where the depth breaks (an edge of rock, a ledge, a creature's rim) a faint cool line
+	// shows what is there, all but hidden; not where her light already shows it.
+	if (reef_dark > 0.0) {
+		vec2 px = 1.5 / VIEWPORT_SIZE;
+		float zc = view_depth(uv, INV_PROJECTION_MATRIX);
+		float e = abs(view_depth(uv + vec2(px.x, 0.0), INV_PROJECTION_MATRIX) - zc) + abs(view_depth(uv - vec2(px.x, 0.0), INV_PROJECTION_MATRIX) - zc)
+			+ abs(view_depth(uv + vec2(0.0, px.y), INV_PROJECTION_MATRIX) - zc) + abs(view_depth(uv - vec2(0.0, px.y), INV_PROJECTION_MATRIX) - zc);
+		float edge = smoothstep(0.015, 0.09, e / max(zc, 1.0));
+		col += vec3(0.2, 0.25, 0.4) * edge * 0.22 * reef_dark * (1.0 - lit);
+	}
 
 	// Vignette, oval to the screen, tinted by the deep water; heavier as the depths darken.
 	vec2 d = (uv - 0.5) * vec2(VIEWPORT_SIZE.x / VIEWPORT_SIZE.y, 1.0);

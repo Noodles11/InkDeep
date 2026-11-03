@@ -96,8 +96,8 @@ What changes is the protagonist's skin:
   Presentation only — but in the adventure the sim keeps her oral arm too, as a
   line along the way she swam, and it stings the corrupted creatures it brushes
   (docs/ADVENTURE.md §6).
-- **Bioluminescence**: a soft round light from her bell, as a bulb's (§5.3), and a faint glow
-  round the bell itself; the player's light is the primary light source in dark
+- **Bioluminescence**: a lamp in her bell: softened through the bell all round her, as a bulb's (§5.3), and an
+  intense searchlight out of the bell's opening (docs/ADVENTURE.md §8), and a faint glow round the bell itself; the player's light is the primary light source in dark
   depths (inherited rule: *Clementine is
   always the warm light in the scene*).
 - **The Absorbent:** one of her kind. A pearl swallowed is a skill absorbed —
@@ -932,11 +932,13 @@ stream only — never touches gameplay physics. Quality presets inherited.
 Every light that matters reaches only where it can: the reef is a heightfield, so visibility is worked out on it
 exactly and cheaply, and the water glows where light passes through it.
 
-- **Her lantern** (BellView): a **bulb**: a smooth round light from her bell's heart, shining all round her with no beam,
-  no streaks and no filaments, its soft shadows from a light the size of her heart (her own bell and strands cast none). A
+- **Her lantern** (BellView): a **lamp in a shade**: a smooth soft light from the top of her bell, softened by it,
+  shining every way but down through the bell's opening (a projector on the light masks that cone, `BellView.LampShade`),
+  turning with her bell as she tips, with no streaks and no filaments, its soft shadows from a light the size of her
+  heart (her own bell and strands cast none). Out of the opening her searchlight shines instead (docs/ADVENTURE.md §8). A
   faint short glow round the bell (3 m) keeps what swims right beside her from going black. Its strength follows the
   depth's **Lantern** (`ReefLook.Lantern`, §5.1): 1 in the Shallows, 1.1 Kelp, 1.35 Galleon, 1.5 Carnival, 1.85 Trench, 2
-  Abyss, 0.6 Tank; it is 0.7 × Lantern^1.8 strong (`BellView.BulbEnergy`), reaches 9 m × √(Lantern × Lantern Pearl's glow; the pearl makes it no stronger)
+  Abyss, 0.6 Tank; it is 0.45 × Lantern^1.8 strong (`BellView.BulbEnergy`), reaches 9 m × √(Lantern × Lantern Pearl's glow; the pearl makes it no stronger)
   and falls off more gently the deeper she is. Her glow in the water is even all round her and nothing cuts it, and the
   warm pool it leaves on the floor below is centred on her as the eye sees her, not straight under her.
 - **Where her light reaches — the horizon map** (`HorizonMap.cs`): round her light, for 256 directions × 32 distances
@@ -1363,14 +1365,13 @@ at mist distance (inherited fade rule).
   (`lf_see_cut`); it opens in about 0.17 s and closes over 0.5 s. A wall she only swims beside stays whole. A canopy fading over Clementine is drawn unblurred while it fades.
 - **Combat** (`PlaneCombat.cs`; the Depth-1 bestiary is being ported onto the plane, the Pufferling first): Clementine has
   100 HP (shown by the gonad rings on her bell, §2.5; the run's play time, stopped while paused, §9) and shoots toward the mouse (held) or the
-  arrow keys — 10 damage, 4–5 volleys a second. Her shots are translucent bubbles, and a bubble never stops dead:
-  thrown at 17 m/s, it slows steadily at first, then — once the water's drag (2.2 × its speed, per second) is the
-  gentler — eases off exponentially, the two meeting smoothly at about 6.5 m/s. Slower than 0.9 m/s it hovers, still
-  drifting and slowing (about 0.1 m/s left at the end), each bubble for its own time (0.8–1.2 s, rolled as it is
-  thrown, times her **bubble hover** stat, which pearls can change: Bubble Coral ×1.5); then it pops at the end of
-  her range, 12.8 m (half the screen's height at the 100% camera zoom), however near her the pointer is (only its way
-  from her counts; what is in the way is struck anyway). Where it goes out it clears a little of
-  the ground's corruption. It only ever comes to rest by popping. They always pop on a mob (piercing and boomerang bubbles fly on through mobs). A bubble that bumps into rock
+  arrow keys — 10 damage, 4–5 volleys a second. Her shots are light (docs/LIGHT-BUBBLES.md), and a shot never stops
+  dead: thrown at 20 m/s, it slows steadily at first, as if to stop at the end of her range, then — once the water's
+  drag (6 × its speed, per second) is the gentler — eases off exponentially. Slower than 0.9 m/s it floats, still
+  drifting and slowing, each shot for its own time (0.12–0.22 s, rolled as it is thrown, times her **bubble hover**
+  stat, which pearls can change; with Bubble Coral 0.8–1.2 s × 1.5); then it pops near the end of her range, 6.4 m
+  (a quarter of the screen's height at the 100% camera zoom), however near her the pointer is (only its way from her
+  counts; what is in the way is struck anyway). Where it pops it clears a little of the ground's corruption. It only ever comes to rest by popping. They always pop on a mob (piercing and boomerang bubbles fly on through mobs). A bubble that bumps into rock
   pops 40% of the time and otherwise bounces off (Mirror Scale's bounces are sure). Two of her bubbles that touch
   (bubbles of one volley never do) bounce off each other: pushed apart, the bigger moving less, and turned off each
   other like two balls (80% of the meeting speed kept; each keeps its own easing-out speed, so a bounce turns it, and

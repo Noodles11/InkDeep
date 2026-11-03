@@ -6,8 +6,11 @@
 // swell inflates it (a sac's telegraph); fade dissolves it (a burst). A murkling's throw: pull bends it back away from
 // aim like a drawn slingshot (−1), then lunges it forward (+1); bud swells the piece it throws out of its front.
 // A throw itself: drip draws its back out into the neck it is pinching off from (1 → 0 as it parts).
+// Her light burns it where it falls on it (her_burn.gdshaderinc).
 shader_type spatial;
 render_mode cull_back, shadows_disabled;
+
+#include "res://assets/shaders/her_burn.gdshaderinc"
 
 instance uniform float ember = 0.4;
 instance uniform float wobble = 1.0;
@@ -99,4 +102,7 @@ void fragment() {
 		float strength = (worn > 0.0 ? 1.1 + 0.9 * worn : 0.0) + hit * 3.0;
 		EMISSION += vec3(1.0, 0.93, 0.75) * line * strength;
 	}
+	float rough = ROUGHNESS;
+	her_burn_paint((INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz, n, seed, 1.0, ALBEDO, EMISSION, rough);
+	ROUGHNESS = rough;
 }

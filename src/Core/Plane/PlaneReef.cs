@@ -21,6 +21,25 @@ public static class ReefTuning
     public const int CavesPerLevel = 3;
 
     public static int LeakXp(int caveLevel) => (int)MathF.Round(LeakXpBase * MathF.Pow(Math.Max(caveLevel, 1), LeakXpPower));
+
+    /// <summary>A pearl's worth in silver shells at the shell shop: PearlWorthBase + PearlWorthPerQuality × its quality.</summary>
+    public const int PearlWorthBase = 20, PearlWorthPerQuality = 20;
+    public static int PearlWorth(int quality) => PearlWorthBase + PearlWorthPerQuality * Math.Max(quality, 0);
+
+    /// <summary>How near her lost light she must swim to take it back (metres).</summary>
+    public const float LostReach = 1.4f;
+}
+
+/// <summary>
+/// Her lost light (docs/RPG-PROPOSAL.md §5.1): where she dimmed, everything death took from her — her passive pearls and
+/// the shells on her — glowing in one cluster. She takes it all back by swimming into it; dimming again first, it is gone.
+/// </summary>
+public sealed class PlaneLostLight
+{
+    public Vector2 Position;
+    public List<string> Pearls = new();
+    public int Shells;
+    public bool Taken;
 }
 
 /// <summary>
@@ -63,6 +82,17 @@ public static class OpenReef
     /// <summary>A cave's own level id (apart from every run level and hand-drawn map), from its region, depth and number.</summary>
     public static LevelId CaveId(string region, int depth, int cave) => new(1000 + RegionNumber(region), depth, cave + 1);
 
+    /// <summary>
+    /// A place's key, for where her lost light lies: the bay, a region, or a region's cave by its number (a cave sealed
+    /// since is gone, and the light with it).
+    /// </summary>
+    public static string PlaceKey(string kind, string region, int cave = -1) => kind switch
+    {
+        "cave" => $"cave:{region}:{cave}",
+        "region" => $"region:{region}",
+        _ => "bay",
+    };
+
     static List<int> CavesOf(Jelly jelly, string region) =>
         jelly.Caves.TryGetValue(region, out var list) ? list : jelly.Caves[region] = new List<int>();
 }
@@ -93,6 +123,20 @@ public sealed partial class PlaneWorld
             if (d > ReefTuning.LeaveAfter) _wentIn = true;
             return _wentIn && d < ReefTuning.MouthReach + 1f;
         }
+    }
+
+    /// <summary>Her lost light, if it lies in this place (the game puts it here from her jelly).</summary>
+    public PlaneLostLight? Lost { get; set; }
+
+    /// <summary>She swims into her lost light: her pearls are hers again (absorbed at once), and her shells.</summary>
+    void StepLostLight()
+    {
+        if (Lost is not { Taken: false } lost || Defeated || Vector2.Distance(Player.Position, lost.Position) > ReefTuning.LostReach) return;
+        lost.Taken = true;
+        foreach (string id in lost.Pearls) Run.Add(id);
+        Run.Shells += lost.Shells;
+        Player.Hp = MathF.Min(Player.Hp, Run.MaxHp);
+        Events.Add(new PlaneEvent(PlaneEventType.LostLightTaken, lost.Position, Vector2.Zero, lost.Pearls.Count));
     }
 
     /// <summary>The depth whose life fills the water: the open reef's places have their region's fish whatever its depth.</summary>

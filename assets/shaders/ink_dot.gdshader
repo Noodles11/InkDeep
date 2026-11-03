@@ -1,8 +1,11 @@
 // A speck of the ink in the water (AdventureView): a tiny plain purple dot like the plankton, drifting a little, on any of
 // the water's layers, with no glow. Camera-facing quads in one MultiMesh; the instance's scale is its size in metres
-// across, INSTANCE_CUSTOM.x a seed.
+// across, INSTANCE_CUSTOM.x a seed. Its own flat colour everywhere, but in a cave's dark (reef_dark) only where light
+// falls on it: hers, or her shots'.
 shader_type spatial;
-render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
+render_mode blend_mix, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
+
+global uniform float reef_dark;
 
 varying vec3 v_ink;
 
@@ -17,6 +20,9 @@ void vertex() {
 }
 
 void fragment() {
-	ALBEDO = v_ink;
+	ALBEDO = v_ink * reef_dark;
+	EMISSION = v_ink * (1.0 - reef_dark);
+	ROUGHNESS = 1.0;
+	SPECULAR = 0.0;
 	ALPHA = (1.0 - smoothstep(0.55, 1.0, length(UV * 2.0 - 1.0))) * 0.85;
 }

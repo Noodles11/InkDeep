@@ -476,7 +476,7 @@ means a full meter. All damage, healing and items work unchanged.
 | Part | Where | What |
 |---|---|---|
 | Meter | `MinimapView` frame | Replaces the red bezel round the minimap. Dark ink fills it clockwise from 12 o'clock over a pale gold track. A violet sheen sits on the ink's lip and pulses above 75 %. An ink bead with a glint marks the tip. |
-| Numbers | `DamageNumbers` | No signs, two colours only: light and corruption. A hit on her shows its amount in dark violet ink with a pale violet edge. Her hits on anything and her cleansing or healing show in bright gold light. |
+| Hits on her | `BellView.Splatter` | No floating numbers (`DamageNumbers` is hidden). A hit on her splatters the corruption it drove into her off her bell on the side it struck, like blood: dark ink drops flung back out toward what hit her and fanning wide, sinking a little as they slow, a few violet-edged motes among them and a puff of ink mist. As many drops as the hit took of her max health (250 for all of it, 3–120), each with a smaller one streaking behind it. A murkling clinging to her oozes drops off her where it clings, as fast as it drains her. |
 | Words | pause menu, save card, resume stats, death splash | "X% corrupted". The death splash reads "The corruption took Clementine". |
 
 ## Light springs (`LightSpring`)

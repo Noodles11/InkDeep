@@ -29,6 +29,7 @@ public partial class DamageNumbers : Node3D
     /// <summary>One number per damage event this step (PlayerHit, MobHit, MobDefeated, BossHit).</summary>
     public void Show(in PlaneEvent e)
     {
+        if (!Visible) return;
         if (e.Type is not (PlaneEventType.PlayerHit or PlaneEventType.PlayerDrained or PlaneEventType.MobHit or PlaneEventType.MobDefeated or PlaneEventType.BossHit)) return;
         // A drain cut short (a tick or two as she leaves the dark) would read as a hit of 0.
         if (e.Type == PlaneEventType.PlayerDrained && e.Size < 0.5f) return;
@@ -37,7 +38,10 @@ public partial class DamageNumbers : Node3D
     }
 
     /// <summary>Corruption cleansed (any source: a spring, Whale Song, a healing pearl, the shop): a light −number above Clementine.</summary>
-    public void ShowHeal(System.Numerics.Vector2 at, float amount) => Show(at, amount, hers: true, Height);
+    public void ShowHeal(System.Numerics.Vector2 at, float amount)
+    {
+        if (Visible) Show(at, amount, hers: true, Height);
+    }
 
     /// <summary>A signed amount: negative is damage, positive healing.</summary>
     void Show(System.Numerics.Vector2 at, float amount, bool hers, float lift)

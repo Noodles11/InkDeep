@@ -83,6 +83,17 @@ public partial class HudView : Control
     ColorRect _bell = null!;
     ShaderMaterial _bellLook = null!;
     float _lastCharge = 1f, _used;
+    /// <summary>
+    /// The open reef's second and third slots (docs/RPG-PROPOSAL.md §5.2): small pearls right of her bell, their charge
+    /// round each, their key under; an empty slot a faint ring.
+    /// </summary>
+    readonly ColorRect[] _slotDots = new ColorRect[2];
+    readonly string?[] _slotIds = new string?[2];
+    readonly float[] _slotCharges = new float[2];
+    bool _slots;
+    static Vector2 SlotAt(int i) => BellAt + new Vector2(BellRadius + 22f + i * 34f, 36f);
+    const float SlotRadius = 12f;
+
     /// <summary>Health's arm frayed by a hit: the lost piece (as shares of its length) and how long it has been drifting off.</summary>
     readonly List<(float From, float To, float Age)> _frays = new();
 
@@ -115,6 +126,11 @@ public partial class HudView : Control
         _bellLook = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/hud_bell.gdshader") };
         _bell = new ColorRect { Material = _bellLook, MouseFilter = MouseFilterEnum.Ignore, Visible = false, Position = BellAt - Vector2.One * BellRadius, Size = Vector2.One * BellRadius * 2f };
         AddChild(_bell);
+        for (int i = 0; i < _slotDots.Length; i++)
+        {
+            _slotDots[i] = new ColorRect { MouseFilter = MouseFilterEnum.Ignore, Visible = false, Position = SlotAt(i) - Vector2.One * SlotRadius, Size = Vector2.One * SlotRadius * 2f };
+            AddChild(_slotDots[i]);
+        }
     }
 
     MeshInstance3D ShellMesh()
@@ -306,6 +322,18 @@ public partial class HudView : Control
                 else _frays[i] = f;
             }
             SyncBell();
+            _slots = world.Run.Reef;
+            for (int i = 0; i < _slotDots.Length; i++)
+            {
+                var held = _slots ? world.Run.SlotActive(i + 1) : null;
+                if (held?.Id != _slotIds[i])
+                {
+                    _slotIds[i] = held?.Id;
+                    if (held is not null) _slotDots[i].Material = OctoShoots.Game.Fx.PearlMaterials.Flat(held.Pearl);
+                }
+                _slotDots[i].Visible = held is not null;
+                _slotCharges[i] = held is null ? 0f : world.Run.Charge(i + 1);
+            }
             if (_shells > 0) _shellsSeen = true;
             _leaks.Clear();
             int leaksSealed = world.Leaks.Count - world.LeaksOpen;
@@ -427,6 +455,22 @@ public partial class HudView : Control
     void DrawGauge(Font font)
     {
         float pulse = 0.5f + 0.5f * Mathf.Sin(_time * 4f);
+        if (_slots)
+        {
+            string[] keys = { OctoShoots.Game.Controls.InputSetup.Active2, OctoShoots.Game.Controls.InputSetup.Active3 };
+            for (int i = 0; i < _slotDots.Length; i++)
+            {
+                var c = SlotAt(i);
+                bool held = _slotIds[i] is not null, ready = held && _slotCharges[i] >= 1f;
+                DrawCircle(c, SlotRadius + 3f, new Color(0f, 0f, 0f, 0.35f));
+                if (held) DrawArc(c, SlotRadius + 2.5f, -Mathf.Pi * 0.5f, -Mathf.Pi * 0.5f + Mathf.Tau * _slotCharges[i], 32,
+                    ready ? new Color(1f, 0.9f, 0.6f, 0.75f + 0.25f * pulse) : new Color(1f, 1f, 1f, 0.45f), 2.5f, true);
+                else DrawArc(c, SlotRadius, 0f, Mathf.Tau, 32, new Color(1f, 1f, 1f, 0.25f), 1.5f, true);
+                string key = OctoShoots.Game.Controls.InputSetup.Hint(keys[i]);
+                var ks = font.GetStringSize(key, HorizontalAlignment.Left, -1, 12);
+                Outlined(font, c + new Vector2(-ks.X * 0.5f, SlotRadius + 16f), key, 12, new Color(1f, 0.95f, 0.85f, held ? 0.9f : 0.5f));
+            }
+        }
         bool low = _healthShown < 0.25f;
         var health = low ? new Color(1f, 0.88f, 0.62f).Lerp(new Color(1f, 0.42f, 0.58f), 0.4f + 0.4f * pulse) : new Color(1f, 0.88f, 0.62f);
         Arm(0, _healthShown, health, _hurt, low ? 1f : 0f);

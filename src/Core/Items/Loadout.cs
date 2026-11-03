@@ -107,8 +107,11 @@ public sealed class Loadout
         return new Loadout { Stats = stats };
     }
 
-    /// <summary>The pearls' loadout, with any further stat changes (her skill points) added among the pearls' own.</summary>
-    public static Loadout Build(ItemCatalog? catalog, IReadOnlyList<string> itemIds, Tuning tuning, IEnumerable<StatMod>? extra = null)
+    /// <summary>
+    /// The pearls' loadout, with any further stat changes (her skill points) added among the pearls' own. Without
+    /// <paramref name="pearlStats"/> (the open reef) the pearls change no stat at all, only what she does.
+    /// </summary>
+    public static Loadout Build(ItemCatalog? catalog, IReadOnlyList<string> itemIds, Tuning tuning, IEnumerable<StatMod>? extra = null, bool pearlStats = true)
     {
         if (catalog is null || itemIds.Count == 0) return Empty(tuning, extra);
 
@@ -133,7 +136,7 @@ public sealed class Loadout
         bundles.AddRange(transformations);
 
         var stats = StatBlock.Base(tuning);
-        stats.Apply(bundles.SelectMany(b => b.Stats).Concat(extra ?? Array.Empty<StatMod>()));
+        stats.Apply((pearlStats ? bundles.SelectMany(b => b.Stats) : Enumerable.Empty<StatMod>()).Concat(extra ?? Array.Empty<StatMod>()));
 
         var shot = new ShotSpec();
         foreach (var b in bundles)

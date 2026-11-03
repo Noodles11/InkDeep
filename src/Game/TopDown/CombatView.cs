@@ -77,6 +77,13 @@ public partial class CombatView : Node3D
 
     readonly List<Bloom> _blooms = new();
     readonly List<MeshInstance3D> _halos = new();
+    /// <summary>
+    /// Each shot of hers is a small lantern (docs/ADVENTURE.md §8): a real light on the reef round it, reaching farther and
+    /// shining stronger the more damage the shot carries (LampReach and LampEnergy for a plain shot, × the square root of
+    /// its share of one), breathing as it floats, gone when it pops.
+    /// </summary>
+    readonly List<OmniLight3D> _lamps = new();
+    const float LampReach = 3.4f, LampEnergy = 1.1f, LampAbove = 0.35f;
     ShaderMaterial _halo = null!;
     readonly QuadMesh _haloQuad = new() { Size = new Vector2(2f, 2f) };
     /// <summary>Her bubbles as last drawn: where each was and how many it held (pops and kills look the bubble up).</summary>
@@ -314,6 +321,7 @@ public partial class CombatView : Node3D
         }
         foreach (var s in _shots) s.QueueFree();
         foreach (var h in _halos) h.QueueFree();
+        foreach (var l in _lamps) l.QueueFree();
         _trails.Clear();
         _fireworks.Clear();
         _dust.Clear();
@@ -323,6 +331,7 @@ public partial class CombatView : Node3D
         foreach (var q in _pearls) q.QueueFree();
         _shots.Clear();
         _halos.Clear();
+        _lamps.Clear();
         _merges.Clear();
         ClearLights();
         _pearls.Clear();
@@ -700,23 +709,6 @@ void fragment() {
         _pops.Add(new PopFx { Node = node, Shell = shell, Drops = drops, DropAt = place, DropVel = vel, DropBorn = born, Impact = impact, Radius = radius, Light = bubbles > 0 ? CoreLight(bubbles) : 0f });
     }
 
-    /// <summary>
-    /// A shot of her light going out at the end of its range, like a match: a last flicker, a few embers drifting up
-    /// and cooling, and a curl of smoke. No flash and no bloom on the water.
-    /// </summary>
-    public void Extinguish(System.Numerics.Vector2 at, System.Numerics.Vector2 dir)
-    {
-        var p = new Vector3(at.X, LevelMap.SwimBand, at.Y);
-        var on = new Vector3(dir.X, 0f, dir.Y) * 0.6f;
-        var gold = new Color(1.2f, 0.75f, 0.3f);
-        var ember = new Color(0.9f, 0.3f, 0.06f, 0f);
-        for (int i = 0; i < 5; i++)
-            _fireworks.Emit(p, on + new Vector3(_fireworks.RandRange(-0.3f, 0.3f), _fireworks.RandRange(0.5f, 1.2f), _fireworks.RandRange(-0.3f, 0.3f)),
-                _fireworks.RandRange(0.35f, 0.7f), _fireworks.RandRange(0.05f, 0.09f), 0.01f, gold, ember, drag: 2f, buoyancy: 0.4f);
-        // The smoke: a pale curl that rises and spreads as it fades.
-        _fireworks.Emit(p, on * 0.5f + Vector3.Up * 0.6f, 0.9f, 0.1f, 0.35f, new Color(0.5f, 0.45f, 0.4f, 0.25f), new Color(0.3f, 0.3f, 0.32f, 0f), drag: 1.5f, buoyancy: 0.3f);
-    }
-
     /// <summary>A shot's afterlight, from its pearls (LightTrails.Style).</summary>
     static LightTrails.Style TrailStyle(PlaneShot shot)
     {
@@ -977,6 +969,9 @@ void fragment() {
             var halo = new MeshInstance3D { Mesh = _haloQuad, MaterialOverride = _halo, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Scale = Vector3.One * HaloRadius, Visible = false };
             AddChild(halo);
             _halos.Add(halo);
+            var lamp = new OmniLight3D { ShadowEnabled = false, OmniAttenuation = 1.2f, LightSpecular = 0.4f, Visible = false };
+            AddChild(lamp);
+            _lamps.Add(lamp);
         }
         _candidates.Clear();
         LensCount = 0;
@@ -986,6 +981,7 @@ void fragment() {
             bool used = i < world.Shots.Count;
             _shots[i].Visible = used;
             _halos[i].Visible = false;
+            _lamps[i].Visible = false;
             if (!used) continue;
             var shot = world.Shots[i];
             _shots[i].Position = new Vector3(shot.Position.X, LevelMap.SwimBand, shot.Position.Y);
@@ -1067,7 +1063,16 @@ void fragment() {
                 halo.Scale = Vector3.One * HaloRadius * drawn;
                 halo.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("strength"), Mathf.Min(Mathf.Lerp(HaloMin, HaloMax, Warmth(shot.Bubbles)) * (0.6f + 0.4f * k), HaloMax) * (shot.Explosive ? 1.3f : 1f));
                 halo.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("color"), LightOf(shot.Hue).Lerp(new Color(1f, 0.95f, 0.84f), shot.Hue == PrismHue.None ? warmth : warmth * 0.3f));
-                _candidates.Add((shot.Position, GroundStrength * Mathf.Min(k, 1f) * (shot.Explosive ? 1.3f : 1f), GroundRadius));
+                // Its lantern: the harder it hits, the farther and stronger it shines, on the water round it (the post
+                // pass) and as a real light on the reef.
+                float share = Mathf.Sqrt(Mathf.Max(shot.Damage, 0f) / PlaneCombatTuning.ShotDamage);
+                _candidates.Add((shot.Position, GroundStrength * Mathf.Min(k, 1f) * Mathf.Clamp(share, 0.6f, 1.8f) * (shot.Explosive ? 1.3f : 1f), GroundRadius * Mathf.Clamp(share, 0.55f, 2.6f)));
+                var lamp = _lamps[i];
+                lamp.Visible = true;
+                lamp.Position = _shots[i].Position + Vector3.Up * LampAbove;
+                lamp.OmniRange = LampReach * Mathf.Clamp(share, 0.55f, 2.6f);
+                lamp.LightEnergy = LampEnergy * Mathf.Clamp(share, 0.6f, 1.8f) * ember * shot.Dim * (1f + 0.5f * pulse);
+                lamp.LightColor = LightOf(shot.Hue).Lerp(new Color(1f, 0.95f, 0.84f), shot.Hue == PrismHue.None ? warmth * 0.6f : warmth * 0.2f);
                 if (LensCount < MaxLenses)
                 {
                     var at = _shots[i].GlobalPosition;

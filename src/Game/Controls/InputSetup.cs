@@ -27,7 +27,9 @@ public static class InputSetup
 	public const string Dash = "dash";
 	public const string Dive = "dive";
 	public const string Active = "use_active";
-	public const string Bomb = "ink_bomb";
+	/// <summary>The open reef's second and third active slots (docs/RPG-PROPOSAL.md §5.2).</summary>
+	public const string Active2 = "use_active_2";
+	public const string Active3 = "use_active_3";
 	public const string Review = "review_pearls";
 	public const string Pause = "pause";
 	public const string Restart = "restart";
@@ -60,7 +62,9 @@ public static class InputSetup
 		new(Fire, "Shoot (hold)", "mouse:Left", "axis:TriggerRight:+"),
 		new(Dash, "Dash", "key:Space", "axis:TriggerLeft:+"),
 		new(Dive, "Dive down the shaft", "key:Shift", "button:X"),
-		new(Active, "Use the active pearl", "key:F", "button:Y"),
+		new(Active, "Use the active pearl (first slot)", "key:F", "button:Y"),
+		new(Active2, "Use the second slot's pearl", "key:Q", "button:LeftShoulder"),
+		new(Active3, "Use the third slot's pearl", "key:E", "button:RightShoulder"),
 		new(Review, "Level map (hold)", "key:Tab", "button:Back"),
 		// Esc always pauses (and cancels a rebind), so its key stays.
 		new(Pause, "Pause", "key:Escape", "button:Start", KeyLocked: true),
@@ -138,7 +142,6 @@ public static class InputSetup
 	{
 		Load();
 		foreach (var spec in Bindable) Apply(spec.Action);
-		KeyOnly(Bomb, Godot.Key.E);
 		KeyOnly(Restart, Godot.Key.R);
 		KeyOnly(DebugPanel, Godot.Key.F1);
 		LoadMappings();

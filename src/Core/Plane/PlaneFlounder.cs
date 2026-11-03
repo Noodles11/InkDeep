@@ -161,7 +161,8 @@ public sealed partial class PlaneWorld
                 continue;
             }
             f.Corruption.Step(Dt);
-            StepHearthguard(f);
+            // Dazzled by her light: it holds still, its shimmy or its sting paused where it is.
+            if (!Dazzled(f)) StepHearthguard(f);
         }
 
         // Her shots of light on a Hearthguard (its wardens may turn them aside).

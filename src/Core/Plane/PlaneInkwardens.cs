@@ -202,6 +202,12 @@ public sealed partial class PlaneWorld
         {
             if (!w.Alive) continue;
             w.Corruption.Step(Dt);
+            // Dazzled by her light: it holds still, its spin and its spikes paused.
+            if (Dazzled(w))
+            {
+                w.Velocity = Vector2.Zero;
+                continue;
+            }
             if (w.Puffer)
             {
                 StepSpiky(w);

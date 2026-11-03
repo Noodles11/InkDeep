@@ -415,6 +415,8 @@ public class AdventureTests
         Run(w, PlaneWorld.TickRate);
         var shoal = w.Murklings.Where(m => m.Swarm == school).ToList();
         Assert.Equal(members.Count, shoal.Count);
+        // (Her light's burn and dazzle off: the shoal on its own.)
+        w.LightBurns = false;
 
         // She stops beside them; they ring her all round, and the ring circles her (whichever way she aims).
         w.Player.Position = w.Player.PrevPosition = shoal[0].Position;
@@ -479,6 +481,8 @@ public class AdventureTests
         fish.Ink = 1f;
         Run(w, PlaneWorld.TickRate);
         var m = w.Murklings.Single(x => x.Fish == fish);
+        // (Her light's burn and dazzle off: the chase on its own.)
+        w.LightBurns = false;
         w.Player.Position = w.Player.PrevPosition = m.Position + Vector2.Normalize(new Vector2(1f, 0.3f)) * 6f;
         if (!w.Clear(w.Player.Position, w.Radius)) w.Player.Position = w.Player.PrevPosition = m.Position + new Vector2(0f, 0.01f) + Vector2.UnitY * 3f;
         for (int i = 0; i < 4 * PlaneWorld.TickRate && !m.Clinging; i++)

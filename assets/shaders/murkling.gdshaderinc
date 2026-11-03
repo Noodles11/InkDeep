@@ -5,6 +5,7 @@
 // lit inside showing through; they close as its corruption grows back. Painted like her light is (light_stroke): its ink
 // brushed in flowing bands, a ragged violet rim laid as a dry-brushed stroke, a torn silhouette, one soft dab of sheen.
 // The throw (pull, bud) and its own throws (drip) are shaped as corruption_orb shapes them. worn, hit: her outline.
+// Her light burns it where it falls on it (her_burn.gdshaderinc).
 // Also the Blightroot's painted parts (BlightView.Octopus): skin (rgb, a how much) is a kind's own colour under the ink
 // and in its rim (the Blightroot's blue; freed, the octopus's own healthy red), swell its head swelling on the pulse.
 
@@ -31,6 +32,7 @@ instance uniform float hollow = 1.0;
 instance uniform float spikes = 0.0;
 instance uniform float tadpole = 0.0;
 instance uniform vec3 swim = vec3(0.0, 0.0, 1.0);
+#include "res://assets/shaders/her_burn.gdshaderinc"
 #ifdef OVER
 #include "res://assets/shaders/over_her.gdshaderinc"
 varying vec3 v_world;
@@ -202,6 +204,10 @@ void fragment() {
 			float strength = (worn > 0.0 ? 1.1 + 0.9 * worn : 0.0) + hit * 3.0;
 			EMISSION += vec3(1.0, 0.93, 0.75) * line * strength;
 		}
+		// Her light burning it, where it falls on it.
+		float rough = ROUGHNESS;
+		her_burn_paint((INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz, n, seed, 1.0, ALBEDO, EMISSION, rough);
+		ROUGHNESS = rough;
 	}
 #ifdef OVER
 	// Drawn after the water's pass (and her), so hazed by hand to match it: matte (no sun glint the water would

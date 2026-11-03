@@ -532,6 +532,7 @@ public sealed partial class PlaneWorld
         if (!drunk) v.Wave = 0f;
         Events.Add(new PlaneEvent(drunk ? PlaneEventType.LeakDrunk : PlaneEventType.LeakSealed, v.Position, Vector2.UnitY, LeaksLeft));
         if (wakes && LeaksLeft == 0) Events.Add(new PlaneEvent(PlaneEventType.MainCurrentWoke, v.Position, Vector2.UnitY));
+        if (Map.LeakCave) DissolveAsh(v.Position);
         if (drunk) return;
         // Her reward: shells burst out of it.
         for (int i = 0; i < AdventureTuning.LeakShells; i++)
