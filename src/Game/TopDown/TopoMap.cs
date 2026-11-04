@@ -57,6 +57,8 @@ public partial class TopoMap : Control
     public readonly List<(System.Numerics.Vector2 At, bool Bathing)> Springs = new();
     /// <summary>Places the requests she carries name (a cave mouth, the Tide Fan with one to untie): ringed in its colour.</summary>
     public readonly List<(System.Numerics.Vector2 At, Color Colour)> Marks = new();
+    /// <summary>Short notes on places, shown once she has charted them (a cave mouth's level: "Lv 8").</summary>
+    public readonly List<(System.Numerics.Vector2 At, string Text)> Notes = new();
     /// <summary>The main current's course while it runs: a faint line to the way down.</summary>
     public IReadOnlyList<System.Numerics.Vector2>? Current;
     /// <summary>The places' emblems' size (the Tab map draws them larger than the minimap).</summary>
@@ -288,6 +290,14 @@ public partial class TopoMap : Control
             Vector2 q = P(at);
             DrawArc(q, 13f * EmblemScale, 0f, Mathf.Tau, 32, Ink, 5f * EmblemScale, true);
             DrawArc(q, 13f * EmblemScale, 0f, Mathf.Tau, 32, colour, 2.6f * EmblemScale, true);
+        }
+        foreach (var (at, text) in Notes)
+        {
+            if (Fog is { } charted && charted.At(at) < 0.5f) continue;
+            int px = Mathf.RoundToInt(11f * EmblemScale);
+            var q = P(at) + new Vector2(10f * EmblemScale, -8f * EmblemScale);
+            DrawStringOutline(font, q, text, HorizontalAlignment.Left, -1, px, 4, new Color(0f, 0f, 0f, 0.6f));
+            DrawString(font, q, text, HorizontalAlignment.Left, -1, px, new Color(1f, 0.92f, 0.78f));
         }
 
         // A light spring, once seen: a pool of clear aqua with a gold heart (brighter while she bathes).

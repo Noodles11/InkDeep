@@ -131,6 +131,31 @@ public static class OpenReef
             ? hand.Zones.Count > 0 ? hand.Zones.Min(z => z.Level) : hand.Tier
             : (ZoneOf(hand, mouth)?.Level ?? hand.Tier) + Math.Clamp(hand.Mouths[mouth].Danger, 0, ReefTuning.MostDanger);
 
+    /// <summary>How many floors the cave behind a mouth goes down (docs/REEF-WORLD.md §3): one more than its danger.</summary>
+    public static int CaveFloors(HandLayout hand, int mouth) =>
+        1 + (mouth >= 0 && mouth < hand.Mouths.Count ? Math.Clamp(hand.Mouths[mouth].Danger, 0, ReefTuning.MostDanger) : 0);
+
+    /// <summary>
+    /// A cave's name (docs/REEF-WORLD.md §3), from its zone's own words, her world's seed and the cave's number: "The
+    /// Weeping Grotto" in the Shallows, "The Flooded Hold" in the Galleon.
+    /// </summary>
+    public static string CaveName(string zone, string seed, int cave)
+    {
+        var (kinds, places) = CaveWords.TryGetValue(zone, out var words) ? words : CaveWords["shallows"];
+        ulong h = 1469598103934665603UL;
+        foreach (char c in $"{seed}:{zone}:{cave}") h = (h ^ c) * 1099511628211UL;
+        return $"The {kinds[(int)(h % (ulong)kinds.Length)]} {places[(int)(h / 7 % (ulong)places.Length)]}";
+    }
+
+    /// <summary>Each zone's words for its caves: what kind of place, and what place.</summary>
+    static readonly Dictionary<string, (string[] Kinds, string[] Places)> CaveWords = new()
+    {
+        ["shallows"] = (new[] { "Weeping", "Sunken", "Quiet", "Drowned", "Pale", "Still" }, new[] { "Grotto", "Burrow", "Cove", "Den", "Pocket", "Hollow" }),
+        ["kelp"] = (new[] { "Tangled", "Hushed", "Knotted", "Shaded", "Choking", "Green" }, new[] { "Thicket", "Bower", "Warren", "Hollow", "Tangle", "Root-cave" }),
+        ["galleon"] = (new[] { "Flooded", "Gilded", "Silent", "Broken", "Rotten", "Lost" }, new[] { "Hold", "Bilge", "Brig", "Magazine", "Galley", "Cabin" }),
+        ["carnival"] = (new[] { "Grinning", "Painted", "Glittering", "Endless", "Laughing", "Hushed" }, new[] { "Hall", "Funhouse", "Tent", "Maze", "Stage", "Arcade" }),
+    };
+
     /// <summary>The Menace of the cave behind a mouth: its zone's (the region's, without zones), and more for its danger.</summary>
     public static float CaveMenace(HandLayout hand, int mouth) =>
         (ZoneOf(hand, mouth)?.Menace ?? hand.Menace) + ReefTuning.MenacePerDanger * (mouth >= 0 && mouth < hand.Mouths.Count ? hand.Mouths[mouth].Danger : 0);
@@ -142,7 +167,8 @@ public static class OpenReef
     /// A place's key, for where her lost light lies: a region, or a region's cave by its number (a cave sealed since is
     /// gone, and the light with it).
     /// </summary>
-    public static string PlaceKey(string kind, string region, int cave = -1) => kind == "cave" ? $"cave:{region}:{cave}" : $"region:{region}";
+    public static string PlaceKey(string kind, string region, int cave = -1, int floor = 1) =>
+        kind == "cave" ? floor > 1 ? $"cave:{region}:{cave}:{floor}" : $"cave:{region}:{cave}" : $"region:{region}";
 
     static List<int> CavesOf(Jelly jelly, string region) =>
         jelly.Caves.TryGetValue(region, out var list) ? list : jelly.Caves[region] = new List<int>();
@@ -230,7 +256,13 @@ public sealed partial class PlaneWorld
     /// Into a leak cave's way out with its leak sealed: she leaves the cave. Till then its current (PlaneCurrent.Holds)
     /// pushes her back in.
     /// </summary>
-    public bool LeavingCave => AtCaveMouth && LeaksOpen == 0 && Map.Way is { } way && way.Holds(Player.Position, ReefTuning.MouthIn);
+    public bool LeavingCave => AtCaveMouth && !CaveLeakOpen && Map.Way is { } way && way.Holds(Player.Position, ReefTuning.MouthIn);
+
+    /// <summary>
+    /// A leak cave's leak is open: on its deepest floor, till she seals it; on a floor above, always (it lies below, and
+    /// she leaves a sealed cave by the upwelling where it was).
+    /// </summary>
+    public bool CaveLeakOpen => Map.LeakCave && (LeaksOpen > 0 || Map.HoleDown);
 
     float _caveBud;
 
@@ -276,7 +308,8 @@ public sealed partial class PlaneWorld
     {
         var path = LevelValidator.ShortestPath(Map, Map.Start.Position, Map.Exit.Position, clearance: 1f);
         if (path.Count == 0) return;
-        var guard = path.LastOrDefault(q => Vector2.Distance(q, Map.Exit.Position) >= ReefTuning.CavePrimeBeforeLeak && Clear(q, BlightTuning.PrimeBody));
+        // The leak, on the deepest floor, is guarded (a floor above holds only its hole down).
+        var guard = Map.HoleDown ? default : path.LastOrDefault(q => Vector2.Distance(q, Map.Exit.Position) >= ReefTuning.CavePrimeBeforeLeak && Clear(q, BlightTuning.PrimeBody));
         if (guard != default) Bud(guard, -1, prime: true, drink: false, born: true);
         int want = ReefTuning.CaveMurklings + (int)MathF.Round(ReefTuning.CaveMurklingsPerMenace * Menace);
         var spots = path.Where(q => Vector2.Distance(q, Map.Start.Position) >= ReefTuning.CaveMurkFromStart).ToList();
@@ -298,7 +331,7 @@ public sealed partial class PlaneWorld
     /// <summary>While its leak is open, a leak cave buds murklings out of its ink near her (and now and then a prime).</summary>
     void StepCaveMurklings(InkDots dots)
     {
-        if (!Map.LeakCave || LeaksOpen == 0 || Defeated) return;
+        if (!CaveLeakOpen || Defeated) return;
         _caveBud -= Dt;
         if (_caveBud > 0f) return;
         _caveBud = ReefTuning.CaveBudEvery / (1f + 0.6f * Menace);

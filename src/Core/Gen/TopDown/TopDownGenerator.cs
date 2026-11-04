@@ -96,10 +96,13 @@ public static class TopDownGenerator
     /// of it still swimming the way she went (in by a mouth on the right, out of the cave's left wall). Null: a wall
     /// facing the camera.
     /// </param>
-    public static LevelMap GenerateCave(SeedCode seed, LevelId id, float menace, int level, Vector2? into = null)
+    /// <param name="floor">Which of its floors (from 1), and how many it has (docs/REEF-WORLD.md §3): only its first
+    /// floor has a way in; she comes down into a deeper one from the hole above.</param>
+    public static LevelMap GenerateCave(SeedCode seed, LevelId id, float menace, int level, Vector2? into = null, int floor = 1, int floors = 1)
     {
-        var map = Generate(new RunStreams(seed), LevelPlan.ForCave(seed, id, menace), null, "", 0f);
+        var map = Generate(new RunStreams(seed), LevelPlan.ForCave(seed, id, menace, floor, floors), null, "", 0f);
         map.CaveLevel = level;
+        if (floor > 1) return map;
         // Its way in and out: an opening in its start chamber's wall (where that wall has no room, the nearest wall along
         // the way in that has), the closest to the way wanted sought first, near the start. Coming in by a mouth, the way
         // she swam is kept to before the start is: any wall in the water round it that has room. At the last, any wall
@@ -278,7 +281,7 @@ public static class TopDownGenerator
             {
                 Seed = streams.Seed.Value, Id = id, Attempt = attempt, HasBoss = plan.HasBoss, Rift = plan.Rift, Menace = plan.Menace,
                 EntryStampSeed = plan.EntryStamp, ExitStampSeed = plan.ExitStamp, EntryFromArena = plan.EntryFromArena,
-                Template = plan.Template, Luck = luck, LeakCave = plan.LeakCave,
+                Template = plan.Template, Luck = luck, LeakCave = plan.LeakCave, Floor = plan.Floor, Floors = plan.Floors,
             };
             Array.Fill(map.Heights, -PathDepth);
             // The wall tops come from the reef prototype's terrain for this text (the run's first try: the seed itself).
@@ -430,8 +433,8 @@ public static class TopDownGenerator
         if (features is not null) return features;
         FlattenSeabed(map);
         SoftenSlopes(map, Stage("slopes"), strata);
-        // A leak cave has no way down: its leak lies where the shaft would be.
-        if (map.LeakCave) map.Shaft = NoShaft;
+        // A leak cave's deepest floor has no way down: its leak lies where the shaft would be (a floor above it, a hole).
+        if (map.LeakCave && !map.HoleDown) map.Shaft = NoShaft;
         else CutShaft(map, Stage("shaft"));
         ClampHeights(map);
         RoofShortcuts(map);

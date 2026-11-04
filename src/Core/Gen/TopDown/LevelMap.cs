@@ -396,12 +396,18 @@ public sealed class LevelMap
         return best;
     }
     /// <summary>
-    /// A leak cave (docs/RPG-PROPOSAL.md §2.3): one leak, at the dead end of its main path where a way down would be;
-    /// no shaft; its way out (Way) in its start chamber's wall.
+    /// A leak cave (docs/RPG-PROPOSAL.md §2.3, docs/REEF-WORLD.md §3): one floor of it. Its deepest floor holds its one
+    /// leak, at the dead end of its main path where a way down would be, and no shaft; a floor above it holds a hole
+    /// there instead (HoleDown), down to the next. Its first floor's way in (Way) is in its start chamber's wall; she
+    /// comes down into a deeper floor's start from above.
     /// </summary>
     public bool LeakCave;
     /// <summary>A leak cave's level (what its leak is worth, how strong its creatures are); 0 elsewhere.</summary>
     public int CaveLevel;
+    /// <summary>A leak cave's floor (from 1) and how many it has; its floors above the last end in a hole down (a shaft).</summary>
+    public int Floor = 1, Floors = 1;
+    /// <summary>A leak cave's floor with a hole down to the next where its leak would be.</summary>
+    public bool HoleDown => LeakCave && Floor < Floors;
     /// <summary>A region's cave mouths, openings in its walls: swimming into one takes her into its leak cave.</summary>
     public List<Doorway> Mouths = new();
     /// <summary>A leak cave's way out, the opening she came in by (in its start chamber's wall); null elsewhere.</summary>

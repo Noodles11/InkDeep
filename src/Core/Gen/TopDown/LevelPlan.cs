@@ -88,6 +88,9 @@ public sealed class LevelPlan
     public LevelId Next { get; init; }
     /// <summary>A leak cave (LevelMap.LeakCave): no way down, one leak where it would be.</summary>
     public bool LeakCave { get; init; }
+    /// <summary>A leak cave's floor (from 1) and how many it has (LevelMap.Floor, Floors).</summary>
+    public int Floor { get; init; } = 1;
+    public int Floors { get; init; } = 1;
 
     public int Places => Treasures + Secrets + Curses + Shops + Caches + Crabs + (HasBoss ? 1 : 0);
     /// <summary>The level's template (docs/LEVEL-TEMPLATES-PROPOSAL.md): null in the tutorial.</summary>
@@ -280,9 +283,12 @@ public sealed class LevelPlan
     /// and no shell cache; now and then a secret or a curse den off its main path (and, as on any level, maybe a light
     /// spring); the Menace its region gives it.
     /// </summary>
-    public static LevelPlan ForCave(SeedCode seed, LevelId id, float menace)
+    /// <param name="floor">Which of its floors (from 1; each its own layout), and how many it has: a floor above the last
+    /// ends in a hole down instead of the leak, and each floor down is meaner (FloorMenace more).</param>
+    public static LevelPlan ForCave(SeedCode seed, LevelId id, float menace, int floor = 1, int floors = 1)
     {
         var streams = new RunStreams(seed);
+        if (floor > 1) id = id with { Cycle = id.Cycle + FloorCycles * (floor - 1) };
         var rng = streams.Plan(id);
         return new LevelPlan
         {
@@ -291,12 +297,19 @@ public sealed class LevelPlan
             Curses = rng.NextFloat() < CaveCurse ? 1 : 0,
             EntryStamp = streams.StampSeed(id),
             ExitStamp = streams.StampSeed(id with { Level = id.Level + 1 }),
-            Menace = menace,
+            Menace = menace + FloorMenace * (floor - 1),
             Next = id,
             Template = LevelTemplates.Get("default"),
             LeakCave = true,
+            Floor = floor,
+            Floors = Math.Max(floors, floor),
         };
     }
+
+    /// <summary>A deeper floor of a cave counts as a level of its own: its id's cycle this many on per floor.</summary>
+    public const int FloorCycles = 100;
+    /// <summary>Each floor down a cave adds this to its Menace.</summary>
+    public const float FloorMenace = 0.1f;
 
     /// <summary>How often a leak cave holds a curse den.</summary>
     public const float CaveCurse = 0.35f;

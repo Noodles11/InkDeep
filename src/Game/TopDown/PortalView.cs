@@ -12,16 +12,62 @@ namespace OctoShoots.Game.TopDown;
 /// </summary>
 public partial class PortalView : Node3D
 {
-    static Shader? _shader, _throat;
+    static Shader? _shader, _throat, _ink;
 
-    public void Show(LevelMap map, IReadOnlySet<int>? shut = null)
+    /// <param name="dangers">Each mouth's danger (docs/REEF-WORLD.md §3): a dangerous one weeps the Leak's ink down its
+    /// face and onto the floor before it, the more the more dangerous.</param>
+    public void Show(LevelMap map, IReadOnlySet<int>? shut = null, IReadOnlyList<int>? dangers = null)
     {
         foreach (var child in GetChildren()) child.QueueFree();
         if (map.Station) Add(map.Exit.Position, ReefTuning.StationReach * 2.6f);
         for (int i = 0; i < map.Mouths.Count; i++)
-            if (shut?.Contains(i) != true) AddThroat(map.Mouths[i]);
+        {
+            if (shut?.Contains(i) == true) continue;
+            AddThroat(map.Mouths[i]);
+            if (dangers is not null && i < dangers.Count && dangers[i] > 0) AddInk(map, map.Mouths[i], dangers[i] / (float)ReefTuning.MostDanger, i);
+        }
         if (map.Way is { } way) AddThroat(way);
     }
+
+    /// <summary>A mouth's weeping ink: runs down its face, and a stain pooled on the floor before its threshold.</summary>
+    void AddInk(LevelMap map, Doorway door, float amount, int index)
+    {
+        _ink ??= GD.Load<Shader>("res://assets/shaders/mouth_ink.gdshader");
+        var side = new Vector3(door.Across.X, 0f, door.Across.Y);
+        var outward = new Vector3(-door.Into.X, 0f, -door.Into.Y);
+        float floor = map.HeightAt(door.At - door.Into * 0.6f);
+        float width = 2f * (Doorway.HalfWidth + 1.6f), top = Doorway.FaceHeight + 0.4f;
+        var face = door.At - door.Into * 0.12f;
+        AddChild(new MeshInstance3D
+        {
+            Mesh = new QuadMesh { Size = new Vector2(width, top - floor) },
+            MaterialOverride = InkMaterial(amount, 1f, index),
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            Transform = new Transform3D(new Basis(side, Vector3.Up, outward), new Vector3(face.X, (floor + top) * 0.5f, face.Y)),
+        });
+        const float pool = 4.5f;
+        var stain = door.At - door.Into * (pool * 0.5f + 0.2f);
+        var into = -outward;
+        AddChild(new MeshInstance3D
+        {
+            Mesh = new QuadMesh { Size = new Vector2(width + 1.2f, pool) },
+            MaterialOverride = InkMaterial(amount, 0f, index),
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            Transform = new Transform3D(new Basis(side, into, side.Cross(into)), new Vector3(stain.X, map.HeightAt(stain) + 0.05f, stain.Y)),
+        });
+    }
+
+    static ShaderMaterial InkMaterial(float amount, float standing, int index)
+    {
+        var material = new ShaderMaterial { Shader = _ink };
+        material.SetShaderParameter("amount", amount);
+        material.SetShaderParameter("standing", standing);
+        material.SetShaderParameter("seed", index * 3.7f);
+        return material;
+    }
+
+    /// <summary>A sealed leak's upwelling (docs/REEF-WORLD.md §3): the station's bright swirl where the leak was.</summary>
+    public void Upwell(System.Numerics.Vector2 at) => Add(at, ReefTuning.StationReach * 2.2f);
 
     void Add(System.Numerics.Vector2 at, float size)
     {

@@ -290,6 +290,42 @@ public class OpenReefTests
     }
 
     [Fact]
+    public void ADangerousCaveGoesDownFloors_EachAboveTheDeepestEndingInAHole_TheDeepestInItsGuardedLeak()
+    {
+        var hand = Shallows.Value;
+        int deep = hand.Mouths.FindIndex(m => m.Danger == 2);
+        Assert.Equal(3, OpenReef.CaveFloors(hand, deep));
+        Assert.Equal(1, OpenReef.CaveFloors(hand, hand.Mouths.FindIndex(m => m.Danger == 0)));
+        var id = OpenReef.CaveId("reef", hand.Depth, 0);
+        var floors = Enumerable.Range(1, 3).Select(f => TopDownGenerator.GenerateCave(Seed, id, 0.2f, 3, new Vector2(0f, -1f), f, 3)).ToList();
+        Assert.Equal(3, floors.Select(m => m.Id).Distinct().Count());
+        Assert.True(floors[0].Menace < floors[2].Menace, "each floor down is meaner");
+        // The first floor has the way in; she comes down into the deeper ones from above.
+        Assert.NotNull(floors[0].Way);
+        Assert.Null(floors[1].Way);
+        for (int f = 0; f < 2; f++)
+        {
+            var map = floors[f];
+            Assert.True(map.HoleDown);
+            Assert.True(map.Shaft.Contains(map.Exit.Position, 0f), $"floor {f + 1}: its hole lies where the leak would be");
+            var w = World(map);
+            Assert.Empty(w.Leaks);
+            Assert.True(w.CaveLeakOpen, "its leak lies below, open");
+            Assert.DoesNotContain(w.Murklings, m => m.Prime);
+        }
+        var bottom = floors[2];
+        Assert.False(bottom.HoleDown);
+        Assert.False(bottom.Shaft.Contains(bottom.Exit.Position, 4f));
+        var wb = World(bottom);
+        Assert.Single(wb.Leaks);
+        Assert.Contains(wb.Murklings, m => m.Prime);
+        // Its name is its zone's own, the same every time.
+        string name = OpenReef.CaveName("galleon", "KELP7Q2Z", 4);
+        Assert.StartsWith("The ", name);
+        Assert.Equal(name, OpenReef.CaveName("galleon", "KELP7Q2Z", 4));
+    }
+
+    [Fact]
     public void AMouthAlwaysLeadsToACave_ASealedOneMakesWayForAFreshOne()
     {
         var jelly = new Jelly();

@@ -381,7 +381,8 @@ public sealed partial class PlaneWorld
         if (Map.Station) return;
         if (Map.LeakCave)
         {
-            Leaks.Add(NewLeak(Map.Exit.Position));
+            // (A floor above its deepest holds a hole down there instead.)
+            if (!Map.HoleDown) Leaks.Add(NewLeak(Map.Exit.Position));
             return;
         }
         // Where she can swim with the boss's walls shut: they wait for the leaks, so none may lie behind them.

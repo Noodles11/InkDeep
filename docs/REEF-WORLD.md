@@ -75,7 +75,7 @@ their own below the shelf.
   "The Tangled Hollow" (Kelp), "The Flooded Hold" (Galleon) or "The Hall of Grins" (Carnival). As she comes in, its
   title shows with the floor: "The Flooded Hold · Floor 2 of 3 · Level 8".
 - **Read from outside.** The rim of a dangerous mouth weeps more ink, so a danger 2 mouth looks darker and wetter than
-  a danger 0. Nearing a mouth, within 10 m, its name, level and floors show over it until she swims away.
+  a danger 0. Nearing a mouth, within 12 m, its name, level and floors show over it until she swims away.
   - The Tab map marks every mouth she has charted with its level.
 - **Out again.** The way in is held by the Leak's current while the leak is open, as now.
   - Sealing the leak on the deepest floor turns the Leak's pull into an upwelling where the leak was. Swimming into it
@@ -123,7 +123,20 @@ Each step is playable on its own:
    Kelp Jungle 1.6 times a Kelp level's for its area, the Shallows 0.8, the Galleon 0.4, the Carnival 0.25). Caves
    take their level and Menace from their zone and danger (`OpenReef.CaveLevel`, `CaveMenace`), and the Tide Fan's
    requests name no cave more than two levels past hers (`RequestTuning.Reach`).
-2. **Caves as dungeons.** Mouth dangers and cave levels, names, floors and holes, the guarded leak, the upwelling out,
-   the mouth's ink by danger and its label, and levels on the Tab map.
+2. **Caves as dungeons** (built).
+   - **Floors:** `OpenReef.CaveFloors`, `LevelPlan.ForCave`'s floor (a floor its own level id, `LevelPlan.FloorCycles`,
+     and `FloorMenace` 0.1 meaner each floor down) and `LevelMap.HoleDown`. A floor above the deepest keeps its
+     shaft and holds no leak and no waiting prime, and its leak counts as open (`PlaneWorld.CaveLeakOpen`): its way
+     in stays held and it buds murklings.
+   - **Rides in the dark:** swimming over a hole (`TopDownMain.WayThrough`, `RideWay.Down`) sinks her into it as the
+     screen goes black over 0.7 s, and she comes down into the next floor's start from above as it lifts. A sealed
+     leak's upwelling (`RideWay.Up`, `PortalView.Upwell`) works the same way within 1.8 m of where the leak was.
+   - **Its name and title** come from `OpenReef.CaveName`.
+   - **The mouth from outside:** its weeping ink (`PortalView.AddInk`, `mouth_ink.gdshader`) and its label within
+     12 m (`MouthLabel`).
+   - **The Tab map:** "Lv N" by every charted mouth (`TopoMap.Notes`).
+   - **Experience:** a sealed leak pays its experience once for every floor of its cave.
+   - **Verification:** `--reef=cave:N` starts in the cave behind mouth N, `--floor=N` on its floor N, `--at=hole` over
+     a floor's hole and `--at=leak-on` on its leak (with `--dbg-sealvent`, the upwelling then carries her out).
 3. **Rosters and levels.** Each zone's creatures, and level scaling on the open reef and in caves.
 4. **The homeward current.**

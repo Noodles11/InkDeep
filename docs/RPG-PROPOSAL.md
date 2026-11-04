@@ -356,8 +356,12 @@ Each step is playable on its own:
     6 m on into the cave at 11 m/s, faster than she swims (`PlaneCurrent.Holds`, `CurrentTuning.HoldSpeed`): it
     pushes her back inside, and says so when she reaches the threshold ("The Leak's current holds the way out · seal
     the leak first", `PlaneWorld.AtCaveMouth`). It shows as moving water, as any current does (`CurrentView`).
-  - **Sealed:** the current dies away over 1.5 s, and no other wakes in it; she swims back herself. Swimming into the
-    way out, once she has been 10 m from it, takes her out to the region at that mouth (`PlaneWorld.LeavingCave`).
+  - **Sealed:** the current dies away over 1.5 s, and no other wakes in it. An upwelling rises where the leak was, and
+    swimming into it carries her up through every floor and out of the cave's mouth (docs/REEF-WORLD.md §3). On a
+    cave of one floor she can also swim back herself: swimming into the way out, once she has been 10 m from it, takes
+    her out to the region at that mouth (`PlaneWorld.LeavingCave`).
+  - **Floors:** a cave goes down one to three floors by its mouth's danger, each above the last ending in a hole
+    down; its leak is on the deepest (docs/REEF-WORLD.md §3).
 - **Behind each mouth** (`OpenReef`): a cave, grown from her jelly's own seed.
   - **Sealed, it shuts:** sealing a cave shuts its mouth in the region (`Jelly.Shut`, `PlaneWorld.ShutMouths`): rock
     fills its arch (`LevelView.ShutDoors`) and stops her at its threshold, so she cannot go in by it. Coming out of

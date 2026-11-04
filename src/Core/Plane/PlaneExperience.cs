@@ -112,7 +112,7 @@ public sealed partial class PlaneWorld
             // On the open reef only a sealed leak counts, for its cave's level.
             if (Options.Reef)
             {
-                if (e.Type == PlaneEventType.LeakSealed) gained += ReefTuning.LeakXp(Map.CaveLevel);
+                if (e.Type == PlaneEventType.LeakSealed) gained += ReefTuning.LeakXp(Map.CaveLevel) * Math.Max(Map.Floors, 1);
             }
             else if (e.Type == PlaneEventType.FishFreed) gained += ExperienceTuning.FishXp;
             else if (e.Type == PlaneEventType.LeakSealed) gained += AdventureTuning.LeakXp;

@@ -281,6 +281,7 @@ public partial class TopDownMain : Node3D
     bool Reef => _place != ReefPlace.Run;
     PortalView _portals = null!;
     Blackout _blackout = null!;
+    MouthLabel _mouthLabel = null!;
     LostLightView _lostLight = null!;
     // The bay's mirror (docs/RPG-PROPOSAL.md §8): its pool, its drawer, the look she came to it with, and whether swimming
     // onto it opens it (only once she has swum off it since).
@@ -303,9 +304,23 @@ public partial class TopDownMain : Node3D
     Doorway? _rideDoor, _arriveDoor;
     /// <summary>A sealed cave's mouth she came out of: it closes behind her once she is out (−1: none).</summary>
     int _closeBehind = -1;
+    /// <summary>
+    /// A cave's floor she is on (docs/REEF-WORLD.md §3), and the one a ride takes her to. How a ride goes in the dark: down
+    /// a hole to the next floor (she sinks), or up a sealed leak's upwelling and out (she rises); either way, and through
+    /// an opening, the screen goes black while the next place is made (RideBlack), and lifts as she arrives.
+    /// </summary>
+    int _floor = 1, _rideFloor = 1;
+    enum RideWay { Current, Door, Down, Up }
+    RideWay _rideWay;
+    bool _arriveBlack;
+    bool RideBlack => _rideWay != RideWay.Current;
+    /// <summary>How near a sealed leak's spot she must swim to be carried up by its upwelling (metres).</summary>
+    const float UpwellReach = 1.8f;
     const float RideLeast = 2.4f, RideSpeed = 16f, RideLift = 2.5f, ArriveSeconds = 1.4f, ArriveDrift = 6f, DoorSpeed = 6f;
     /// <summary>Through an opening: the screen goes black over DoorDark as she swims into its dark, and clears over DoorLight as she swims out of the far one.</summary>
     const float DoorDark = 0.45f, DoorLight = 0.5f;
+    /// <summary>Down a cave's hole or up its upwelling: the screen goes black over FloorDark as she sinks FloorSink metres (or rises).</summary>
+    const float FloorDark = 0.7f, FloorSink = 3f;
 
     /// <summary>Where a ride sets her down: a point she comes down onto from above, or an opening she swims out of.</summary>
     readonly record struct Landing(System.Numerics.Vector2 At, Doorway? Through);
@@ -443,9 +458,13 @@ public partial class TopDownMain : Node3D
                 (_place, _mouth) = Value("--reef=") switch
                 {
                     "cave" => (ReefPlace.Cave, 0),
+                    // The cave behind the reef's mouth N.
+                    var cave when cave.StartsWith("cave:") && int.TryParse(cave[5..], out int m) => (ReefPlace.Cave, m),
                     "bay" => (ReefPlace.Region, -1),
                     _ => (ReefPlace.Region, -1),
                 };
+            // A cave's floor N.
+            else if (arg.StartsWith("--floor=") && int.TryParse(Value("--floor="), out int floor)) _floor = Math.Max(floor, 1);
             else if (arg.StartsWith("--at=")) _startAt = Value("--at=");
             else if (arg == "--autopilot") _autopilot = true;
             else if (arg.StartsWith("--boss-hp=") && float.TryParse(Value("--boss-hp="), NumberStyles.Float, CultureInfo.InvariantCulture, out float bhp)) _bossHp = bhp;
@@ -619,7 +638,7 @@ public partial class TopDownMain : Node3D
         _splash.Visible = true;
         // The title has it under way when it started the run.
         _firstMap = RunLaunch.Shaping is { } made && made.Seed.Equals(_seed) && made.Id == _id && made.Luck == Luck ? made.Shape
-            : Reef ? ShapePlace(_place, _region, _mouth) : Shape(_id);
+            : Reef ? ShapePlace(_place, _region, _mouth, _floor) : Shape(_id);
         RunLaunch.Shaping = null;
     }
 
@@ -657,8 +676,17 @@ public partial class TopDownMain : Node3D
         }
     }
 
+    /// <summary>The name of the cave behind a region's mouth now ("The Flooded Hold"), from its zone and her seed.</summary>
+    string CaveName(string region, int mouth) =>
+        _jelly is { } jelly
+            ? OpenReef.CaveName(OpenReef.ZoneOf(LoadMap(region), mouth)?.Name ?? "shallows", jelly.Seed, OpenReef.CaveBehind(jelly, region, Math.Max(mouth, 0)))
+            : "Leak cave";
+
+    /// <summary>A cave's level, and its floor if it has more than one: "Level 8 · Floor 2 of 3".</summary>
+    static string CaveFacts(int level, int floor, int floors) => floors > 1 ? $"Level {level} · Floor {floor} of {floors}" : $"Level {level}";
+
     /// <summary>A place of the open reef, made and readied off the main thread: a region, or a region mouth's leak cave.</summary>
-    Task<LevelShape> ShapePlace(ReefPlace place, string region, int mouth)
+    Task<LevelShape> ShapePlace(ReefPlace place, string region, int mouth, int floor = 1)
     {
         if (place == ReefPlace.Region) return ShapeRegion(region);
         var hand = LoadMap(region);
@@ -666,6 +694,8 @@ public partial class TopDownMain : Node3D
         int cave = OpenReef.CaveBehind(jelly, region, Math.Max(mouth, 0));
         int level = OpenReef.CaveLevel(hand, mouth);
         float menace = OpenReef.CaveMenace(hand, mouth);
+        int floors = OpenReef.CaveFloors(hand, mouth);
+        floor = Math.Clamp(floor, 1, floors);
         var id = OpenReef.CaveId(region, hand.Depth, cave);
         if (!SeedCode.TryParse(jelly.Seed, out var seed)) seed = _seed;
         // Its way in faces the mouth she swims into (the region is made already: she is coming from it).
@@ -674,7 +704,7 @@ public partial class TopDownMain : Node3D
         {
             var mouths = (await home).Map.Mouths;
             System.Numerics.Vector2? into = mouth >= 0 && mouth < mouths.Count ? mouths[mouth].Into : null;
-            return LevelShape.Prepare(TopDownGenerator.GenerateCave(seed, id, menace, level, into));
+            return LevelShape.Prepare(TopDownGenerator.GenerateCave(seed, id, menace, level, into, floor, floors));
         });
     }
 
@@ -930,6 +960,38 @@ public partial class TopDownMain : Node3D
         }
     }
 
+    /// <summary>How near a cave mouth she must be for its name to show over it (metres).</summary>
+    const float MouthLabelReach = 12f;
+
+    /// <summary>On the reef, the nearest cave mouth within MouthLabelReach: its cave's name over it, its level and floors.</summary>
+    void StepMouthLabel()
+    {
+        int near = -1;
+        float best = MouthLabelReach;
+        var her = _world.Player.Position;
+        if (Reef && _place == ReefPlace.Region)
+            for (int i = 0; i < _map.Mouths.Count; i++)
+            {
+                float d = System.Numerics.Vector2.Distance(her, _map.Mouths[i].At);
+                if (d >= best) continue;
+                best = d;
+                near = i;
+            }
+        if (near < 0)
+        {
+            _mouthLabel.Hide();
+            return;
+        }
+        var hand = LoadMap(_region);
+        int floors = OpenReef.CaveFloors(hand, near);
+        string facts = _world.ShutMouths.Contains(near) ? "Sealed · the Leak will seep back"
+            : $"Level {OpenReef.CaveLevel(hand, near)} · {floors} {(floors == 1 ? "floor" : "floors")}";
+        var door = _map.Mouths[near];
+        var over = new Vector3(door.At.X, LevelMap.SwimBand + Doorway.FaceHeight + 0.8f, door.At.Y);
+        var at = OctoShoots.Game.Fx.Fisheye.Shown(_camera.Camera.UnprojectPosition(over), GetViewport().GetVisibleRect().Size);
+        _mouthLabel.Show(CaveName(_region, near), facts, at);
+    }
+
     /// <summary>The haven's edge as she crosses it: its name over her, and the fan's ribbons tied afresh as she comes home.</summary>
     void NoteHaven(in PlaneEvent e)
     {
@@ -1040,6 +1102,9 @@ public partial class TopDownMain : Node3D
         // Achievement banners: above the HUD, below the pause menu.
         var bannerLayer = new CanvasLayer { Layer = 3 };
         AddChild(bannerLayer);
+        // A cave mouth's name over it as she nears it.
+        _mouthLabel = new MouthLabel();
+        bannerLayer.AddChild(_mouthLabel);
         // The boss intro: over everything but the pointer and the pause menu.
         _intro = new BossIntro();
         bannerLayer.AddChild(_intro);
@@ -1238,7 +1303,7 @@ public partial class TopDownMain : Node3D
             _seed = parsed;
         }
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        var shape = Reef ? ShapePlace(_place, _region, _mouth).Result : LevelShape.Prepare(Abyss(TopDownGenerator.Generate(new RunStreams(_seed), _id, luck: Luck)));
+        var shape = Reef ? ShapePlace(_place, _region, _mouth, _floor).Result : LevelShape.Prepare(Abyss(TopDownGenerator.Generate(new RunStreams(_seed), _id, luck: Luck)));
         ShowLevel(shape, keepRun, watch.ElapsedMilliseconds);
     }
 
@@ -1573,6 +1638,13 @@ public partial class TopDownMain : Node3D
         _fullMap.Fog = _fog;
         _fullMap.Seen = _fog;
         _fullMap.Visited = _visited;
+        // Every cave mouth she has charted, with its cave's level.
+        _fullMap.Notes.Clear();
+        if (Reef && _place == ReefPlace.Region)
+        {
+            var hand = LoadMap(_region);
+            for (int i = 0; i < _map.Mouths.Count && i < hand.Mouths.Count; i++) _fullMap.Notes.Add((_map.Mouths[i].At, $"Lv {OpenReef.CaveLevel(hand, i)}"));
+        }
         _seedField.Text = _seed.ToString();
         // The level's title, for a moment as she arrives.
         var (title, where) = PlaceTitle();
@@ -1600,7 +1672,7 @@ public partial class TopDownMain : Node3D
             int zone = _map.ZoneAt(_world.Player.Position);
             return zone >= 0 ? (_map.Zones[zone].Title, $"Area level {_map.Zones[zone].Level}") : (_map.Title, "The open reef");
         }
-        if (_map.LeakCave) return ($"Leak cave · level {_map.CaveLevel}", OpenReef.ZoneOf(LoadMap(_region), _mouth)?.Title ?? LoadMap(_region).Title);
+        if (_map.LeakCave) return (CaveName(_region, _mouth), $"{OpenReef.ZoneOf(LoadMap(_region), _mouth)?.Title ?? LoadMap(_region).Title} · {CaveFacts(_map.CaveLevel, _floor, _map.Floors)}");
         string title = _map.Template is { Name.Length: > 0 } template ? template.Name : _id.Level == 1 ? ReefLook.For(_id.Depth).Name : $"Level {_id.Level}";
         return (title, _id.Level == 1 ? $"{ReefLook.For(_id.Depth).Name} · {_id}" : _id.ToString());
     }
@@ -1654,7 +1726,7 @@ public partial class TopDownMain : Node3D
     /// leak cave's way out (back out of that mouth), and the opening she goes in by. None until she has swum clear of the
     /// one she came out of.
     /// </summary>
-    (ReefPlace To, string Region, int Mouth, Func<LevelMap, Landing?> Arrive, Doorway? By)? WayThrough()
+    (ReefPlace To, string Region, int Mouth, Func<LevelMap, Landing?> Arrive, Doorway? By, int Floor, RideWay Way)? WayThrough()
     {
         if (!_portalsArmed)
         {
@@ -1662,12 +1734,18 @@ public partial class TopDownMain : Node3D
             if (!_portalsArmed) return null;
         }
         if (_place == ReefPlace.Region && _world.AtMouth() is var mouth and >= 0)
-            return (ReefPlace.Cave, _region, mouth, m => m.Way is { } way ? Through(way) : null, _map.Mouths[mouth]);
-        if (_place == ReefPlace.Cave && _world.LeavingCave)
-        {
-            int back = _mouth;
-            return (ReefPlace.Region, _region, back, m => back >= 0 && back < m.Mouths.Count ? Through(m.Mouths[back]) : null, _map.Way);
-        }
+            return (ReefPlace.Cave, _region, mouth, m => m.Way is { } way ? Through(way) : null, _map.Mouths[mouth], 1, RideWay.Door);
+        if (_place != ReefPlace.Cave) return null;
+        int back = _mouth;
+        Landing? OutOfMouth(LevelMap m) => back >= 0 && back < m.Mouths.Count ? Through(m.Mouths[back]) : null;
+        if (_world.LeavingCave) return (ReefPlace.Region, _region, back, OutOfMouth, _map.Way, 1, RideWay.Door);
+        var her = _world.Player.Position;
+        // Over a floor's hole: down to the next floor, coming down into its start from above.
+        if (_map.HoleDown && _map.Shaft.Contains(her, 0f) && !_world.Defeated)
+            return (ReefPlace.Cave, _region, back, _ => null, null, _floor + 1, RideWay.Down);
+        // Into a sealed leak's upwelling: up through every floor and out of the cave's mouth.
+        if (!_map.HoleDown && _world.Leaks.Count > 0 && _world.LeaksOpen == 0 && System.Numerics.Vector2.Distance(her, _map.Exit.Position) < UpwellReach)
+            return (ReefPlace.Region, _region, back, OutOfMouth, null, 1, RideWay.Up);
         return null;
     }
 
@@ -1677,7 +1755,7 @@ public partial class TopDownMain : Node3D
 
     string PlaceKeyNow() => _place switch
     {
-        ReefPlace.Cave when _jelly is { } j => OpenReef.PlaceKey("cave", _region, OpenReef.CaveBehind(j, _region, Math.Max(_mouth, 0))),
+        ReefPlace.Cave when _jelly is { } j => OpenReef.PlaceKey("cave", _region, OpenReef.CaveBehind(j, _region, Math.Max(_mouth, 0)), _floor),
         ReefPlace.Region => OpenReef.PlaceKey("region", _region),
         _ => OpenReef.PlaceKey("bay", ""),
     };
@@ -1710,7 +1788,7 @@ public partial class TopDownMain : Node3D
         }
         var at = _world.Player.Position;
         string place = _placeKey;
-        if (_place == ReefPlace.Cave && _world.LeaksOpen == 0)
+        if (_place == ReefPlace.Cave && !_world.CaveLeakOpen)
         {
             place = OpenReef.PlaceKey("region", _region);
             at = _mouthAt.At - _mouthAt.Into * 2.5f;
@@ -1719,7 +1797,7 @@ public partial class TopDownMain : Node3D
     }
 
     /// <summary>She is swept off on the current: the next place starts being made.</summary>
-    void BeginRide(ReefPlace to, string region, int mouth, Func<LevelMap, Landing?> arrive, Doorway? by)
+    void BeginRide(ReefPlace to, string region, int mouth, Func<LevelMap, Landing?> arrive, Doorway? by, int floor = 1, RideWay rideWay = RideWay.Current)
     {
         _accumulator = 0;
         AddToRun();
@@ -1729,7 +1807,9 @@ public partial class TopDownMain : Node3D
         _rideRegion = region;
         _rideMouth = mouth;
         _rideArrive = arrive;
-        _rideTask = ShapePlace(to, region, mouth);
+        _rideFloor = floor;
+        _rideWay = rideWay;
+        _rideTask = ShapePlace(to, region, mouth, floor);
         _riding = true;
         _rideTime = 0f;
         _rideFrom = _world.Player.Position;
@@ -1738,6 +1818,7 @@ public partial class TopDownMain : Node3D
         // Through an opening, on into its dark; on a current, the way she was swimming.
         _rideDir = by is { } door ? door.Into : way.LengthSquared() > 0.25f ? System.Numerics.Vector2.Normalize(way) : -System.Numerics.Vector2.UnitY;
         _bell.Kick();
+        _mouthLabel.Hide();
         _hud.Diving = true;
         _sfx.PlayPitched("dash", 0.6f, -6f);
         if (_captureDir is not null) GD.Print($"Ride to {to} {region} {mouth} begins at frame {_frame}");
@@ -1756,7 +1837,8 @@ public partial class TopDownMain : Node3D
         var p = _world.Player;
         p.PrevPosition = p.Position;
         float lift;
-        bool through = _rideDoor is not null;
+        bool through = RideBlack;
+        float dark = _rideDoor is null ? FloorDark : DoorDark;
         if (_rideDoor is { } door)
         {
             // On into its dark at the pace she came in, the screen going black round her.
@@ -1765,6 +1847,15 @@ public partial class TopDownMain : Node3D
             p.Velocity = _rideDir * DoorSpeed;
             lift = 0f;
             _blackout.Set(Ease(t / DoorDark), loading: true);
+        }
+        else if (_rideWay is RideWay.Down or RideWay.Up)
+        {
+            // Down a hole she sinks into its dark, slowing; up an upwelling she is lifted away; the screen going black.
+            p.Velocity *= Mathf.Exp(-3f * dt);
+            var next = p.Position + p.Velocity * dt;
+            if (_world.Clear(next, _world.Radius)) p.Position = next;
+            lift = (_rideWay == RideWay.Down ? -FloorSink : RideLift * 1.5f) * Ease(t / FloorDark);
+            _blackout.Set(Ease(t / FloorDark), loading: true);
         }
         else
         {
@@ -1793,7 +1884,7 @@ public partial class TopDownMain : Node3D
         }
         _hud.Elapsed = _elapsed;
         _hud.Track(_world, _catalog, dt);
-        if (t < (through ? DoorDark : RideLeast) || _rideTask is not { IsCompleted: true } task) return;
+        if (t < (through ? dark : RideLeast) || _rideTask is not { IsCompleted: true } task) return;
         _rideTask = null;
         _riding = false;
         if (task.IsFaulted)
@@ -1805,6 +1896,11 @@ public partial class TopDownMain : Node3D
         _place = _rideTo;
         _region = _rideRegion;
         _mouth = _rideMouth;
+        _floor = _rideFloor;
+        // Out of the dark (an opening, a hole, an upwelling) the black lifts as she arrives; down a hole she settles
+        // straight down into the floor below.
+        _arriveBlack = RideBlack;
+        if (_rideWay == RideWay.Down) _rideDir = System.Numerics.Vector2.Zero;
         var shape = task.Result;
         var landing = _rideArrive?.Invoke(shape.Map);
         _rideDoor = null;
@@ -1851,7 +1947,7 @@ public partial class TopDownMain : Node3D
         _snow.Tick(dt, Focus(1f) + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
         _plankton.Tick(dt, Focus(1f) + Vector3.Up * 2f, _camera.Camera.GlobalBasis);
         // Out of an opening's dark the place is all there, the black lifting off it; else it opens out round her.
-        if (_arriveDoor is not null) _blackout.Set(1f - Ease(_arriveTime / DoorLight), loading: false);
+        if (_arriveBlack) _blackout.Set(1f - Ease(_arriveTime / DoorLight), loading: false);
         else _level.SetPortal(new Vector2(p.Position.X, p.Position.Y), Mathf.Lerp(0f, 160f, Mathf.Pow(Ease(_arriveTime / ArriveSeconds), 1.5f)), 2);
         _hud.Elapsed = _elapsed;
         _hud.Track(_world, _catalog, dt);
@@ -1875,7 +1971,7 @@ public partial class TopDownMain : Node3D
     /// <summary>A region's cave mouths as they stand: the open ones dark with the Leak, the shut ones closed with rock.</summary>
     void ShowMouths()
     {
-        _portals.Show(_map, _world.ShutMouths);
+        _portals.Show(_map, _world.ShutMouths, Reef && _place == ReefPlace.Region ? LoadMap(_region).Mouths.Select(m => m.Danger).ToList() : null);
         _level.ShutDoors(_world.ShutMouths);
     }
 
@@ -2103,6 +2199,8 @@ public partial class TopDownMain : Node3D
             "blotter" => _world.Blotters.Select(b => (System.Numerics.Vector2?)(b.Position + new System.Numerics.Vector2(0f, 3.4f))).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
             // A few metres out before the level's first leak, facing it.
             "leak" => _world.Leaks.Select(v => (System.Numerics.Vector2?)(v.Position + new System.Numerics.Vector2(0f, 4f))).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
+            // On the level's first leak (with --dbg-sealvent, a leak cave's upwelling then carries her out).
+            "leak-on" => _world.Leaks.Select(v => (System.Numerics.Vector2?)v.Position).FirstOrDefault(),
             "cache" => _map.Pois.Where(p => p.Kind == PoiKind.ShellCache).Select(p => (System.Numerics.Vector2?)p.Position).FirstOrDefault(),
             // A few metres from the first shell cache, its shells still lying there (captures of them).
             "cache-near" => _map.Pois.Where(p => p.Kind == PoiKind.ShellCache)
@@ -2505,6 +2603,8 @@ public partial class TopDownMain : Node3D
                 {
                     OpenReef.Sealed(sealer, _region, Math.Max(_mouth, 0), _regionMouths);
                     SaveJelly();
+                    // The Leak's pull turns: an upwelling where the leak was carries her up and out.
+                    _portals.Upwell(_map.Exit.Position);
                 }
                 else if (e.Type == PlaneEventType.PlayerDefeated) dived = false;
                 else if (e.Type == PlaneEventType.PearlTouched)
@@ -2672,7 +2772,8 @@ public partial class TopDownMain : Node3D
             else music.ExitCombat();
         }
         // Down the shaft: the dive takes over until she is on the level below.
-        if (dived)
+        // (On the open reef a cave's hole is a way through, taken by swimming over it.)
+        if (dived && !Reef)
         {
             BeginDive();
             return;
@@ -2686,7 +2787,7 @@ public partial class TopDownMain : Node3D
         // The open reef: a way through takes her on the current.
         if (Reef && WayThrough() is { } way)
         {
-            BeginRide(way.To, way.Region, way.Mouth, way.Arrive, way.By);
+            BeginRide(way.To, way.Region, way.Mouth, way.Arrive, way.By, way.Floor, way.Way);
             return;
         }
         // A leak cave's way out is held by the Leak's current till its leak is sealed: said once each time she comes back to it.
@@ -2715,6 +2816,7 @@ public partial class TopDownMain : Node3D
         StepRequests();
         // The bay's look as she swims out of it, or back in.
         StepPlaceLook();
+        StepMouthLabel();
         // Onto the bay's mirror: it shows her, and her look can change.
         if (_jelly is not null && _map.Mirror is not null)
         {
@@ -2790,6 +2892,7 @@ public partial class TopDownMain : Node3D
             {
                 _adventure.OnEvent(_world, _world.Events[i]);
                 CorruptionEvent(_world.Events[i]);
+                if (_world.Events[i].Type == PlaneEventType.LeakSealed && _place == ReefPlace.Cave) _portals.Upwell(_map.Exit.Position);
             }
         }
         if (_dbgSeal > 0 && _world.Time >= 1f)
@@ -3138,7 +3241,7 @@ public partial class TopDownMain : Node3D
     void StartLoading()
     {
         DropBelow();
-        _nextMap = Reef ? ShapePlace(_place, _region, _mouth) : Shape(_id);
+        _nextMap = Reef ? ShapePlace(_place, _region, _mouth, _floor) : Shape(_id);
         _transition = Transition.Loading;
         _transitionTime = 0f;
     }
@@ -3233,7 +3336,7 @@ public partial class TopDownMain : Node3D
         else if (!_debug.Visible)
         {
             _pause.Trade = _world.InHaven;
-            _pause.Open(_world.Run, _catalog, _seed.ToString(), Reef ? $"{_map.Title}{(_map.LeakCave ? $"Leak cave · level {_map.CaveLevel}" : "")}" : $"{_id} · {HudView.Clock(_elapsed)}", _world.Player.Hp, _achievementData);
+            _pause.Open(_world.Run, _catalog, _seed.ToString(), Reef ? (_map.LeakCave ? $"{CaveName(_region, _mouth)} · {CaveFacts(_map.CaveLevel, _floor, _map.Floors)}" : PlaceTitle().Title) : $"{_id} · {HudView.Clock(_elapsed)}", _world.Player.Hp, _achievementData);
             FillPauseRequests();
             if (_pad) _pause.FocusFirst();
             if (_pauseTab >= 0) _pause.ShowTab(_pauseTab);
@@ -3310,12 +3413,13 @@ public partial class TopDownMain : Node3D
                 _sfx.PlayPitched("bell_ring", 0.85f, -6f);
                 Say(e.Size > 0 ? $"Leak sealed · {(int)e.Size} to go"
                     : _world.LeaksOpen > 0 ? "Leak sealed"
-                    : _place == ReefPlace.Cave ? "Leak sealed · the mouth lets you out"
+                    : _place == ReefPlace.Cave ? "Leak sealed · its upwelling carries you out"
                     : "Every leak sealed");
                 break;
             case PlaneEventType.ExitOpened:
                 _sfx.PlayPitched("bell_ring", 0.6f, -4f);
-                Say("The way down is open");
+                // (On the open reef there is no way down: a cave's leak opens its upwelling instead.)
+                if (!Reef) Say("The way down is open");
                 break;
             case PlaneEventType.DealRefused:
                 _sfx.PlayPitched("pop", 0.5f, -8f);

@@ -190,7 +190,7 @@ public sealed partial class PlaneWorld
     {
         if (Currents.Count == 0 && Leaks.Count == 0) return;
         foreach (var c in Currents)
-            c.Strength = c.Holds ? MathUtil.MoveToward(c.Strength, LeaksOpen > 0 ? 1f : 0f, Dt / CurrentTuning.HoldFade)
+            c.Strength = c.Holds ? MathUtil.MoveToward(c.Strength, CaveLeakOpen ? 1f : 0f, Dt / CurrentTuning.HoldFade)
                 : MathUtil.MoveToward(c.Strength, LeaksLeft == 0 ? 1f : 0f, Dt / CurrentTuning.MainRise);
         var p = Player;
         Vector2 flow = CurrentAt(p.Position);
