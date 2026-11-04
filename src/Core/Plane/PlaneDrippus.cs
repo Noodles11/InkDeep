@@ -134,16 +134,24 @@ public sealed partial class PlaneWorld
         CheckPhase(boss);
     }
 
-    /// <summary>The slingshot fan: big drops slung across an arc along its locked aim.</summary>
+    /// <summary>
+    /// The slingshot fan: big drops slung across an arc along its locked aim (or a spec's own sweep: its count of plain
+    /// drops across its arc, BossSpec.SweepCount).
+    /// </summary>
     void Fan(PlaneBoss boss)
     {
-        float arc = DrippusTuning.FanArcDeg * MathUtil.Deg2Rad;
-        for (int i = 0; i < DrippusTuning.FanCount; i++)
+        bool sweep = boss.Spec.SweepCount > 0;
+        int count = sweep ? boss.Spec.SweepCount : DrippusTuning.FanCount;
+        float arc = (sweep ? boss.Spec.SweepArc : DrippusTuning.FanArcDeg) * MathUtil.Deg2Rad;
+        for (int i = 0; i < count; i++)
         {
-            var dir = Rotate(boss.Aim, -arc / 2f + arc * i / (DrippusTuning.FanCount - 1));
-            var drop = BossPearl(boss, dir, boss.Spec.PearlSpeed * DrippusTuning.FanSpeed);
-            drop.Damage *= DrippusTuning.FanHit;
-            drop.Radius = DrippusTuning.FanRadius;
+            var dir = Rotate(boss.Aim, -arc / 2f + arc * i / Math.Max(count - 1, 1));
+            var drop = BossPearl(boss, dir, boss.Spec.PearlSpeed * (sweep ? 1f : DrippusTuning.FanSpeed));
+            if (!sweep)
+            {
+                drop.Damage *= DrippusTuning.FanHit;
+                drop.Radius = DrippusTuning.FanRadius;
+            }
             Shots.Add(drop);
         }
     }

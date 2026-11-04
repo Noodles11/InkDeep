@@ -65,6 +65,8 @@
     { "id": "mossbank", "x": 90, "y": 90, "r": 11, "role": "Branch" },
     { "id": "crown", "x": 200, "y": 70, "r": 12, "role": "Branch" },
     { "id": "kelpeast", "x": 360, "y": 90, "r": 11, "role": "Main" },
+    // The still bed, past the moss bank in the far north-west corner, deepest in the kelp: Fennel's great cave.
+    { "id": "stillbed", "x": 36, "y": 44, "r": 10, "role": "Branch" },
 
     // The Sunken Galleon: wide flats strewn with the wreck's field, broken by long ridges.
     { "id": "wreckwest", "x": 480, "y": 560, "r": 13, "role": "Main" },
@@ -141,6 +143,7 @@
     { "a": "deepkelp", "b": "crown", "width": 6, "kind": "Side" },
     { "a": "deepkelp", "b": "kelpeast", "width": 7 },
     { "a": "stalks", "b": "kelpeast", "width": 6, "kind": "Side" },
+    { "a": "mossbank", "b": "stillbed", "width": 6, "kind": "Side" },
 
     { "a": "wreckwest", "b": "hull", "width": 9 },
     { "a": "wreckwest", "b": "keel", "width": 8 },
@@ -182,10 +185,11 @@
   // The Tide Fan: the great old sea fan in the commune, where the bay ties its requests (docs/QUESTS-PROPOSAL.md §2).
   "fan": { "x": 110, "y": 762 },
   // The bay's folk at home, each once she is freed (docs/NPC-BOSSES-PROPOSAL.md): Tull's shell by the fan's foot, Kip
-  // beside the mirror.
+  // beside the mirror, Fennel's weed bed in the lagoon's quiet corner.
   "homes": [
     { "x": 103, "y": 770, "folk": "tull" },
-    { "x": 57, "y": 773, "folk": "kip" }
+    { "x": 57, "y": 773, "folk": "kip" },
+    { "x": 81, "y": 781, "folk": "fennel" }
   ],
   // The cave mouths, each by a chamber's north wall (an opening facing the camera is sought first), and each with its
   // danger: its cave's level is its zone's area level plus it, its floors one more (docs/REEF-WORLD.md §3).
@@ -219,6 +223,7 @@
     // The great caves (docs/NPC-BOSSES-PROPOSAL.md §2): each holds a neighbour of the bay, corrupted, at its bottom; her
     // cave's level and floors are her own.
     { "x": 30, "y": 646, "name": "ledge", "folk": "tull" },
-    { "x": 405, "y": 623, "name": "station", "folk": "kip" }
+    { "x": 405, "y": 623, "name": "station", "folk": "kip" },
+    { "x": 36, "y": 35, "name": "still bed", "folk": "fennel" }
   ]
 }

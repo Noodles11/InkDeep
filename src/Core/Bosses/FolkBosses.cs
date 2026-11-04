@@ -18,6 +18,7 @@ public static class FolkBosses
     {
         "tull" => Tull(level, menace),
         "kip" => Kip(level, menace),
+        "fennel" => Fennel(level, menace),
         _ => null,
     };
 
@@ -103,6 +104,43 @@ public static class FolkBosses
         foreach (float side in new[] { 1f, -1f })
             for (int i = 0; i < 4; i++)
                 spec.Sites.Add(new BodySite(side * (0.55f + 0.6f * i), 0.85f, 0.35f + 0.05f * i, false));
+        return spec;
+    }
+
+    /// <summary>
+    /// Papa Fennel (§6.2): a leafy seadragon, his fronds hardened into thorns curling into him, his clutch of eggs
+    /// untouched on his tail. The hidden one: he drifts between five stands of kelp round the arena and hides in one, as
+    /// still as the weed, his drip rising out of it. She finds him by swimming near or by her light reaching him; then
+    /// he unfurls and lashes an arc of nine drops across 90° at where he last felt her (vibration), and his chest is open
+    /// for 1.6 s before he drifts off to another stand. Left alone, he strikes from hiding: the tangle, a wall of drops
+    /// with a gap of two, and no opening after. From half his meter two other stands drip too.
+    /// </summary>
+    static BossSpec Fennel(int level, float menace)
+    {
+        var spec = new BossSpec
+        {
+            Seed = SeedOf("fennel"), Cycle = 1, Depth = 2, Menace = menace, Tier = BossTier.Common,
+            Plan = BodyPlan.Fish, Form = BodyForm.Seadragon, Concept = BossConcept.TheHiddenOne, Blockade = true,
+            Name = "Papa Fennel", Folk = "fennel",
+            // 5 m long mutated, 3 m freed.
+            Radius = 1.4f, Stretch = 1.75f, Count = 12, Bulk = 0.5f, TrueScale = 0.6f,
+            // Ochre-yellow, his leaves green.
+            TrueColor = new Vector3(0.78f, 0.6f, 0.25f), Accent = new Vector3(0.42f, 0.6f, 0.26f),
+            Theme = MutationTheme.InvertedSpines, Mutation = 0.5f,
+            // At his chest, behind the thorns: open only after his lash.
+            Exposure = Exposure.Stagger, Pearl = new BodySite(0f, 0.45f, 0.5f, false), PearlRadius = 0.7f,
+            Hp = MeterAt(level), Damage = 12f, Telegraph = 1f, Rest = 6f, Volleys = 1, VolleyInterval = 1f, Window = 1.6f,
+            PearlSpeed = 6.5f, RingCount = 0, WallCount = 14, HelixArms = 3, SweepCount = 9, SweepArc = 90f,
+            Signature = BossAttack.Fan, Move = BossMove.Hide, MoveRate = 2.2f, Tempo = BossTempo.SurgeAndRest,
+            Sense = BossSense.Vibration, Stands = 5, Decoys = 2, Spice = BossSpice.FastLongWindows,
+        };
+        spec.Fillers.Add(BossAttack.Wall);
+        spec.Acts.Add(new[] { BossAttack.Fan });
+        spec.Phases.Add(new BossPhase(0.5f, PhaseChange.MutationAdvances, null));
+        // His fronds grown into thorns, along both sides from his neck to his tail.
+        foreach (float side in new[] { 1f, -1f })
+            for (int i = 0; i < 4; i++)
+                spec.Sites.Add(new BodySite(side * (0.45f + 0.65f * i), 0.8f, 0.4f, false));
         return spec;
     }
 }

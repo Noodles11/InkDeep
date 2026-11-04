@@ -65,15 +65,15 @@ public static class BossGenerator
         BodyForm.MoonJelly or BodyForm.Siphonophore => BodyPlan.Cnidarian,
         BodyForm.Murkling => BodyPlan.Ink,
         BodyForm.Turtle => BodyPlan.Reptile,
-        BodyForm.Wrasse => BodyPlan.Fish,
+        BodyForm.Wrasse or BodyForm.Seadragon => BodyPlan.Fish,
         _ => BodyPlan.Gastropod,
     };
 
-    /// <summary>A fight only authored, never rolled (Drippus Prime's, Kip's).</summary>
-    public static bool Authored(BossConcept concept) => concept is BossConcept.TheBrood or BossConcept.CleaningDance;
+    /// <summary>A fight only authored, never rolled (Drippus Prime's, the bay's folk's).</summary>
+    public static bool Authored(BossConcept concept) => concept is BossConcept.TheBrood or BossConcept.CleaningDance or BossConcept.TheHiddenOne;
 
     /// <summary>A body only authored, never rolled (Drippus Prime's, the bay's folk's).</summary>
-    public static bool Authored(BodyForm form) => form is BodyForm.Murkling or BodyForm.Turtle or BodyForm.Wrasse;
+    public static bool Authored(BodyForm form) => form is BodyForm.Murkling or BodyForm.Turtle or BodyForm.Wrasse or BodyForm.Seadragon;
 
     /// <summary>What each body can throw: an attack only comes from anatomy that could make it (§7.1).</summary>
     public static bool Can(BodyForm form, BossAttack attack) => attack switch

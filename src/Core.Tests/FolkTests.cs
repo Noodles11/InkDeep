@@ -206,4 +206,70 @@ public class FolkTests
         Assert.Contains(mouth, OpenReef.ShutMouths(jelly, "reef", hand));
         Assert.Equal("Grandmother Tull has gone home to Lantern Bay", Folk.HomeCaption(Folk.Get("tull")!));
     }
+
+    [Fact]
+    public void Fennel_HidesInHisKelp_StrikesFromHidingUnfound_ThenOnceFoundLashesAndOpens_AndMovesOn()
+    {
+        var w = GreatCave("fennel");
+        var boss = w.Boss!;
+        Assert.Equal(BodyForm.Seadragon, boss.Spec.Form);
+        Assert.Equal(5, boss.Stands.Count);
+        Assert.Equal(boss.Stands[0], boss.Position);
+        Assert.True(boss.Hidden);
+        // Into the arena on the far side from him: he stays hidden, and strikes from hiding with no opening after.
+        var away = w.ArenaCenter - Vector2.Normalize(boss.Position - w.ArenaCenter) * 4f;
+        Assert.True(Vector2.Distance(away, boss.Position) > PlaneBossTuning.FoundReach + boss.Radius);
+        Hold(w, away, 3f, () => boss.Stage == BossStage.Fight);
+        var volleys = new System.Collections.Generic.List<BossAttack>();
+        bool opened = false;
+        for (int i = 0; i < 10 * PlaneWorld.TickRate; i++)
+        {
+            w.Player.Position = w.Player.PrevPosition = away;
+            w.Player.Hp = w.Run.MaxHp;
+            w.Step(default);
+            foreach (var e in w.Events.Where(e => e.Type == PlaneEventType.BossVolley)) volleys.Add((BossAttack)(int)e.Size);
+            opened |= boss.Open;
+        }
+        Assert.Contains(BossAttack.Wall, volleys);
+        Assert.DoesNotContain(BossAttack.Fan, volleys);
+        Assert.False(opened, "unfound, he never opens");
+        Assert.True(boss.Hidden);
+        // She swims up to him: found, he unfurls, lashes at her and opens.
+        var near = boss.Position + Vector2.Normalize(w.ArenaCenter - boss.Position) * (boss.Radius + 2.5f);
+        int stand = boss.Stand;
+        volleys.Clear();
+        for (int i = 0; i < 8 * PlaneWorld.TickRate && boss.Act != BossAct.Window; i++)
+        {
+            w.Player.Position = w.Player.PrevPosition = near;
+            w.Player.Hp = w.Run.MaxHp;
+            w.Step(default);
+            foreach (var e in w.Events.Where(e => e.Type == PlaneEventType.BossVolley)) volleys.Add((BossAttack)(int)e.Size);
+        }
+        Assert.Equal(BossAct.Window, boss.Act);
+        Assert.True(boss.Open);
+        Assert.False(boss.Hidden);
+        Assert.Equal(BossAttack.Fan, volleys.Last());
+        // After his opening he drifts off to another stand.
+        Hold(w, near, boss.Spec.Window + 0.2f);
+        Assert.NotEqual(stand, boss.Stand);
+        // From half his meter, two other stands drip too.
+        Hold(w, near, 2f, () => boss.Act is BossAct.Telegraph or BossAct.Window);
+        w.DebugHurtBoss(boss.MaxHp * 0.55f);
+        Assert.Equal(2, boss.Decoys.Count);
+        Assert.DoesNotContain(boss.Stand, boss.Decoys);
+    }
+
+    [Fact]
+    public void FennelKeepsTheShellsSheLeavesWithHim()
+    {
+        var jelly = new Jelly();
+        var run = new PlaneRun(Catalog.Value, new Tuning()) { Shells = 40 };
+        BroodBed.Leave(jelly, run);
+        Assert.Equal(0, run.Shells);
+        Assert.Equal(40, jelly.Banked);
+        run.Shells = 5;
+        BroodBed.TakeBack(jelly, run);
+        Assert.Equal(45, run.Shells);
+        Assert.Equal(0, jelly.Banked);
+    }
 }

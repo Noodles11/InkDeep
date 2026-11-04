@@ -263,6 +263,7 @@ public static class BossIntroArt
             case BodyForm.Murkling: Drippus(ci, s, g, menace, mood, t, body, accent, iris, blink); break;
             case BodyForm.Turtle: Turtle(ci, s, g, menace, mood, t, body, accent, iris, blink, freed); break;
             case BodyForm.Wrasse: Wrasse(ci, s, g, menace, mood, t, body, accent, iris, blink, freed); break;
+            case BodyForm.Seadragon: Seadragon(ci, s, g, menace, mood, t, body, accent, iris, blink, freed); break;
             default: Snail(ci, spec, s, g, menace, mood, t, body, accent, iris, blink); break;
         }
         if (!freed && (spec.Theme == MutationTheme.InkSacs || spec.Minor == MutationTheme.InkSacs))
@@ -404,6 +405,44 @@ public static class BossIntroArt
         ci.DrawLine(c + new Vector2(-s * 0.95f, -s * 0.16f), c + new Vector2(s * 0.9f, -s * 0.12f), accent.Lightened(0.2f), s * 0.07f, true);
         ci.DrawColoredPolygon(Ellipse(c + new Vector2(s * 0.2f, -s * 0.28f), s * 0.35f, s * 0.07f, 12), new Color(1f, 1f, 1f, 0.35f));
         Face(ci, c + new Vector2(s * 0.62f, -s * 0.04f), s * 0.38f, mood, menace, 0.6f, blink, iris, t);
+    }
+
+    /// <summary>
+    /// Fennel, the leafy seadragon: upright like a seahorse, his long snout, his leafy fronds swaying, his tail curled
+    /// round his pink eggs; he curls it tighter and peeks out shyly. Corrupted, thorns jut from his fronds.
+    /// </summary>
+    static void Seadragon(CanvasItem ci, float s, float g, float menace, Mood mood, float t, Color body, Color accent, Color iris, float blink, bool freed)
+    {
+        float sway = Mathf.Sin(t * 1.6f) * 0.06f;
+        float curl = g < 1.2f ? Mathf.SmoothStep(0f, 1f, g / 1.2f) : 1f;
+        // The tail: down from the body and curled round under it, the eggs held in its curl.
+        var tail = new List<Vector2>();
+        for (int i = 0; i <= 14; i++)
+        {
+            float k = i / 14f, a = k * (2.2f + 1.2f * curl);
+            tail.Add(new Vector2(s * 0.1f + Mathf.Sin(a) * s * 0.45f * (1f - 0.5f * k), s * 0.55f + Mathf.Cos(a) * s * 0.1f + k * s * 0.55f * (1f - 0.6f * k)));
+        }
+        for (int i = 1; i < tail.Count; i++) ci.DrawLine(tail[i - 1], tail[i], Line, s * (0.2f - 0.1f * i / 14f), true);
+        for (int i = 1; i < tail.Count; i++) ci.DrawLine(tail[i - 1], tail[i], body, s * (0.14f - 0.08f * i / 14f), true);
+        for (int i = 0; i < 6; i++) Blob(ci, tail[9] + new Vector2(-s * 0.1f + s * 0.07f * i, s * 0.05f * (i % 2)), s * 0.06f, s * 0.06f, new Color(0.98f, 0.6f, 0.66f), s, 0.02f);
+        // The body, upright, and its fronds: lobed leaves (green), a thorn on each while corrupted.
+        var c = new Vector2(0f, s * (0.1f + sway));
+        Inked(ci, Ellipse(c, s * 0.42f, s * 0.62f, 24), body, s);
+        for (int i = 0; i < 6; i++)
+        {
+            float side = i % 2 == 0 ? -1f : 1f;
+            var root = c + new Vector2(side * s * 0.35f, -s * 0.35f + s * 0.18f * i);
+            var tip = root + new Vector2(side * s * (0.45f + 0.08f * Mathf.Sin(t * 2f + i)), -s * 0.12f);
+            Inked(ci, Ellipse((root + tip) * 0.5f, s * 0.26f, s * 0.11f, 12), accent, s, 0.035f);
+            if (!freed) Inked(ci, new[] { tip + new Vector2(0f, -s * 0.04f), tip + new Vector2(side * s * 0.16f, 0f), tip + new Vector2(0f, s * 0.04f) }, new Color(0.1f, 0.04f, 0.16f), s, 0.025f);
+        }
+        // The head atop it, and his long tube of a snout.
+        var head = c + new Vector2(s * 0.08f, -s * 0.72f);
+        ci.DrawLine(head, head + new Vector2(s * 0.75f, s * 0.12f), Line, s * 0.16f, true);
+        ci.DrawLine(head, head + new Vector2(s * 0.75f, s * 0.12f), body, s * 0.1f, true);
+        Inked(ci, Ellipse(head, s * 0.28f, s * 0.24f, 18), body, s, 0.04f);
+        Inked(ci, Ellipse(head + new Vector2(-s * 0.1f, -s * 0.25f), s * 0.18f, s * 0.08f, 10), accent, s, 0.03f);
+        Face(ci, head + new Vector2(-s * 0.02f, 0f), s * 0.3f, mood, menace, 0.5f + 0.3f * Mathf.Sin(t * 0.7f), blink, iris, t);
     }
 
     /// <summary>The giant clam: snaps its shell twice, then blows a bubble raspberry; a pearl crown on top.</summary>

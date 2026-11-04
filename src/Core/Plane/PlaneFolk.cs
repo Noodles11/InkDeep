@@ -36,6 +36,12 @@ public static class Folk
             "Your sister glowed just like that. I did her rim twice, she was so proud of it.",
             "The mirror's clean. Mostly. Don't look at the corners, I'm getting to them.",
         }),
+        new("fennel", "Fennel", "leafy seadragon", "Papa Fennel", "The Still Bed", 6, 3, BayService.BroodBed, new[]
+        {
+            "They passed through the kelp in a line, all facing down. None of them were pulsing. You don't drift like that. Something was drinking them.",
+            "Leave your shells with me, if you like. I'll keep them the way I keep these.",
+            "Shh. They're sleeping. All forty-one of them.",
+        }),
     };
 
     /// <summary>The neighbours whose boss waits in a great cave now (the rest come with theirs).</summary>
@@ -54,4 +60,25 @@ public static class Folk
 
     /// <summary>What she says when Clementine swims close: her lines in turn, one more each visit.</summary>
     public static string Line(Neighbour n, int visit) => n.Lines[Math.Abs(visit) % n.Lines.Length];
+}
+
+/// <summary>
+/// Fennel's Brood Bed (docs/NPC-BOSSES-PROPOSAL.md §6.3): shells she leaves with him are kept, never lost when she
+/// dims (the shells she carries go with her lost light, as ever).
+/// </summary>
+public static class BroodBed
+{
+    /// <summary>She leaves every shell she carries with him.</summary>
+    public static void Leave(Jelly jelly, PlaneRun run)
+    {
+        jelly.Banked += run.Shells;
+        run.Shells = 0;
+    }
+
+    /// <summary>She takes back every shell he keeps for her.</summary>
+    public static void TakeBack(Jelly jelly, PlaneRun run)
+    {
+        run.Shells += jelly.Banked;
+        jelly.Banked = 0;
+    }
 }

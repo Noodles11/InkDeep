@@ -54,6 +54,14 @@ public partial class FolkView : Node3D
         }
     }
 
+    /// <summary>The neighbour whose home Clementine is at (within reach of it), or null.</summary>
+    public Neighbour? AtHome(System.Numerics.Vector2 her, float reach)
+    {
+        foreach (var h in _homes)
+            if (System.Numerics.Vector2.Distance(her, h.At) < reach) return h.Folk;
+        return null;
+    }
+
     public void Sync(PlaneWorld world, float dt)
     {
         Near = null;

@@ -66,6 +66,8 @@ public static class PlaneBossTuning
     public const float DriftEase = 3f;
     /// <summary>A dart: this far along its aim, at this speed (it overshoots her); a stationed body turns this fast.</summary>
     public const float DartReach = 14f, DartSpeed = 16f, StationTurn = 4f;
+    /// <summary>A hider's stands lie this far round its arena (a share of its radius); she finds it by coming this near, or by her light reaching it.</summary>
+    public const float StandsOut = 0.6f, FoundReach = 5f;
     /// <summary>Freed, she shudders this long as her pearl bursts, then leaves (a clam leaps aside and stays open).</summary>
     public const float FreedShudder = 0.3f, ShuffleAside = 6.5f, LeaveSpeed = 1.4f, LeaveSeconds = 25f;
 }
@@ -138,6 +140,14 @@ public sealed class PlaneBoss
     /// <summary>A dart under way: its way and how far it has left to go (0: none).</summary>
     public Vector2 DartDir = Vector2.UnitY;
     public float DartLeft;
+    /// <summary>
+    /// A hider (Fennel): its stands of kelp round the arena, the one it is at or drifting to, whether it is hidden in it
+    /// now, whether she has found it this time, and the stands that drip too (its decoys, from its second phase).
+    /// </summary>
+    public readonly List<Vector2> Stands = new();
+    public int Stand;
+    public bool Hidden, Found;
+    public readonly List<int> Decoys = new();
     public readonly List<BossSac> Sacs = new();
     public readonly List<BossRing> Rings = new();
     /// <summary>How long its current warning lasts (Drippus Prime's is its next attack's own; the others' their spec's).</summary>
@@ -250,6 +260,23 @@ public sealed partial class PlaneWorld
         Boss.Heard = ArenaCenter;
         if (spec.Exposure == Exposure.CoaxOut)
             foreach (var site in spec.Sites.Where(s => s.Sac)) Boss.Sacs.Add(new BossSac { Site = site, Hp = spec.SacHp });
+        if (spec.Move == BossMove.Hide) PlaceStands(Boss);
+    }
+
+    /// <summary>A hider's stands of kelp, evenly round its arena (where there is water), and it waits in the first.</summary>
+    void PlaceStands(PlaneBoss boss)
+    {
+        float r = MathF.Min(ArenaRadius * PlaneBossTuning.StandsOut, ArenaRadius - boss.Radius - PlaneBossTuning.RimKeep);
+        float turn = _bossRng.Range(0f, MathF.Tau);
+        for (int i = 0; i < boss.Spec.Stands; i++)
+        {
+            float a = turn + MathF.Tau * i / boss.Spec.Stands;
+            var at = ArenaCenter + new Vector2(MathF.Cos(a), MathF.Sin(a)) * r;
+            for (int k = 0; k < 4 && !Clear(at, boss.Radius); k++) at = Vector2.Lerp(at, ArenaCenter, 0.25f);
+            boss.Stands.Add(at);
+        }
+        boss.Position = boss.Stands[0];
+        boss.Hidden = true;
     }
 
     void StepBoss()
@@ -453,7 +480,9 @@ public sealed partial class PlaneWorld
         switch (boss.Act)
         {
             case BossAct.Rest:
-                if (boss.ActTime >= spec.Rest * boss.RestScale) BeginTelegraph(boss);
+                // A hider, hidden: she finds it by swimming near (it unfurls at once to strike).
+                if (spec.Move == BossMove.Hide && boss.Hidden && Vector2.Distance(p.Position, boss.Position) < PlaneBossTuning.FoundReach + boss.Radius) Find(boss);
+                else if (boss.ActTime >= spec.Rest * boss.RestScale) BeginTelegraph(boss);
                 break;
             case BossAct.Telegraph:
                 if (boss.ActTime >= boss.TelegraphLength)
@@ -515,6 +544,8 @@ public sealed partial class PlaneWorld
                 {
                     SetAct(boss, BossAct.Rest);
                     Events.Add(new PlaneEvent(PlaneEventType.BossClosed, boss.Position, boss.Facing));
+                    // A hider moves on to another stand, to hide again.
+                    if (spec.Move == BossMove.Hide) MoveOn(boss);
                 }
                 break;
             case BossAct.Stagger:
@@ -564,7 +595,8 @@ public sealed partial class PlaneWorld
     /// <summary>The act is over: rest, or (Stagger, Coax out) open its window first.</summary>
     void EndAct(PlaneBoss boss)
     {
-        if (boss.Spec.Exposure is Exposure.Stagger or Exposure.CoaxOut)
+        bool hiding = boss.Spec.Move == BossMove.Hide && !boss.Found;
+        if (boss.Spec.Exposure is Exposure.Stagger or Exposure.CoaxOut && !hiding)
         {
             SetAct(boss, BossAct.Window);
             Events.Add(new PlaneEvent(PlaneEventType.BossStagger, boss.Position, boss.Facing, 0f));
@@ -591,7 +623,31 @@ public sealed partial class PlaneWorld
 
     /// <summary>An authored boss's act for its phase, written out (BossSpec.Acts), or null for the turn.</summary>
     public static BossAttack[]? ActNow(PlaneBoss boss) =>
-        boss.Spec.Acts.Count == 0 ? null : boss.Spec.Acts[Math.Clamp(boss.Phase - 1, 0, boss.Spec.Acts.Count - 1)];
+        boss.Spec.Acts.Count == 0 ? null
+        // A hider not found strikes from hiding with its filler (Fennel's tangle), with no window after.
+        : boss.Spec.Move == BossMove.Hide && !boss.Found ? HiddenAct
+        : boss.Spec.Acts[Math.Clamp(boss.Phase - 1, 0, boss.Spec.Acts.Count - 1)];
+
+    static readonly BossAttack[] HiddenAct = { BossAttack.Wall };
+
+    /// <summary>She found the hider (came near, or her light reached it): it unfurls and strikes.</summary>
+    void Find(PlaneBoss boss)
+    {
+        if (boss.Found) return;
+        boss.Found = true;
+        boss.Hidden = false;
+        Events.Add(new PlaneEvent(PlaneEventType.BossExposed, boss.Position, boss.Facing));
+        if (boss.Act == BossAct.Rest) BeginTelegraph(boss);
+    }
+
+    /// <summary>A hider found and struck moves on: to another stand, not yet hidden, and lost to her again.</summary>
+    void MoveOn(PlaneBoss boss)
+    {
+        boss.Found = boss.Hidden = false;
+        int next = boss.Stand;
+        while (boss.Stands.Count > 1 && next == boss.Stand) next = _bossRng.Int(boss.Stands.Count);
+        boss.Stand = next;
+    }
 
     /// <summary>How many volleys its act has.</summary>
     static int VolleysOf(PlaneBoss boss) => ActNow(boss)?.Length ?? boss.Spec.Volleys;
@@ -668,6 +724,20 @@ public sealed partial class PlaneWorld
                 if (toHer == Vector2.Zero) break;
                 var want = boss.Act == BossAct.Window ? Rotate(toHer, -spec.Pearl.Angle) : boss.Act == BossAct.Rest && Vector2.Distance(boss.Position, home) > 0.3f ? SafeNormalize(home - boss.Position) : toHer;
                 if (want != Vector2.Zero) boss.Facing = Turn(boss.Facing, want, PlaneBossTuning.StationTurn * Dt);
+                break;
+            }
+            case BossMove.Hide:
+            {
+                // Between acts it drifts to its stand and hides in it; it faces where it last felt her.
+                var stand = boss.Stands[boss.Stand];
+                if (boss.Act == BossAct.Rest && !boss.Hidden)
+                {
+                    float left = Vector2.Distance(boss.Position, stand);
+                    boss.Position += SafeNormalize(stand - boss.Position) * MathF.Min(spec.MoveRate * Dt, left);
+                    if (left <= spec.MoveRate * Dt + 0.05f) boss.Hidden = true;
+                }
+                var felt = SafeNormalize(boss.Heard - boss.Position);
+                if (felt != Vector2.Zero && !still) boss.Facing = Turn(boss.Facing, felt, 1.5f * Dt);
                 break;
             }
             case BossMove.Circle:
@@ -884,6 +954,13 @@ public sealed partial class PlaneWorld
         var boss = Boss;
         if (boss is null || boss.Stage != BossStage.Fight) return false;
         if (IsDrippus(boss)) return ShotHitsDrippus(boss, shot);
+        // A hider in its kelp: her light reaching it finds it (and does it no harm).
+        if (boss.Hidden && Reaches(shot, boss.Position, boss.Radius))
+        {
+            Pop(shot, boss.Position - shot.Position);
+            Find(boss);
+            return true;
+        }
         foreach (var sac in boss.Sacs)
         {
             if (!sac.Alive || !Reaches(shot, boss.SacAt(sac), PlaneBossTuning.SacRadius * (0.6f + sac.Site.Size))) continue;
@@ -960,6 +1037,10 @@ public sealed partial class PlaneWorld
     {
         boss.Phase++;
         if (boss.Phase == 2 && boss.Spec.Clients > 0) ReleaseClients(boss);
+        // A hider's decoys: other stands drip from now on (only her light tells which holds it).
+        if (boss.Phase == 2 && boss.Spec.Decoys > 0)
+            foreach (int i in Enumerable.Range(0, boss.Stands.Count).Where(i => i != boss.Stand).OrderBy(_ => _bossRng.NextFloat()).Take(boss.Spec.Decoys))
+                boss.Decoys.Add(i);
         foreach (var phase in boss.Spec.Phases.Where(p => p.At == at))
             switch (phase.Change)
             {

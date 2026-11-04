@@ -11,15 +11,15 @@ public enum BodyPlan { Bivalve, Echinoderm, Cnidarian, Gastropod, Ink, Reptile, 
 
 /// <summary>
 /// The real animal a plan is drawn as (Murkling: Drippus Prime's body, a murkling prime grown huge; Turtle: Grandmother
-/// Tull's, Wrasse: Kip's, docs/NPC-BOSSES-PROPOSAL.md, authored, never rolled).
+/// Tull's, Wrasse: Kip's, Seadragon: Fennel's, docs/NPC-BOSSES-PROPOSAL.md, authored, never rolled).
 /// </summary>
-public enum BodyForm { GiantClam, SeaStar, Urchin, MoonJelly, Siphonophore, SeaHare, Snail, Murkling, Turtle, Wrasse }
+public enum BodyForm { GiantClam, SeaStar, Urchin, MoonJelly, Siphonophore, SeaHare, Snail, Murkling, Turtle, Wrasse, Seadragon }
 
 /// <summary>
 /// The designed fight ideas (§4): every boss is one of these (TheBrood: Drippus Prime's; CleaningDance: Kip's, darting
-/// at her and turning side-on after; both authored).
+/// at her and turning side-on after; TheHiddenOne: Fennel's, hidden in the kelp till she finds him; all authored).
 /// </summary>
-public enum BossConcept { TheLid, SnappingGate, TurningStar, SlamAndSigh, PulseBell, TrailingCurtain, TheSpreader, ShyShell, BoilHeart, TheBrood, CleaningDance }
+public enum BossConcept { TheLid, SnappingGate, TurningStar, SlamAndSigh, PulseBell, TrailingCurtain, TheSpreader, ShyShell, BoilHeart, TheBrood, CleaningDance, TheHiddenOne }
 
 public enum BossTier { Common, Rare, Legendary }
 
@@ -44,8 +44,11 @@ public enum Exposure
 /// </summary>
 public enum BossAttack { Ring, Wall, Helix, Homing, Snap, ArcBombs, PulseRing, SacBurst, Brood, Fan, Dart }
 
-/// <summary>How it moves (§7.2). Station: it keeps to its station in the arena's middle, gliding back to it between acts (Kip's).</summary>
-public enum BossMove { Hold, Turn, Spin, Creep, DriftPulse, Circle, Station }
+/// <summary>
+/// How it moves (§7.2). Station: it keeps to its station in the arena's middle, gliding back to it between acts (Kip's).
+/// Hide: it drifts between stands of kelp round the arena and hides in one till she finds it (Fennel's).
+/// </summary>
+public enum BossMove { Hold, Turn, Spin, Creep, DriftPulse, Circle, Station, Hide }
 
 public enum BossTempo { Metronome, Relentless, Duelist, SurgeAndRest, Territorial }
 
@@ -169,6 +172,12 @@ public sealed class BossSpec
     public bool ActsStill { get; set; }
     /// <summary>At its first phase change it lets out this many lesser murklings, the fish it once cared for (Kip's clients).</summary>
     public int Clients { get; set; }
+    /// <summary>A hider's stands round its arena, and how many of the others drip too from its second phase (decoys).</summary>
+    public int Stands { get; set; }
+    public int Decoys { get; set; }
+    /// <summary>Its fan (a sweep): this many drops across this arc (degrees), each a plain drop; 0: Drippus Prime's slingshot fan.</summary>
+    public int SweepCount { get; set; }
+    public float SweepArc { get; set; }
 
     /// <summary>Every attack it can throw in this fight (the signature, the fillers, and those phases bring).</summary>
     public IEnumerable<BossAttack> Kit

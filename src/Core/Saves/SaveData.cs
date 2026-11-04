@@ -32,8 +32,9 @@ public sealed class Jelly
     /// <summary>Skill points not yet spent, and the points spent (by stat name): the only way her stats change.</summary>
     public int Points { get; set; }
     public Dictionary<string, int> Skills { get; set; } = new();
-    /// <summary>Silver shells on her.</summary>
+    /// <summary>Silver shells on her, and those she has left with Fennel in the bay (BroodBed: never lost).</summary>
     public int Shells { get; set; }
+    public int Banked { get; set; }
     /// <summary>The passive pearls absorbed into her bell (lost as lost light when she dims).</summary>
     public List<string> Passives { get; set; } = new();
     /// <summary>Every active pearl she owns (never lost), and which sit in her three slots (null: an empty slot).</summary>

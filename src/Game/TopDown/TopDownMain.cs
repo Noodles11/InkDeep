@@ -180,7 +180,7 @@ public partial class TopDownMain : Node3D
     /// <summary>The run's play time so far (sim time: still while paused or diving), for the HUD clock.</summary>
     float _elapsed;
     bool _fireBlocked;
-    bool Paused => _pause.Visible || _mirror.Visible || _fanMenu.Visible || _debug.Visible || _menuBlend > 0f;
+    bool Paused => _pause.Visible || _mirror.Visible || _fanMenu.Visible || _folkMenu.Visible || _debug.Visible || _menuBlend > 0f;
     /// <summary>F1: the debug menu (level jump, pearls). Once used, the run is neither saved nor recorded.</summary>
     DebugMenu _debug = null!;
     bool _f1Latched, _debugRun;
@@ -1244,7 +1244,7 @@ public partial class TopDownMain : Node3D
         _mirror.Reverted += RevertMirror;
         // The bay's Tide Fan and the requests she carries.
         BuildRequests(pauseLayer);
-        BuildFolk();
+        BuildFolk(pauseLayer);
         _splash = new LoadingSplash();
         pauseLayer.AddChild(_splash);
         _pause.RestartPressed += () =>
@@ -3810,7 +3810,7 @@ public partial class TopDownMain : Node3D
     /// <summary>The pause menu's close framing: the camera closes in as the drawer slides in, and eases back as it slides away.</summary>
     void StepMenu(float dt)
     {
-        _menuBlend = _pause.IsOpen || _mirror.IsOpen || _fanMenu.IsOpen ? Mathf.Min(1f, _menuBlend + dt / MenuIn) : Mathf.Max(0f, _menuBlend - dt / MenuOut);
+        _menuBlend = _pause.IsOpen || _mirror.IsOpen || _fanMenu.IsOpen || _folkMenu.IsOpen ? Mathf.Min(1f, _menuBlend + dt / MenuIn) : Mathf.Max(0f, _menuBlend - dt / MenuOut);
         if (!_dbgLevelUp || _world.Run.Points <= 0) return;
         // Verification (--dbg-levelup): the menu opens and spends her points, one every 1.2 s.
         if (!_pause.IsOpen) TogglePause();
@@ -3836,6 +3836,7 @@ public partial class TopDownMain : Node3D
         if (_mirror.IsOpen) RevertMirror();
         _mirror.Shut();
         _fanMenu.Shut();
+        _folkMenu.Shut();
         _camera.Zoom = 1f;
     }
 
@@ -3865,6 +3866,11 @@ public partial class TopDownMain : Node3D
         else if (_fanMenu.IsOpen)
         {
             if (esc && !_escLatched || back && !_backLatched) CloseFan();
+        }
+        // A neighbour's drawer: Esc and B leave it.
+        else if (_folkMenu.IsOpen)
+        {
+            if (esc && !_escLatched || back && !_backLatched) CloseFolkMenu();
         }
         else if (esc && !_escLatched)
         {
