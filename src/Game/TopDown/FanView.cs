@@ -28,7 +28,9 @@ public partial class FanView : Node3D
     public void Show(LevelMap map)
     {
         foreach (var child in GetChildren()) child.QueueFree();
+        // (Its ribbons are tied again for the new place: none drawn from the last one's.)
         _tokens.Clear();
+        _ribbons.Clear();
         _fan = null;
         if (map.Fan is not { } at) return;
         float floor = map.HeightAt(at);

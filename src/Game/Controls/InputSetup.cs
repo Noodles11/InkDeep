@@ -31,6 +31,8 @@ public static class InputSetup
 	public const string Active2 = "use_active_2";
 	public const string Active3 = "use_active_3";
 	public const string Review = "review_pearls";
+	/// <summary>The open reef's homeward current (docs/REEF-WORLD.md §5): held, she calls it home to the bay.</summary>
+	public const string Homeward = "homeward";
 	public const string Pause = "pause";
 	public const string Restart = "restart";
 	public const string DebugPanel = "debug_panel";
@@ -66,6 +68,7 @@ public static class InputSetup
 		new(Active2, "Use the second slot's pearl", "key:Q", "button:LeftShoulder"),
 		new(Active3, "Use the third slot's pearl", "key:E", "button:RightShoulder"),
 		new(Review, "Level map (hold)", "key:Tab", "button:Back"),
+		new(Homeward, "Call the homeward current (hold)", "key:H", "button:DpadDown"),
 		// Esc always pauses (and cancels a rebind), so its key stays.
 		new(Pause, "Pause", "key:Escape", "button:Start", KeyLocked: true),
 		// The menus on a controller (the keyboard's are fixed: arrows, Enter, Esc). Rebindable for a pad Godot does not

@@ -114,11 +114,12 @@ their own below the shelf.
 
 ## 5. The homeward current
 
-- **Calling it.** On the open reef or in a cave, she calls the homeward current from the pause menu or by holding its
-  key (H; the D-pad's down on a controller). She gathers it for 2 s, a swirl rising round her. Any harm breaks it.
+- **Calling it.** On the open reef or in a cave, she calls the homeward current by holding its key (H; the D-pad's
+  down on a controller; rebindable in Settings). She gathers it for 2 s, a swirl growing under her as it rises round
+  her. Any harm breaks it, and she must let go of the key and call it again.
 - **The ride.** She is carried home on a current ride and arrives at the lantern post in the bay.
-- **The way back.** A homeward swirl stays by the post (the station swirl we have). Swimming into it rides her back to
-  where she called it:
+- **The way back.** A homeward swirl stays 5 m north of the post (the station swirl we have). Swimming into it rides
+  her back to where she called it:
   - On the open reef, back to that very spot.
   - In a cave, back to the floor she called it from, at its way in. The cave is as it was when she first came in: the
     leak heals when she leaves, as now.
@@ -153,4 +154,6 @@ Each step is playable on its own:
 3. **Rosters and levels** (built). Each zone's fish and packs (§4), and level scaling: a murkling's meter
    (`PlaneWorld.LevelMeter`, `ReefTuning.MeterPerLevel`) by the level where it buds, and the harm she takes
    (`PlaneWorld.HurtScale`, `ReefTuning.HarmPerLevel`) by the level where she is (`PlaneWorld.LevelAt`).
-4. **The homeward current.**
+4. **The homeward current** (built): TopDownMain.StepHomeward (its key, InputSetup.Homeward), the ride home and the
+   way back (WayThrough, PortalView.Gather, PortalView.Homeward). Verification: --dbg-homeward holds its key
+   from the start.

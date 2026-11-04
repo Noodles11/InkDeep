@@ -374,7 +374,8 @@ Each step is playable on its own:
   (`ReefTuning.LeakXp`), and an untied request as much again for its level (`PlaneWorld.GiveXp`). No level-up is
   held back.
 - **The current ride** (`TopDownMain.BeginRide`, `StepRide`, `StepArrive`):
-  - **Where it goes:** a mouth leads to its cave, and a cave's way out leads back out of that mouth. (A current station
+  - **Where it goes:** a mouth leads to its cave, and a cave's way out leads back out of that mouth. The homeward
+    current takes her home to the bay from anywhere, and back (docs/REEF-WORLD.md §5). (A current station
     would lead to another region's map; there is none yet.)
   - **Leaving:** on a current, she is swept off and lifted. The place dissolves round where she was (the dive's iris)
     until only water and streaming snow are left, and the next place is made meanwhile; the ride lasts at least 2.4 s.

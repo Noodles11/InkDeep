@@ -100,6 +100,8 @@ public partial class TopDownMain : Node3D
     bool _dbgTurn;
     /// <summary>Verification (the adventure): the leak nearest her seals two seconds in.</summary>
     bool _dbgSealLeak;
+    /// <summary>Verification: the homeward current's key is held from the start (once, till it carries her home).</summary>
+    bool _dbgHomeward;
     /// <summary>Verification (the adventure): every Inkwarden is struck two seconds in (it rouses and fires its spikes).</summary>
     bool _dbgRouse;
     /// <summary>
@@ -478,6 +480,7 @@ public partial class TopDownMain : Node3D
             else if (arg == "--dbg-murkfish") _dbgMurkFish = true;
             else if (arg == "--dbg-turn") _dbgTurn = true;
             else if (arg == "--dbg-sealvent") _dbgSealLeak = true;
+            else if (arg == "--dbg-homeward") _dbgHomeward = true;
             else if (arg == "--dbg-rouse") _dbgRouse = true;
             else if (arg == "--dbg-throw") _dbgThrow = true;
             else if (arg.StartsWith("--dbg-seal=") && int.TryParse(Value("--dbg-seal="), out int sealHits)) _dbgSeal = sealHits;
@@ -960,6 +963,58 @@ public partial class TopDownMain : Node3D
         }
     }
 
+    /// <summary>
+    /// The homeward current (docs/REEF-WORLD.md §5): how long its key has been held (it gathers over HomewardGather s),
+    /// her health when it began (any harm breaks it), whether the key must be let go before it can gather again, and
+    /// where it took her from (its way back waits by the lantern post, HomewardOff from it, until ridden or she leaves
+    /// the bay).
+    /// </summary>
+    float _homeward, _homewardHp;
+    bool _homewardSpent;
+    (ReefPlace Place, string Region, int Mouth, int Floor, System.Numerics.Vector2 At)? _homeReturn;
+    const float HomewardGather = 2f, HomewardReach = 1.6f;
+    static readonly System.Numerics.Vector2 HomewardOff = new(0f, -5f);
+    System.Numerics.Vector2 HomewardSwirl => _map.Start.Position + HomewardOff;
+
+    /// <summary>One frame of the homeward current's key: true once it has carried her off (a ride has begun).</summary>
+    bool StepHomeward(float dt)
+    {
+        bool held = Input.IsActionPressed(InputSetup.Homeward) || _dbgHomeward;
+        if (!held) _homewardSpent = false;
+        bool can = held && !_homewardSpent && _jelly is not null && !_world.InHaven && !_world.Defeated && !_pause.IsOpen;
+        if (!can)
+        {
+            if (_homeward > 0f) _portals.Gather(default, 0f);
+            _homeward = 0f;
+            return false;
+        }
+        var her = _world.Player.Position;
+        if (_homeward == 0f)
+        {
+            _homewardHp = _world.Player.Hp;
+            Say("The homeward current gathers…");
+        }
+        else if (_world.Player.Hp < _homewardHp)
+        {
+            // Any harm breaks it; she must let go of its key and call it again.
+            _homeward = 0f;
+            _homewardSpent = true;
+            _portals.Gather(default, 0f);
+            Say("Struck: the homeward current breaks");
+            return false;
+        }
+        _homeward += dt;
+        _portals.Gather(her, _homeward / HomewardGather);
+        if (_homeward < HomewardGather) return false;
+        _homeward = 0f;
+        _homewardSpent = true;
+        _dbgHomeward = false;
+        _portals.Gather(default, 0f);
+        _homeReturn = (_place, _region, _mouth, _floor, her);
+        BeginRide(ReefPlace.Region, OpenReef.FirstRegion, -1, m => new Landing(m.Start.Position, null), null);
+        return true;
+    }
+
     /// <summary>How near a cave mouth she must be for its name to show over it (metres).</summary>
     const float MouthLabelReach = 12f;
 
@@ -998,6 +1053,12 @@ public partial class TopDownMain : Node3D
         if (e.Type is not (PlaneEventType.HavenEntered or PlaneEventType.HavenLeft)) return;
         var (title, where) = PlaceTitle();
         _hud.ShowTitle(title, where);
+        // Out of the bay on her own: the homeward current's way back is gone.
+        if (e.Type == PlaneEventType.HavenLeft && _homeReturn is not null)
+        {
+            _homeReturn = null;
+            _portals.Homeward(null);
+        }
         if (e.Type == PlaneEventType.HavenEntered)
         {
             FillFan();
@@ -1455,7 +1516,8 @@ public partial class TopDownMain : Node3D
         _levelTime = 0f;
         // Continuing a run left mid-level: the moment it was left (restored once the level is made again).
         var moment = keepRun ? null : _resume?.State;
-        ApplyLook();
+        // The look where she arrives (her world is the last place's still).
+        ApplyLook(Reef ? LookAt(map, arriveAt ?? map.Start.Position) : Look);
         // Where the sun reaches into this level's water (its god rays and caustics end at the rock that shades them).
         ReefLook.SetExtent(map.Size);
         OctoShoots.Game.Fx.SunMap.Build(map, OctoShoots.Game.Fx.SunLight.Direction);
@@ -1735,6 +1797,16 @@ public partial class TopDownMain : Node3D
         }
         if (_place == ReefPlace.Region && _world.AtMouth() is var mouth and >= 0)
             return (ReefPlace.Cave, _region, mouth, m => m.Way is { } way ? Through(way) : null, _map.Mouths[mouth], 1, RideWay.Door);
+        // The homeward current's way back, by the lantern post: to where she called it (on the reef, that very spot; in a
+        // cave, the floor she called it from, at its way in).
+        if (_place == ReefPlace.Region && _homeReturn is { } home && System.Numerics.Vector2.Distance(_world.Player.Position, HomewardSwirl) < HomewardReach)
+        {
+            _homeReturn = null;
+            _portals.Homeward(null);
+            Func<LevelMap, Landing?> arrive = home.Place == ReefPlace.Region ? _ => new Landing(home.At, null)
+                : home.Floor == 1 ? m => m.Way is { } way ? Through(way) : null : _ => null;
+            return (home.Place, home.Region, home.Mouth, arrive, null, home.Floor, RideWay.Current);
+        }
         if (_place != ReefPlace.Cave) return null;
         int back = _mouth;
         Landing? OutOfMouth(LevelMap m) => back >= 0 && back < m.Mouths.Count ? Through(m.Mouths[back]) : null;
@@ -1971,6 +2043,7 @@ public partial class TopDownMain : Node3D
     /// <summary>A region's cave mouths as they stand: the open ones dark with the Leak, the shut ones closed with rock.</summary>
     void ShowMouths()
     {
+        _portals.Homeward(Reef && _place == ReefPlace.Region && _homeReturn is not null ? HomewardSwirl : null);
         _portals.Show(_map, _world.ShutMouths, Reef && _place == ReefPlace.Region ? LoadMap(_region).Mouths.Select(m => m.Danger).ToList() : null);
         _level.ShutDoors(_world.ShutMouths);
     }
@@ -2790,10 +2863,12 @@ public partial class TopDownMain : Node3D
             BeginRide(way.To, way.Region, way.Mouth, way.Arrive, way.By, way.Floor, way.Way);
             return;
         }
+        // Holding the homeward current's key, it gathers round her; gathered, it carries her home.
+        if (Reef && StepHomeward(dt)) return;
         // A leak cave's way out is held by the Leak's current till its leak is sealed: said once each time she comes back to it.
         if (_place == ReefPlace.Cave)
         {
-            if (!_world.AtCaveMouth || _world.LeaksOpen == 0) _mouthShutSaid = false;
+            if (!_world.AtCaveMouth || !_world.CaveLeakOpen) _mouthShutSaid = false;
             else if (!_mouthShutSaid)
             {
                 _mouthShutSaid = true;

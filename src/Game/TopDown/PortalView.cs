@@ -27,6 +27,8 @@ public partial class PortalView : Node3D
             if (dangers is not null && i < dangers.Count && dangers[i] > 0) AddInk(map, map.Mouths[i], dangers[i] / (float)ReefTuning.MostDanger, i);
         }
         if (map.Way is { } way) AddThroat(way);
+        _gather = null;
+        if (_homewardAt is { } home) _homeward = Add(home, ReefTuning.StationReach * 1.8f);
     }
 
     /// <summary>A mouth's weeping ink: runs down its face, and a stain pooled on the floor before its threshold.</summary>
@@ -69,7 +71,35 @@ public partial class PortalView : Node3D
     /// <summary>A sealed leak's upwelling (docs/REEF-WORLD.md §3): the station's bright swirl where the leak was.</summary>
     public void Upwell(System.Numerics.Vector2 at) => Add(at, ReefTuning.StationReach * 2.2f);
 
-    void Add(System.Numerics.Vector2 at, float size)
+    MeshInstance3D? _gather, _homeward;
+    System.Numerics.Vector2? _homewardAt;
+
+    /// <summary>
+    /// The homeward current gathering round her (docs/REEF-WORLD.md §5): a swirl under her, growing as it gathers
+    /// (k 0..1); none at 0.
+    /// </summary>
+    public void Gather(System.Numerics.Vector2 at, float k)
+    {
+        if (k <= 0f)
+        {
+            _gather?.QueueFree();
+            _gather = null;
+            return;
+        }
+        if (_gather is null || !IsInstanceValid(_gather)) _gather = Add(at, 1f);
+        _gather.Scale = Vector3.One * Mathf.Lerp(0.6f, ReefTuning.StationReach * 1.6f, k);
+        _gather.Position = new Vector3(at.X, -0.6f + 0.8f * k, at.Y);
+    }
+
+    /// <summary>The homeward current's way back (docs/REEF-WORLD.md §5): a swirl by the lantern post, or none.</summary>
+    public void Homeward(System.Numerics.Vector2? at)
+    {
+        _homewardAt = at;
+        if (_homeward is not null && IsInstanceValid(_homeward)) _homeward.QueueFree();
+        _homeward = at is { } p ? Add(p, ReefTuning.StationReach * 1.8f) : null;
+    }
+
+    MeshInstance3D Add(System.Numerics.Vector2 at, float size)
     {
         _shader ??= GD.Load<Shader>("res://assets/shaders/reef_portal.gdshader");
         var material = new ShaderMaterial { Shader = _shader };
@@ -82,6 +112,7 @@ public partial class PortalView : Node3D
             Position = new Vector3(at.X, -0.6f, at.Y),
         };
         AddChild(quad);
+        return quad;
     }
 
     /// <summary>
