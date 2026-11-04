@@ -12,9 +12,12 @@ public enum BayService { TideFan, Mirror, BroodBed, PearlCollector, DuskDance }
 /// One of the bay's folk (docs/NPC-BOSSES-PROPOSAL.md): who she is, the boss the Leak made of her and the great cave she
 /// waits at the bottom of (its level and floors fixed, the same for every jelly), and what she opens in the bay.
 /// </summary>
-/// <remarks>Called: what the reef calls her till she names herself in the bay (Bubbles: "The dragonet").</remarks>
+/// <remarks>
+/// Called: what the reef calls her till she names herself in the bay (Bubbles: "The dragonet"). Late: a line she has
+/// only once the Coral Carnival's neighbour is home too (the foreshadowing the Bible allows from Depth 4, §4.4).
+/// </remarks>
 public sealed record Neighbour(
-    string Id, string Name, string Species, string Boss, string Cave, int Level, int Floors, BayService Opens, string[] Lines, string? Called = null);
+    string Id, string Name, string Species, string Boss, string Cave, int Level, int Floors, BayService Opens, string[] Lines, string? Called = null, string? Late = null);
 
 /// <summary>
 /// The bay's folk (docs/NPC-BOSSES-PROPOSAL.md): every NPC is a boss first. Each waits, corrupted, at the bottom of a great
@@ -30,7 +33,7 @@ public static class Folk
             "I watched your whole bloom go down in one breath. I'm too wide for the Crack, little lamp. You aren't.",
             "You found me asleep under all that. Don't tell the others how long it took.",
             "The bay ties its troubles to the fan. I tie the knots. Take what you can carry.",
-        }),
+        }, Late: "At night the shore has lights that don't move like stars. I never liked them."),
         new("kip", "Kip", "cleaner wrasse", "Nine-Fin Kip", "The Cleaning Station", 3, 3, BayService.Mirror, new[]
         {
             "Hold still. You've got Leak in your frills. …There. Family colour, all the way through.",
@@ -72,8 +75,18 @@ public static class Folk
     /// <summary>The caption as a neighbour swims off home.</summary>
     public static string HomeCaption(Neighbour n) => $"{n.Called ?? n.Name} has gone home to Lantern Bay";
 
-    /// <summary>What she says when Clementine swims close: her lines in turn, one more each visit.</summary>
-    public static string Line(Neighbour n, int visit) => n.Lines[Math.Abs(visit) % n.Lines.Length];
+    /// <summary>
+    /// What she says when Clementine swims close: her lines in turn, one more each visit (her late line among them once
+    /// it is hers to say).
+    /// </summary>
+    public static string Line(Neighbour n, int visit, bool late = false)
+    {
+        var lines = late && n.Late is { } more ? n.Lines.Append(more).ToArray() : n.Lines;
+        return lines[Math.Abs(visit) % lines.Length];
+    }
+
+    /// <summary>Her late lines are hers to say: the Coral Carnival's neighbour is home.</summary>
+    public static bool Late(Jelly jelly) => jelly.Freed.Contains("bubbles");
 }
 
 /// <summary>

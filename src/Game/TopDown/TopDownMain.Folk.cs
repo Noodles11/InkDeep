@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using OctoShoots.Core.Bosses;
 using OctoShoots.Core.Plane;
@@ -61,8 +62,9 @@ public partial class TopDownMain
     void StepFolk(float dt)
     {
         _folkView.Sync(_world, dt);
+        StepChains(dt);
         bool drawer = _pause.IsOpen || _mirror.IsOpen || _fanMenu.IsOpen || _folkMenu.IsOpen;
-        _folkTalk.Sync(drawer ? null : _folkView.Near, dt);
+        _folkTalk.Sync(drawer ? null : _folkView.Near, _jelly is { } jelly && Folk.Late(jelly), dt);
         var home = _folkView.AtHome(_world.Player.Position, ServeReach);
         if (home is null) _serveArmed = true;
         else if (_serveArmed && !drawer && !_debug.Visible && HasDrawer(home)) OpenFolkMenu(home);
@@ -137,6 +139,84 @@ public partial class TopDownMain
                             Kept("Your shells are with you again");
                         }),
                     });
+        }
+    }
+
+    // ───────────────────────── the key quest chains ─────────────────────────
+
+    /// <summary>The chains' gold, on the HUD's ribbons and the maps.</summary>
+    static readonly Color ChainGold = new(1f, 0.8f, 0.36f);
+
+    float _chainCheck;
+
+    /// <summary>Something she did answers a chain's step: the chains it finishes pay their pearl, with their neighbour's line.</summary>
+    void NoteChain(StepKind kind, string? zone = null, string? folk = null, System.Numerics.Vector2? at = null)
+    {
+        if (_jelly is not { } jelly) return;
+        var before = Chains.Active(jelly).Select(a => (a.Chain.Folk, a.Step)).ToList();
+        var finished = Chains.Note(jelly, kind, zone, folk, at);
+        bool moved = !before.SequenceEqual(Chains.Active(jelly).Select(a => (a.Chain.Folk, a.Step)));
+        foreach (var chain in finished)
+        {
+            // Her active pearl is hers (owned, into a free slot or her stash), with her line for it.
+            _world.Run.Add(chain.Pearl);
+            var who = Folk.Get(chain.Folk)?.Name ?? chain.Folk;
+            string pearl = _catalog is not null && _catalog.TryGet(chain.Pearl, out var item) ? item.Name : chain.Pearl;
+            Say($"{chain.Title} · done. {who}: \u201c{chain.Line}\u201d · {pearl} is yours");
+            _sfx.PlayPitched("bell_ring", 1.05f, -3f);
+        }
+        if (finished.Count == 0 && moved) _sfx.PlayPitched("bell_ring", 1.3f, -9f);
+        if (moved || finished.Count > 0) SaveJelly();
+    }
+
+    /// <summary>The sim's events that answer a chain's step: a prime freed or a minor leak sealed (by its zone), home again.</summary>
+    void NoteChainEvent(in PlaneEvent e)
+    {
+        if (_jelly is null || !Reef) return;
+        switch (e.Type)
+        {
+            case PlaneEventType.PrimeFreed:
+                NoteChain(StepKind.Prime, zone: ZoneHere(e.Position));
+                break;
+            case PlaneEventType.LeakSealed when _place == ReefPlace.Cave && GreatHere is null:
+                NoteChain(StepKind.Seal, zone: ZoneHere(e.Position));
+                break;
+            case PlaneEventType.HavenEntered:
+                NoteChain(StepKind.Home);
+                break;
+        }
+    }
+
+    /// <summary>The zone a point is in: on a region, where it lies; in a cave, its mouth's.</summary>
+    string? ZoneHere(System.Numerics.Vector2 at) =>
+        _place == ReefPlace.Cave ? OpenReef.ZoneOf(LoadMap(_region), _mouth)?.Name
+        : _map.ZoneAt(at) is var z and >= 0 ? _map.Zones[z].Name : null;
+
+    /// <summary>Now and then on a region: the places she has swum to and the zones she is in answer their steps.</summary>
+    void StepChains(float dt)
+    {
+        if (_jelly is null || _place != ReefPlace.Region || (_chainCheck -= dt) > 0f) return;
+        _chainCheck = 0.5f;
+        var her = _world.Player.Position;
+        NoteChain(StepKind.Find, at: her);
+        if (ZoneHere(her) is { } zone) NoteChain(StepKind.Enter, zone: zone);
+    }
+
+    /// <summary>The chains' steps as the HUD's kelp ribbons show them (gold).</summary>
+    IEnumerable<RequestRibbons.Ribbon> ChainRibbons() =>
+        _jelly is { } jelly ? Chains.Active(jelly).Select(a => new RequestRibbons.Ribbon(Chains.Short(a.Step, a.Count), ChainGold, ChainGold, false))
+            : Enumerable.Empty<RequestRibbons.Ribbon>();
+
+    /// <summary>The chains' places on the maps: a place to find, or the great cave's mouth to find (on her region).</summary>
+    IEnumerable<(System.Numerics.Vector2 At, Color Colour)> ChainMarks()
+    {
+        if (_jelly is not { } jelly || _place != ReefPlace.Region) yield break;
+        var hand = LoadMap(_region);
+        foreach (var (_, step, _) in Chains.Active(jelly))
+        {
+            if (step.Kind == StepKind.Find) yield return (step.At, ChainGold);
+            if (step.Kind == StepKind.Mouth && hand.Mouths.FindIndex(m => m.Folk == step.Folk) is var i and >= 0 && i < _map.Mouths.Count)
+                yield return (_map.Mouths[i].At, ChainGold);
         }
     }
 

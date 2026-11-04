@@ -58,6 +58,8 @@ public sealed class PlaneBody
     public bool WasFiring;
     /// <summary>Bubble Shield: untouchable inside it while this counts down.</summary>
     public float ShieldTimer;
+    /// <summary>Ink Cloud: the Leak's creatures lose her while this counts down (PlaneWorld.Unseen).</summary>
+    public float CloakTimer;
     /// <summary>Tide Pulse (PlanePushWave.cs): seconds into its waves (−1: none under way), their whole length and the radius they clear.</summary>
     public float PushTime = -1f, PushLength = 1f, PushRadius;
 

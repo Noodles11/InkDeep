@@ -1047,6 +1047,8 @@ public partial class TopDownMain : Node3D
         var hand = LoadMap(_region);
         int floors = OpenReef.CaveFloors(hand, near);
         bool great = OpenReef.GreatOf(hand, near) is not null;
+        // A chain that asks her to find this great cave: she has.
+        if (OpenReef.GreatOf(hand, near) is { } found && best < ChainTuning.MouthReach) NoteChain(StepKind.Mouth, folk: found.Id);
         string facts = _world.ShutMouths.Contains(near) ? great ? "Sealed for good" : "Sealed · the Leak will seep back"
             : $"Level {OpenReef.CaveLevel(hand, near)} · {floors} {(floors == 1 ? "floor" : "floors")}{(great ? " · Great cave" : "")}";
         var door = _map.Mouths[near];
@@ -2633,6 +2635,7 @@ public partial class TopDownMain : Node3D
             foreach (var e in _world.Events)
             {
                 NoteRequest(e);
+                NoteChainEvent(e);
                 NoteHaven(e);
                 _blight.OnEvent(e);
                 _adventure.OnEvent(_world, e);
@@ -2794,7 +2797,17 @@ public partial class TopDownMain : Node3D
                     // Its mark: a small round smear of the picture where it went off.
                     _camera.AddBlur(e.Position, Mathf.Clamp(e.Size * 0.75f, 1f, 2.4f));
                 }
-                else if (e.Type == PlaneEventType.ActiveUsed) _combat.ActiveUsed(_world);
+                else if (e.Type == PlaneEventType.ActiveUsed)
+                {
+                    _combat.ActiveUsed(_world);
+                    // Conch Horn: the sea answers, a ring of moving water out to its reach.
+                    if (_world.Run.SlotActive((int)e.Direction.X)?.Active?.Action == OctoShoots.Core.Items.ActiveAction.ConchHorn)
+                    {
+                        _combat.Shockwave(e.Position, e.Size, 0.5f);
+                        _sfx.PlayPitched("spout", 0.6f, -4f);
+                        if (_view.CameraShake) _camera.Shake(0.15f);
+                    }
+                }
                 else if (e.Type == PlaneEventType.SealRefused)
                 {
                     // The boss's wall takes no light yet: a dull knock, and now and then why.

@@ -415,6 +415,17 @@ fallback is a small trade at Tull's fan: a pearl or two for shells, until Ottili
   shop's cave is Ottilie's home: till she is in it the shop's stands are empty (`PlaneOptions.ShopShut`) and the
   Pearls tab sells nothing (`PauseMenu.Sells`), though her slots can still be changed in the bay. Bubbles's corner of
   the lagoon is the Dusk Dance: its drawer gives back every skill point spent, to lay again (`PlaneRun.Relearn`).
+- **The key quest chains** (`PlaneChains.cs`: `Chains`, `Jelly.Chains`): each freed neighbour's begins once she is home,
+  its steps in turn, shown as gold kelp ribbons on the HUD with their places marked on the maps; the last pays her
+  active pearl with her line for it. Tull's "Find Kip": chart the Shallows' east, free two primes in the Shallows, find
+  the Cleaning Station (Bubble Shield). Kip's "My kelp clients stopped coming": swim into the Kelp Jungle, untie a
+  request, free a prime there, find the Still Bed (Whale Song). Fennel's "The wreck has gone quiet": swim into the
+  Sunken Galleon, seal a leak there, free a prime there, find the Captain's Hold (Ink Cloud). Ottilie's "My best
+  glint": find her old hoard in the wreck's debris, bring her glint home (Prism Pearl; on the reef, not in her sealed
+  cave). Bubbles's "Where the reef goes down": find where it goes down past the Carnival's mirrors (Conch Horn; the
+  way below the shelf comes with the second map). Ink Cloud and Conch Horn work on the plane for this
+  (docs/PEARLS.md).
+- **Tull's late line** (`Neighbour.Late`): once Bubbles is home, the shore's lights that don't move like stars.
 - **Verification:** `--reef=cave:22` starts in Tull's cave, and `--reef=cave:23` to `26` with `--floor=3` on Kip's,
   Fennel's, Ottilie's and Bubbles's deepest floors (`--at=boss-near` near the boss);
   `--dbg-freed=tull,kip,fennel,ottilie,bubbles` has them freed and home, and `--reef=bay --at=103,775`,

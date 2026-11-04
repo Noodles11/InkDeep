@@ -373,4 +373,69 @@ public class FolkTests
         Assert.Equal(45, run.Shells);
         Assert.Equal(0, jelly.Banked);
     }
+
+    [Fact]
+    public void EachNeighboursChainBeginsOnceSheIsHome_ItsStepsInTurn_TheLastPayingHerActivePearl()
+    {
+        var jelly = new Jelly();
+        Assert.Empty(Chains.Active(jelly));
+        jelly.Freed.Add("tull");
+        var (chain, step, _) = Assert.Single(Chains.Active(jelly));
+        Assert.Equal("tull", chain.Folk);
+        Assert.Equal(StepKind.Find, step.Kind);
+        // Out of order, nothing moves; in order, step by step.
+        Assert.Empty(Chains.Note(jelly, StepKind.Mouth, folk: "kip"));
+        Assert.Empty(Chains.Note(jelly, StepKind.Find, at: new Vector2(100f, 100f)));
+        Assert.Equal(StepKind.Find, Chains.Active(jelly).Single().Step.Kind);
+        Chains.Note(jelly, StepKind.Find, at: step.At + new Vector2(3f, 0f));
+        Assert.Equal(StepKind.Prime, Chains.Active(jelly).Single().Step.Kind);
+        Chains.Note(jelly, StepKind.Prime, zone: "kelp");
+        Chains.Note(jelly, StepKind.Prime, zone: "shallows");
+        Assert.Equal(1, Chains.Active(jelly).Single().Count);
+        Chains.Note(jelly, StepKind.Prime, zone: "shallows");
+        var done = Chains.Note(jelly, StepKind.Mouth, folk: "kip");
+        Assert.Equal("tull", Assert.Single(done).Folk);
+        Assert.Empty(Chains.Active(jelly));
+        Assert.True(Chains.Done(jelly, Chains.Of("tull")!));
+        // Every chain pays an active pearl that works on the open reef, and its Mouth steps name a great cave.
+        var hand = Reef.Value;
+        foreach (var c in Chains.All)
+        {
+            Assert.NotNull(Folk.Get(c.Folk));
+            Assert.Contains(c.Pearl, PlaneRun.PortedPearls);
+            Assert.True(Catalog.Value.TryGet(c.Pearl, out var pearl) && pearl.Kind == ItemKind.Active, $"{c.Pearl} is an active pearl");
+            foreach (var s in c.Steps.Where(s => s.Kind == StepKind.Mouth)) Assert.Contains(hand.Mouths, m => m.Folk == s.Folk);
+        }
+        // Tull's late line is hers once the Carnival's neighbour is home.
+        var tull = Folk.Get("tull")!;
+        Assert.DoesNotContain(Enumerable.Range(0, 8), v => Folk.Line(tull, v) == tull.Late);
+        Assert.Contains(Enumerable.Range(0, 8), v => Folk.Line(tull, v, late: true) == tull.Late);
+    }
+
+    [Fact]
+    public void InkCloudLosesHerToTheLeaksCreatures_ConchHornShakesThemOffAndAway()
+    {
+        var hand = Reef.Value;
+        var map = TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("reef", hand.Depth, 3), 0.2f, 2);
+        var run = new PlaneRun(Catalog.Value, new Tuning()) { Reef = true };
+        run.Add("ink_cloud");
+        run.Add("conch_horn");
+        var w = new PlaneWorld(map, new Tuning(), run, PlaneOptions.OpenReef);
+        Assert.Equal("ink_cloud", run.SlotActive(0)?.Id);
+        Assert.Equal("conch_horn", run.SlotActive(1)?.Id);
+        run.SetCharge(0, 1f);
+        run.SetCharge(1, 1f);
+        Assert.False(w.Unseen);
+        w.Step(new PlaneInput { UseActive = true });
+        Assert.True(w.Unseen);
+        Assert.Contains(w.Clouds, c => Vector2.Distance(c.Position, w.Player.Position) < 0.5f);
+        Hold(w, w.Player.Position, 4.5f);
+        Assert.False(w.Unseen);
+        // Conch Horn: the murkling beside her is shaken and knocked away.
+        var m = w.Murklings.First(x => x.Alive && !x.Prime);
+        w.Player.Position = w.Player.PrevPosition = m.Position + new Vector2(2f, 0f);
+        w.Step(new PlaneInput { UseActive2 = true });
+        Assert.True(m.Shaken > 0f);
+        Assert.True(Vector2.Dot(m.Velocity, m.Position - w.Player.Position) > 0f, "knocked away from her");
+    }
 }

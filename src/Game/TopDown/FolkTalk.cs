@@ -51,7 +51,7 @@ public partial class FolkTalk : Control
     }
 
     /// <summary>A frame: the neighbour she is near (null: none), the bubble fading in and out.</summary>
-    public void Sync((Neighbour Folk, BossSpec Spec)? near, float dt)
+    public void Sync((Neighbour Folk, BossSpec Spec)? near, bool late, float dt)
     {
         if (near is { } n && n.Folk.Id != _who)
         {
@@ -60,7 +60,7 @@ public partial class FolkTalk : Control
             int visit = _visits.TryGetValue(_who, out int v) ? v : 0;
             _visits[_who] = visit + 1;
             _name.Text = n.Folk.Name;
-            _line.Text = Folk.Line(n.Folk, visit);
+            _line.Text = Folk.Line(n.Folk, visit, late);
             _portrait.Spec = n.Spec;
         }
         else if (near is null) _who = null;

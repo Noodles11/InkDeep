@@ -863,7 +863,7 @@ public sealed partial class PlaneWorld
         var to = p.Position - m.Position;
         float d = to.Length();
         var dir = SafeNormalize(to);
-        bool sees = d < AdventureTuning.SpikedSense;
+        bool sees = !Unseen && d < AdventureTuning.SpikedSense;
         Vector2 wish = Wobble(m, 0.3f);
         if (sees && !NavLine(m.Position, p.Position))
             // Rock between: round it toward her, to where it can see her again.
@@ -899,7 +899,7 @@ public sealed partial class PlaneWorld
         var p = Player;
         float speed = Tuning.PlaneCruiseSpeed * AdventureTuning.TadpoleSpeed;
         float d = Vector2.Distance(m.Position, p.Position);
-        bool chase = d < AdventureTuning.TadpoleSense;
+        bool chase = !Unseen && d < AdventureTuning.TadpoleSense;
         Vector2 wish = (chase ? WayToHer(m.Position) * speed : Vector2.Zero) + Wobble(m, chase ? 0.5f : 0.6f);
         if (wish.Length() > speed) wish = Vector2.Normalize(wish) * speed;
         m.Target = chase ? p.Position : m.Position;
@@ -951,7 +951,7 @@ public sealed partial class PlaneWorld
         foreach (var o in school) centre += o.Position;
         centre /= school.Count;
         Vector2 wish;
-        if (Vector2.Distance(centre, p.Position) < AdventureTuning.ShoalSense)
+        if (!Unseen && Vector2.Distance(centre, p.Position) < AdventureTuning.ShoalSense)
         {
             // Its place on the ring: evenly round her, the ring circling her (each school its own way, each layer a little
             // faster than the one inside it) — never tied to her aim, so she can time her shots through the gaps.

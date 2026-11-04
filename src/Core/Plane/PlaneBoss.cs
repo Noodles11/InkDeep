@@ -486,8 +486,8 @@ public sealed partial class PlaneWorld
         var p = Player;
         var spec = boss.Spec;
         boss.ActTime += Dt;
-        // A Vibration sense hears her shots and dashes.
-        if (p.IsDashing || Events.Exists(e => e.Type == PlaneEventType.Shot)) boss.Heard = p.Position;
+        // A Vibration sense hears her shots and dashes (and a water sense keeps where it last had her, for when it loses her).
+        if (p.IsDashing || Events.Exists(e => e.Type == PlaneEventType.Shot) || spec.Sense == BossSense.Water && !Unseen) boss.Heard = p.Position;
         if (spec.Exposure == Exposure.MovingWindow && boss.Act != BossAct.Stagger) boss.PearlTurn += spec.PearlOrbit * Dt;
         if (IsDrippus(boss))
         {
@@ -715,7 +715,8 @@ public sealed partial class PlaneWorld
     {
         var target = boss.Spec.Sense switch
         {
-            BossSense.Water => Player.Position,
+            // (In her Ink Cloud it aims where it last felt her.)
+            BossSense.Water => Unseen ? boss.Heard : Player.Position,
             BossSense.Vibration => boss.Heard,
             _ => from + boss.Facing,
         };

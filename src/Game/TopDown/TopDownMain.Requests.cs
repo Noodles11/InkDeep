@@ -144,6 +144,7 @@ public partial class TopDownMain
         _world.GiveXp(r.Xp);
         _sfx.PlayPitched("bell_ring", 1.25f, -4f);
         Say("Request untied");
+        NoteChain(StepKind.Untie);
         SaveJelly();
         RefillFan();
     }
@@ -188,6 +189,8 @@ public partial class TopDownMain
         if (jelly is not null && Reef && _view.RequestRibbons)
             foreach (var r in jelly.Carried)
                 shown.Add(new RequestRibbons.Ribbon(Requests.Short(r, MouthNames(r.Region)), RequestRibbons.KindColour(r.Kind), TokenColour(r), r.Done));
+        // The bay's folk's chains, in gold, after the requests.
+        if (jelly is not null && Reef && _view.RequestRibbons) shown.AddRange(ChainRibbons());
         _ribbons.Show(shown);
         var marks = new List<(System.Numerics.Vector2 At, Color Colour)>();
         if (jelly is not null)
@@ -209,6 +212,7 @@ public partial class TopDownMain
                 foreach (var r in jelly.Carried)
                     if (!r.Done && r.Region == _region && r.Mouth >= 0 && r.Mouth < _map.Mouths.Count) marks.Add((_map.Mouths[r.Mouth].At, RequestRibbons.KindColour(r.Kind)));
         }
+        marks.AddRange(ChainMarks());
         _minimap.SetMarks(marks);
         _fullMap.Marks.Clear();
         _fullMap.Marks.AddRange(marks);

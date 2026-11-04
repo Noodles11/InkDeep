@@ -13,6 +13,8 @@ namespace OctoShoots.Core.Plane;
 /// </summary>
 public static class PlaneCombatTuning
 {
+    /// <summary>Conch Horn: the murklings it shakes loose are knocked away this fast (m/s).</summary>
+    public const float ConchKnock = 9f;
     public const float PlayerMaxHp = 100f;
     /// <summary>Untouchable for a moment after a hit.</summary>
     public const float PlayerHurtGrace = 0.6f;
@@ -614,12 +616,15 @@ public sealed partial class PlaneWorld
     /// <summary>
     /// The active pearls (F; on the open reef F, Q and E for her three slots): each recharges over its listed time (faster
     /// with her recharge stat), and when charged, its button uses it. Bubble Shield: untouchable for its duration. Whale
-    /// Song: heals (not at full HP). Tide Pulse: three waves push everything loose away from her (PlanePushWave.cs). The
-    /// events' Direction.X says which slot.
+    /// Song: heals (not at full HP). Tide Pulse: three waves push everything loose away from her (PlanePushWave.cs). Ink
+    /// Cloud: a cloud of her own ink where she is, and for its duration the Leak's creatures lose her (Unseen). Conch
+    /// Horn: every murkling within its reach is shaken loose, knocked away and stunned for its duration. The events'
+    /// Direction.X says which slot.
     /// </summary>
     void StepActive(in PlaneInput input)
     {
         Player.ShieldTimer -= Dt;
+        Player.CloakTimer -= Dt;
         for (int slot = 0; slot < PlaneRun.SlotCount; slot++)
             StepSlot(slot, slot switch { 0 => input.UseActive, 1 => input.UseActive2, _ => input.UseActive3 });
     }
@@ -648,6 +653,24 @@ public sealed partial class PlaneWorld
                 break;
             case ActiveAction.PushWave:
                 BeginPushWave(spec.Duration, spec.Radius);
+                break;
+            case ActiveAction.InkCloud:
+                p.CloakTimer = spec.Duration;
+                Clouds.Add(new PlaneInk { Position = p.Position, Radius = spec.Radius, Life = spec.Duration, MaxLife = spec.Duration });
+                break;
+            case ActiveAction.ConchHorn:
+                foreach (var m in Murklings)
+                {
+                    if (!m.Alive || Vector2.Distance(m.Position, p.Position) > spec.Radius) continue;
+                    var away = SafeNormalize(m.Position - p.Position);
+                    if (away == Vector2.Zero) away = Vector2.UnitY;
+                    if (m.Clinging) m.Position = p.Position + away * (Radius + m.Radius + 0.3f);
+                    m.Clinging = false;
+                    m.Windup = 0f;
+                    m.Shaken = spec.Duration;
+                    m.Velocity = away * PlaneCombatTuning.ConchKnock;
+                }
+                size = spec.Radius;
                 break;
             case ActiveAction.WhaleSong:
                 if (p.Hp >= Run.MaxHp)

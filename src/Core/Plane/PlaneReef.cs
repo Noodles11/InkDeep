@@ -318,6 +318,9 @@ public sealed partial class PlaneWorld
     /// </summary>
     public bool CaveLeakOpen => Map.LeakCave && (LeaksOpen > 0 || Map.HoleDown);
 
+    /// <summary>In her Ink Cloud (the active): the Leak's creatures have lost her.</summary>
+    public bool Unseen => Player.CloakTimer > 0f;
+
     /// <summary>On the zoned reef, too far from her to live just now (ReefTuning.Awake): it holds still where it is.</summary>
     bool Asleep(Vector2 at) => Map.Zones.Count > 0 && Vector2.DistanceSquared(at, Player.Position) > ReefTuning.Awake * ReefTuning.Awake;
 

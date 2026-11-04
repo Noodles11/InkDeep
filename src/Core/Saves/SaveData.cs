@@ -43,6 +43,8 @@ public sealed class Jelly
     /// <summary>The great leaks sealed for good, and the named creatures freed (now living in the bay), by id.</summary>
     public HashSet<string> GreatLeaks { get; set; } = new();
     public HashSet<string> Freed { get; set; } = new();
+    /// <summary>Her progress through each freed neighbour's key quest chain (Chains): the step she is on, and how far along it.</summary>
+    public Dictionary<string, List<int>> Chains { get; set; } = new();
     /// <summary>Her world's seed code: every leak cave is grown from it.</summary>
     public string Seed { get; set; } = "";
     /// <summary>Per region: the cave behind each of its mouths now, and how many minor leaks she has sealed there (OpenReef).</summary>
