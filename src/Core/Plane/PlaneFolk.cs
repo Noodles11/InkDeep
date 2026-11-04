@@ -42,6 +42,12 @@ public static class Folk
             "Leave your shells with me, if you like. I'll keep them the way I keep these.",
             "Shh. They're sleeping. All forty-one of them.",
         }),
+        new("ottilie", "Ottilie", "common octopus", "Many-Armed Ottilie", "The Captain's Hold", 9, 3, BayService.PearlCollector, new[]
+        {
+            "Real ink is brown and honest, darling. That stuff out there is ink pretending.",
+            "Buying, selling, admiring. Mostly admiring. Bring me something that glints.",
+            "The brightest fish I ever saw swam through my wreck going north-east. All the wrong colours. Or all the right ones.",
+        }),
     };
 
     /// <summary>The neighbours whose boss waits in a great cave now (the rest come with theirs).</summary>

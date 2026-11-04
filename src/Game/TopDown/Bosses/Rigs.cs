@@ -13,6 +13,7 @@ public static class Rigs
         BodyPlan.Ink => new DrippusRig(),
         BodyPlan.Reptile => new TurtleRig(),
         BodyPlan.Fish => new FishRig(),
+        BodyPlan.Cephalopod => new OctopusRig(),
         _ => new GastropodRig(),
     };
 }

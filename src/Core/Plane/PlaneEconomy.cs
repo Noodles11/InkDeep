@@ -144,7 +144,7 @@ public sealed partial class PlaneWorld
     void PlaceShop()
     {
         var shop = Map.Pois.FirstOrDefault(p => p.Kind == PoiKind.Shop);
-        if (shop is null) return;
+        if (shop is null || Options.ShopShut) return;
         Vector2 facing = shop.Cave >= 0 ? Map.Caves[shop.Cave].Facing : Vector2.UnitY;
         Vector2 side = new(-facing.Y, facing.X);
         var rng = new Rng(Map.Seed ^ 0x5409UL ^ ((ulong)Map.Level << 28) ^ ((ulong)Map.Depth << 36) ^ ((ulong)Map.Attempt << 50));

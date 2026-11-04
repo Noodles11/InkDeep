@@ -260,6 +260,56 @@ public class FolkTests
     }
 
     [Fact]
+    public void Ottilie_KeepsHerPearlBehindHer_ThrowsThenReachesAlongLitLines_ThenLiftsItToAdmire_AndBloomsPastHalf()
+    {
+        var w = GreatCave("ottilie");
+        var boss = w.Boss!;
+        Assert.Equal(BodyForm.Octopus, boss.Spec.Form);
+        Assert.True(boss.Spec.Shielded);
+        var her = w.ArenaCenter + new Vector2(0f, 9f);
+        Hold(w, her, 3f, () => boss.Stage == BossStage.Fight);
+        // She turns to face her, her body between Clementine and the pearl.
+        Hold(w, her, 1.5f);
+        Assert.True(Vector2.Distance(boss.PearlAt, her) > Vector2.Distance(boss.Position, her) + 0.5f, "her pearl is behind her");
+        var volleys = new System.Collections.Generic.List<BossAttack>();
+        bool lit = false;
+        for (int i = 0; i < 10 * PlaneWorld.TickRate && boss.Act != BossAct.Window; i++)
+        {
+            w.Player.Position = w.Player.PrevPosition = her;
+            w.Player.Hp = w.Run.MaxHp;
+            w.Step(default);
+            foreach (var e in w.Events.Where(e => e.Type == PlaneEventType.BossVolley)) volleys.Add((BossAttack)(int)e.Size);
+            lit |= boss.ReachDirs.Count == 2;
+        }
+        Assert.Equal(new[] { BossAttack.ArcBombs, BossAttack.Reach }, volleys);
+        Assert.True(lit, "the reach's lines are lit before it strikes");
+        Assert.Equal(BossAct.Window, boss.Act);
+        Assert.True(boss.Open);
+        // Past half her meter, an ink bloom joins her act.
+        w.DebugHurtBoss(boss.MaxHp * 0.55f);
+        Assert.Equal(new[] { BossAttack.ArcBombs, BossAttack.Bloom, BossAttack.Reach }, PlaneWorld.ActNow(boss));
+        Hold(w, her, 8f, () => boss.Blooms.Count > 0);
+        Assert.NotEmpty(boss.Blooms);
+    }
+
+    [Fact]
+    public void TheBaysShellShopStandsEmptyTillOttilieIsHome()
+    {
+        var region = TopDownGenerator.FromHand(Reef.Value);
+        var open = new PlaneWorld(region, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), PlaneOptions.OpenReef);
+        Assert.NotEmpty(open.Stands);
+        var shut = PlaneOptions.OpenReef;
+        shut.ShopShut = true;
+        Assert.Empty(new PlaneWorld(region, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), shut).Stands);
+        Assert.False(Folk.Opens(new Jelly(), BayService.PearlCollector));
+        // Her home is the shop's cave, by its stands.
+        var shop = region.Pois.First(p => p.Kind == PoiKind.Shop);
+        var home = Reef.Value.Homes.First(h => h.Folk == "ottilie");
+        float d = Vector2.Distance(shop.Position, new Vector2(home.X, home.Y));
+        Assert.True(d < 4f && region.IsOpen(new Vector2(home.X, home.Y)), $"the shop is at {shop.Position}, her home {d} m from it");
+    }
+
+    [Fact]
     public void FennelKeepsTheShellsSheLeavesWithHim()
     {
         var jelly = new Jelly();

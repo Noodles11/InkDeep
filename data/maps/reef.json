@@ -80,6 +80,8 @@
     { "id": "stern", "x": 800, "y": 760, "r": 12, "role": "Branch" },
     { "id": "hold", "x": 790, "y": 620, "r": 12, "role": "Branch" },
     { "id": "quarter", "x": 780, "y": 480, "r": 12, "role": "Branch" },
+    // The captain's hold, east of the keel in the heart of the wreck's field: Ottilie's great cave.
+    { "id": "captains", "x": 655, "y": 612, "r": 10, "role": "Branch" },
 
     // The Coral Carnival: round arenas ringed by tall reef, farthest from the bay.
     { "id": "tentwest", "x": 480, "y": 110, "r": 14, "role": "Main" },
@@ -160,6 +162,7 @@
     { "a": "cannons", "b": "quarter", "width": 8 },
     { "a": "bowsprit", "b": "quarter", "width": 7, "kind": "Side" },
     { "a": "hold", "b": "stern", "width": 7, "kind": "Side" },
+    { "a": "keel", "b": "captains", "width": 7, "kind": "Side" },
 
     // The passes into the Coral Carnival: from the Kelp Jungle's east, and from the Galleon's bow.
     { "a": "kelpeast", "b": "tentwest", "width": 6 },
@@ -185,11 +188,12 @@
   // The Tide Fan: the great old sea fan in the commune, where the bay ties its requests (docs/QUESTS-PROPOSAL.md §2).
   "fan": { "x": 110, "y": 762 },
   // The bay's folk at home, each once she is freed (docs/NPC-BOSSES-PROPOSAL.md): Tull's shell by the fan's foot, Kip
-  // beside the mirror, Fennel's weed bed in the lagoon's quiet corner.
+  // beside the mirror, Fennel's weed bed in the lagoon's quiet corner, Ottilie in the market's cave with her hoard.
   "homes": [
     { "x": 103, "y": 770, "folk": "tull" },
     { "x": 57, "y": 773, "folk": "kip" },
-    { "x": 81, "y": 781, "folk": "fennel" }
+    { "x": 81, "y": 781, "folk": "fennel" },
+    { "x": 26, "y": 786, "folk": "ottilie" }
   ],
   // The cave mouths, each by a chamber's north wall (an opening facing the camera is sought first), and each with its
   // danger: its cave's level is its zone's area level plus it, its floors one more (docs/REEF-WORLD.md §3).
@@ -224,6 +228,7 @@
     // cave's level and floors are her own.
     { "x": 30, "y": 646, "name": "ledge", "folk": "tull" },
     { "x": 405, "y": 623, "name": "station", "folk": "kip" },
-    { "x": 36, "y": 35, "name": "still bed", "folk": "fennel" }
+    { "x": 36, "y": 35, "name": "still bed", "folk": "fennel" },
+    { "x": 655, "y": 603, "name": "captain's hold", "folk": "ottilie" }
   ]
 }

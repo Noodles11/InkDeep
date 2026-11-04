@@ -3424,6 +3424,7 @@ public partial class TopDownMain : Node3D
         else if (!_debug.Visible)
         {
             _pause.Trade = _world.InHaven;
+            _pause.Sells = BayOpen(BayService.PearlCollector);
             _pause.Open(_world.Run, _catalog, _seed.ToString(), Reef ? (_map.LeakCave ? $"{CaveName(_region, _mouth)} · {CaveFacts(_map.CaveLevel, _floor, _map.Floors)}" : PlaceTitle().Title) : $"{_id} · {HudView.Clock(_elapsed)}", _world.Player.Hp, _achievementData);
             FillPauseRequests();
             if (_pad) _pause.FocusFirst();

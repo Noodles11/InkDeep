@@ -264,6 +264,7 @@ public static class BossIntroArt
             case BodyForm.Turtle: Turtle(ci, s, g, menace, mood, t, body, accent, iris, blink, freed); break;
             case BodyForm.Wrasse: Wrasse(ci, s, g, menace, mood, t, body, accent, iris, blink, freed); break;
             case BodyForm.Seadragon: Seadragon(ci, s, g, menace, mood, t, body, accent, iris, blink, freed); break;
+            case BodyForm.Octopus: Octopus(ci, s, g, menace, mood, t, body, accent, iris, blink, freed); break;
             default: Snail(ci, spec, s, g, menace, mood, t, body, accent, iris, blink); break;
         }
         if (!freed && (spec.Theme == MutationTheme.InkSacs || spec.Minor == MutationTheme.InkSacs))
@@ -443,6 +444,44 @@ public static class BossIntroArt
         Inked(ci, Ellipse(head, s * 0.28f, s * 0.24f, 18), body, s, 0.04f);
         Inked(ci, Ellipse(head + new Vector2(-s * 0.1f, -s * 0.25f), s * 0.18f, s * 0.08f, 10), accent, s, 0.03f);
         Face(ci, head + new Vector2(-s * 0.02f, 0f), s * 0.3f, mood, menace, 0.5f + 0.3f * Mathf.Sin(t * 0.7f), blink, iris, t);
+    }
+
+    /// <summary>
+    /// Ottilie, the octopus: grand and theatrical, she lifts her treasure in one arm to admire it, the others waving.
+    /// Corrupted, the pearl is black and too many arms crowd under her; freed, it is a pale glint and her eight are hers.
+    /// </summary>
+    static void Octopus(CanvasItem ci, float s, float g, float menace, Mood mood, float t, Color body, Color accent, Color iris, float blink, bool freed)
+    {
+        int arms = freed ? 8 : 12;
+        // The arms, out under her and curling at their tips; the one at her right lifts her treasure.
+        for (int i = 0; i < arms; i++)
+        {
+            float a = Mathf.Pi * (0.1f + 0.8f * i / (arms - 1));
+            bool extra = !freed && i % 3 == 1;
+            var root = new Vector2(Mathf.Cos(a) * s * 0.45f, s * 0.35f);
+            var pts = new List<Vector2>();
+            for (int k = 0; k <= 8; k++)
+            {
+                float u = k / 8f, w = Mathf.Sin(t * 2.2f + i + u * 3f) * 0.25f;
+                pts.Add(root + new Vector2(Mathf.Cos(a + w * u) * s * 0.95f * u, Mathf.Sin(a + w * u) * s * 0.75f * u));
+            }
+            var c = extra ? new Color(0.1f, 0.04f, 0.16f) : body;
+            for (int k = 1; k < pts.Count; k++) ci.DrawLine(pts[k - 1], pts[k], Line, s * (0.2f - 0.15f * k / 8f) + s * 0.04f, true);
+            for (int k = 1; k < pts.Count; k++) ci.DrawLine(pts[k - 1], pts[k], c, s * (0.2f - 0.15f * k / 8f), true);
+        }
+        // The lifted arm and its treasure, held up high (admired: a slow turn of it).
+        float up = g < 0.8f ? Mathf.SmoothStep(0f, 1f, g / 0.8f) : 1f;
+        var hand = new Vector2(s * (0.95f + 0.05f * Mathf.Sin(t * 1.5f)), s * (0.2f - 0.95f * up));
+        ci.DrawLine(new Vector2(s * 0.4f, s * 0.2f), hand, Line, s * 0.2f, true);
+        ci.DrawLine(new Vector2(s * 0.4f, s * 0.2f), hand, body, s * 0.14f, true);
+        Blob(ci, hand + new Vector2(0f, -s * 0.16f), s * 0.16f, s * 0.16f, freed ? new Color(0.97f, 0.95f, 0.9f) : new Color(0.08f, 0.04f, 0.12f), s, 0.035f);
+        ci.DrawCircle(hand + new Vector2(-s * 0.05f, -s * 0.21f), s * 0.04f, new Color(1f, 1f, 1f, 0.7f));
+        // The mantle: a big soft bulb, mottled, with her face low on it.
+        var mantle = Ellipse(new Vector2(-s * 0.05f, -s * 0.2f), s * 0.75f, s * 0.82f, 32);
+        Inked(ci, mantle, body, s);
+        for (int i = 0; i < 6; i++) ci.DrawCircle(new Vector2(-s * 0.4f + s * 0.16f * i, -s * 0.5f + s * 0.08f * (i % 2)), s * 0.05f, accent with { A = 0.45f });
+        ci.DrawColoredPolygon(Ellipse(new Vector2(-s * 0.35f, -s * 0.62f), s * 0.22f, s * 0.1f, 14), new Color(1f, 1f, 1f, 0.3f));
+        Face(ci, new Vector2(-s * 0.02f, s * 0.05f), s * 0.6f, mood, menace, -0.2f + 0.5f * up, blink, iris, t);
     }
 
     /// <summary>The giant clam: snaps its shell twice, then blows a bubble raspberry; a pearl crown on top.</summary>

@@ -41,6 +41,8 @@ public partial class TopDownMain
     PlaneOptions ReefOptions()
     {
         var options = PlaneOptions.OpenReef;
+        // The bay's shell shop stands empty till Ottilie, its collector, is home.
+        options.ShopShut = !BayOpen(BayService.PearlCollector);
         if (GreatHere is { } n && _map.HasBoss && _jelly is { } jelly && !jelly.Freed.Contains(n.Id))
             options.Boss = FolkBosses.For(n.Id, n.Level, _map.Menace);
         return options;

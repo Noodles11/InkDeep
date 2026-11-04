@@ -357,8 +357,9 @@ public partial class PauseMenu : Control
         }
     }
 
-    /// <summary>The open reef: whether pearls can be slotted and sold here (in Lantern Bay).</summary>
+    /// <summary>The open reef: whether pearls can be slotted and sold here (in Lantern Bay), and whether the shell shop is open to buy them (its collector, Ottilie, home).</summary>
     public bool Trade { get; set; }
+    public bool Sells { get; set; } = true;
 
     /// <summary>
     /// The pearls tab. On a run: every pearl she has absorbed, newest first. On the open reef: her three active slots (each
@@ -377,7 +378,9 @@ public partial class PauseMenu : Control
                 if (catalog.TryGet(id, out var item)) _pearls.AddChild(Row(item));
             return;
         }
-        _pearls.AddChild(Note(Trade ? $"{run.Shells} silver shells. The shell shop buys any pearl: an active for its worth, a passive for half." : "Change your slots and sell pearls in Lantern Bay."));
+        _pearls.AddChild(Note(!Trade ? "Change your slots and sell pearls in Lantern Bay."
+            : Sells ? $"{run.Shells} silver shells. The shell shop buys any pearl: an active for its worth, a passive for half."
+            : "The market's cave stands dark: its collector is not home yet. Your slots are yours to change."));
         _pearls.AddChild(Heading("Active slots"));
         string[] keys = { InputSetup.Active, InputSetup.Active2, InputSetup.Active3 };
         for (int i = 0; i < PlaneRun.SlotCount; i++)
@@ -401,7 +404,7 @@ public partial class PauseMenu : Control
 
     Button SellButton(PlaneRun run, string id)
     {
-        var sell = new Button { Text = $"Sell · {run.SellPrice(id)}", Disabled = !Trade, SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        var sell = new Button { Text = $"Sell · {run.SellPrice(id)}", Disabled = !Trade || !Sells, SizeFlagsVertical = SizeFlags.ShrinkCenter };
         sell.Pressed += () => PearlSold?.Invoke(id);
         return sell;
     }

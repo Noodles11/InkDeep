@@ -17,6 +17,8 @@ public sealed class PlaneOptions
     public bool Vases = false;
     /// <summary>The boss to meet on a boss level (null: the boss generator's for its loop and depth). Tests and debug starts name one.</summary>
     public OctoShoots.Core.Bosses.BossSpec? Boss;
+    /// <summary>The bay's shell shop stands empty: its collector, Ottilie, is not home yet (docs/NPC-BOSSES-PROPOSAL.md §7.3).</summary>
+    public bool ShopShut;
     /// <summary>
     /// The adventure (docs/ADVENTURE.md): leaks floating in the chambers fill the water with ink, the reef's fish turn
     /// in it, and the way down opens once enough leaks are sealed. The older creatures (Blightroots, Blotters,

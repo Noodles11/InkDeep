@@ -357,8 +357,8 @@ fallback is a small trade at Tull's fan: a pearl or two for shells, until Ottili
 
 ## 12. What is built so far
 
-- **The folk and their great caves** (`PlaneFolk.cs`: `Folk`, `Neighbour`, `BayService`): Grandmother Tull, Kip and
-  Fennel are in the game. A great mouth names its neighbour (`HandPoint.Folk`) and comes after every minor mouth in `reef.json`
+- **The folk and their great caves** (`PlaneFolk.cs`: `Folk`, `Neighbour`, `BayService`): Grandmother Tull, Kip,
+  Fennel and Ottilie are in the game. A great mouth names its neighbour (`HandPoint.Folk`) and comes after every minor mouth in `reef.json`
   (`OpenReef.MinorMouths`: the Tide Fan names only those). Its cave's level and floors are hers (`OpenReef.CaveLevel`,
   `CaveFloors`), its number is its own past every minor cave's (`OpenReef.GreatCave`), it is grown from the region's
   seed, and its deepest floor is a boss's arena round its leak (`LevelPlan.ForCave`'s `boss`).
@@ -386,6 +386,15 @@ fallback is a small trade at Tull's fan: a pearl or two for shells, until Ottili
   drip too (`PlaneBoss.Decoys`). His body is `FishRig`'s seadragon: lobed fronds that sway, stiffen and rattle on the
   lash's warning, his pink eggs under his tail in their own colour; the stands are `BossView.Stands`. His cut-in curls
   his tail round his eggs (`BossIntroArt.Seadragon`).
+- **Ottilie** (The Captain's Hold, east of the keel in the wreck's field, three floors, level 9): her pearl is held
+  behind her (`BossSpec.Shielded`): she turns at 0.5 rad/s to keep her body between it and Clementine, and a shot
+  coming through her body to it is stopped, so circling round her finds it. She hurls three glints of ink at her (arc
+  bombs), then two arms shoot 12 m out along lines lit on the floor through the second before (`BossAttack.Reach`,
+  `PlaneBoss.ReachDirs`); after each act she lifts the pearl up to admire it for 1.2 s, when it can be struck from
+  anywhere. From half her meter an ink bloom joins: a cloud 7 m across toward her for 5 s (`BossAttack.Bloom`,
+  `PlaneBoss.Blooms`). Her body is `OctopusRig` (eight segmented arms that sway, curl back on the throw's warning and
+  reach along the lines, six thinner inked ones crowding between, ink sacs at her back); the lit lines and the clouds
+  are `BossView.Reach`; her cut-in lifts her treasure (`BossIntroArt.Octopus`).
 - **The homecoming:** freed, she swims off, and the caption reads "Grandmother Tull has gone home to Lantern Bay"
   (`Jelly.Freed`).
 - **At home** (`FolkView`, `FolkTalk`, `FolkPortrait`; `HandLayout.Homes`): her true body at her home by the Tide Fan,
@@ -393,9 +402,11 @@ fallback is a small trade at Tull's fan: a pearl or two for shells, until Ottili
 - **The bay's services** (`Folk.Opens`): the Tide Fan hangs bare, ties no ribbons and opens no drawer till Tull is
   home; silt lies over the mirror, which opens no drawer, till Kip is home (beside it). Fennel's weed bed, in the
   lagoon's quiet corner, is the Brood Bed: within 2.2 m of it its drawer opens (`FolkMenu`), where she leaves the
-  shells she carries with him or takes them back (`BroodBed`, `Jelly.Banked`: never lost when she dims). A service
-  whose neighbour is not in the game yet (the shell shop) is open as before.
-- **Verification:** `--reef=cave:22` starts in Tull's cave, and `--reef=cave:23 --floor=3` and `--reef=cave:24
-  --floor=3` on Kip's and Fennel's deepest floors (`--at=boss-near` near the boss), `--dbg-freed=tull,kip,fennel` has
-  them freed and home, and `--reef=bay --at=103,775`, `--at=57,777.5` or `--at=81,785.5` sets Clementine down by
-  Tull, Kip or Fennel (`--at=81,782` on his bed, its drawer open). Tests: `FolkTests`.
+  shells she carries with him or takes them back (`BroodBed`, `Jelly.Banked`: never lost when she dims). The shell
+  shop's cave is Ottilie's home: till she is in it the shop's stands are empty (`PlaneOptions.ShopShut`) and the
+  Pearls tab sells nothing (`PauseMenu.Sells`), though her slots can still be changed in the bay.
+- **Verification:** `--reef=cave:22` starts in Tull's cave, and `--reef=cave:23`, `24` and `25` with `--floor=3` on
+  Kip's, Fennel's and Ottilie's deepest floors (`--at=boss-near` near the boss); `--dbg-freed=tull,kip,fennel,ottilie`
+  has them freed and home, and `--reef=bay --at=103,775`, `--at=57,777.5`, `--at=81,785.5` or `--at=28,782` sets
+  Clementine down by Tull, Kip, Fennel or Ottilie (`--at=81,782` on Fennel's bed, its drawer open). Tests:
+  `FolkTests`.

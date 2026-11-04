@@ -68,6 +68,10 @@ public static class PlaneBossTuning
     public const float DartReach = 14f, DartSpeed = 16f, StationTurn = 4f;
     /// <summary>A hider's stands lie this far round its arena (a share of its radius); she finds it by coming this near, or by her light reaching it.</summary>
     public const float StandsOut = 0.6f, FoundReach = 5f;
+    /// <summary>A reach: two arms this long out of the body, this far either side of its aim, this wide, its blow ×ReachHit.</summary>
+    public const float ReachLength = 12f, ReachSpread = 0.3f, ReachWidth = 0.9f, ReachHit = 1.3f;
+    /// <summary>An ink bloom: a cloud this far toward her, this wide, lasting this long.</summary>
+    public const float BloomOut = 6f, BloomRadius = 7f, BloomLife = 5f;
     /// <summary>Freed, she shudders this long as her pearl bursts, then leaves (a clam leaps aside and stays open).</summary>
     public const float FreedShudder = 0.3f, ShuffleAside = 6.5f, LeaveSpeed = 1.4f, LeaveSeconds = 25f;
 }
@@ -83,6 +87,13 @@ public sealed class BossSac
     public BodySite Site;
     public float Hp;
     public bool Alive => Hp > 0f;
+}
+
+/// <summary>A cloud of the Leak's ink a boss blooms into the water (Ottilie's): it hides what is in it, and fades.</summary>
+public sealed class InkBloom
+{
+    public Vector2 Position;
+    public float Radius, Age;
 }
 
 /// <summary>An ink pulse ring running out from the boss.</summary>
@@ -148,6 +159,9 @@ public sealed class PlaneBoss
     public int Stand;
     public bool Hidden, Found;
     public readonly List<int> Decoys = new();
+    /// <summary>A reach's arms, aimed and lit on the floor as its warning begins (empty: none coming); its ink blooms in the water.</summary>
+    public readonly List<Vector2> ReachDirs = new();
+    public readonly List<InkBloom> Blooms = new();
     public readonly List<BossSac> Sacs = new();
     public readonly List<BossRing> Rings = new();
     /// <summary>How long its current warning lasts (Drippus Prime's is its next attack's own; the others' their spec's).</summary>
@@ -556,6 +570,15 @@ public sealed partial class PlaneWorld
         if (boss.DartLeft > 0f) StepDart(boss);
         else Move(boss);
         StepRings(boss);
+        // A reach coming: its arms' lines are aimed and lit on the floor as its warning begins.
+        if (Coming(boss) == BossAttack.Reach && boss.ReachDirs.Count == 0)
+        {
+            var aim = AimFrom(boss, boss.Position);
+            boss.ReachDirs.Add(Rotate(aim, -PlaneBossTuning.ReachSpread));
+            boss.ReachDirs.Add(Rotate(aim, PlaneBossTuning.ReachSpread));
+        }
+        foreach (var b in boss.Blooms) b.Age += Dt;
+        boss.Blooms.RemoveAll(b => b.Age >= PlaneBossTuning.BloomLife);
 
         // A clam snaps at Clementine when she comes close while it is open (once per opening).
         if (boss.Active.Contains(BossAttack.Snap) && boss.Open && !boss.SnapUsed && boss.SnapTimer < 0f
@@ -596,7 +619,7 @@ public sealed partial class PlaneWorld
     void EndAct(PlaneBoss boss)
     {
         bool hiding = boss.Spec.Move == BossMove.Hide && !boss.Found;
-        if (boss.Spec.Exposure is Exposure.Stagger or Exposure.CoaxOut && !hiding)
+        if ((boss.Spec.Exposure is Exposure.Stagger or Exposure.CoaxOut || boss.Spec.Shielded) && !hiding)
         {
             SetAct(boss, BossAct.Window);
             Events.Add(new PlaneEvent(PlaneEventType.BossStagger, boss.Position, boss.Facing, 0f));
@@ -797,6 +820,31 @@ public sealed partial class PlaneWorld
             case BossAttack.Brood:
                 Brood(boss);
                 break;
+            case BossAttack.Reach:
+            {
+                // Its arms shoot out along their lit lines: touching one hurts her (a dash slips them).
+                var p = Player;
+                foreach (var dir in boss.ReachDirs)
+                {
+                    var from = boss.Position + dir * boss.Radius;
+                    var along = Math.Clamp(Vector2.Dot(p.Position - from, dir), 0f, PlaneBossTuning.ReachLength);
+                    if (!p.IsDashing && Vector2.Distance(p.Position, from + dir * along) < PlaneBossTuning.ReachWidth + Radius)
+                    {
+                        HurtPlayer(boss.Damage * PlaneBossTuning.ReachHit, dir, DamageSource.BossContact);
+                        break;
+                    }
+                }
+                Events.Add(new PlaneEvent(PlaneEventType.BossReach, boss.Position, boss.ReachDirs.Count > 0 ? boss.ReachDirs[0] : boss.Facing));
+                boss.ReachDirs.Clear();
+                break;
+            }
+            case BossAttack.Bloom:
+            {
+                var at = boss.Position + AimFrom(boss, boss.Position) * PlaneBossTuning.BloomOut;
+                boss.Blooms.Add(new InkBloom { Position = at, Radius = PlaneBossTuning.BloomRadius });
+                Events.Add(new PlaneEvent(PlaneEventType.BossBloom, at, Vector2.Zero, PlaneBossTuning.BloomRadius));
+                break;
+            }
             case BossAttack.Dart:
                 // Straight at her, and on past where she was.
                 boss.DartDir = AimFrom(boss, boss.Position);
@@ -970,6 +1018,14 @@ public sealed partial class PlaneWorld
         }
         if (boss.Open && Reaches(shot, boss.PearlAt, boss.Spec.PearlRadius))
         {
+            // A shielded pearl, held behind the body: a shot coming through the body to it is stopped by the body
+            // (all but in the window, when the pearl is lifted up out of its arms).
+            if (boss.Spec.Shielded && boss.Act != BossAct.Window
+                && Vector2.Dot(SafeNormalize(shot.Velocity), SafeNormalize(boss.PearlAt - boss.Position)) > 0.3f)
+            {
+                Pop(shot, boss.Position - shot.Position);
+                return true;
+            }
             // The crust absorbs most of a shot's light while it holds (each layer a sixth).
             DamageBoss(boss, HitDamage(shot) * (1f - 0.17f * boss.Crust), shot.Velocity);
             Pop(shot, boss.PearlAt - shot.Position);
@@ -977,7 +1033,7 @@ public sealed partial class PlaneWorld
         }
         // An open clam's raised lid lets light over its shell to the pearl; a moving-window body is all skin; a Coax-out
         // body is soft, and light passes over it to the sacs and the pearl.
-        if (boss.Open || boss.Spec.Exposure == Exposure.CoaxOut) return false;
+        if (boss.Open && !boss.Spec.Shielded || boss.Spec.Exposure == Exposure.CoaxOut) return false;
         if (!Reaches(shot, boss.Position, boss.Radius)) return false;
         Pop(shot, boss.Position - shot.Position);
         return true;
@@ -1086,6 +1142,8 @@ public sealed partial class PlaneWorld
         boss.StageTime = 0f;
         boss.SnapTimer = -1f;
         boss.DartLeft = 0f;
+        boss.ReachDirs.Clear();
+        boss.Blooms.Clear();
         boss.Rings.Clear();
         // Its pearl bursts into light: it washes the whole arena clean of corruption and turns white. Its pearls still in
         // the water burst with it.

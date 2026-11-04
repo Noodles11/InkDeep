@@ -7,19 +7,20 @@ namespace OctoShoots.Core.Bosses;
 /// The body plans a boss can grow from (docs/BOSS-GENERATOR.md §3). Later passes add the rest. Ink is no animal: a
 /// creature of ink itself (Drippus Prime, authored, never generated).
 /// </summary>
-public enum BodyPlan { Bivalve, Echinoderm, Cnidarian, Gastropod, Ink, Reptile, Fish }
+public enum BodyPlan { Bivalve, Echinoderm, Cnidarian, Gastropod, Ink, Reptile, Fish, Cephalopod }
 
 /// <summary>
 /// The real animal a plan is drawn as (Murkling: Drippus Prime's body, a murkling prime grown huge; Turtle: Grandmother
-/// Tull's, Wrasse: Kip's, Seadragon: Fennel's, docs/NPC-BOSSES-PROPOSAL.md, authored, never rolled).
+/// Tull's, Wrasse: Kip's, Seadragon: Fennel's, Octopus: Ottilie's, docs/NPC-BOSSES-PROPOSAL.md, authored, never rolled).
 /// </summary>
-public enum BodyForm { GiantClam, SeaStar, Urchin, MoonJelly, Siphonophore, SeaHare, Snail, Murkling, Turtle, Wrasse, Seadragon }
+public enum BodyForm { GiantClam, SeaStar, Urchin, MoonJelly, Siphonophore, SeaHare, Snail, Murkling, Turtle, Wrasse, Seadragon, Octopus }
 
 /// <summary>
 /// The designed fight ideas (§4): every boss is one of these (TheBrood: Drippus Prime's; CleaningDance: Kip's, darting
-/// at her and turning side-on after; TheHiddenOne: Fennel's, hidden in the kelp till she finds him; all authored).
+/// at her and turning side-on after; TheHiddenOne: Fennel's, hidden in the kelp till she finds him; TheTreasure: Ottilie's,
+/// her pearl held behind her; all authored).
 /// </summary>
-public enum BossConcept { TheLid, SnappingGate, TurningStar, SlamAndSigh, PulseBell, TrailingCurtain, TheSpreader, ShyShell, BoilHeart, TheBrood, CleaningDance, TheHiddenOne }
+public enum BossConcept { TheLid, SnappingGate, TurningStar, SlamAndSigh, PulseBell, TrailingCurtain, TheSpreader, ShyShell, BoilHeart, TheBrood, CleaningDance, TheHiddenOne, TheTreasure }
 
 public enum BossTier { Common, Rare, Legendary }
 
@@ -40,9 +41,10 @@ public enum Exposure
 
 /// <summary>
 /// What it throws (§7.1). All of it is ink her light cannot clear. Brood and Fan are Drippus Prime's: murklings born out
-/// of its body, and a fan of big drops slung at her. Dart: a fish's straight charge along its aim (Kip's).
+/// of its body, and a fan of big drops slung at her. Dart: a fish's straight charge along its aim (Kip's). Reach: arms
+/// shot out along lines lit on the floor a moment before; Bloom: a cloud of the Leak's ink (both Ottilie's).
 /// </summary>
-public enum BossAttack { Ring, Wall, Helix, Homing, Snap, ArcBombs, PulseRing, SacBurst, Brood, Fan, Dart }
+public enum BossAttack { Ring, Wall, Helix, Homing, Snap, ArcBombs, PulseRing, SacBurst, Brood, Fan, Dart, Reach, Bloom }
 
 /// <summary>
 /// How it moves (§7.2). Station: it keeps to its station in the arena's middle, gliding back to it between acts (Kip's).
@@ -175,6 +177,11 @@ public sealed class BossSpec
     /// <summary>A hider's stands round its arena, and how many of the others drip too from its second phase (decoys).</summary>
     public int Stands { get; set; }
     public int Decoys { get; set; }
+    /// <summary>
+    /// Its body shields its pearl (Ottilie's, held behind her): her light reaches the pearl only from its own side, or in
+    /// the window after each act (as the boss lifts it up to admire it); elsewhere the body stops her shots.
+    /// </summary>
+    public bool Shielded { get; set; }
     /// <summary>Its fan (a sweep): this many drops across this arc (degrees), each a plain drop; 0: Drippus Prime's slingshot fan.</summary>
     public int SweepCount { get; set; }
     public float SweepArc { get; set; }

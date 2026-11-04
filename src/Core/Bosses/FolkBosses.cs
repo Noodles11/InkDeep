@@ -19,6 +19,7 @@ public static class FolkBosses
         "tull" => Tull(level, menace),
         "kip" => Kip(level, menace),
         "fennel" => Fennel(level, menace),
+        "ottilie" => Ottilie(level, menace),
         _ => null,
     };
 
@@ -141,6 +142,45 @@ public static class FolkBosses
         foreach (float side in new[] { 1f, -1f })
             for (int i = 0; i < 4; i++)
                 spec.Sites.Add(new BodySite(side * (0.45f + 0.65f * i), 0.8f, 0.4f, false));
+        return spec;
+    }
+
+    /// <summary>
+    /// Many-Armed Ottilie (§7.2): an octopus with fourteen arms crowding over each other and ink sacs swelling between
+    /// them, her pearl held behind her, the best of her hoard. The treasure: she turns slowly to keep her body between it
+    /// and Clementine (her light reaches it only from behind her, so circling round her finds it), and after each act
+    /// she lifts it up to admire it for 1.2 s, when it can be struck from anywhere. She hurls three glints of the Leak's
+    /// ink at her (the hoard throw), then shoots two arms out along lines lit on the floor a moment before (the reach).
+    /// From half her meter an ink bloom joins: a cloud of the Leak's ink toward her, hiding what is in it.
+    /// </summary>
+    static BossSpec Ottilie(int level, float menace)
+    {
+        var spec = new BossSpec
+        {
+            Seed = SeedOf("ottilie"), Cycle = 1, Depth = 3, Menace = menace, Tier = BossTier.Common,
+            Plan = BodyPlan.Cephalopod, Form = BodyForm.Octopus, Concept = BossConcept.TheTreasure, Blockade = true,
+            Name = "Many-Armed Ottilie", Folk = "ottilie",
+            // 5.5 m across her arms mutated, 3.3 m freed.
+            Radius = 2.2f, Stretch = 1f, Count = 8, Bulk = 0.55f, TrueScale = 0.6f,
+            // Warm red-brown, her suckers pale.
+            TrueColor = new Vector3(0.62f, 0.3f, 0.2f), Accent = new Vector3(0.92f, 0.68f, 0.52f),
+            Theme = MutationTheme.ExtraArms, Minor = MutationTheme.InkSacs, Mutation = 0.6f,
+            // Held behind her (her back to the pearl's side), shielded by her body.
+            Exposure = Exposure.MovingWindow, Pearl = new BodySite(MathF.PI, 0.75f, 0.6f, false), PearlRadius = 0.7f, PearlOrbit = 0f,
+            Shielded = true,
+            Hp = MeterAt(level), Damage = 12f, Telegraph = 0.8f, Rest = 2.2f, Volleys = 2, VolleyInterval = 1f, Window = 1.2f,
+            PearlSpeed = 7f, RingCount = 0, WallCount = 0, HelixArms = 3,
+            Signature = BossAttack.ArcBombs, Move = BossMove.Turn, MoveRate = 0.5f, Tempo = BossTempo.Duelist,
+            Sense = BossSense.Water, Spice = BossSpice.FastLongWindows,
+        };
+        spec.Fillers.Add(BossAttack.Reach);
+        spec.Acts.Add(new[] { BossAttack.ArcBombs, BossAttack.Reach });
+        spec.Acts.Add(new[] { BossAttack.ArcBombs, BossAttack.Bloom, BossAttack.Reach });
+        spec.Phases.Add(new BossPhase(0.5f, PhaseChange.MutationAdvances, BossAttack.Bloom));
+        // The extra arms, crowding in between her own all round; two ink sacs swelling between them at her back.
+        for (int i = 0; i < 6; i++) spec.Sites.Add(new BodySite(MathF.Tau * (i + 0.5f) / 6f, 0.55f, 0.4f, false));
+        spec.Sites.Add(new BodySite(MathF.PI * 0.8f, 0.35f, 0.35f, true));
+        spec.Sites.Add(new BodySite(-MathF.PI * 0.8f, 0.35f, 0.35f, true));
         return spec;
     }
 }

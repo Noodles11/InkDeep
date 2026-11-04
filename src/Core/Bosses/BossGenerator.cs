@@ -66,14 +66,15 @@ public static class BossGenerator
         BodyForm.Murkling => BodyPlan.Ink,
         BodyForm.Turtle => BodyPlan.Reptile,
         BodyForm.Wrasse or BodyForm.Seadragon => BodyPlan.Fish,
+        BodyForm.Octopus => BodyPlan.Cephalopod,
         _ => BodyPlan.Gastropod,
     };
 
     /// <summary>A fight only authored, never rolled (Drippus Prime's, the bay's folk's).</summary>
-    public static bool Authored(BossConcept concept) => concept is BossConcept.TheBrood or BossConcept.CleaningDance or BossConcept.TheHiddenOne;
+    public static bool Authored(BossConcept concept) => concept is BossConcept.TheBrood or BossConcept.CleaningDance or BossConcept.TheHiddenOne or BossConcept.TheTreasure;
 
     /// <summary>A body only authored, never rolled (Drippus Prime's, the bay's folk's).</summary>
-    public static bool Authored(BodyForm form) => form is BodyForm.Murkling or BodyForm.Turtle or BodyForm.Wrasse or BodyForm.Seadragon;
+    public static bool Authored(BodyForm form) => form is BodyForm.Murkling or BodyForm.Turtle or BodyForm.Wrasse or BodyForm.Seadragon or BodyForm.Octopus;
 
     /// <summary>What each body can throw: an attack only comes from anatomy that could make it (§7.1).</summary>
     public static bool Can(BodyForm form, BossAttack attack) => attack switch
@@ -103,6 +104,8 @@ public static class BossGenerator
         [BossAttack.Brood] = new[] { "spreader" },
         [BossAttack.Fan] = new[] { "ranged" },
         [BossAttack.Dart] = new[] { "close" },
+        [BossAttack.Reach] = new[] { "close" },
+        [BossAttack.Bloom] = new[] { "ranged" },
     };
 
     /// <summary>The mutation themes each body can grow (§5).</summary>

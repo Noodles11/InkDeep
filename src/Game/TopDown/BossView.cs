@@ -286,6 +286,7 @@ public partial class BossView : Node3D
         float fade = boss.Freed && boss.Spec.Form != OctoShoots.Core.Bosses.BodyForm.GiantClam ? 1f - Mathf.Clamp((boss.Leap - 0.6f) / 0.4f, 0f, 1f) : 1f;
         // (No brightening as her light strikes it, for now.) A hider hidden in its kelp is half seen.
         SyncStands(boss, dt);
+        SyncReach(boss);
         rig.SetSkin(_drained, 0f, _surge + (world.Corruption is null ? 0f : boss.Crust * 0.06f), fade * (1f - 0.5f * _hide));
         _root.Visible &= !boss.Gone && fade > 0.01f;
 
