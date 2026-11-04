@@ -4017,6 +4017,7 @@ public partial class TopDownMain : Node3D
         input.Move = new System.Numerics.Vector2(stick.X, stick.Y);
         bool dash = Input.IsActionPressed(InputSetup.Dash);
         input.Dash = dash && !_dashLatched;
+        input.DashHeld = dash;
         _dashLatched = dash;
         bool dive = Input.IsActionPressed(InputSetup.Dive);
         input.Dive = dive && !_diveLatched || _autoDive && _world.CanDive;

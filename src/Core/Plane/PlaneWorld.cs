@@ -10,6 +10,8 @@ public struct PlaneInput
 {
     public Vector2 Move;
     public bool Dash;
+    /// <summary>The dash key held: past the dash's burst, she swims on fast (Tuning.SprintMultiplier) while it is.</summary>
+    public bool DashHeld;
     /// <summary>Unit aim direction on the plane (mouse or arrow keys).</summary>
     public Vector2 Aim;
     /// <summary>Held: shoot along Aim (with Pearl Diver, held charges a pearl and letting go throws it).</summary>
@@ -36,6 +38,8 @@ public sealed class PlaneBody
     public float DashTimer;
     public float DashInvulnerableTimer;
     public float DashCooldownTimer;
+    /// <summary>Swimming fast on from a dash while its key stays held (it ends as the key is let go).</summary>
+    public bool Sprinting;
     public float Hp = PlaneCombatTuning.PlayerMaxHp;
     public float ShotTimer;
     /// <summary>Sardine Run: how far the stream has spun up, 0 (her normal rate) → 1 (MinigunMax times as fast).</summary>
@@ -232,6 +236,10 @@ public sealed partial class PlaneWorld
             Events.Add(new PlaneEvent(PlaneEventType.DashStarted, p.Position, dir));
             DashFreed();
         }
+        // Holding the key on past the burst (or pressed while the dash cools down), she keeps up a fast swim; letting go
+        // (or a tumble) ends it.
+        if (input.Dash && !tumbling) p.Sprinting = true;
+        if (!input.DashHeld || tumbling) p.Sprinting = false;
 
         if (p.DashTimer > 0f)
         {
@@ -259,8 +267,9 @@ public sealed partial class PlaneWorld
                 float k = MathUtil.Clamp01(p.JetTimer / t.JetDuration);
                 boost = 1f + (t.JetMultiplier - 1f) * k * k * (3f - 2f * k);
             }
-            float maxSpeed = cruise * boost;
-            float rate = cruise / t.AccelTime * boost;
+            float sprint = p.Sprinting ? t.SprintMultiplier : 1f;
+            float maxSpeed = cruise * MathF.Max(boost, sprint);
+            float rate = cruise / t.AccelTime * MathF.Max(boost, sprint);
             if (p.Velocity.Length() > maxSpeed + 0.01f) rate = MathF.Max(rate, t.OverspeedDecel);
             p.Velocity = MoveToward(p.Velocity, wish * maxSpeed, rate * Dt);
             p.IdleTime = 0f;

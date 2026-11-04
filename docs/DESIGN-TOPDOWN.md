@@ -120,6 +120,10 @@ What changes is the protagonist's skin:
 - **Ink dash** inherited (DESIGN-2D §30): Space, ~3.4× speed, 0.32 s
   untouchable, 0.85 s cooldown, leaves a slowing ink cloud. (Yes, a jellyfish
   inks — the Leak changed her. The Sea-pedia entry says so.)
+- **The fast swim:** holding the dash key on past its burst, she keeps swimming
+  at 1.75× her cruise (`Tuning.SprintMultiplier`, `PlaneBody.Sprinting`) for as
+  long as it is held, at no cost for now; letting go, she eases back to her
+  cruise. Pressed while the dash cools down, the key starts the fast swim alone.
 - Base swim speed 4.5 m/s equivalent, scaled by the `speed` stat.
 
 ### 2.3 Combat — bubbles

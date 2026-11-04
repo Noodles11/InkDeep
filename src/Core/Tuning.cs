@@ -48,6 +48,8 @@ public sealed class Tuning
     [Tune("Dash", 0.5f, 4f)] public float InkCloudRadius = 1.6f;
     [Tune("Dash", 0.5f, 5f)] public float InkCloudLife = 2f;
     [Tune("Dash", 0.1f, 1f)] public float InkCloudSlow = 0.4f;
+    /// <summary>The dash key held on past its burst: she swims on at this many times her cruise, for free (for now).</summary>
+    [Tune("Dash", 1f, 3f)] public float SprintMultiplier = 1.75f;
 
     // Shooting (§4.1)
     [Tune("Shooting", 0.5f, 20f)] public float Damage = 3.5f;

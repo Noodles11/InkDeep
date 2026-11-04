@@ -54,6 +54,23 @@ public class PlaneWorldTests
     }
 
     [Fact]
+    public void HoldingTheDashKeySheSwimsOnFastAfterItsBurst_LettingGoSheSlowsToHerCruise()
+    {
+        var t = new Tuning();
+        var w = World();
+        Vector2 dir = DownTheCorridor(w);
+        w.Step(new PlaneInput { Move = dir, Dash = true, DashHeld = true });
+        // Past the burst (0.24 s), still held: her sprint, not her cruise.
+        for (int i = 0; i < 40; i++) w.Step(new PlaneInput { Move = dir, DashHeld = true });
+        Assert.True(w.Player.Sprinting);
+        Assert.Equal(6f * t.SprintMultiplier, w.Player.Velocity.Length(), 0);
+        // Let go: back to her cruise.
+        for (int i = 0; i < 60; i++) w.Step(new PlaneInput { Move = dir });
+        Assert.False(w.Player.Sprinting);
+        Assert.Equal(6f, w.Player.Velocity.Length(), 0);
+    }
+
+    [Fact]
     public void TheInkDashBurstsLeavesInkAndCoolsDown()
     {
         var t = new Tuning();
