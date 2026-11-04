@@ -913,8 +913,8 @@ public partial class TitleMain : Node3D
         _card = card;
         if (card is JellyCard)
         {
-            // Her slots are no drawer: the jellies float in the sea, their cards under them, all over the page.
-            card.Size = size;
+            // Her slots are no drawer: the jellies float in the sea, their cards under them, all over the page
+            // (its own full-rect anchors fill the page; a size set here would only be overridden).
             card.Modulate = new Color(1f, 1f, 1f, 0f);
             card.CreateTween().TweenProperty(card, "modulate:a", 1f, Reduced ? 0.01f : 0.35f).SetDelay(Reduced ? 0f : 0.15f);
         }
