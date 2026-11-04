@@ -11,9 +11,10 @@ public enum BodyPlan { Bivalve, Echinoderm, Cnidarian, Gastropod, Ink, Reptile, 
 
 /// <summary>
 /// The real animal a plan is drawn as (Murkling: Drippus Prime's body, a murkling prime grown huge; Turtle: Grandmother
-/// Tull's, Wrasse: Kip's, Seadragon: Fennel's, Octopus: Ottilie's, docs/NPC-BOSSES-PROPOSAL.md, authored, never rolled).
+/// Tull's, Wrasse: Kip's, Seadragon: Fennel's, Octopus: Ottilie's, Dragonet: Bubbles's, docs/NPC-BOSSES-PROPOSAL.md,
+/// authored, never rolled).
 /// </summary>
-public enum BodyForm { GiantClam, SeaStar, Urchin, MoonJelly, Siphonophore, SeaHare, Snail, Murkling, Turtle, Wrasse, Seadragon, Octopus }
+public enum BodyForm { GiantClam, SeaStar, Urchin, MoonJelly, Siphonophore, SeaHare, Snail, Murkling, Turtle, Wrasse, Seadragon, Octopus, Dragonet }
 
 /// <summary>
 /// The designed fight ideas (§4): every boss is one of these (TheBrood: Drippus Prime's; CleaningDance: Kip's, darting
@@ -42,9 +43,10 @@ public enum Exposure
 /// <summary>
 /// What it throws (§7.1). All of it is ink her light cannot clear. Brood and Fan are Drippus Prime's: murklings born out
 /// of its body, and a fan of big drops slung at her. Dart: a fish's straight charge along its aim (Kip's). Reach: arms
-/// shot out along lines lit on the floor a moment before; Bloom: a cloud of the Leak's ink (both Ottilie's).
+/// shot out along lines lit on the floor a moment before; Bloom: a cloud of the Leak's ink (both Ottilie's). Rise: it
+/// lifts off the plane through its warning and comes down where its shadow is, in a ring (Bubbles's dusk rise).
 /// </summary>
-public enum BossAttack { Ring, Wall, Helix, Homing, Snap, ArcBombs, PulseRing, SacBurst, Brood, Fan, Dart, Reach, Bloom }
+public enum BossAttack { Ring, Wall, Helix, Homing, Snap, ArcBombs, PulseRing, SacBurst, Brood, Fan, Dart, Reach, Bloom, Rise }
 
 /// <summary>
 /// How it moves (§7.2). Station: it keeps to its station in the arena's middle, gliding back to it between acts (Kip's).

@@ -12,8 +12,9 @@ public enum BayService { TideFan, Mirror, BroodBed, PearlCollector, DuskDance }
 /// One of the bay's folk (docs/NPC-BOSSES-PROPOSAL.md): who she is, the boss the Leak made of her and the great cave she
 /// waits at the bottom of (its level and floors fixed, the same for every jelly), and what she opens in the bay.
 /// </summary>
+/// <remarks>Called: what the reef calls her till she names herself in the bay (Bubbles: "The dragonet").</remarks>
 public sealed record Neighbour(
-    string Id, string Name, string Species, string Boss, string Cave, int Level, int Floors, BayService Opens, string[] Lines);
+    string Id, string Name, string Species, string Boss, string Cave, int Level, int Floors, BayService Opens, string[] Lines, string? Called = null);
 
 /// <summary>
 /// The bay's folk (docs/NPC-BOSSES-PROPOSAL.md): every NPC is a boss first. Each waits, corrupted, at the bottom of a great
@@ -48,6 +49,13 @@ public static class Folk
             "Buying, selling, admiring. Mostly admiring. Bring me something that glints.",
             "The brightest fish I ever saw swam through my wreck going north-east. All the wrong colours. Or all the right ones.",
         }),
+        new("bubbles", "Bubbles", "mandarin dragonet", "The Pale Dragonet", "The Empty Stage", 12, 3, BayService.DuskDance, new[]
+        {
+            "Bubbles. That's the sound the sky made when it looked at me.",
+            "Before the sea I lived somewhere small. The sun never moved. Food fell like snow. I think I dreamed it.",
+            "There were jellies there too, before me. Pale ones. They never went anywhere.",
+            "You don't have to keep swimming the way you learned.",
+        }, "The dragonet"),
     };
 
     /// <summary>The neighbours whose boss waits in a great cave now (the rest come with theirs).</summary>
@@ -62,7 +70,7 @@ public static class Folk
     public static bool Opens(Jelly jelly, BayService service) => Opener(service) is not { } n || jelly.Freed.Contains(n.Id);
 
     /// <summary>The caption as a neighbour swims off home.</summary>
-    public static string HomeCaption(Neighbour n) => $"{n.Name} has gone home to Lantern Bay";
+    public static string HomeCaption(Neighbour n) => $"{n.Called ?? n.Name} has gone home to Lantern Bay";
 
     /// <summary>What she says when Clementine swims close: her lines in turn, one more each visit.</summary>
     public static string Line(Neighbour n, int visit) => n.Lines[Math.Abs(visit) % n.Lines.Length];

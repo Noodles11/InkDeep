@@ -20,6 +20,7 @@ public static class FolkBosses
         "kip" => Kip(level, menace),
         "fennel" => Fennel(level, menace),
         "ottilie" => Ottilie(level, menace),
+        "bubbles" => Bubbles(level, menace),
         _ => null,
     };
 
@@ -181,6 +182,45 @@ public static class FolkBosses
         for (int i = 0; i < 6; i++) spec.Sites.Add(new BodySite(MathF.Tau * (i + 0.5f) / 6f, 0.55f, 0.4f, false));
         spec.Sites.Add(new BodySite(MathF.PI * 0.8f, 0.35f, 0.35f, true));
         spec.Sites.Add(new BodySite(-MathF.PI * 0.8f, 0.35f, 0.35f, true));
+        return spec;
+    }
+
+    /// <summary>
+    /// The Pale Dragonet (§8.2), who will call herself Bubbles: a mandarin dragonet whose every swirl of colour has
+    /// swollen into a glossy ink sac, the rest of her drained to ash. Boil Heart: five sacs, each a small meter; each one
+    /// burst gives back a swirl of her colour, and with all burst her pearl surfaces from her heart. Blind to Clementine,
+    /// she dances on her own cycle for the light above: she rises off the plane and comes down where her shadow is, in a
+    /// ring of drops (the dusk rise), then her sacs fire their rings. A spiral joins at a third of her meter; at each
+    /// third her sacs grow back, one fewer each time, her restored swirls staying where they are.
+    /// </summary>
+    static BossSpec Bubbles(int level, float menace)
+    {
+        var spec = new BossSpec
+        {
+            Seed = SeedOf("bubbles"), Cycle = 1, Depth = 4, Menace = menace, Tier = BossTier.Legendary,
+            Plan = BodyPlan.Fish, Form = BodyForm.Dragonet, Concept = BossConcept.BoilHeart, Blockade = true,
+            Name = "The Pale Dragonet", Folk = "bubbles",
+            // 4.5 m long mutated, 2.7 m freed.
+            Radius = 1.8f, Stretch = 1.25f, Count = 5, Bulk = 0.6f, TrueScale = 0.6f,
+            // Orange swirled with electric blue.
+            TrueColor = new Vector3(0.95f, 0.45f, 0.15f), Accent = new Vector3(0.1f, 0.45f, 0.95f),
+            Theme = MutationTheme.InkSacs, Mutation = 0.7f,
+            // Buried at her heart, under her sacs.
+            Exposure = Exposure.CoaxOut, Pearl = new BodySite(0f, 0f, 0.6f, false), PearlRadius = 0.8f, SacHp = MeterAt(level) * 0.08f,
+            Hp = MeterAt(level) * 0.75f, Damage = 12f, Telegraph = 1f, Rest = 2.4f, Volleys = 2, VolleyInterval = 1f, Window = 2.6f,
+            PearlSpeed = 7.5f, RingCount = 18, WallCount = 0, HelixArms = 4,
+            Signature = BossAttack.Rise, Move = BossMove.Circle, MoveRate = 0.15f, Tempo = BossTempo.Territorial,
+            Sense = BossSense.Blind, Spice = BossSpice.FastLongWindows,
+        };
+        spec.Fillers.Add(BossAttack.SacBurst);
+        spec.Fillers.Add(BossAttack.Helix);
+        spec.Acts.Add(new[] { BossAttack.Rise, BossAttack.SacBurst });
+        spec.Acts.Add(new[] { BossAttack.Rise, BossAttack.Helix, BossAttack.SacBurst });
+        spec.Acts.Add(new[] { BossAttack.Rise, BossAttack.Helix, BossAttack.Rise, BossAttack.SacBurst });
+        spec.Phases.Add(new BossPhase(0.34f, PhaseChange.MutationAdvances, BossAttack.Helix));
+        spec.Phases.Add(new BossPhase(0.67f, PhaseChange.MutationAdvances, null));
+        // Her swirls, swollen into sacs: over her back and flanks, round her heart.
+        for (int i = 0; i < 5; i++) spec.Sites.Add(new BodySite(MathF.Tau * i / 5f + 0.3f, 0.5f + 0.08f * (i % 2), 0.45f, true));
         return spec;
     }
 }

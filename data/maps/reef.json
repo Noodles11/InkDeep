@@ -91,7 +91,9 @@
     { "id": "mirrors", "x": 760, "y": 300, "r": 15, "role": "Branch" },
     { "id": "lanterns", "x": 740, "y": 140, "r": 16, "role": "Main" },
     { "id": "juggler", "x": 560, "y": 50, "r": 13, "role": "Branch" },
-    { "id": "finale", "x": 780, "y": 50, "r": 13, "role": "Exit" }
+    { "id": "finale", "x": 780, "y": 50, "r": 13, "role": "Exit" },
+    // The empty stage, east of the lanterns in the far north-east, farthest from the bay: Bubbles's great cave.
+    { "id": "stage", "x": 812, "y": 110, "r": 10, "role": "Branch" }
   ],
   "tunnels": [
     { "a": "post", "b": "lagoon", "width": 9 },
@@ -178,7 +180,8 @@
     { "a": "bigtop", "b": "mirrors", "width": 7 },
     { "a": "juggler", "b": "lanterns", "width": 7, "kind": "Side" },
     { "a": "lanterns", "b": "finale", "width": 8 },
-    { "a": "mirrors", "b": "lanterns", "width": 7, "kind": "Side" }
+    { "a": "mirrors", "b": "lanterns", "width": 7, "kind": "Side" },
+    { "a": "lanterns", "b": "stage", "width": 7, "kind": "Side" }
   ],
   "rooms": [
     { "kind": "Shop", "from": "market", "angle": 100, "distance": 14 }
@@ -188,12 +191,14 @@
   // The Tide Fan: the great old sea fan in the commune, where the bay ties its requests (docs/QUESTS-PROPOSAL.md §2).
   "fan": { "x": 110, "y": 762 },
   // The bay's folk at home, each once she is freed (docs/NPC-BOSSES-PROPOSAL.md): Tull's shell by the fan's foot, Kip
-  // beside the mirror, Fennel's weed bed in the lagoon's quiet corner, Ottilie in the market's cave with her hoard.
+  // beside the mirror, Fennel's weed bed in the lagoon's quiet corner, Ottilie in the market's cave with her hoard,
+  // Bubbles in the lagoon's brightest corner, where the evening light falls longest.
   "homes": [
     { "x": 103, "y": 770, "folk": "tull" },
     { "x": 57, "y": 773, "folk": "kip" },
     { "x": 81, "y": 781, "folk": "fennel" },
-    { "x": 26, "y": 786, "folk": "ottilie" }
+    { "x": 26, "y": 786, "folk": "ottilie" },
+    { "x": 62, "y": 762, "folk": "bubbles" }
   ],
   // The cave mouths, each by a chamber's north wall (an opening facing the camera is sought first), and each with its
   // danger: its cave's level is its zone's area level plus it, its floors one more (docs/REEF-WORLD.md §3).
@@ -229,6 +234,7 @@
     { "x": 30, "y": 646, "name": "ledge", "folk": "tull" },
     { "x": 405, "y": 623, "name": "station", "folk": "kip" },
     { "x": 36, "y": 35, "name": "still bed", "folk": "fennel" },
-    { "x": 655, "y": 603, "name": "captain's hold", "folk": "ottilie" }
+    { "x": 655, "y": 603, "name": "captain's hold", "folk": "ottilie" },
+    { "x": 812, "y": 101, "name": "stage", "folk": "bubbles" }
   ]
 }

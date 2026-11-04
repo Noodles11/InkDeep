@@ -72,7 +72,7 @@ public partial class TopDownMain
     bool BayOpen(BayService service) => _jelly is not { } jelly || Folk.Opens(jelly, service);
 
     /// <summary>The services that are a drawer at their neighbour's home (the fan and the mirror are places of their own).</summary>
-    static bool HasDrawer(Neighbour n) => n.Opens is BayService.BroodBed;
+    static bool HasDrawer(Neighbour n) => n.Opens is BayService.BroodBed or BayService.DuskDance;
 
     void OpenFolkMenu(Neighbour n)
     {
@@ -105,6 +105,21 @@ public partial class TopDownMain
         var run = _world.Run;
         switch (n.Opens)
         {
+            case BayService.DuskDance:
+            {
+                // Bubbles's Dusk Dance: every skill point she has spent comes back to lay again.
+                int spent = run.Upgrades;
+                return ("The Dusk Dance",
+                    $"At the soft end of the day Bubbles dances, rising in the water. Dance with her, and every skill point you have spent comes back to you to lay again. You have spent {spent}.",
+                    new List<FolkMenu.Choice>
+                    {
+                        new($"Dance with her  ({spent} {(spent == 1 ? "point" : "points")} back)", spent > 0, () =>
+                        {
+                            run.Relearn();
+                            Kept("Your points are yours to lay again");
+                        }),
+                    });
+            }
             default:
                 // Fennel's Brood Bed: the shells she leaves with him are never lost when she dims.
                 return ("The Brood Bed",

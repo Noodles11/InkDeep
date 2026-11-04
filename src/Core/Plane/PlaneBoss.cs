@@ -72,6 +72,8 @@ public static class PlaneBossTuning
     public const float ReachLength = 12f, ReachSpread = 0.3f, ReachWidth = 0.9f, ReachHit = 1.3f;
     /// <summary>An ink bloom: a cloud this far toward her, this wide, lasting this long.</summary>
     public const float BloomOut = 6f, BloomRadius = 7f, BloomLife = 5f;
+    /// <summary>A dusk rise comes down this near and far from the arena's middle.</summary>
+    public const float RiseNear = 3f, RiseFar = 8f;
     /// <summary>Freed, she shudders this long as her pearl bursts, then leaves (a clam leaps aside and stays open).</summary>
     public const float FreedShudder = 0.3f, ShuffleAside = 6.5f, LeaveSpeed = 1.4f, LeaveSeconds = 25f;
 }
@@ -162,6 +164,10 @@ public sealed class PlaneBoss
     /// <summary>A reach's arms, aimed and lit on the floor as its warning begins (empty: none coming); its ink blooms in the water.</summary>
     public readonly List<Vector2> ReachDirs = new();
     public readonly List<InkBloom> Blooms = new();
+    /// <summary>A dusk rise under way: where it lifted off and where it comes down (its shadow), null for none. Aloft, it is off her plane: not solid, and her light passes under it.</summary>
+    public Vector2 RiseFrom;
+    public Vector2? RiseTo;
+    public bool Aloft => RiseTo is not null;
     public readonly List<BossSac> Sacs = new();
     public readonly List<BossRing> Rings = new();
     /// <summary>How long its current warning lasts (Drippus Prime's is its next attack's own; the others' their spec's).</summary>
@@ -358,7 +364,7 @@ public sealed partial class PlaneWorld
         }
         // Its body is solid: Clementine is pushed off it (and hurt by it while the fight runs). Freed, only a clam
         // lying open stays solid; the others leave.
-        bool solid = boss.Stage == BossStage.Fight || boss.Freed && boss.Spec.Form == BodyForm.GiantClam;
+        bool solid = boss.Stage == BossStage.Fight && !boss.Aloft || boss.Freed && boss.Spec.Form == BodyForm.GiantClam;
         if (solid)
         {
             Vector2 off = p.Position - boss.Position;
@@ -579,6 +585,21 @@ public sealed partial class PlaneWorld
         }
         foreach (var b in boss.Blooms) b.Age += Dt;
         boss.Blooms.RemoveAll(b => b.Age >= PlaneBossTuning.BloomLife);
+        // A dusk rise coming: it lifts off and drifts, aloft, over to where it will come down.
+        if (Coming(boss) == BossAttack.Rise)
+        {
+            if (boss.RiseTo is null)
+            {
+                float a = _bossRng.Range(0f, MathF.Tau);
+                float far = MathF.Min(PlaneBossTuning.RiseFar, ArenaRadius - boss.Radius - PlaneBossTuning.RimKeep);
+                var to = ArenaCenter + new Vector2(MathF.Cos(a), MathF.Sin(a)) * _bossRng.Range(PlaneBossTuning.RiseNear, MathF.Max(far, PlaneBossTuning.RiseNear));
+                boss.RiseFrom = boss.Position;
+                boss.RiseTo = Clear(to, boss.Radius) ? to : ArenaCenter;
+            }
+            float k = boss.Act == BossAct.Telegraph ? boss.ActTime / MathF.Max(boss.TelegraphLength, 0.01f) : boss.ActTime / MathF.Max(spec.VolleyInterval, 0.01f);
+            k = MathUtil.Clamp01(k);
+            boss.Position = Vector2.Lerp(boss.RiseFrom, boss.RiseTo!.Value, k * k * (3f - 2f * k));
+        }
 
         // A clam snaps at Clementine when she comes close while it is open (once per opening).
         if (boss.Active.Contains(BossAttack.Snap) && boss.Open && !boss.SnapUsed && boss.SnapTimer < 0f
@@ -845,6 +866,13 @@ public sealed partial class PlaneWorld
                 Events.Add(new PlaneEvent(PlaneEventType.BossBloom, at, Vector2.Zero, PlaneBossTuning.BloomRadius));
                 break;
             }
+            case BossAttack.Rise:
+                // It comes down where its shadow is, in a ring of drops.
+                if (boss.RiseTo is { } down) boss.Position = down;
+                boss.RiseTo = null;
+                PearlRing(boss);
+                Events.Add(new PlaneEvent(PlaneEventType.BossPulse, boss.Position, boss.Facing));
+                break;
             case BossAttack.Dart:
                 // Straight at her, and on past where she was.
                 boss.DartDir = AimFrom(boss, boss.Position);
@@ -1002,6 +1030,8 @@ public sealed partial class PlaneWorld
         var boss = Boss;
         if (boss is null || boss.Stage != BossStage.Fight) return false;
         if (IsDrippus(boss)) return ShotHitsDrippus(boss, shot);
+        // Aloft in a dusk rise, it is off her plane: her light passes under it.
+        if (boss.Aloft) return false;
         // A hider in its kelp: her light reaching it finds it (and does it no harm).
         if (boss.Hidden && Reaches(shot, boss.Position, boss.Radius))
         {
@@ -1123,6 +1153,14 @@ public sealed partial class PlaneWorld
         Events.Add(new PlaneEvent(PlaneEventType.BossStagger, boss.Position, boss.Facing, 1f));
     }
 
+    /// <summary>Tests and verification: every ink sac on the fighting boss bursts.</summary>
+    public void DebugBurstSacs()
+    {
+        if (Boss is not { Stage: BossStage.Fight } boss) return;
+        foreach (var sac in boss.Sacs)
+            if (sac.Alive) DamageSac(boss, sac, sac.Hp, Vector2.UnitY);
+    }
+
     /// <summary>Tests and verification: the fighting boss's pearl takes this much light, as her shot's would.</summary>
     public void DebugHurtBoss(float damage)
     {
@@ -1144,6 +1182,7 @@ public sealed partial class PlaneWorld
         boss.DartLeft = 0f;
         boss.ReachDirs.Clear();
         boss.Blooms.Clear();
+        boss.RiseTo = null;
         boss.Rings.Clear();
         // Its pearl bursts into light: it washes the whole arena clean of corruption and turns white. Its pearls still in
         // the water burst with it.

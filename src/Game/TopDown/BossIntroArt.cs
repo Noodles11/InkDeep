@@ -265,6 +265,7 @@ public static class BossIntroArt
             case BodyForm.Wrasse: Wrasse(ci, s, g, menace, mood, t, body, accent, iris, blink, freed); break;
             case BodyForm.Seadragon: Seadragon(ci, s, g, menace, mood, t, body, accent, iris, blink, freed); break;
             case BodyForm.Octopus: Octopus(ci, s, g, menace, mood, t, body, accent, iris, blink, freed); break;
+            case BodyForm.Dragonet: Dragonet(ci, s, g, menace, mood, t, body, accent, iris, blink, freed); break;
             default: Snail(ci, spec, s, g, menace, mood, t, body, accent, iris, blink); break;
         }
         if (!freed && (spec.Theme == MutationTheme.InkSacs || spec.Minor == MutationTheme.InkSacs))
@@ -482,6 +483,41 @@ public static class BossIntroArt
         for (int i = 0; i < 6; i++) ci.DrawCircle(new Vector2(-s * 0.4f + s * 0.16f * i, -s * 0.5f + s * 0.08f * (i % 2)), s * 0.05f, accent with { A = 0.45f });
         ci.DrawColoredPolygon(Ellipse(new Vector2(-s * 0.35f, -s * 0.62f), s * 0.22f, s * 0.1f, 14), new Color(1f, 1f, 1f, 0.3f));
         Face(ci, new Vector2(-s * 0.02f, s * 0.05f), s * 0.6f, mood, menace, -0.2f + 0.5f * up, blink, iris, t);
+    }
+
+    /// <summary>
+    /// The dragonet: a squat round fish with great fan fins, hovering and looking up, never at Clementine. Corrupted her
+    /// swirls are glossy ink sacs on a pale body; freed (Bubbles) they are orange and electric blue.
+    /// </summary>
+    static void Dragonet(CanvasItem ci, float s, float g, float menace, Mood mood, float t, Color body, Color accent, Color iris, float blink, bool freed)
+    {
+        float hover = Mathf.Sin(t * 1.8f) * s * 0.06f;
+        var c = new Vector2(0f, s * 0.1f + hover);
+        var skin = freed ? new Color(0.95f, 0.48f, 0.18f) : body.Lerp(new Color(0.75f, 0.74f, 0.78f), 0.7f);
+        // The fans, each side, and the tail.
+        foreach (float side in new[] { -1f, 1f })
+        {
+            var fan = new List<Vector2> { c + new Vector2(side * s * 0.35f, s * 0.05f) };
+            for (int i = 0; i <= 10; i++)
+            {
+                float a = Mathf.Lerp(-0.6f, 1.4f, i / 10f) + 0.1f * Mathf.Sin(t * 3f + i);
+                fan.Add(c + new Vector2(side * (s * 0.35f + Mathf.Cos(a) * s * 0.75f), s * 0.05f + Mathf.Sin(a) * s * 0.55f));
+            }
+            Inked(ci, fan.ToArray(), freed ? new Color(0.15f, 0.5f, 0.95f) : skin.Darkened(0.15f), s, 0.035f);
+        }
+        Inked(ci, Ellipse(c + new Vector2(0f, s * 0.75f), s * 0.3f, s * 0.18f, 16), freed ? new Color(0.15f, 0.5f, 0.95f) : skin.Darkened(0.2f), s, 0.035f);
+        // The body: squat and round, her swirls (blue on orange freed; ink sacs while the Leak has her).
+        Inked(ci, Ellipse(c, s * 0.62f, s * 0.7f, 28), skin, s);
+        for (int i = 0; i < 5; i++)
+        {
+            float a = i * Mathf.Tau / 5f + 0.4f;
+            var at = c + new Vector2(Mathf.Cos(a) * s * 0.36f, s * 0.12f + Mathf.Sin(a) * s * 0.38f);
+            if (freed) ci.DrawArc(at, s * 0.13f, 0f, Mathf.Tau * 0.8f, 14, new Color(0.15f, 0.5f, 0.95f), s * 0.06f, true);
+            else Blob(ci, at, s * 0.13f, s * 0.12f, new Color(0.1f, 0.04f, 0.16f), s, 0.03f);
+        }
+        ci.DrawColoredPolygon(Ellipse(c + new Vector2(-s * 0.25f, -s * 0.42f), s * 0.2f, s * 0.08f, 12), new Color(1f, 1f, 1f, 0.3f));
+        // Her face, turned up toward the light above.
+        Face(ci, c + new Vector2(0f, -s * 0.28f), s * 0.42f, mood, menace, -0.9f, blink, iris, t);
     }
 
     /// <summary>The giant clam: snaps its shell twice, then blows a bubble raspberry; a pearl crown on top.</summary>

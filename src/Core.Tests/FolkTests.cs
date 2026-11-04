@@ -310,6 +310,57 @@ public class FolkTests
     }
 
     [Fact]
+    public void Bubbles_RisesAndComesDownInARing_ThenHerSacsFire_HerHeartOpenOnlyOnceTheyAreBurst()
+    {
+        var w = GreatCave("bubbles");
+        var boss = w.Boss!;
+        Assert.Equal(BodyForm.Dragonet, boss.Spec.Form);
+        Assert.Equal(Exposure.CoaxOut, boss.Spec.Exposure);
+        Assert.Equal(5, boss.Sacs.Count);
+        var her = w.ArenaCenter + new Vector2(0f, 10f);
+        Hold(w, her, 3f, () => boss.Stage == BossStage.Fight);
+        var volleys = new System.Collections.Generic.List<BossAttack>();
+        bool aloft = false, openEarly = false;
+        Vector2? down = null;
+        for (int i = 0; i < 12 * PlaneWorld.TickRate && boss.Act != BossAct.Window; i++)
+        {
+            w.Player.Position = w.Player.PrevPosition = her;
+            w.Player.Hp = w.Run.MaxHp;
+            if (boss.RiseTo is { } to) down = to;
+            w.Step(default);
+            aloft |= boss.Aloft;
+            openEarly |= boss.Open;
+            foreach (var e in w.Events.Where(e => e.Type == PlaneEventType.BossVolley))
+            {
+                volleys.Add((BossAttack)(int)e.Size);
+                if ((BossAttack)(int)e.Size == BossAttack.Rise) Assert.True(Vector2.Distance(down!.Value, boss.Position) < 0.5f, $"she comes down at {boss.Position}, her shadow at {down}");
+            }
+        }
+        Assert.True(aloft, "she rises off the plane");
+        Assert.Equal(new[] { BossAttack.Rise, BossAttack.SacBurst }, volleys);
+        Assert.False(openEarly, "her heart is buried under her sacs");
+        // Every sac burst: her pearl surfaces.
+        w.DebugBurstSacs();
+        Assert.True(boss.Open);
+        Assert.Equal("The dragonet has gone home to Lantern Bay", Folk.HomeCaption(Folk.Get("bubbles")!));
+    }
+
+    [Fact]
+    public void TheDuskDanceGivesBackEverySkillPointSpent()
+    {
+        var run = new PlaneRun(Catalog.Value, new Tuning()) { Reef = true, Points = 3 };
+        var stat = Skills.All(new Tuning()).First().Stat;
+        Assert.True(run.Spend(stat));
+        Assert.True(run.Spend(stat));
+        float max = run.MaxHp;
+        Assert.Equal(2, run.Relearn());
+        Assert.Equal(3, run.Points);
+        Assert.Empty(run.Skills);
+        Assert.True(run.MaxHp < max);
+        Assert.True(run.Hp <= run.MaxHp);
+    }
+
+    [Fact]
     public void FennelKeepsTheShellsSheLeavesWithHim()
     {
         var jelly = new Jelly();

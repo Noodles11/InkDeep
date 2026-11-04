@@ -16,6 +16,10 @@ namespace OctoShoots.Game.TopDown.Bosses;
 /// all along it, and his clutch of pink eggs under his tail (the Leak never touched them). He drifts like loose weed;
 /// on the lash's warning his fronds stiffen and rattle, and he whips round on it. The Leak's mutation: fronds hardened
 /// into thorns driven back into him.
+/// A mandarin dragonet (Bubbles): squat and round-headed, great fan-shaped pectoral fins, a spined sail on her back,
+/// swirled orange and electric blue. The Leak swelled every swirl into a glossy sac and drained the rest to ash; each sac
+/// burst gives back its swirl, in her true colours, and it stays. In her dusk rise she lifts off the plane, her shadow
+/// shrinking under her, and drops back in a squash; in the fin swirl her fins fan wide.
 /// </summary>
 public partial class FishRig : BossRig
 {
@@ -24,6 +28,11 @@ public partial class FishRig : BossRig
     readonly List<(Node3D Pivot, float Side, float Phase)> _leaves = new();
     float _beat, _tuck, _roll, _bob, _swim, _stiff, _whip = 1f;
     bool Dragon => Spec.Form == BodyForm.Seadragon;
+    bool Mandarin => Spec.Form == BodyForm.Dragonet;
+    readonly List<Node3D> _swirls = new();
+    readonly List<bool> _restored = new();
+    MeshInstance3D? _shadow;
+    float _rise, _land = 1f, _fan;
 
     float Long => R * Spec.Stretch;
     float Thick => R * 0.36f;
@@ -65,6 +74,11 @@ public partial class FishRig : BossRig
         if (Dragon)
         {
             BuildSeadragon();
+            return;
+        }
+        if (Mandarin)
+        {
+            BuildMandarin();
             return;
         }
         // The body, tail root to snout along +X, a little taller than wide; its stripe and band painted along the flanks.
@@ -143,6 +157,77 @@ public partial class FishRig : BossRig
         PearlHeight = Hang;
     }
 
+    void BuildMandarin()
+    {
+        // The body: squat and broad, a big round head, wider than tall; her swirls painted in her accent.
+        var path = BossMeshes.Path(t => new Vector3(Mathf.Lerp(-Long, Long, t), 0f, 0f), 24);
+        float Girth2(float t) => R * 0.46f * Mathf.Pow(Mathf.Sin(Mathf.Pi * Mathf.Clamp(0.06f + 0.9f * t, 0f, 1f)), 0.6f) + 0.03f;
+        Part(BossMeshes.Tube(path, Girth2, 18, (p, t, a) => new Color(Stain(new Vector3(p.X, 0f, p.Z)), Swirl(p), 0.25f * Swirl(p)), _ => 0.75f), _body);
+        // The great pectoral fans, held out flat to either side behind the head.
+        for (int side = -1; side <= 1; side += 2)
+        {
+            var pivot = new Node3D { Position = new Vector3(Long * 0.25f, -0.05f, side * R * 0.35f) };
+            _body.AddChild(pivot);
+            var fan = BossMeshes.Sheet((u, v) =>
+            {
+                float a = Mathf.Lerp(-0.2f, 1.6f, v);
+                float r = R * 0.85f * u * (0.85f + 0.15f * Mathf.Sin(v * 9f));
+                return new Vector3(-Mathf.Sin(a) * r, 0.05f * r, side * Mathf.Cos(a) * r);
+            }, 6, 10, (p, u, v) => new Color(0f, 0.5f + 0.5f * Mathf.Sin(v * 14f), 0.3f * u));
+            Part(fan, pivot);
+            _pectorals.Add((pivot, side));
+        }
+        // The sail on her back: a few long spines webbed together.
+        var sail = BossMeshes.Sheet((u, v) => new Vector3(Mathf.Lerp(-Long * 0.1f, Long * 0.4f, u), R * 0.4f + v * R * 0.55f * (1f - 0.6f * u), 0f), 6, 3,
+            (_, u, v) => new Color(0f, 0.6f * v, 0.5f));
+        Part(sail, _body);
+        // Her tail, a round fan.
+        _tail = new Node3D { Position = new Vector3(-Long * 0.95f, 0f, 0f) };
+        _body.AddChild(_tail);
+        Part(BossMeshes.Sheet((u, v) =>
+        {
+            float a = Mathf.Lerp(-1.2f, 1.2f, v);
+            float r = R * 0.55f * u;
+            return new Vector3(-Mathf.Cos(a) * r, 0.05f * r, Mathf.Sin(a) * r * 0.9f);
+        }, 6, 10, (_, u, v) => new Color(0f, 0.5f + 0.5f * Mathf.Sin(v * 11f), 0.3f * u)), _tail);
+        // Her shadow on the floor, under her as she rises.
+        _shadow = new MeshInstance3D
+        {
+            Mesh = new CylinderMesh { TopRadius = 1f, BottomRadius = 1f, Height = 0.02f, RadialSegments = 32 },
+            MaterialOverride = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, Transparency = BaseMaterial3D.TransparencyEnum.Alpha, AlbedoColor = new Color(0f, 0f, 0f, 0.45f) },
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = false,
+        };
+        AddChild(_shadow);
+        // Her swirls, given back one by one as her sacs burst: discs of her true orange ringed in blue, under each sac.
+        var orange = new StandardMaterial3D { AlbedoColor = BossRig.ToColor(Spec.TrueColor), Roughness = 0.45f, EmissionEnabled = true, Emission = BossRig.ToColor(Spec.TrueColor), EmissionEnergyMultiplier = 0.15f };
+        var blue = new StandardMaterial3D { AlbedoColor = BossRig.ToColor(Spec.Accent), Roughness = 0.4f, EmissionEnabled = true, Emission = BossRig.ToColor(Spec.Accent), EmissionEnergyMultiplier = 0.25f };
+        foreach (var site in Spec.Sites)
+        {
+            if (!site.Sac) continue;
+            var swirl = new Node3D { Position = Surface(site.Angle, site.Out) - new Vector3(0f, Hang, 0f), Visible = false };
+            _body.AddChild(swirl);
+            float r = R * (0.22f + 0.2f * site.Size);
+            Part(BossMeshes.Lathe(t => new Vector2(r * Mathf.Min(1f, t * 3f), 0.04f * (1f - t)), 3, 24), swirl, blue);
+            Part(BossMeshes.Lathe(t => new Vector2(r * 0.68f * Mathf.Min(1f, t * 3f), 0.06f * (1f - t)), 3, 24), swirl, orange).Position = new Vector3(0f, 0.01f, 0f);
+            _swirls.Add(swirl);
+            _restored.Add(false);
+        }
+        PearlHeight = Hang + R * 0.2f;
+    }
+
+    /// <summary>A sac rides on her body (so it rises with her in her dusk rise).</summary>
+    protected override Node3D Sac(BodySite site)
+    {
+        var sac = base.Sac(site);
+        if (!Mandarin) return sac;
+        sac.Position -= new Vector3(0f, Hang, 0f);
+        _body.AddChild(sac);
+        return sac;
+    }
+
+    /// <summary>Her swirls' pattern over her skin: winding bands of her accent.</summary>
+    static float Swirl(Vector3 p) => Mathf.SmoothStep(0.55f, 0.75f, Mathf.Abs(Mathf.Sin(p.X * 3.1f + 2f * Mathf.Sin(p.Z * 2.7f + p.Y * 2f))));
+
     /// <summary>A frond: a lobed leaf out of the body's side (side -1, 1) at t along it, on a pivot that sways it.</summary>
     void AddLeaf(float t, float side, float length, float phase)
     {
@@ -200,6 +285,11 @@ public partial class FishRig : BossRig
             PoseSeadragon(pose);
             return;
         }
+        if (Mandarin)
+        {
+            PoseMandarin(pose);
+            return;
+        }
         var boss = pose.Boss;
         bool fighting = pose.Stage == BossStage.Fight;
         bool darting = boss is { DartLeft: > 0f };
@@ -222,6 +312,44 @@ public partial class FishRig : BossRig
         _tail.Rotation = new Vector3(0f, beat, 0f);
         foreach (var (pivot, side) in _pectorals)
             pivot.Rotation = new Vector3(0f, side * (0.4f * _tuck - 0.25f * Mathf.Sin(pose.Time * 5f + side)), 0f);
+    }
+
+    void PoseMandarin(in RigPose pose)
+    {
+        var boss = pose.Boss;
+        bool fighting = pose.Stage == BossStage.Fight;
+        var coming = fighting && boss is not null ? PlaneWorld.Coming(boss) : null;
+        float warn = pose.Act == BossAct.Telegraph ? pose.Warn
+            : pose.Act == BossAct.Act && boss is not null ? Mathf.Clamp(pose.ActTime / Mathf.Max(boss.Spec.VolleyInterval, 0.01f), 0f, 1f) : 0f;
+        // The dusk rise: she lifts off the plane through its warning and drops back down in a squash.
+        float rise = coming == BossAttack.Rise ? Mathf.Sin(Mathf.SmoothStep(0f, 1f, warn) * Mathf.Pi * 0.5f) : 0f;
+        if (_rise > 0.6f && rise < 0.05f) _land = 0f;
+        _rise = coming == BossAttack.Rise ? rise : Mathf.MoveToward(_rise, 0f, pose.Dt * 8f);
+        _land = Mathf.MoveToward(_land, 1f, pose.Dt / 0.35f);
+        float squash = _land < 1f ? 1f - 0.25f * Mathf.Sin(_land * Mathf.Pi) : 1f;
+        _body.Position = new Vector3(0f, Hang + 4.5f * _rise + 0.15f * Mathf.Sin(pose.Time * 2.2f), 0f);
+        PearlHeight = Hang + R * 0.2f + 4.5f * _rise;
+        _body.Scale = new Vector3(1f / Mathf.Sqrt(squash), squash, 1f / Mathf.Sqrt(squash));
+        if (_shadow is not null)
+        {
+            _shadow.Visible = _rise > 0.02f;
+            float sr = R * (1.1f - 0.5f * _rise);
+            _shadow.Scale = new Vector3(sr, 1f, sr * 0.8f);
+            _shadow.Position = new Vector3(0f, 0.03f, 0f);
+        }
+        // The fin swirl: her fans spread wide; at rest they ripple, hopping her along.
+        _fan = Mathf.MoveToward(_fan, fighting && pose.Act == BossAct.Helix ? 1f : 0f, pose.Dt * 4f);
+        _swim += pose.Dt * (pose.Stage == BossStage.Freed ? 6f : 3f);
+        foreach (var (pivot, side) in _pectorals)
+            pivot.Rotation = new Vector3(side * (0.15f * Mathf.Sin(_swim) + 0.2f * _fan), side * (0.35f * _fan - 0.1f * Mathf.Sin(_swim * 0.5f)), 0f);
+        _tail.Rotation = new Vector3(0f, 0.2f * Mathf.Sin(_swim * 1.3f), 0f);
+        // Each sac burst gives its swirl back, and it stays (a sac grown back covers it again, but it is hers).
+        if (boss is not null)
+            for (int i = 0; i < _swirls.Count && i < boss.Sacs.Count; i++)
+                if (!boss.Sacs[i].Alive) _restored[i] = true;
+        bool freed = pose.Stage == BossStage.Freed || boss is null;
+        for (int i = 0; i < _swirls.Count; i++)
+            _swirls[i].Visible = freed || _restored[i];
     }
 
     void PoseSeadragon(in RigPose pose)

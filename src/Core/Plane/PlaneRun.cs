@@ -192,6 +192,20 @@ public sealed class PlaneRun
         return true;
     }
 
+    /// <summary>
+    /// The Dusk Dance (Bubbles's, docs/NPC-BOSSES-PROPOSAL.md §8.3): every skill point she has spent comes back to lay
+    /// again (and the max HP they gave goes with them). Returns how many.
+    /// </summary>
+    public int Relearn()
+    {
+        int back = Upgrades;
+        Points += back;
+        Skills.Clear();
+        Rebuild();
+        Hp = System.MathF.Min(Hp, MaxHp);
+        return back;
+    }
+
     public void Add(string itemId)
     {
         bool active = Catalog is not null && Catalog.TryGet(itemId, out var item) && item.Kind == ItemKind.Active;
