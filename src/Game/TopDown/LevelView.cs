@@ -35,16 +35,24 @@ public sealed class LevelShape
     {
         var shape = new LevelShape { Map = map };
         const int chunk = 32;
+        // Every chunk on its own (plain arrays from the map alone), so they are built at once, kept in this order.
+        var pieces = new List<Func<LevelShape.Surface?>>();
         for (int cy = 0; cy < map.Size; cy += chunk)
         for (int cx = 0; cx < map.Size; cx += chunk)
-            shape.Ground.Add(LevelView.ChunkSurface(map, cx, cy, Math.Min(cx + chunk, map.Size), Math.Min(cy + chunk, map.Size))!);
+        {
+            int x0 = cx, y0 = cy;
+            pieces.Add(() => LevelView.ChunkSurface(map, x0, y0, Math.Min(x0 + chunk, map.Size), Math.Min(y0 + chunk, map.Size)));
+        }
         // The reef carries on past the rim, so swimming along the edge never shows the void beyond the square.
         var spans = new List<(int A, int B, bool Inside)> { (-LevelView.Skirt, 0, false) };
         for (int c = 0; c < map.Size; c += chunk) spans.Add((c, Math.Min(c + chunk, map.Size), true));
         spans.Add((map.Size, map.Size + LevelView.Skirt, false));
         foreach (var sy in spans)
         foreach (var sx in spans)
-            if (!sx.Inside || !sy.Inside) shape.Ground.Add(LevelView.SkirtSurface(map, sx.A, sy.A, sx.B, sy.B)!);
+            if (!sx.Inside || !sy.Inside) pieces.Add(() => LevelView.SkirtSurface(map, sx.A, sy.A, sx.B, sy.B));
+        var built = new LevelShape.Surface?[pieces.Count];
+        System.Threading.Tasks.Parallel.For(0, pieces.Count, k => built[k] = pieces[k]());
+        foreach (var surface in built) shape.Ground.Add(surface!);
         foreach (var cave in map.Caves) shape.Lids.Add(LevelView.LidSurface(map, cave));
         foreach (var rock in map.WeakRocks)
             if (rock.Kind == SealKind.Secret && rock.Cave >= 0 && LevelView.LidSurface(map, map.Caves[rock.Cave], opened: true) is { } open) shape.OpenLids[rock.Cave] = open;

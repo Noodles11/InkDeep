@@ -577,38 +577,43 @@ public static class TopDownGenerator
         int N = map.Samples;
         var toWater = CaveLayout.Chamfer(open, true);
         var rift = map.Exit;
-        // The raw profile first: the floor, and the rock rising from the water's edge to its warped top.
+        // The raw profile first: the floor, and the rock rising from the water's edge to its warped top. (Every sample
+        // on its own, so the rows are worked at once.)
         var raw = new float[N * N];
-        for (int y = 0; y < N; y++)
-        for (int x = 0; x < N; x++)
+        Parallel.For(0, N, y =>
         {
-            int i = y * N + x;
-            if (open[i])
+            for (int x = 0; x < N; x++)
             {
-                float h = -PathDepth - 0.6f * FloorDip(x, y, dipSeed);
-                if (map.HasBoss) h = MathUtil.Lerp(-PathDepth, h, Smooth(rift.Radius, rift.Radius + 5f, Vector2.Distance(new Vector2(x, y), rift.Position)));
-                raw[i] = h;
+                int i = y * N + x;
+                if (open[i])
+                {
+                    float h = -PathDepth - 0.6f * FloorDip(x, y, dipSeed);
+                    if (map.HasBoss) h = MathUtil.Lerp(-PathDepth, h, Smooth(rift.Radius, rift.Radius + 5f, Vector2.Distance(new Vector2(x, y), rift.Position)));
+                    raw[i] = h;
+                }
+                else
+                {
+                    var warp = strata.Warp(x, y);
+                    float t = Bilinear(tops, x + warp.X, y + warp.Y);
+                    float top = WallTopMin + (WallTopMax - WallTopMin) * (t - ReefTerrain.HMin) / (ReefTerrain.HMax - ReefTerrain.HMin);
+                    raw[i] = MathF.Max(WallFoot, MathF.Min(top, WallFoot + WallRise * (toWater[i] - 1f)));
+                }
             }
-            else
-            {
-                var warp = strata.Warp(x, y);
-                float t = Bilinear(tops, x + warp.X, y + warp.Y);
-                float top = WallTopMin + (WallTopMax - WallTopMin) * (t - ReefTerrain.HMin) / (ReefTerrain.HMax - ReefTerrain.HMin);
-                raw[i] = MathF.Max(WallFoot, MathF.Min(top, WallFoot + WallRise * (toWater[i] - 1f)));
-            }
-        }
+        });
         float RawAt(float x, float y) => Bilinear(raw, x, y);
-        for (int y = 0; y < N; y++)
-        for (int x = 0; x < N; x++)
+        Parallel.For(0, N, y =>
         {
-            int i = y * N + x;
-            // Terraced: rock only, and never down to the swim level.
-            float h = open[i] ? raw[i] : MathF.Max(WallFoot, strata.Terrace(raw[i], x, y, RawAt));
-            float e = MathF.Min(MathF.Min(x, y), MathF.Min(map.Size - x, map.Size - y));
-            float w = ReefTerrain.Falloff(e / (Rim + 1f));
-            if (w > 0f) h += w * (ReefTerrain.HMax - h);
-            heights[i] = h;
-        }
+            for (int x = 0; x < N; x++)
+            {
+                int i = y * N + x;
+                // Terraced: rock only, and never down to the swim level.
+                float h = open[i] ? raw[i] : MathF.Max(WallFoot, strata.Terrace(raw[i], x, y, RawAt));
+                float e = MathF.Min(MathF.Min(x, y), MathF.Min(map.Size - x, map.Size - y));
+                float w = ReefTerrain.Falloff(e / (Rim + 1f));
+                if (w > 0f) h += w * (ReefTerrain.HMax - h);
+                heights[i] = h;
+            }
+        });
     }
 
     /// <summary>A sealed wall's half thickness (metres either side of its middle, along its passage), and how far past the passage's half width it reaches across.</summary>
@@ -924,41 +929,45 @@ public static class TopDownGenerator
         var roof = Chamfer(map.Samples, i => !float.IsNaN(map.Lid[i]) || !float.IsNaN(map.Roof[i]));
         uint seed = (uint)(rng.NextU64() >> 32);
         var eased = new bool[N * N];
-        for (int y = 0; y < N; y++)
-        for (int x = 0; x < N; x++)
+        // (Every point on its own, so the rows are worked at once.)
+        Parallel.For(0, N, y =>
         {
-            int i = y * N + x;
-            float h = map.Heights[i];
-            if (h <= LevelMap.BlockHeight || d[i] == float.MaxValue) continue;
-            var p = new Vector2(x, y);
-            // Where the walls stay cliffs, and how steep the rest lean (two slow noises).
-            float cliff = 0.5f + 0.5f * TerrainNoise.Fbm(x / 22f + 31f, y / 22f - 17f, seed, 2);
-            float soft = MathUtil.Smoothstep(MathUtil.Clamp01((cliff - strata.CliffShare + 0.06f) / 0.12f));
-            float steep = 0.5f + 0.5f * TerrainNoise.Fbm(x / 30f - 7f, y / 30f + 11f, seed + 5u, 2);
-            // Not under or beside a roof.
-            soft *= MathUtil.Smoothstep(MathUtil.Clamp01((roof[i] - 1f) / 3f));
-            if (soft <= 0f) continue;
-            // Held under the strata's profile, but never down to the swim level (a wall stays a wall).
-            float cap = MathF.Max(strata.SlopeCap(d[i], steep, x, y), 0.4f);
-            if (cap >= h) continue;
-            map.Heights[i] = MathUtil.Lerp(h, cap, soft);
-            eased[i] = true;
-        }
+            for (int x = 0; x < N; x++)
+            {
+                int i = y * N + x;
+                float h = map.Heights[i];
+                if (h <= LevelMap.BlockHeight || d[i] == float.MaxValue) continue;
+                // Where the walls stay cliffs, and how steep the rest lean (two slow noises).
+                float cliff = 0.5f + 0.5f * TerrainNoise.Fbm(x / 22f + 31f, y / 22f - 17f, seed, 2);
+                float soft = MathUtil.Smoothstep(MathUtil.Clamp01((cliff - strata.CliffShare + 0.06f) / 0.12f));
+                float steep = 0.5f + 0.5f * TerrainNoise.Fbm(x / 30f - 7f, y / 30f + 11f, seed + 5u, 2);
+                // Not under or beside a roof.
+                soft *= MathUtil.Smoothstep(MathUtil.Clamp01((roof[i] - 1f) / 3f));
+                if (soft <= 0f) continue;
+                // Held under the strata's profile, but never down to the swim level (a wall stays a wall).
+                float cap = MathF.Max(strata.SlopeCap(d[i], steep, x, y), 0.4f);
+                if (cap >= h) continue;
+                map.Heights[i] = MathUtil.Lerp(h, cap, soft);
+                eased[i] = true;
+            }
+        });
         // The distance is measured in eight directions, which leaves faint facets: two light passes round them off
         // (over the eased rock only, never down to the swim level).
         for (int pass = 0; pass < 2; pass++)
         {
             var was = (float[])map.Heights.Clone();
-            for (int y = 1; y < N - 1; y++)
-            for (int x = 1; x < N - 1; x++)
+            Parallel.For(1, N - 1, y =>
             {
-                int i = y * N + x;
-                if (!eased[i]) continue;
-                float sum = 0f;
-                for (int dy = -1; dy <= 1; dy++)
-                for (int dx = -1; dx <= 1; dx++) sum += MathF.Max(was[i + dy * N + dx], 0.4f);
-                map.Heights[i] = MathF.Max(MathF.Min(sum / 9f, was[i] + 0.3f), 0.4f);
-            }
+                for (int x = 1; x < N - 1; x++)
+                {
+                    int i = y * N + x;
+                    if (!eased[i]) continue;
+                    float sum = 0f;
+                    for (int dy = -1; dy <= 1; dy++)
+                    for (int dx = -1; dx <= 1; dx++) sum += MathF.Max(was[i + dy * N + dx], 0.4f);
+                    map.Heights[i] = MathF.Max(MathF.Min(sum / 9f, was[i] + 0.3f), 0.4f);
+                }
+            });
         }
     }
 
@@ -1620,11 +1629,14 @@ public static class TopDownGenerator
             if (ok && saddle >= 2.5f) passCandidates.Add((a, b, saddle, d));
         }
         // A real shortcut: the way round by water at least PassSaves times as long (measured from each end, as needed).
-        var fromSample = new Dictionary<Vector2, float[]>();
-        float Water(Vector2 a, Vector2 b)
+        // (Searched only as far as it must be to tell; the swimmable cells are measured again only once a pass is cut.)
+        bool[]? water = null;
+        var scratch = new float[map.Size * map.Size];
+        Array.Fill(scratch, float.PositiveInfinity);
+        bool FarRound(Vector2 a, Vector2 b, float least)
         {
-            if (!fromSample.TryGetValue(a, out var dist)) fromSample[a] = dist = LevelValidator.Distances(map, a);
-            return LevelValidator.DistanceAt(dist, b);
+            water ??= LevelValidator.OpenCells(map);
+            return float.IsPositiveInfinity(LevelValidator.DistanceWithin(water, a, b, least, scratch));
         }
         int passes = PassesMin + rng.Int(PassesMax - PassesMin + 1);
         foreach (var cand in passCandidates.OrderByDescending(c => c.Saddle).ThenBy(c => c.A.X).ThenBy(c => c.A.Y))
@@ -1632,7 +1644,7 @@ public static class TopDownGenerator
             if (map.Corridors.Count(c => c.Kind == CorridorKind.Pass) >= passes + PassSpares) break;
             Vector2 mid = (cand.A + cand.B) * 0.5f;
             if (map.Corridors.Where(c => c.Kind == CorridorKind.Pass).Any(c => Vector2.Distance((c.Points[0] + c.Points[^1]) * 0.5f, mid) < 15f)) continue;
-            if (Water(cand.A, cand.B) < cand.D * PassSaves) continue;
+            if (!FarRound(cand.A, cand.B, cand.D * PassSaves)) continue;
             // A tunnel worn through the rock: winding a little, its roof the rock as it stood — rock all along its middle
             // stretch, under it and either side past what is bored (never a channel along the open water).
             var pass = new Corridor { Kind = CorridorKind.Pass, Width = rng.Range(3f, 5f), Points = Winding(rng, cand.A, cand.B), Roofed = true };
@@ -1640,8 +1652,8 @@ public static class TopDownGenerator
             if (!InRock(map, pass)) continue;
             CarvePass(map, pass, rng);
             map.Corridors.Add(pass);
-            // The water round has changed: what was measured from before no longer holds.
-            fromSample.Clear();
+            // The water round has changed: what was measured before no longer holds.
+            water = null;
         }
 
         // Arches: peak pairs flanking a corridor, bridged by a 10–20 m span across it.

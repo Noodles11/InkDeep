@@ -229,10 +229,7 @@ public static class LevelValidator
     public static float[] Distances(LevelMap map, Vector2 from, float clearance = BodyRadius, Func<Vector2, bool>? blocked = null)
     {
         int N = map.Size;
-        var open = new bool[N * N];
-        for (int y = 0; y < N; y++)
-        for (int x = 0; x < N; x++)
-            open[y * N + x] = CellOpen(map, x, y, clearance) && blocked?.Invoke(new Vector2(x + 0.5f, y + 0.5f)) != true;
+        var open = OpenCells(map, clearance, blocked);
         var dist = new float[N * N];
         Array.Fill(dist, float.PositiveInfinity);
         var (sx, sy) = Cell(from, N);
@@ -261,6 +258,71 @@ public static class LevelValidator
             }
         }
         return dist;
+    }
+
+    /// <summary>Which 1 m cells are swimmable (CellOpen), as <see cref="Distances"/> sees them.</summary>
+    public static bool[] OpenCells(LevelMap map, float clearance = BodyRadius, Func<Vector2, bool>? blocked = null)
+    {
+        int N = map.Size;
+        var open = new bool[N * N];
+        // (Every cell on its own: the rows at once, unless the caller's test must be asked in turn.)
+        void Row(int y)
+        {
+            for (int x = 0; x < N; x++)
+                open[y * N + x] = CellOpen(map, x, y, clearance) && blocked?.Invoke(new Vector2(x + 0.5f, y + 0.5f)) != true;
+        }
+        if (blocked is null) System.Threading.Tasks.Parallel.For(0, N, Row);
+        else for (int y = 0; y < N; y++) Row(y);
+        return open;
+    }
+
+    /// <summary>
+    /// The swimming distance from one point to another exactly as <see cref="Distances"/> measures it, but searched only
+    /// while it is under <paramref name="limit"/>: ∞ if it is not (unreachable, or at least that far round). The cells
+    /// are <see cref="OpenCells"/>' and <paramref name="scratch"/> a field of the map's cells all ∞, left so.
+    /// </summary>
+    public static float DistanceWithin(bool[] open, Vector2 from, Vector2 to, float limit, float[] scratch)
+    {
+        int N = Side(scratch);
+        var (sx, sy) = Cell(from, N);
+        var (tx, ty) = Cell(to, N);
+        int target = ty * N + tx;
+        var touched = new List<int>();
+        var queue = new PriorityQueue<int, float>();
+        scratch[sy * N + sx] = 0f;
+        touched.Add(sy * N + sx);
+        queue.Enqueue(sy * N + sx, 0f);
+        float found = float.PositiveInfinity;
+        // In the order Distances settles them: a cell is final once taken off the queue, and nothing after is nearer.
+        while (queue.TryDequeue(out int i, out float d))
+        {
+            if (d > scratch[i]) continue;
+            if (d >= limit) break;
+            if (i == target)
+            {
+                found = d;
+                break;
+            }
+            int x = i % N, y = i / N;
+            for (int dy = -1; dy <= 1; dy++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                int nx = x + dx, ny = y + dy;
+                if (nx < 0 || ny < 0 || nx >= N || ny >= N || !open[ny * N + nx]) continue;
+                if (dx != 0 && dy != 0 && (!open[y * N + nx] || !open[ny * N + x])) continue;
+                float nd = d + (dx != 0 && dy != 0 ? 1.41421356f : 1f);
+                int j = ny * N + nx;
+                if (nd < scratch[j])
+                {
+                    if (float.IsPositiveInfinity(scratch[j])) touched.Add(j);
+                    scratch[j] = nd;
+                    queue.Enqueue(j, nd);
+                }
+            }
+        }
+        foreach (int i in touched) scratch[i] = float.PositiveInfinity;
+        return found;
     }
 
     public static float DistanceAt(float[] dist, Vector2 p)

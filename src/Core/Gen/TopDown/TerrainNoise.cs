@@ -43,7 +43,17 @@ public static class TerrainNoise
         h ^= h >> 13;
         h *= 0x5bd1e995u;
         h ^= h >> 15;
-        float a = (h & 4095u) / 4096f * MathF.Tau;
-        return MathF.Cos(a) * dx + MathF.Sin(a) * dy;
+        uint k = h & 4095u;
+        return Cos[k] * dx + Sin[k] * dy;
+    }
+
+    /// <summary>The 4096 gradients' directions, worked out once (each exactly as MathF would give it every time).</summary>
+    static readonly float[] Cos = Directions(MathF.Cos), Sin = Directions(MathF.Sin);
+
+    static float[] Directions(Func<float, float> f)
+    {
+        var t = new float[4096];
+        for (uint k = 0; k < 4096u; k++) t[k] = f(k / 4096f * MathF.Tau);
+        return t;
     }
 }
