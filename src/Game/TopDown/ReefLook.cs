@@ -100,19 +100,19 @@ public sealed record ReefLook
     };
 
     /// <summary>
-    /// Lantern Bay (docs/RPG-PROPOSAL.md §3): a summer night over the shallows, warm and safe. A low silver moon lays soft
-    /// caustics and a few faint shafts on moon-blue water and silvered sand; the bay's own life keeps its colours, dimmed,
-    /// and Clementine's tangerine is the brightest thing in it, her light pooling round her wherever she swims. No menace:
-    /// the dark here is gentle, the contrast deep.
+    /// Lantern Bay (docs/RPG-PROPOSAL.md §3): the Sunlit Shallows themselves at the soft end of a summer day, safe and
+    /// joyful. The same turquoise over sand, pink coral and saturated life, the same caustics and shafts, all of it
+    /// gentler and dimmed, the sun low and pale gold; so Clementine's tangerine is the brightest thing in it, her light
+    /// pooling round her wherever she swims. No menace: the dusk here is warm, never gloomy.
     /// </summary>
     public static readonly ReefLook Bay = Shallows with
     {
         Name = "Lantern Bay",
-        WaterShallow = C("#2C4F80"), WaterDeep = C("#1B3263"), Murk = C("#0A1430"),
-        Sand = C("#7F869E"), Rock = C("#7A8098"),
-        Sun = C("#A9C2F2"), SunEnergy = 0.3f, Ambient = C("#33508F"), AmbientEnergy = 0.14f,
-        Caustics = 0.5f, Rays = 0.3f, Menace = 0f, Saturation = 1f, Vignette = 0.55f, Fog = 0.18f, Contrast = 1.3f,
-        Lantern = 1.15f,
+        WaterShallow = C("#3E90AA"), WaterDeep = C("#1F6E90"), Murk = C("#0C3A56"),
+        Sand = C("#B0A27C"), Rock = C("#96948A"),
+        Sun = C("#FFEACB"), SunEnergy = 0.4f, Ambient = C("#2E86AA"), AmbientEnergy = 0.1f,
+        Caustics = 0.8f, Rays = 0.6f, Menace = 0f, Saturation = 1.3f, Vignette = 0.42f, Fog = 0.2f, Contrast = 1.22f,
+        Lantern = 1.25f,
     };
 
     public static readonly ReefLook Kelp = Shallows with

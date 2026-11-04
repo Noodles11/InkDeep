@@ -84,7 +84,7 @@ void her_burn_paint(vec3 world, vec3 n, float spot, float amount, inout vec3 alb
 	scorch *= amount;
 	if (lit + seam + scorch <= 0.0) return;
 	vec3 c = her_light;
-	vec3 hot = mix(c, vec3(1.0), 0.35) * 1.2;
+	vec3 hot = mix(c, vec3(1.0), 0.3);
 	vec3 p = world * 3.4 + vec3(spot * 3.1);
 	float craze = hb_craze(p + vec3(0.0, TIME * 0.35, 0.0));
 	float boil = hb_noise(world * 11.0 + vec3(TIME * 2.2, -TIME * 1.7, spot));
@@ -97,7 +97,7 @@ void her_burn_paint(vec3 world, vec3 n, float spot, float amount, inout vec3 alb
 	albedo = mix(albedo, c * 0.25 + vec3(0.05), lit);
 	roughness = mix(roughness, 0.25, lit);
 	emission = mix(emission, emission * 0.2, lit);
-	emission += lit * (c * (0.55 + 0.6 * boil) * (0.45 + 0.75 * cell) * glow + hot * (craze * 2.4 + fizz * 3.0)) * flicker;
+	emission += lit * (c * (0.4 + 0.45 * boil) * (0.45 + 0.75 * cell) * glow + hot * (craze * 1.5 + fizz * 2.0)) * flicker;
 	emission = mix(emission, emission * 0.3, scorch);
-	emission += hot * seam * 4.5 * flicker;
+	emission += hot * seam * 2.8 * flicker;
 }

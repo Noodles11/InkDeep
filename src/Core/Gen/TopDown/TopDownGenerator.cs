@@ -91,31 +91,75 @@ public static class TopDownGenerator
     /// A leak cave (docs/RPG-PROPOSAL.md §2.3): a seeded level from its own plan (LevelPlan.ForCave), its leak at the dead
     /// end of the main path where the way down would be.
     /// </summary>
-    public static LevelMap GenerateCave(SeedCode seed, LevelId id, float menace, int level)
+    /// <param name="into">
+    /// The way she swam into the mouth she comes in by: the cave's way in is cut in a wall the other way, so she comes out
+    /// of it still swimming the way she went (in by a mouth on the right, out of the cave's left wall). Null: a wall
+    /// facing the camera.
+    /// </param>
+    public static LevelMap GenerateCave(SeedCode seed, LevelId id, float menace, int level, Vector2? into = null)
     {
         var map = Generate(new RunStreams(seed), LevelPlan.ForCave(seed, id, menace), null, "", 0f);
         map.CaveLevel = level;
-        // Its way out: an opening in its start chamber's wall, the one she came in by (where that wall has no room, the
-        // nearest wall along the way in that has). One facing the camera is sought first, near the start; at the last,
-        // any wall anywhere along the way in.
+        // Its way in and out: an opening in its start chamber's wall (where that wall has no room, the nearest wall along
+        // the way in that has), the closest to the way wanted sought first, near the start. Coming in by a mouth, the way
+        // she swam is kept to before the start is: any wall in the water round it that has room. At the last, any wall
+        // anywhere along the way in.
+        var toward = into is { } went ? -Vector2.Normalize(went) : CameraWard;
         var path = LevelValidator.ShortestPath(map, map.Start.Position, map.Exit.Position, clearance: 1f);
-        for (int f = 0; f < DoorFacings.Length && map.Way is null; f++)
+        var facings = into is null ? DoorFacings : WayFacings;
+        for (int f = 0; f < facings.Length && map.Way is null; f++)
         {
-            float far = f == DoorFacings.Length - 1 ? float.MaxValue : DoorFromStart;
-            map.Way = CutDoorway(map, map.Start.Position, StartRadius + DoorReach, DoorFacings[f]);
+            bool last = f == facings.Length - 1;
+            if (into is not null && !last)
+            {
+                map.Way = CutDoorwayNear(map, map.Start.Position, toward, facings[f]);
+                continue;
+            }
+            float far = last ? float.MaxValue : DoorFromStart;
+            map.Way = CutDoorway(map, map.Start.Position, StartRadius + DoorReach, toward, facings[f]);
             for (int i = 4; i < path.Count && Vector2.Distance(path[i], map.Start.Position) < far && map.Way is null; i += 4)
-                map.Way = CutDoorway(map, path[i], DoorReach, DoorFacings[f]);
+                map.Way = CutDoorway(map, path[i], DoorReach, toward, facings[f]);
         }
         return map;
     }
 
+    /// <summary>How far from a cave's start the water is searched for a wall going the way wanted (metres), and how much each metre from it counts against a wall.</summary>
+    const float WayNear = 24f, WayFar = 0.4f;
+
+    /// <summary>
+    /// The opening best placed going the way wanted, sought from the water all round a point (every 2 m within WayNear),
+    /// the nearer the point the better; cut, or null where no wall there has room.
+    /// </summary>
+    static Doorway? CutDoorwayNear(LevelMap map, Vector2 at, Vector2 toward, float least)
+    {
+        (Doorway Door, Vector2 Edge, float Score)? best = null;
+        for (float y = -WayNear; y <= WayNear; y += 2f)
+        for (float x = -WayNear; x <= WayNear; x += 2f)
+        {
+            var from = at + new Vector2(x, y);
+            float off = new Vector2(x, y).Length();
+            if (off > WayNear || !Inside(map, from, 1f) || !map.IsOpen(from)) continue;
+            if (FindDoorway(map, from, DoorReach, toward, least) is not { } found) continue;
+            float score = found.Score + WayFar * off;
+            if (best is { } held && held.Score <= score) continue;
+            best = (found.Door, found.Edge, score);
+        }
+        if (best is not { } cut) return null;
+        CarveDoorway(map, cut.Door, cut.Edge);
+        return cut.Door;
+    }
+
     /// <summary>How far past a chamber's middle (a cave's start) or a drawn mouth's point a wall is looked for to cut an opening in.</summary>
     const float DoorReach = 10f;
+    /// <summary>Into a wall north of the water: its face looks toward the camera.</summary>
+    static readonly Vector2 CameraWard = new(0f, -1f);
     /// <summary>
-    /// The ways into the rock an opening is sought by, in turn (the most its Into's Y may be): into a wall north of the
-    /// water first, so its face looks toward the camera; then sideways; then any.
+    /// How near the way wanted an opening must go into the rock, in turn (the least cosine between them): near it first,
+    /// then within a right angle, then any.
     /// </summary>
-    static readonly float[] DoorFacings = { -0.45f, 0.3f, 1.01f };
+    static readonly float[] DoorFacings = { 0.45f, -0.3f, -1.01f };
+    /// <summary>The same for a cave's way in, the way she swam wanted closely first (within about 30°).</summary>
+    static readonly float[] WayFacings = { 0.85f, 0.45f, -0.3f, -1.01f };
     /// <summary>A leak cave's way out is sought no further along its way in from its start than this (metres).</summary>
     const float DoorFromStart = 16f;
     /// <summary>
@@ -127,12 +171,21 @@ public static class TopDownGenerator
 
     /// <summary>
     /// A cave's opening cut into a wall (<see cref="Doorway"/>): from a point in the water, the stretch of wall near it
-    /// with rock enough behind it and beside it (a wall north of the point is liked best: its face is toward the camera).
-    /// The rock round it is raised into a mound, so its face stands tall over the water whatever the wall's height; then
-    /// a passage is cut Depth into it from a short notch at the water's edge, the mound's rock over it kept as its roof.
-    /// Only rock is raised, so no water anywhere is closed off. Null where no wall near has room.
+    /// with rock enough behind it and beside it, going into the rock no further from <paramref name="toward"/> than
+    /// <paramref name="least"/> (its cosine) and the nearer the better. The rock round it is raised into a mound, so its
+    /// face stands tall over the water whatever the wall's height; then a passage is cut Depth into it from a short notch
+    /// at the water's edge, the mound's rock over it kept as its roof. Only rock is raised, so no water anywhere is closed
+    /// off. Null where no wall near has room.
     /// </summary>
-    internal static Doorway? CutDoorway(LevelMap map, Vector2 from, float reach, float facing = 1.01f)
+    internal static Doorway? CutDoorway(LevelMap map, Vector2 from, float reach, Vector2 toward, float least = -1.01f)
+    {
+        if (FindDoorway(map, from, reach, toward, least) is not { } best) return null;
+        CarveDoorway(map, best.Door, best.Edge);
+        return best.Door;
+    }
+
+    /// <summary>Where <see cref="CutDoorway"/> would cut, not cut yet: the opening, the water's edge before it, and its score (the lower the better).</summary>
+    static (Doorway Door, Vector2 Edge, float Score)? FindDoorway(LevelMap map, Vector2 from, float reach, Vector2 toward, float least)
     {
         const int ways = 72;
         const float step = 0.25f;
@@ -143,21 +196,21 @@ public static class TopDownGenerator
         {
             float a = k * MathF.Tau / ways;
             var dir = new Vector2(MathF.Cos(a), MathF.Sin(a));
-            if (dir.Y > facing) continue;
+            float along = Vector2.Dot(dir, toward);
+            if (along < least) continue;
             float s = 0f;
             while (s < reach && map.IsOpen(from + dir * s)) s += step;
             if (s >= reach) continue;
             var door = new Doorway(from + dir * (s + DoorNotch), dir);
             if (!DoorRoom(map, door)) continue;
-            // Nearest, and facing the camera: north of the point (dir.Y −1) best, south worst.
-            float score = s + 8f * (1f + dir.Y);
+            // Nearest, and nearest the way wanted.
+            float score = s + 8f * (1f - along);
             if (score >= bestScore) continue;
             bestScore = score;
             best = door;
             bestEdge = from + dir * MathF.Max(s - 0.6f, 0f);
         }
-        if (best is { } cut) CarveDoorway(map, cut, bestEdge);
-        return best;
+        return best is { } found ? (found, bestEdge, bestScore) : null;
     }
 
     /// <summary>Rock all round where the passage would go (and behind it), inside the square, and no cave's room or tunnel's roof over it.</summary>
@@ -309,7 +362,7 @@ public static class TopDownGenerator
             foreach (float facing in DoorFacings)
             {
                 foreach (var from in froms.Where(map.IsOpen))
-                    if ((door = CutDoorway(map, from, DoorReach, facing)) is not null) break;
+                    if ((door = CutDoorway(map, from, DoorReach, CameraWard, facing)) is not null) break;
                 if (door is not null) break;
             }
             map.Mouths.Add(door ?? throw new InvalidOperationException($"The map {hand.Name} cannot be built: no wall near its {m.Name} mouth has room for an opening"));

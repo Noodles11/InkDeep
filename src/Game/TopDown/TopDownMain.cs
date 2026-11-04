@@ -280,6 +280,7 @@ public partial class TopDownMain : Node3D
     bool _jellySaved;
     bool Reef => _place != ReefPlace.Run;
     PortalView _portals = null!;
+    Blackout _blackout = null!;
     LostLightView _lostLight = null!;
     // The bay's mirror (docs/RPG-PROPOSAL.md §8): its pool, its drawer, the look she came to it with, and whether swimming
     // onto it opens it (only once she has swum off it since).
@@ -303,6 +304,8 @@ public partial class TopDownMain : Node3D
     /// <summary>A sealed cave's mouth she came out of: it closes behind her once she is out (−1: none).</summary>
     int _closeBehind = -1;
     const float RideLeast = 2.4f, RideSpeed = 16f, RideLift = 2.5f, ArriveSeconds = 1.4f, ArriveDrift = 6f, DoorSpeed = 6f;
+    /// <summary>Through an opening: the screen goes black over DoorDark as she swims into its dark, and clears over DoorLight as she swims out of the far one.</summary>
+    const float DoorDark = 0.45f, DoorLight = 0.5f;
 
     /// <summary>Where a ride sets her down: a point she comes down onto from above, or an opening she swims out of.</summary>
     readonly record struct Landing(System.Numerics.Vector2 At, Doorway? Through);
@@ -342,7 +345,7 @@ public partial class TopDownMain : Node3D
         // Prism Pearl: the red and the blue beside her while her light is split.
         foreach (var part in _prismBells) AddChild(part);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_horizon"), _lantern.Texture);
-        _combat = new CombatView();
+        _combat = new CombatView { Swells = _swells };
         AddChild(_combat);
         _crab = new CrabView();
         AddChild(_crab);
@@ -376,7 +379,7 @@ public partial class TopDownMain : Node3D
         AddChild(_blight);
         _ash = new AshView();
         AddChild(_ash);
-        _adventure = new AdventureView { Steam = (at, dir, radius, k) => _combat.Steam(at, dir, radius, k) };
+        _adventure = new AdventureView { Steam = (at, dir, k) => _combat.Steam(at, dir, k) };
         AddChild(_adventure);
         _springs = new SpringView();
         AddChild(_springs);
@@ -664,7 +667,14 @@ public partial class TopDownMain : Node3D
         int level = OpenReef.CaveLevel(jelly, region, hand.Tier);
         var id = OpenReef.CaveId(region, hand.Depth, cave);
         if (!SeedCode.TryParse(jelly.Seed, out var seed)) seed = _seed;
-        return Task.Run(() => LevelShape.Prepare(TopDownGenerator.GenerateCave(seed, id, hand.Menace, level)));
+        // Its way in faces the mouth she swims into (the region is made already: she is coming from it).
+        var home = ShapeRegion(region);
+        return Task.Run(async () =>
+        {
+            var mouths = (await home).Map.Mouths;
+            System.Numerics.Vector2? into = mouth >= 0 && mouth < mouths.Count ? mouths[mouth].Into : null;
+            return LevelShape.Prepare(TopDownGenerator.GenerateCave(seed, id, hand.Menace, level, into));
+        });
     }
 
     /// <summary>The loading page of a run's first level.</summary>
@@ -835,7 +845,7 @@ public partial class TopDownMain : Node3D
     void ApplyLook() => ApplyLook(Look);
 
     /// <summary>
-    /// This level's look where she is: its depth's, or a cave's dark; in a haven's water the bay's summer night, blending
+    /// This level's look where she is: its depth's, or a cave's dark; in a haven's water the bay's summer evening, blending
     /// into the region's over HavenFade metres past its edge.
     /// </summary>
     ReefLook Look => _map is { } map ? LookAt(map, HavenShare(map, _world?.Player.Position ?? map.Start.Position)) : ReefLook.For(_id.Depth);
@@ -854,7 +864,7 @@ public partial class TopDownMain : Node3D
 
     float _havenShare = -1f;
 
-    /// <summary>Swimming out of the bay or back into it, the water's look changes with her: the bay's night to the reef's.</summary>
+    /// <summary>Swimming out of the bay or back into it, the water's look changes with her: the bay's evening to the reef's.</summary>
     void StepHavenLook()
     {
         if (_map.Haven is null) return;
@@ -997,6 +1007,11 @@ public partial class TopDownMain : Node3D
         bannerLayer.AddChild(_pearlBanner);
         _pearlHint = new PearlHint();
         bannerLayer.AddChild(_pearlHint);
+        // The dark of a cave opening, over the HUD and its banners.
+        var blackLayer = new CanvasLayer { Layer = 4 };
+        AddChild(blackLayer);
+        _blackout = new Blackout();
+        blackLayer.AddChild(_blackout);
         // Its sounds come from the game's Sfx (made in _Ready, before or after this).
         if (_sfx is not null) _achievementBanner.Sound = _sfx;
         // ESC: pause, restart the run, see the pearls she has absorbed. Drawn above the rest of the HUD.
@@ -1666,9 +1681,10 @@ public partial class TopDownMain : Node3D
     }
 
     /// <summary>
-    /// One frame of the ride: she gathers speed with the current and is lifted off the floor (through an opening, she
-    /// swims on in to its back instead); the place dissolves round where she was, its life fading with it, until only
-    /// water and streaming snow are left. Once the next place is made (and the ride has run its least), she arrives.
+    /// One frame of the ride: she gathers speed with the current and is lifted off the floor, and the place dissolves round
+    /// where she was, its life fading with it, until only water and streaming snow are left. Through an opening she swims
+    /// on into its dark instead, the screen going black, her loader turning in it while the place beyond is made. Once the
+    /// next place is made (and the ride has run its least), she arrives.
     /// </summary>
     void StepRide(float dt)
     {
@@ -1677,13 +1693,15 @@ public partial class TopDownMain : Node3D
         var p = _world.Player;
         p.PrevPosition = p.Position;
         float lift;
+        bool through = _rideDoor is not null;
         if (_rideDoor is { } door)
         {
-            float speed = DoorSpeed * (1f - Ease(t / 1.2f));
-            var next = p.Position + _rideDir * speed * dt;
-            if (door.Measure(next).In < Doorway.Depth - 0.7f) p.Position = next;
-            p.Velocity = _rideDir * speed;
+            // On into its dark at the pace she came in, the screen going black round her.
+            var next = p.Position + _rideDir * DoorSpeed * dt;
+            if (door.Measure(next).In < Doorway.Depth - 0.4f) p.Position = next;
+            p.Velocity = _rideDir * DoorSpeed;
             lift = 0f;
+            _blackout.Set(Ease(t / DoorDark), loading: true);
         }
         else
         {
@@ -1699,22 +1717,26 @@ public partial class TopDownMain : Node3D
         _camera.Track(focus, dt);
         _snow.Tick(dt, focus + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
         _plankton.Tick(dt, focus + Vector3.Up * 2f, _camera.Camera.GlobalBasis);
-        var from = new Vector2(_rideFrom.X, _rideFrom.Y);
-        float radius = Mathf.Lerp(-3f, 160f, Mathf.Pow(Ease(t / 1.6f), 1.5f));
-        _level.SetPortal(from, radius, 1);
-        float stay = 1f - Ease(t / 1.2f);
-        FadeLevelLife(from, radius, stay);
-        _portals.Visible = stay > 0.05f;
-        _corruption.Fade(stay);
-        _minimap.DiveOut(Ease(t / 0.9f));
+        if (!through)
+        {
+            var from = new Vector2(_rideFrom.X, _rideFrom.Y);
+            float radius = Mathf.Lerp(-3f, 160f, Mathf.Pow(Ease(t / 1.6f), 1.5f));
+            _level.SetPortal(from, radius, 1);
+            float stay = 1f - Ease(t / 1.2f);
+            FadeLevelLife(from, radius, stay);
+            _portals.Visible = stay > 0.05f;
+            _corruption.Fade(stay);
+            _minimap.DiveOut(Ease(t / 0.9f));
+        }
         _hud.Elapsed = _elapsed;
         _hud.Track(_world, _catalog, dt);
-        if (t < RideLeast || _rideTask is not { IsCompleted: true } task) return;
+        if (t < (through ? DoorDark : RideLeast) || _rideTask is not { IsCompleted: true } task) return;
         _rideTask = null;
         _riding = false;
         if (task.IsFaulted)
         {
             GD.PushError(task.Exception?.ToString());
+            _blackout.Set(0f, loading: false);
             return;
         }
         _place = _rideTo;
@@ -1745,8 +1767,9 @@ public partial class TopDownMain : Node3D
     }
 
     /// <summary>
-    /// She comes down into the new place from above, still carried the way the current took her (or swims out of its
-    /// opening's dark), the place opening out round her; then she settles in its water and is hers to swim.
+    /// She comes down into the new place from above, still carried the way the current took her, the place opening out
+    /// round her (or swims out of its opening's dark the way she swam in, the black lifting); then she settles in its
+    /// water and is hers to swim.
     /// </summary>
     void StepArrive(float dt)
     {
@@ -1764,12 +1787,15 @@ public partial class TopDownMain : Node3D
         _camera.Track(Focus(1f) + Vector3.Up * (drop * 0.5f), dt);
         _snow.Tick(dt, Focus(1f) + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
         _plankton.Tick(dt, Focus(1f) + Vector3.Up * 2f, _camera.Camera.GlobalBasis);
-        _level.SetPortal(new Vector2(p.Position.X, p.Position.Y), Mathf.Lerp(0f, 160f, Mathf.Pow(Ease(_arriveTime / ArriveSeconds), 1.5f)), 2);
+        // Out of an opening's dark the place is all there, the black lifting off it; else it opens out round her.
+        if (_arriveDoor is not null) _blackout.Set(1f - Ease(_arriveTime / DoorLight), loading: false);
+        else _level.SetPortal(new Vector2(p.Position.X, p.Position.Y), Mathf.Lerp(0f, 160f, Mathf.Pow(Ease(_arriveTime / ArriveSeconds), 1.5f)), 2);
         _hud.Elapsed = _elapsed;
         _hud.Track(_world, _catalog, dt);
         if (_arriveTime < ArriveSeconds) return;
         _arriving = false;
         _arriveDoor = null;
+        _blackout.Set(0f, loading: false);
         _bell.DiveDepth = 0f;
         _hud.Diving = false;
         _level.SetPortal(Vector2.Zero, 0f, 0);
@@ -2429,7 +2455,7 @@ public partial class TopDownMain : Node3D
                 {
                     // Pistol Shrimp Claw: the bang. Bigger blasts (Depth Charge) shake and kick harder.
                     float big = Mathf.Clamp((e.Size - 2.4f) / 2.6f, 0f, 1f);
-                    _combat.Shockwave(e.Position, e.Size, new Color(0.75f, 0.92f, 1f, 0.85f), 0.38f + 0.2f * big);
+                    _combat.Shockwave(e.Position, e.Size, 0.38f + 0.2f * big);
                     _sfx.PlayAt("snap", new Vector3(e.Position.X, LevelMap.SwimBand, e.Position.Y), -4f + 5f * big);
                     _camera.Shake(0.04f + 0.2f * big);
                     _haptics.Pulse(0.05f + 0.6f * big, 0.5f * big, 0.04f + 0.12f * big);
@@ -2442,7 +2468,7 @@ public partial class TopDownMain : Node3D
                 else if (e.Type == PlaneEventType.Necklace)
                 {
                     // Pearl Necklace: the pearl bursts into its ring.
-                    _combat.Shockwave(e.Position, 2.2f, HerColor.Light with { A = 0.9f }, 0.45f);
+                    _combat.Shockwave(e.Position, 2.2f, 0.45f);
                     _sfx.PlayPitched("merge", 1.9f, -4f);
                 }
                 else if (e.Type == PlaneEventType.PearlCollected && _world.LastPearl is { } pearl)
@@ -3165,7 +3191,7 @@ public partial class TopDownMain : Node3D
             var syn = _catalog.Synergies.FirstOrDefault(s => s.Id == id);
             if (syn is null) continue;
             _sfx.Play("synergy", -2f, 0f);
-            _combat.Shockwave(_world.Player.Position, 3f, HerColor.Light with { A = 0.8f }, 0.6f);
+            _combat.Shockwave(_world.Player.Position, 3f, 0.6f);
         }
     }
 

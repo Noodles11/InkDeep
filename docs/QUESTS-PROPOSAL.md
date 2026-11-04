@@ -30,8 +30,8 @@ comes home to untie it. Its token and its experience are hers.
 - **The ribbons:** each request is a kelp ribbon hanging from the lattice. Its knot holds the **token**, the thing it
   offers: the pearl itself (in its effect colour, PearlKey), or gold for shells. Its kind has a colour (§3).
 - **How many:** three places for each region; the ribbons she has carried home done hang there too, glinting gold.
-- **At night:** the bay is a summer night (ReefLook.Bay), so the tokens glow softly and the fan reads from across the
-  commune.
+- **In the evening:** the bay is the Shallows at dusk (ReefLook.Bay), so the tokens glow softly and the fan reads from
+  across the commune.
 
 ### 2.3 Using it
 

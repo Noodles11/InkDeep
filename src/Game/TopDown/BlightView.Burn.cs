@@ -38,7 +38,7 @@ public partial class BlightView
         float rate = SizzleRate * Mathf.Clamp(radius / BlightTuning.MurkRadius, 0.5f, 3f);
         int n = (int)(rate * dt) + (_motes.RandRange(0f, 1f) < rate * dt % 1f ? 1 : 0);
         var light = HerColor.Light;
-        var hot = new Color(Mathf.Lerp(light.R, 1f, 0.6f) * 1.8f, Mathf.Lerp(light.G, 1f, 0.6f) * 1.8f, Mathf.Lerp(light.B, 1f, 0.6f) * 1.8f, 1f);
+        var hot = new Color(Mathf.Lerp(light.R, 1f, 0.5f) * 1.25f, Mathf.Lerp(light.G, 1f, 0.5f) * 1.25f, Mathf.Lerp(light.B, 1f, 0.5f) * 1.25f, 1f);
         var cool = new Color(light.R, light.G * 0.8f, light.B * 0.6f, 0f);
         for (int k = 0; k < n; k++)
         {

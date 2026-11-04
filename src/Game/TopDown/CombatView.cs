@@ -557,37 +557,28 @@ void fragment() {
     const float SongSeconds = 1.6f;
     readonly List<(Node3D Node, StandardMaterial3D Material, float Age)> _songs = new();
 
-    /// <summary>A shockwave: a flat ring racing out to its reach and thinning away, and a hard flash at its heart.</summary>
+    /// <summary>A shockwave's heart: a hard flash, gone in a blink (the wave itself is a ripple of the water, Swells).</summary>
     sealed class Shock
     {
         public Node3D Node = null!;
-        public StandardMaterial3D Ring = null!, Flash = null!;
+        public StandardMaterial3D Flash = null!;
         public MeshInstance3D Core = null!;
         public float Age, Reach, Life;
-        public Color Color;
     }
 
     readonly List<Shock> _shocks = new();
 
     /// <summary>
-    /// Pistol Shrimp Claw: the bubble collapses with a bang. A white-blue shock ring races out to the blast's reach and
-    /// thins away, with a hard flash at its heart and a cold bloom on the water. (Pearl Necklace uses the same ring in
-    /// gold, smaller.)
+    /// Pistol Shrimp Claw: the bubble collapses with a bang. The water is shoved out in a ripple of hot air (the currents'
+    /// and the dash's shimmer) racing to the blast's reach, with a hard flash at its heart and a bloom of light on the
+    /// water. (Pearl Necklace's burst is the same, smaller.)
     /// </summary>
-    public void Shockwave(System.Numerics.Vector2 at, float reach, Color color, float life = 0.38f)
+    public void Shockwave(System.Numerics.Vector2 at, float reach, float life = 0.38f)
     {
         AddBloom(at, 1.4f, 0.5f, Mathf.Min(reach, 4f));
+        Swells?.AddRing(new Vector2(at.X, at.Y), 1.6f, reach / 2.6f, life + 0.2f, snap: 5f);
         var node = new Node3D { Position = new Vector3(at.X, LevelMap.SwimBand, at.Y) };
         AddChild(node);
-        var ring = new StandardMaterial3D
-        {
-            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-            Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-            BlendMode = BaseMaterial3D.BlendModeEnum.Add,
-            AlbedoColor = color,
-            CullMode = BaseMaterial3D.CullModeEnum.Disabled,
-        };
-        node.AddChild(new MeshInstance3D { Mesh = new TorusMesh { InnerRadius = 0.86f, OuterRadius = 1f, Rings = 56, RingSegments = 6 }, MaterialOverride = ring, Scale = new Vector3(1f, 0.25f, 1f), CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         var flash = new StandardMaterial3D
         {
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
@@ -597,7 +588,7 @@ void fragment() {
         };
         var core = new MeshInstance3D { Mesh = _unitSphere, MaterialOverride = flash, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
         node.AddChild(core);
-        _shocks.Add(new Shock { Node = node, Ring = ring, Flash = flash, Core = core, Reach = reach, Life = life, Color = color });
+        _shocks.Add(new Shock { Node = node, Flash = flash, Core = core, Reach = reach, Life = life });
     }
 
     /// <summary>An active pearl was used: Whale Song sends three soft rings of sound out from her (the shield is drawn on her).</summary>
@@ -814,7 +805,8 @@ void fragment() {
 
     /// <summary>
     /// Her light struck a creature (its middle and the radius of its outline; the way the light went through it, from her;
-    /// the share of its whole health the hit took): steam bursts from where it struck, the light bounces back off it — magic
+    /// the share of its whole health the hit took): steam bursts from where it struck (its ripple the same size for every
+    /// shot, whatever the size of what it struck), the light bounces back off it — magic
     /// particles burst from there back toward her — and its corruption is knocked out through the far side, violet brackets
     /// splattering on away from her. The bigger the share, the more of each and the harder thrown; even a graze shows a few.
     /// </summary>
@@ -828,7 +820,7 @@ void fragment() {
         float push = 1f + 0.7f * k;
         // The light bouncing back: from the struck side, fanned wide, back toward her.
         var front = mid - dir * radius;
-        Steam(front, dir, radius, k);
+        Steam(front, dir, k);
         for (int i = 0; i < count; i++)
         {
             float fan = _dust.RandRange(-0.75f, 0.75f);
@@ -850,27 +842,35 @@ void fragment() {
     /// <summary>A hit's burst: so many particles of each kind for a graze, up to so many for a hit that takes a whole creature.</summary>
     const int HitBurstLeast = 6, HitBurstMost = 40;
 
+    /// <summary>The water round her light's bursts shoved outward (TopDownMain's own swells, drawn in topdown_post).</summary>
+    public WaterSwells? Swells { get; init; }
+
     /// <summary>
-    /// Her light boils the ink where it struck, the hit plain to see: a bubble of steam swells out and bursts (its film gone
-    /// in a blink, small bubbles flung off it), and pale billows roll out of it, rising and spreading as they thin. k: how
-    /// hard the hit was (0 a graze, 1 a whole creature); the more of it, the bigger.
+    /// A hit's ripple: the water heated by her light shoved out from where it struck, a radial shimmer of hot air (the
+    /// currents' and the dash's), as wide for every shot whatever it struck: HitRipple metres (a share of 2.6 m), and
+    /// HitRippleHard more for a hit that takes a whole creature; its strength and its life in seconds.
     /// </summary>
-    public void Steam(Vector3 at, Vector3 dir, float radius, float k)
+    const float HitRipple = 0.55f, HitRippleHard = 0.25f, HitRippleStrength = 1f, HitRippleLife = 0.45f;
+
+    /// <summary>
+    /// Her light boils the ink where it struck, the hit plain to see: the water round it shoved out in a ripple of hot air
+    /// (the same size for every shot), small bubbles flung off, and pale billows rolling out, rising and spreading as they
+    /// thin. k: how hard the hit was (0 a graze, 1 a whole creature); the more of it, the more of each.
+    /// </summary>
+    public void Steam(Vector3 at, Vector3 dir, float k)
     {
         var on = at + Vector3.Up * 0.45f;
         float grow = 1f + 0.6f * k;
         var film = new Color(0.72f, 0.76f, 0.8f, 0.9f);
-        // The bubble: swelling to a little wider than the body, and gone.
-        float wide = Mathf.Max(radius * 2.6f, 1.5f) * grow;
-        _steamBubbles.Emit(on, Vector3.Zero, 0.2f, wide * 0.3f, wide, film, film with { A = 0f }, drag: 0f);
-        // The small ones flung off as it bursts.
+        Swells?.AddRing(new Vector2(at.X, at.Z), HitRippleStrength * (0.8f + 0.4f * k), HitRipple + HitRippleHard * k, HitRippleLife, snap: 3f);
+        // The small bubbles flung off it.
         int small = 8 + Mathf.RoundToInt(12f * k);
         for (int i = 0; i < small; i++)
         {
             var d = _steam.RandDir();
             d.Y = Mathf.Abs(d.Y) * 0.5f + 0.1f;
             float size = _steam.RandRange(0.1f, 0.24f) * grow;
-            _steamBubbles.Emit(on + d * radius * 0.3f, d * _steam.RandRange(2f, 5f) * grow, _steam.RandRange(0.3f, 0.55f), size, size * 0.6f, film, film with { A = 0f }, drag: 4f, buoyancy: 0.8f);
+            _steamBubbles.Emit(on + d * 0.15f, d * _steam.RandRange(2f, 5f) * grow, _steam.RandRange(0.3f, 0.55f), size, size * 0.6f, film, film with { A = 0f }, drag: 4f, buoyancy: 0.8f);
         }
         // The billows: rolling out of the burst, back toward her more than on through it, thinning as they rise.
         int billows = 6 + Mathf.RoundToInt(6f * k);
@@ -881,7 +881,7 @@ void fragment() {
             var d = (_steam.RandDir() - dir * 0.5f).Normalized();
             d.Y = Mathf.Abs(d.Y) * 0.4f + 0.15f;
             float size = _steam.RandRange(0.22f, 0.36f) * grow;
-            _steam.Emit(on + d * radius * 0.6f, d * _steam.RandRange(1.6f, 3.6f) * grow, _steam.RandRange(0.3f, 0.55f), size, size * 2.2f, pale, thin, drag: 3.5f, buoyancy: 0.9f);
+            _steam.Emit(on + d * 0.3f, d * _steam.RandRange(1.6f, 3.6f) * grow, _steam.RandRange(0.3f, 0.55f), size, size * 2.2f, pale, thin, drag: 3.5f, buoyancy: 0.9f);
         }
     }
 
@@ -1147,21 +1147,17 @@ void fragment() {
             }
         }
 
-        // Shockwaves: the ring races out (fast, then easing) and thins; the flash is gone in a blink.
+        // Shockwaves' flashes: gone in a blink.
         for (int i = _shocks.Count - 1; i >= 0; i--)
         {
             var s = _shocks[i];
             s.Age += dt;
-            float k = s.Age / s.Life;
-            if (k >= 1f)
+            if (s.Age >= s.Life)
             {
                 s.Node.QueueFree();
                 _shocks.RemoveAt(i);
                 continue;
             }
-            float ease = 1f - (1f - k) * (1f - k) * (1f - k);
-            s.Node.GetChild<MeshInstance3D>(0).Scale = new Vector3(s.Reach * ease, 0.25f, s.Reach * ease);
-            s.Ring.AlbedoColor = s.Color with { A = s.Color.A * (1f - k) * (1f - k) };
             float f = Mathf.Clamp(1f - s.Age / 0.12f, 0f, 1f);
             s.Core.Scale = Vector3.One * (0.25f + 0.5f * (1f - f)) * Mathf.Min(s.Reach, 3f) * 0.5f;
             s.Flash.AlbedoColor = new Color(1f, 1f, 1f, 0.9f * f);

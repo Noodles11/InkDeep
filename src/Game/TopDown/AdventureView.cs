@@ -323,10 +323,10 @@ public partial class AdventureView : Node3D
         }
     }
 
-    /// <summary>Her light's steam where it struck (CombatView.Steam): the place, the way the light went, the body's radius, how hard.</summary>
-    public System.Action<Vector3, Vector3, float, float>? Steam;
-    /// <summary>A leak's width for the steam, and how hard its sealing.</summary>
-    const float LeakSteamRadius = 0.6f, LeakSteamSealed = 1f;
+    /// <summary>Her light's steam where it struck (CombatView.Steam): the place, the way the light went, how hard.</summary>
+    public System.Action<Vector3, Vector3, float>? Steam;
+    /// <summary>How hard a leak's sealing steams.</summary>
+    const float LeakSteamSealed = 1f;
 
     /// <summary>The adventure's events: dots cleared go up in magic particles, a dot drawn to the boss flies to it, a leak struck steams.</summary>
     public void OnEvent(PlaneWorld world, in PlaneEvent e)
@@ -362,11 +362,11 @@ public partial class AdventureView : Node3D
                 break;
             case PlaneEventType.LeakArmStruck:
                 // Her light splashes off the arm.
-                Steam?.Invoke(at + Vector3.Up * LeakHeight, new Vector3(e.Direction.X, 0f, e.Direction.Y), 0.25f, 0.5f);
+                Steam?.Invoke(at + Vector3.Up * LeakHeight, new Vector3(e.Direction.X, 0f, e.Direction.Y), 0.5f);
                 break;
             case PlaneEventType.LeakSealed:
             case PlaneEventType.LeakDrunk:
-                Steam?.Invoke(at + Vector3.Up * LeakHeight, Vector3.Up, LeakSteamRadius, LeakSteamSealed);
+                Steam?.Invoke(at + Vector3.Up * LeakHeight, Vector3.Up, LeakSteamSealed);
                 Burst(at, 40);
                 break;
         }

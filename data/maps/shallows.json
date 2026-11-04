@@ -10,7 +10,7 @@
   "number": 1,
   "depth": 1,
   "size": 420,
-  // Its light: the Sunken Galleon's (ReefLook.For(3)), dimmer than the open Shallows; the bay keeps its summer night.
+  // Its light: the Sunken Galleon's (ReefLook.For(3)), dimmer than the open Shallows; the bay keeps its summer evening.
   "look": 3,
   "menace": 0,
   "tier": 1,

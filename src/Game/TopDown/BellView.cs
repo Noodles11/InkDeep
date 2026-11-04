@@ -55,6 +55,8 @@ public partial class BellView : Node3D
     OmniLight3D _halo = null!;
     /// <summary>How far her light reaches and how strong it is (before Lantern, glow, her breath and pulse).</summary>
     const float BulbRange = 11f, BulbEnergy = 1.3f;
+    /// <summary>How sharply her light dims with distance (OmniAttenuation), in the Shallows and in the deepest dark.</summary>
+    const float Falloff = 1.7f, FalloffDeep = 1.15f;
     /// <summary>How much of her light gets through (1 all; the curse den's dark fades it).</summary>
     public float Dim = 1f;
     /// <summary>The depth's lantern (ReefLook.Lantern): her light's strength and reach against the dark.</summary>
@@ -191,7 +193,7 @@ public partial class BellView : Node3D
         // black.
         _light = new OmniLight3D
         {
-            LightColor = Glow, LightEnergy = BulbEnergy, OmniRange = BulbRange, OmniAttenuation = 1.4f, OmniShadowMode = OmniLight3D.ShadowMode.DualParaboloid,
+            LightColor = Glow, LightEnergy = BulbEnergy, OmniRange = BulbRange, OmniAttenuation = Falloff, OmniShadowMode = OmniLight3D.ShadowMode.DualParaboloid,
             ShadowEnabled = OctoShoots.Game.Settings.ViewOptions.Shadows, ShadowBias = 0.06f, ShadowNormalBias = 1.2f,
             LightSize = 0.3f, ShadowBlur = 1f, LightSpecular = 0.8f, Position = new Vector3(0f, LightHeight, 0f),
         };
@@ -503,11 +505,12 @@ public partial class BellView : Node3D
         // Lantern Pearl: her glow reaches farther, no stronger (a wider light is already a brighter one).
         float glow = world.Run.Loadout.Stats[OctoShoots.Core.Items.Stat.Glow];
         // Farther and brighter in the dark depths (the lantern): in the Shallows a supplement to the sun, in the Trench and
-        // the Abyss about three times as strong and falling off more gently, so it reaches the floor of the canyons she
-        // swims over.
+        // the Abyss about three times as strong, reaching the floor of the canyons she swims over. It always falls off as a
+        // lamp's does, bright round her and dimming steadily with distance, never an even disc: what lies deeper or farther
+        // is darker, so the reef keeps its depth in her light.
         float deep = Mathf.Clamp((Lantern - 1f) / 0.85f, 0f, 1f);
         _light.OmniRange = BulbRange * Mathf.Sqrt(glow * Lantern);
-        if (!_dbgFalloff) _light.OmniAttenuation = Mathf.Lerp(1.4f, 0.8f, deep);
+        if (!_dbgFalloff) _light.OmniAttenuation = Mathf.Lerp(Falloff, FalloffDeep, deep);
         _light.LightEnergy = BulbEnergy * _dbgEnergy * Mathf.Pow(Lantern, 1.8f) * (0.94f + 0.12f * _pulse) * (0.7f + 0.3f * _breath);
         _light.LightColor = GlowNow.Lerp(PrismColour, _prism).Lerp(new Color(1f, 0.3f, 0.55f), _hurt * 0.5f);
         // The red and the blue, and the title's save slots: lighter lanterns, unshadowed (her own casts the reef's shadows).

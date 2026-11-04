@@ -11,7 +11,7 @@ uniform bool debug_normals = false;
 // The level's cave openings (LevelView.AddDoors, docs/RPG-PROPOSAL.md §2.3): each one's threshold (xy, map metres) and
 // the way into it (zw), and the passages' depth, open half-width and arch top. The deeper into one, the darker, until
 // its back is black: the dark of the cave beyond.
-uniform vec4 doors[4];
+uniform vec4 doors[8];
 uniform int door_count = 0;
 uniform vec3 door_size = vec3(4.5, 1.7, 2.8);
 

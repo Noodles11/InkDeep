@@ -84,8 +84,8 @@ uniform float deep_fish_shade = 0.65;
 /// Swells in the water where she set off, turned or dashed (WaterSwells): x, z (world), age 0 → 1, strength; and the
 /// way she was going (x, z; none for a ring) and its reach (a share of 2.6 m; 0 for 1). A faint spreading ring of
 /// refraction at her plane, strongest behind her.
-uniform vec4 swells[8];
-uniform vec4 swell_dirs[8];
+uniform vec4 swells[16];
+uniform vec4 swell_dirs[16];
 uniform int swell_count = 0;
 // The currents (CurrentView): over her plane, how far along its course each point lies (m), how far off to its side (m),
 // how strongly it shows and which current it is; and each current's roll along its course (m) and strength.
@@ -320,7 +320,7 @@ void fragment() {
 	float column_in = clamp((sea_surface_y - (open_deep ? -40.0 : one_reef ? swim_level - seen : world.y)) / 20.0, 0.0, 1.5);
 	// What her own light falls on keeps its warmth: her light travels a few metres, not down from the surface.
 	float lit = open_deep ? 0.0 : her_clear(world);
-	col *= mix(vec3(1.0), vec3(0.64, 0.9, 1.05), column_in * (1.0 - 0.85 * lit));
+	col *= mix(vec3(1.0), vec3(0.64, 0.9, 1.05), column_in * (1.0 - 0.6 * lit));
 	col = mix(col, reef_water_deep * 0.7, 0.13 * column_in);
 
 	// The water over it: clear in the Shallows (a light veil), thick murk deeper down (reef_fog); and past the reef, the
@@ -330,8 +330,9 @@ void fragment() {
 	float fog = smoothstep(0.0, 1.8, seen) * (veil + (0.85 - veil) * (1.0 - exp(-seen * deep_fog * (0.6 + reef_fog))));
 	// Drawn in felt tip (look 4), the water a lighter veil, so the stippling under it still reads.
 	if (reef_art == 4) fog *= 0.55;
-	// The water she lights is not a veil of murk over what she shows.
-	col = mix(col, water, fog * (1.0 - 0.7 * lit));
+	// The water she lights is a thinner veil over what she shows, never none: what lies deeper still sinks into the water
+	// in her light, so the reef keeps its depth round her.
+	col = mix(col, water, fog * (1.0 - 0.45 * lit));
 	// Fish far under her plane: their vague shadows on all that lies below it, where this pixel's ray crosses their depth (over the
 	// water's veil, which would wash them away).
 	if (deep_fish_count > 0 && below > 0.0) {
@@ -398,10 +399,13 @@ void fragment() {
 	vec3 on_layer = cam + ray * ((player_pos.y - cam.y) / min(ray.y, -1e-3));
 	float ign = fract(52.9829189 * fract(dot(FRAGCOORD.xy, vec2(0.06711056, 0.00583715))));
 	col += her_warm * her_inscatter(cam, ray, t0, open_deep ? t0 + 120.0 : t1, ign);
-	// Her light: its glow in the water all round her, and where it falls on the reef, lit through
-	// the murk however deep that lies.
-	col += her_warm * her_water(cam, ray, t0, open_deep ? t0 + 120.0 : t1, ign) * 0.35;
-	if (!open_deep) col += her_warm * her_light_on(world) * 0.14 * her_lantern;
+	// Her light: a faint glow in the water all round her, and where it falls on the reef a warm lift of what is there
+	// (its own colour brightened, not a haze laid over it), fading as a lamp's light does.
+	col += her_warm * her_water(cam, ray, t0, open_deep ? t0 + 120.0 : t1, ign) * 0.15;
+	if (!open_deep) {
+		float on = her_reach(world);
+		col = col * (1.0 + her_warm * on * 0.6 * her_lantern) + her_warm * on * on * 0.05 * her_lantern;
+	}
 	// Her bubbles carry light: each a small halo of its own on the same layer, the same depth-darkness scaling as hers
 	// (subtle in the bright Shallows, glorious in the deep).
 	float bubbles = 0.0;

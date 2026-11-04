@@ -306,27 +306,33 @@ Each step is playable on its own:
   - **Home:** swimming back into it heals her whole (`PlaneWorld.StepHaven`, `HavenEntered`), and the Tide Fan ties
     new ribbons; so it has no light spring (`LightSprings.Of` places none in it). Its name shows as she crosses in
     ("Lantern Bay · Safe water"), the region's as she leaves ("Sunlit Shallows · The open reef").
-  - **Its night:** it lies under a summer night (`ReefLook.Bay`): moon-blue water, silvered sand, a low moon's soft
-    caustics, and Clementine's light the warmest and brightest thing in it, pooling round her wherever she swims.
+  - **Its evening:** it is the Sunlit Shallows themselves (the first depth's look) at the soft end of a summer day,
+    safe and joyful (`ReefLook.Bay`): the same turquoise over sand, pink coral and saturated life, the same caustics
+    and shafts, all gentler and dimmed under a low pale-gold sun, so Clementine's light is the warmest and brightest
+    thing in it, pooling round her wherever she swims.
     Swimming out, the water turns to the reef's look over the 24 m past its edge (`TopDownMain.StepHavenLook`).
   - **Known:** its whole chart and every place in it show on the minimap and the Tab map from the start
     (`FogOfWar.RevealBox`); the rest of the reef is charted as she swims it.
   - **Its shop** sells only while she is in it (the Pearls tab's Change and Sell).
 - **Cave openings** (`Doorway`, `TopDownGenerator.CutDoorway`): a region's cave mouths and a leak cave's way out are
   openings in a wall, as a real cave's are, not spots on the floor.
-  - **Where:** from a drawn mouth's point (or a leak cave's start), the nearest stretch of wall with rock enough round
-    it. A wall north of the water is sought first, so the opening's face looks toward the camera; then one to the side;
-    then any. A leak cave whose start chamber has no room takes the nearest wall along its way in.
+  - **Where:** from a drawn mouth's point, the nearest stretch of wall with rock enough round it. A wall north of the
+    water is sought first, so the opening's face looks toward the camera; then one to the side; then any.
+  - **A leak cave's way in** faces the mouth she swam into, so she comes out of it still swimming the way she went: in
+    by a mouth on the right, out of the cave's left wall (`GenerateCave`'s `into`). The wall going that way within
+    about 30° is sought first in the water up to 24 m round its start, the nearer the start the better; then within
+    63°; then within a right angle; at the last, any wall along its way in.
   - **The rock:** the rock round it is raised into a rough mound (only where rock already stands, so no water is ever
     closed off), and a passage 4.5 m deep and 3.4 m wide is cut into it from a short notch at the water's edge. The
     mound's rock over the passage stays as its roof (`LevelMap.Roof`), drawn in the reef's own ground, and its face
     stands at the threshold with a round-topped arch cut in it, ringed with rough rock (`LevelView.AddDoors`).
-  - **The dark:** the passage darkens the deeper in it goes until it is black (`topdown_ground`'s `door_dark`). At its
-    far end a region mouth shows the Leak's own black, its violet ink stirring; a leak cave's way out shows the water
-    outside shining in (`PortalView`, `cave_throat.gdshader`).
-  - **Through it:** swimming 1.4 m into a passage (`ReefTuning.MouthIn`) takes her through. She swims on into its dark
-    as the place dissolves round her, and comes out of the next place's opening, swimming out of its dark into the
-    water (`TopDownMain.StepRide`, `StepArrive`). In a leak cave she always starts at the back of its way out.
+  - **The dark:** the passage darkens the deeper in it goes until it is black (`topdown_ground`'s `door_dark`), and its
+    far end is plain dark (`PortalView`, `cave_throat.gdshader`): no portal is drawn in an opening.
+  - **Through it:** swimming 1.4 m into a passage (`ReefTuning.MouthIn`) takes her through, seamlessly. She swims on
+    into its dark at her own pace as the screen goes black over 0.45 s. While the next place is made, the screen stays
+    black with her gonad turning in its middle and nothing else (`Blackout`). Then she is at the back of the next
+    place's opening, swimming out of its dark the way she swam in as the black lifts over 0.5 s (`TopDownMain.StepRide`,
+    `StepArrive`). In a leak cave she always starts at the back of its way in.
 - **A region's chart:** what she has charted of a region (its map's fog, a byte a grid point) and the places she has
   been to there are kept on her jelly (`Jelly.Charts`, written with the rest of her), so trips into its caves and home
   never wipe its map.
@@ -367,10 +373,11 @@ Each step is playable on its own:
 - **The current ride** (`TopDownMain.BeginRide`, `StepRide`, `StepArrive`):
   - **Where it goes:** a mouth leads to its cave, and a cave's way out leads back out of that mouth. (A current station
     would lead to another region's map; there is none yet.)
-  - **Leaving:** she is swept off and lifted. The place dissolves round where she was (the dive's iris) until only
-    water and streaming snow are left, and the next place is made meanwhile; the ride lasts at least 2.4 s.
-  - **Arriving:** she comes down into the next place from a level's height above, still carried the way the current
-    took her. The place opens out round her, and she settles in its water.
+  - **Leaving:** on a current, she is swept off and lifted. The place dissolves round where she was (the dive's iris)
+    until only water and streaming snow are left, and the next place is made meanwhile; the ride lasts at least 2.4 s.
+    Through a cave opening, she goes into its dark instead (Cave openings, above).
+  - **Arriving:** off a current, she comes down into the next place from a level's height above, still carried the
+    way the current took her. The place opens out round her, and she settles in its water.
   - **No bounce-back:** a way through takes her only once she has swum clear of the one she came out of.
 - **Jellies** (`SaveFile.Jellies`, `Jelly`, `JellyLook`, `JellyNames`; the title's Play drawer, `JellyCard`):
   - **Save slots:** each jelly is a save of her own, at most three on a machine (`JellyNames.MaxJellies`). Play opens

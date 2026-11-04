@@ -935,8 +935,11 @@ exactly and cheaply, and the water glows where light passes through it.
   It burns nothing: her shots' light does (docs/ADVENTURE.md §8). A faint short glow round the bell (3 m) keeps what swims right beside her from going black. Its strength follows the
   depth's **Lantern** (`ReefLook.Lantern`, §5.1): 1 in the Shallows, 1.1 Kelp, 1.35 Galleon, 1.5 Carnival, 1.85 Trench, 2
   Abyss, 0.6 Tank; it is 0.45 × Lantern^1.8 strong (`BellView.BulbEnergy`), reaches 9 m × √(Lantern × Lantern Pearl's glow; the pearl makes it no stronger)
-  and falls off more gently the deeper she is. Her glow in the water is even all round her and nothing cuts it, and the
-  warm pool it leaves on the floor below is centred on her as the eye sees her, not straight under her.
+  and falls off as a lamp's does, bright round her and dimming steadily with distance (`OmniAttenuation` 1.7 in the
+  Shallows easing to 1.15 in the deepest dark, `BellView.Falloff`), never an even disc: a soft, picturesque pool of
+  light, what lies farther or deeper darker, so the reef keeps its depth in it. Her glow in the water is even all round
+  her and nothing cuts it, and the warm pool it leaves on the floor below is centred on her as the eye sees her, not
+  straight under her.
 - **Where her light reaches — the horizon map** (`HorizonMap.cs`): round her light, for 256 directions × 32 distances
   (out to its reach), the running steepest slope of the terrain (its height over the light ÷ the distance). A point is
   lit exactly when its own slope from the light clears that; one texture lookup (`her_vis`), soft at the edge. Close
@@ -949,7 +952,7 @@ exactly and cheaply, and the water glows where light passes through it.
   it wavering with eddies of denser water and shoved outward along its crest (a sharp leading edge, a softer wake),
   strongest behind her, the water a shade thicker where it passes. A dash pushes hardest (1), setting off less (0.5), a
   turn least (0.4). Heavy blows add even rings of their own (a Blightroot's head coming down; Tide Pulse's three
-  waves, running out sharply to their reach). At most eight at once, one of hers every 0.28 s; off with reduced
+  waves, running out sharply to their reach; her light's hits and bangs). At most sixteen at once, one of hers every 0.28 s; off with reduced
   motion.
 - **A flinch and a jolt on every hit** (`BlightView.Flinch`, `CameraRig.Shake`): a corrupted creature her light
   strikes contracts for a moment (by 10–30%, more for a harder hit) and rebounds past its size as it settles, within
@@ -969,8 +972,11 @@ exactly and cheaply, and the water glows where light passes through it.
   approach and θ the angle seen from the light; 10 samples spaced evenly in that angle (equiangular sampling, jittered
   per pixel) carry equal weight, so the unshadowed glow is exact and only the shadows are sampled: walls, boulders and
   rises cut dark shafts into her glow. Forward-scattering (Henyey-Greenstein, g 0.25), stronger in murkier water. What
-  she lights keeps its warmth: the water pass's red loss, its veil over the deeps and its cool shadow grade ease off
-  in proportion to how strongly her light falls on a point.
+  she lights keeps its warmth: the water pass's red loss and its cool shadow grade ease off in proportion to how
+  strongly her light falls on a point, and its veil over the deeps thins (by at most 45%), never clears, so what lies
+  deeper still sinks into the water in her light. Where her light falls on the reef it lifts what is there in its own
+  colour (multiplied, warmed, fading with her light's falloff), with only a trace laid over it, so it never reads as a
+  bright haze or a mask.
 - **Where the sun reaches — the sun map** (`SunMap.cs`, sunlight.gdshaderinc `sun_lit`): for every point of the sea
   surface, the height where its ray of sunlight first meets the reef (terrain, a cave's roof, an arch or overhang),
   cast once per level on a worker thread (a 200 × 200 map). The god rays are summed only where the sun reaches, so

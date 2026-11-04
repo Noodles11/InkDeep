@@ -1,6 +1,6 @@
 // The bay's mirror (docs/RPG-PROPOSAL.md §8): a still pool of polished nacre on the floor. It mirrors the water and
-// the sky above (the reef's own colours: by the bay's summer night, a moon-blue sheen with the moon's ripples sliding
-// over it and a few stars), thin-film nacre colours (rose, gold, sea green, lilac) round its lip and with the angle;
+// the sky above (the reef's own colours: by the bay's summer evening, a turquoise sheen with the low sun's ripples
+// sliding over it and a few early stars), thin-film nacre colours (rose, gold, sea green, lilac) round its lip and with the angle;
 // and over it she shows in it too, her own glow mirrored under her, rings spreading from it when she is near. Lighter
 // than the floor round it where a cave mouth is dark: it must never read as the Leak's.
 shader_type spatial;
@@ -38,7 +38,7 @@ void fragment() {
 	// Growth lines, faint, round the middle as in a shell's inside.
 	float lines = sin(r * 30.0 + sin(atan(p.y, p.x) * 3.0) * 0.6) * 0.5 + 0.5;
 	vec3 film = nacre(r * 0.6 + grazing * 0.8 + lines * 0.05 + (v_world.x + v_world.z) * 0.02 + TIME * 0.01);
-	// The water and sky above, mirrored: the sea's own colour lifted, the sun's (or the moon's) ripples sliding over it,
+	// The water and sky above, mirrored: the sea's own colour lifted, the sun's ripples sliding over it,
 	// and a few stars twinkling in it.
 	vec2 w = v_world.xz * 1.6;
 	float ripple = sin(w.x + TIME * 0.7 + sin(w.y * 1.3 + TIME * 0.5)) * sin(w.y * 0.9 - TIME * 0.6 + sin(w.x * 1.1)) * 0.5 + 0.5;

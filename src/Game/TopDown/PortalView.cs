@@ -7,9 +7,8 @@ namespace OctoShoots.Game.TopDown;
 
 /// <summary>
 /// The open reef's ways through (docs/RPG-PROPOSAL.md §2–3): a hand-drawn map's current station, a bright swirl of
-/// streaming water on the floor where the ride starts; and the dark in each cave opening (its rock is LevelView's). A
-/// region's open mouth is the Leak's own, black, its slow ink stirring at the back (none where a mouth is shut, its cave
-/// sealed: its plug of rock closes it); a leak cave's way out shows the water outside shining in at its far end.
+/// streaming water on the floor where the ride starts; and the plain dark at the back of each cave opening (its rock is
+/// LevelView's), none where a region's mouth is shut, its cave sealed (its plug of rock closes it).
 /// </summary>
 public partial class PortalView : Node3D
 {
@@ -20,8 +19,8 @@ public partial class PortalView : Node3D
         foreach (var child in GetChildren()) child.QueueFree();
         if (map.Station) Add(map.Exit.Position, ReefTuning.StationReach * 2.6f);
         for (int i = 0; i < map.Mouths.Count; i++)
-            if (shut?.Contains(i) != true) AddThroat(map.Mouths[i], wayOut: false);
-        if (map.Way is { } way) AddThroat(way, wayOut: true);
+            if (shut?.Contains(i) != true) AddThroat(map.Mouths[i]);
+        if (map.Way is { } way) AddThroat(way);
     }
 
     void Add(System.Numerics.Vector2 at, float size)
@@ -43,7 +42,7 @@ public partial class PortalView : Node3D
     /// An opening's far end: a sheet across the back of its passage in its arch's shape (the passage itself darkens into
     /// it in the ground's own shader).
     /// </summary>
-    void AddThroat(Doorway door, bool wayOut)
+    void AddThroat(Doorway door)
     {
         _throat ??= GD.Load<Shader>("res://assets/shaders/cave_throat.gdshader");
         const float floor = -1.3f;
@@ -52,7 +51,6 @@ public partial class PortalView : Node3D
         material.SetShaderParameter("half_width", LevelView.DoorArchHalf);
         material.SetShaderParameter("spring", LevelView.DoorSpring - floor);
         material.SetShaderParameter("height", height);
-        material.SetShaderParameter("way_out", wayOut ? 1f : 0f);
         var at = door.At + door.Into * (Doorway.Depth - 0.4f);
         // The sheet faces out of the opening (its +Z), standing on the passage floor.
         var outward = new Vector3(-door.Into.X, 0f, -door.Into.Y);

@@ -10,7 +10,7 @@ namespace OctoShoots.Game.Fx;
 /// </summary>
 public sealed class WaterSwells
 {
-    public const int Max = 8;
+    public const int Max = 16;
     const float Life = 0.7f;
 
     /// <summary>Per swell: x, z (world), age (0 → 1), strength (0..1).</summary>
@@ -36,8 +36,8 @@ public sealed class WaterSwells
     }
 
     /// <summary>
-    /// A ring of the water shoved outward (a heavy blow: a Blightroot's head coming down; Tide Pulse's waves): even all
-    /// round, out to reach × 2.6 m, as strong as strength (up to 2), over life seconds, its front running out as sharply
+    /// A ring of the water shoved outward (a heavy blow: a Blightroot's head coming down; Tide Pulse's waves; her light
+    /// striking, or bursting with a bang): even all round, out to reach × 2.6 m, as strong as strength (up to 2), over life seconds, its front running out as sharply
     /// as snap (the ease's power: 2 a plain ease-out, higher reaching its width sooner).
     /// </summary>
     public void AddRing(Vector2 at, float strength, float reach, float life = Life, float snap = 2f)

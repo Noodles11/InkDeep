@@ -957,7 +957,7 @@ public partial class LevelView : Node3D
         var doors = map.Mouths.ToList();
         if (map.Way is { } way) doors.Add(way);
         // The ground darkens into each passage (topdown_ground's door_dark).
-        var dark = new Vector4[4];
+        var dark = new Vector4[8];
         for (int k = 0; k < doors.Count && k < dark.Length; k++) dark[k] = new Vector4(doors[k].At.X, doors[k].At.Y, doors[k].Into.X, doors[k].Into.Y);
         _ground.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("doors"), dark);
         _ground.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("door_count"), Math.Min(doors.Count, dark.Length));

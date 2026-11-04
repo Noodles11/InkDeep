@@ -94,6 +94,27 @@ public class OpenReefTests
     }
 
     [Fact]
+    public void ALeakCavesWayInFacesTheMouthSheSwamInto_SoSheComesOutStillSwimmingTheWaySheWent()
+    {
+        var ways = new[] { new Vector2(1f, 0f), new Vector2(-1f, 0f), new Vector2(0f, -1f), new Vector2(0f, 1f) };
+        int near = 0, all = 0;
+        for (int k = 0; k < 12; k++)
+            foreach (var went in ways)
+            {
+                var map = TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("shallows", Shallows.Value.Depth, k), 0f, 2, went);
+                var way = Assert.NotNull(map.Way);
+                AssertAnOpeningInAWall(map, way);
+                Assert.NotEmpty(LevelValidator.ShortestPath(map, map.Exit.Position, way.At - way.Into * 1.5f, clearance: 0.5f));
+                // Out of it she swims -Into: the way she swam into the mouth.
+                float along = Vector2.Dot(-way.Into, went);
+                Assert.True(along > 0f, $"cave {k} in by {went}: out of its way in by {-way.Into}");
+                if (along > 0.85f) near++;
+                all++;
+            }
+        Assert.True(near >= all * 9 / 10, $"{near} of {all} within about 30°");
+    }
+
+    [Fact]
     public void ALeakCaveHasOneLeakAtTheDeadEndOfItsPath_NoShaft_AndIsMostlyInked()
     {
         var map = Cave.Value;
