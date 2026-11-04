@@ -85,6 +85,8 @@ public sealed class PlaneSchool
     public float Radius = ReefFishTuning.SchoolRadius;
     /// <summary>How many fish it has (their Slot runs 0 → Count − 1).</summary>
     public int Count;
+    /// <summary>Its fish, in the order they were placed (a chromis's neighbours are looked for only among them).</summary>
+    public readonly List<PlaneReefFish> Fish = new();
     /// <summary>Guiding her to the secret: the arrow it is forming (0 a loose school → 1 the full arrow), and its heading.</summary>
     public bool Guiding;
     public float Form;
@@ -265,11 +267,13 @@ public sealed partial class PlaneWorld
                 var q = at + new Vector2(MathF.Cos(a), MathF.Sin(a)) * r;
                 if (!Clear(q, ReefFishTuning.ChromisRadius)) q = at;
                 float heading = rng.Range(-0.4f, 0.4f);
-                ReefFish.Add(new PlaneReefFish
+                var fish = new PlaneReefFish
                 {
                     Kind = ReefFishKind.Chromis, Id = ids++, Host = school, Slot = k, Home = at, Position = q, Heading = heading,
                     Velocity = new Vector2(MathF.Cos(heading), MathF.Sin(heading)) * 0.5f, Rng = new Rng(rng.NextU64()),
-                });
+                };
+                ReefFish.Add(fish);
+                Schools[school].Fish.Add(fish);
             }
         }
     }
@@ -288,7 +292,8 @@ public sealed partial class PlaneWorld
 
     void StepReefFish()
     {
-        foreach (var s in Schools) StepSchool(s);
+        foreach (var s in Schools)
+            if (!Asleep(s.Position)) StepSchool(s);
         foreach (var f in ReefFish)
         {
             if (f.Corrupted || f.Gone) continue;
@@ -306,6 +311,8 @@ public sealed partial class PlaneWorld
                 if (f.Turning <= 0f) TurnFish(f);
                 continue;
             }
+            // A chromis lives with its school (asleep with it).
+            if (Asleep(f.Kind == ReefFishKind.Chromis ? Schools[f.Host].Position : f.Position)) continue;
             switch (f.Kind)
             {
                 case ReefFishKind.Clownfish: StepClownfish(f); break;
@@ -497,9 +504,9 @@ public sealed partial class PlaneWorld
         var school = Schools[f.Host];
         Vector2 apart = Vector2.Zero, along = Vector2.Zero;
         int near = 0;
-        foreach (var o in ReefFish)
+        foreach (var o in school.Fish)
         {
-            if (o == f || o.Kind != ReefFishKind.Chromis || o.Host != f.Host || o.Corrupted || o.Turning > 0f) continue;
+            if (o == f || o.Corrupted || o.Turning > 0f) continue;
             Vector2 d = f.Position - o.Position;
             float l2 = d.LengthSquared();
             if (l2 > ReefFishTuning.Align * ReefFishTuning.Align) continue;

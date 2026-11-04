@@ -787,7 +787,7 @@ public sealed partial class PlaneWorld
 
         foreach (var m in Murklings)
         {
-            if (!m.Alive) continue;
+            if (!m.Alive || Asleep(m.Position)) continue;
             if (m.Budding)
             {
                 // It drinks the ink round it up into itself: the ground it takes is left empty (no gold: she did not cleanse it).

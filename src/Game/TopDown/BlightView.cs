@@ -30,6 +30,10 @@ public partial class BlightView : Node3D
 
     readonly List<Root> _roots = new();
     readonly List<MeshInstance3D> _murks = new(), _throws = new();
+    /// <summary>The murkling each body was last drawn for (a far one keeps its look only while it is still the same one).</summary>
+    readonly List<Murkling?> _murkFor = new();
+    /// <summary>Murklings farther than this from her are off the screen (metres).</summary>
+    const float Drawn = 50f;
     readonly List<Ripple> _ripples = new();
     ShaderMaterial _orb = null!, _sacMat = null!, _ring = null!;
     /// <summary>The swells in the water (WaterSwells): a Blightroot's head coming down shoves the water out in rings.</summary>
@@ -120,6 +124,7 @@ public partial class BlightView : Node3D
             var m = new MeshInstance3D { Mesh = _sphere, MaterialOverride = _orb, CastShadow = GeometryInstance3D.ShadowCastingSetting.On };
             AddChild(m);
             _murks.Add(m);
+            _murkFor.Add(null);
         }
         for (int i = 0; i < _murks.Count; i++)
         {
@@ -127,6 +132,14 @@ public partial class BlightView : Node3D
             view.Visible = i < world.Murklings.Count;
             if (!view.Visible) continue;
             var m = world.Murklings[i];
+            // Far off the screen (the open reef's far packs, asleep): it keeps the look it was last drawn with.
+            bool far = System.Numerics.Vector2.DistanceSquared(m.Position, world.Player.Position) > Drawn * Drawn;
+            if (far && ReferenceEquals(_murkFor[i], m))
+            {
+                if (_bodies.TryGetValue(m, out var kept)) kept.Seen = true;
+                continue;
+            }
+            _murkFor[i] = m;
             // Its own liquid body (BlightView.Murklings): its material carries its shape and its holes.
             var body = BodyOf(m);
             view.MaterialOverride = body.Material;

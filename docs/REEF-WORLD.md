@@ -103,6 +103,9 @@ their own below the shelf.
     | Sunken Galleon | 10 | 3–4 | 10% |
     | Coral Carnival | 12 | 4–5 | 30% |
 
+  - **Waiting** (`ReefTuning.Awake`, 60 m): only the fish and murklings within this of her live. The rest hold still
+    where they are until she comes near, as a Diablo map's far monsters wait. This keeps the 840 m reef cheap to run.
+    The views also draw only what is within 50 m of her, and only the kelp beds she is near sway.
   - **Caves:** murklings and primes, more on every floor down (its Menace).
   - **Menace** on the open reef is the zone's she is in (`PlaneWorld.Menace`), so what lives round her is as fierce as
     her zone.

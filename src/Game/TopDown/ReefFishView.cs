@@ -50,7 +50,11 @@ public partial class ReefFishView : Node3D
     readonly List<Node> _nodes = new();
     readonly List<Pose> _poses = new();
     readonly List<float> _hostTops = new();
+    /// <summary>Whether each anemone is shown as turned (hidden), so it is set only when that changes.</summary>
+    readonly List<bool> _hidden = new();
     LevelMap? _map;
+    /// <summary>Fish farther than this from her are off the screen: they keep their last pose (metres).</summary>
+    const float Drawn = 50f;
 
     public override void _Ready()
     {
@@ -89,6 +93,7 @@ public partial class ReefFishView : Node3D
         foreach (var node in _nodes) node.QueueFree();
         _nodes.Clear();
         _anemones.Clear();
+        _hidden.Clear();
         _groups.Clear();
         _poses.Clear();
         var index = new Dictionary<(ReefFishKind, int), int>();
@@ -118,6 +123,7 @@ public partial class ReefFishView : Node3D
             var place = new Transform3D(basis, new Vector3(a.Position.X, floor, a.Position.Y));
             mm.SetInstanceTransform(0, place);
             _anemones.Add((mm, place));
+            _hidden.Add(false);
             var c = AnemoneColours[i % AnemoneColours.Length];
             mm.SetInstanceCustomData(0, new Color(c.R, c.G, c.B, 0f));
             // Where its clownfish nestle: among the tentacles, a little under their tips.
@@ -132,7 +138,12 @@ public partial class ReefFishView : Node3D
         if (_poses.Count != world.ReefFish.Count) Show(world);
         // An anemone turned (an Inkwarden now, BlightView draws it) is gone from its shelf until it is freed.
         for (int i = 0; i < _anemones.Count && i < world.Anemones.Count; i++)
-            _anemones[i].Mesh.SetInstanceTransform(0, world.Anemones[i].Turned ? new Transform3D(Basis.Identity.Scaled(Vector3.Zero), _anemones[i].At.Origin) : _anemones[i].At);
+        {
+            bool turned = world.Anemones[i].Turned;
+            if (_hidden[i] == turned) continue;
+            _hidden[i] = turned;
+            _anemones[i].Mesh.SetInstanceTransform(0, turned ? new Transform3D(Basis.Identity.Scaled(Vector3.Zero), _anemones[i].At.Origin) : _anemones[i].At);
+        }
         foreach (var g in _groups)
         {
             g.Min = Vector3.Inf;
@@ -147,6 +158,15 @@ public partial class ReefFishView : Node3D
             {
                 // A lesser murkling now (BlightView draws it): out of the reef until it is freed. Or swum off, gone.
                 _groups[p.Group].Mesh.SetInstanceTransform(p.Slot, new Transform3D(Basis.Identity.Scaled(Vector3.Zero), Vector3.Zero));
+                continue;
+            }
+            var group = _groups[p.Group];
+            if (System.Numerics.Vector2.DistanceSquared(f.Position, world.Player.Position) > Drawn * Drawn && !float.IsNaN(p.Height))
+            {
+                // Far off the screen: it keeps the pose it was last drawn in (its group's bounds still hold it).
+                var still = new Vector3(f.Position.X, p.Height, f.Position.Y);
+                group.Min = group.Min.Min(still);
+                group.Max = group.Max.Max(still);
                 continue;
             }
             // Turning: ink creeps over it as it shrinks toward the bead it will be.
@@ -175,7 +195,6 @@ public partial class ReefFishView : Node3D
 
             float turn = Mathf.Clamp(f.TurnRate / 2.5f, -1f, 1f);
             var basis = (new Basis(Vector3.Up, p.Yaw) * new Basis(Vector3.Right, p.Roll) * new Basis(Vector3.Back, p.Pitch)).Scaled(Vector3.One * (1f - 0.35f * ink));
-            var group = _groups[p.Group];
             var at = new Vector3(f.Position.X, p.Height + bob, f.Position.Y);
             group.Mesh.SetInstanceTransform(p.Slot, new Transform3D(basis, at));
             group.Mesh.SetInstanceCustomData(p.Slot, new Color(p.Tail, p.Fin, p.Swim, turn));

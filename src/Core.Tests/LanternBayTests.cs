@@ -95,6 +95,25 @@ public class LanternBayTests
     }
 
     [Fact]
+    public void FarFromHerTheReefWaits_ItsPacksAndSchoolsLiveOnlyNearHer()
+    {
+        var w = World(ReefMap.Value);
+        bool Far(System.Numerics.Vector2 p) => Vector2.Distance(p, w.Player.Position) > ReefTuning.Awake + 5f;
+        var packs = w.Murklings.Where(m => Far(m.Position)).Select(m => (m, m.Position)).ToList();
+        var schools = w.Schools.Where(s => Far(s.Position)).Select(s => (s, s.Position)).ToList();
+        Assert.NotEmpty(packs);
+        Assert.NotEmpty(schools);
+        for (int i = 0; i < 240; i++) w.Step(default);
+        Assert.All(packs, p => Assert.Equal(p.Position, p.m.Position));
+        Assert.All(schools, s => Assert.Equal(s.Position, s.s.Position));
+        // She swims up to a school: it comes alive round her.
+        var (near, at) = schools[0];
+        w.Player.Position = w.Player.PrevPosition = at + new Vector2(6f, 0f);
+        for (int i = 0; i < 600; i++) w.Step(default);
+        Assert.NotEqual(at, near.Position);
+    }
+
+    [Fact]
     public void InTheBaySheIsSafe_LeavingItSheIsOnTheOpenReef_AndComingHomeHealsHerWhole()
     {
         var map = ReefMap.Value;

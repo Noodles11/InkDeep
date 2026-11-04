@@ -55,6 +55,11 @@ public static class ReefTuning
     };
     /// <summary>No pack within this of a cave's mouth or the haven (twice it of her start).</summary>
     public const float PackClear = 14f;
+    /// <summary>
+    /// On the zoned reef only what is within this of her lives (its fish and murklings); the rest hold still where they
+    /// are until she comes near, as a Diablo map's far monsters wait (and the 840 m reef stays cheap to run).
+    /// </summary>
+    public const float Awake = 60f;
     /// <summary>A sealed cave's mouth stays shut this long of her play time (s); then the Leak seeps back and it opens on a fresh cave.</summary>
     public const double Recorrupt = 15 * 60;
 
@@ -279,6 +284,9 @@ public sealed partial class PlaneWorld
     /// she leaves a sealed cave by the upwelling where it was).
     /// </summary>
     public bool CaveLeakOpen => Map.LeakCave && (LeaksOpen > 0 || Map.HoleDown);
+
+    /// <summary>On the zoned reef, too far from her to live just now (ReefTuning.Awake): it holds still where it is.</summary>
+    bool Asleep(Vector2 at) => Map.Zones.Count > 0 && Vector2.DistanceSquared(at, Player.Position) > ReefTuning.Awake * ReefTuning.Awake;
 
     float _caveBud;
 

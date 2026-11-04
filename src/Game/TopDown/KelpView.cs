@@ -45,6 +45,10 @@ public partial class KelpView : Node3D
         public Vector2 Center;
         public float Radius;
         public readonly List<Strand> Strands = new();
+        /// <summary>Its first strand in the vertex buffer (its strands follow in order), whether it moved this frame, and its points as streamed.</summary>
+        public int First;
+        public bool Awake;
+        public byte[] Bytes = System.Array.Empty<byte>();
     }
 
     readonly struct Mover
@@ -63,14 +67,15 @@ public partial class KelpView : Node3D
     MeshInstance3D _under = null!, _over = null!;
     ShaderMaterial _material = null!, _overMaterial = null!;
     Vector3[] _verts = System.Array.Empty<Vector3>();
-    /// <summary>The blades' points as the vertex buffer holds them (x, y, z floats), streamed to it each frame.</summary>
+    /// <summary>A bed's points as the vertex buffer holds them (x, y, z floats), on their way to its bytes.</summary>
     float[] _floats = System.Array.Empty<float>();
-    byte[] _bytes = System.Array.Empty<byte>();
     Color[] _colors = System.Array.Empty<Color>();
     Vector2[] _uvs = System.Array.Empty<Vector2>();
     int[] _indices = System.Array.Empty<int>();
     /// <summary>Whether the blades' surface is built (then only its points are streamed in).</summary>
     bool _built;
+    /// <summary>Whether every bed has been turned to the camera since the level was built.</summary>
+    bool _faced;
     float _time;
 
     public override void _Ready()
@@ -116,10 +121,14 @@ public partial class KelpView : Node3D
             _beds.Add(bed);
         }
         int strands = 0;
-        foreach (var b in _beds) strands += b.Strands.Count;
+        foreach (var b in _beds)
+        {
+            b.First = strands;
+            b.Bytes = new byte[b.Strands.Count * Nodes * 2 * 3 * sizeof(float)];
+            strands += b.Strands.Count;
+        }
         _verts = new Vector3[strands * Nodes * 2];
         _floats = new float[_verts.Length * 3];
-        _bytes = new byte[_floats.Length * 4];
         _colors = new Color[_verts.Length];
         _uvs = new Vector2[_verts.Length];
         // What never changes: each point's place along its blade, and the blade's seed and shade.
@@ -140,8 +149,8 @@ public partial class KelpView : Node3D
             }
         }
         _mesh.ClearSurfaces();
-        _built = false;
-        _indices = new int[strands * (Nodes - 1) * 6];
+        _built = _faced = false;
+        _indices =new int[strands * (Nodes - 1) * 6];
         int n = 0;
         for (int s = 0; s < strands; s++)
         for (int i = 0; i < Nodes - 1; i++)
@@ -181,7 +190,8 @@ public partial class KelpView : Node3D
         float h = dt / Steps;
         foreach (var bed in _beds)
         {
-            if (bed.Center.DistanceTo(her) > Awake + bed.Radius) continue;
+            bed.Awake = bed.Center.DistanceTo(her) <= Awake + bed.Radius;
+            if (!bed.Awake) continue;
             // Only the swimmers near this bed stir its water.
             _near.Clear();
             foreach (var m in _movers)
@@ -247,13 +257,17 @@ public partial class KelpView : Node3D
         Vector3 At(System.Numerics.Vector2 p, float y) => new(p.X, y, p.Y);
         float plane = LevelMap.SwimBand;
         _movers.Add(new Mover(bell, V(world.Player.Velocity), world.Radius));
-        foreach (var m in world.Murklings) if (m.Alive && !m.Budding) _movers.Add(new Mover(At(m.Position, plane), V(m.Velocity) + V(m.Knock), m.Body));
+        // Only what could reach a bed awake round her (the open reef's far swimmers stir nothing that moves).
+        var her = world.Player.Position;
+        const float reach = Awake + 2f * TopDownGenerator.KelpRadiusMax + KelpReachMax + Stir + 2f;
+        bool Near(System.Numerics.Vector2 p) => System.Numerics.Vector2.DistanceSquared(p, her) < reach * reach;
+        foreach (var m in world.Murklings) if (m.Alive && !m.Budding && Near(m.Position)) _movers.Add(new Mover(At(m.Position, plane), V(m.Velocity) + V(m.Knock), m.Body));
         foreach (var b in world.Blotters) if (b.Alive && b.Rise <= 0f) _movers.Add(new Mover(At(b.Position, plane - 0.2f), V(b.Velocity) + V(b.Knock), BlotterTuning.Radius));
         foreach (var w in world.Inkwardens) if (w.Alive) _movers.Add(new Mover(At(w.Position, plane + 0.3f), V(w.Velocity) + V(w.Knock), WardenTuning.Radius));
         foreach (var t in world.Thumpsquirts) if (t.Alive) _movers.Add(new Mover(At(t.Position, plane + 0.2f), V(t.Velocity) + V(t.Knock), ThumpTuning.Body));
         foreach (var m in world.Mobs) if (m.Alive) _movers.Add(new Mover(At(m.Position, plane), V(m.Velocity) + V(m.Knock), m.Radius));
-        foreach (var f in world.Fish) _movers.Add(new Mover(At(f.Position, plane), V(f.Velocity), 0.35f));
-        foreach (var f in world.ReefFish) _movers.Add(new Mover(At(f.Position, plane), V(f.Velocity), 0.2f));
+        foreach (var f in world.Fish) if (Near(f.Position)) _movers.Add(new Mover(At(f.Position, plane), V(f.Velocity), 0.35f));
+        foreach (var f in world.ReefFish) if (Near(f.Position)) _movers.Add(new Mover(At(f.Position, plane), V(f.Velocity), 0.2f));
         foreach (var s in world.Shots)
             if (s.FromPlayer && s.Life > 0f) _movers.Add(new Mover(At(s.Position, plane + 0.7f), V(s.Velocity) * 0.2f, s.Radius));
     }
@@ -375,13 +389,47 @@ public partial class KelpView : Node3D
     /// <summary>
     /// The blades: each strand a ribbon turned mostly toward the camera (so it shows its breadth), twisting a little
     /// along it. Built once; after that only the points are streamed into its vertex buffer (the shader turns the
-    /// blades' faces to the camera).
+    /// blades' faces to the camera). Only the beds that moved this frame are rebuilt and streamed; the rest keep the
+    /// pose they were last drawn in.
     /// </summary>
     void Draw(Camera3D? camera)
     {
         var toCam = camera is not null ? camera.GlobalBasis.Z : new Vector3(0f, 0.87f, 0.5f);
-        int s = 0;
+        // The first frame with the camera turns every bed to it.
+        bool all = !_faced;
+        if (camera is not null) _faced = true;
         foreach (var bed in _beds)
+        {
+            if (_built && !bed.Awake && !all) continue;
+            DrawBed(bed, toCam);
+            if (!_built || bed.Strands.Count == 0) continue;
+            int first = bed.First * Nodes * 2;
+            for (int k = 0; k < bed.Strands.Count * Nodes * 2; k++)
+            {
+                var p = _verts[first + k];
+                _floats[k * 3] = p.X;
+                _floats[k * 3 + 1] = p.Y;
+                _floats[k * 3 + 2] = p.Z;
+            }
+            System.Buffer.BlockCopy(_floats, 0, bed.Bytes, 0, bed.Bytes.Length);
+            RenderingServer.MeshSurfaceUpdateVertexRegion(_mesh.GetRid(), 0, first * 3 * sizeof(float), bed.Bytes);
+        }
+        if (_verts.Length == 0 || _built) return;
+        var arrays = new Godot.Collections.Array();
+        arrays.Resize((int)Mesh.ArrayType.Max);
+        arrays[(int)Mesh.ArrayType.Vertex] = _verts;
+        arrays[(int)Mesh.ArrayType.Color] = _colors;
+        arrays[(int)Mesh.ArrayType.TexUV] = _uvs;
+        arrays[(int)Mesh.ArrayType.Index] = _indices;
+        _mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+        _mesh.CustomAabb = new Aabb(new Vector3(-10f, -12f, -10f), new Vector3(_map!.Size + 20f, 30f, _map.Size + 20f));
+        _built = true;
+    }
+
+    /// <summary>One bed's blades into the vertex array.</summary>
+    void DrawBed(Bed bed, Vector3 toCam)
+    {
+        int s = bed.First;
         foreach (var st in bed.Strands)
         {
             for (int i = 0; i < Nodes; i++)
@@ -401,27 +449,5 @@ public partial class KelpView : Node3D
             }
             s++;
         }
-        if (_verts.Length == 0) return;
-        if (!_built)
-        {
-            var arrays = new Godot.Collections.Array();
-            arrays.Resize((int)Mesh.ArrayType.Max);
-            arrays[(int)Mesh.ArrayType.Vertex] = _verts;
-            arrays[(int)Mesh.ArrayType.Color] = _colors;
-            arrays[(int)Mesh.ArrayType.TexUV] = _uvs;
-            arrays[(int)Mesh.ArrayType.Index] = _indices;
-            _mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-            _mesh.CustomAabb = new Aabb(new Vector3(-10f, -12f, -10f), new Vector3(_map!.Size + 20f, 30f, _map.Size + 20f));
-            _built = true;
-            return;
-        }
-        for (int k = 0; k < _verts.Length; k++)
-        {
-            _floats[k * 3] = _verts[k].X;
-            _floats[k * 3 + 1] = _verts[k].Y;
-            _floats[k * 3 + 2] = _verts[k].Z;
-        }
-        System.Buffer.BlockCopy(_floats, 0, _bytes, 0, _bytes.Length);
-        RenderingServer.MeshSurfaceUpdateVertexRegion(_mesh.GetRid(), 0, 0, _bytes);
     }
 }
