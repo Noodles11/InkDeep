@@ -311,9 +311,11 @@ public static class TopDownGenerator
     /// own stages on it — the rock, its rooms, arches and passes, the decoration and the kelp — but no seals, pickups or
     /// spawns. A haven has no shaft. One attempt: a map that cannot be built is a mistake in the map.
     /// </summary>
-    public static LevelMap FromHand(HandLayout hand)
+    public static LevelMap FromHand(HandLayout hand, Action<string>? log = null)
     {
         if (!SeedCode.TryParse(hand.Seed, out var seed)) throw new InvalidOperationException($"The map {hand.Name} has no seed code ({hand.Seed})");
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        void Done(string what) => log?.Invoke($"{hand.Name}: {what} by {clock.ElapsedMilliseconds} ms");
         var streams = new RunStreams(seed);
         var id = hand.Id;
         Rng Stage(string name) => streams.TopDown(id, 0, name);
@@ -321,6 +323,7 @@ public static class TopDownGenerator
         {
             Seed = seed.Value, Id = id, Menace = hand.Menace, Title = hand.Title, Station = true, CurrentStation = hand.Station, LookDepth = hand.Look,
             Haven = hand.Haven is { } h ? (new Vector2(h.X0, h.Y0), new Vector2(h.X1, h.Y1)) : null,
+            Zones = hand.Zones.Select(z => new ReefZone(z.Name, z.Title, z.Look, new Vector2(z.Box.X0, z.Box.Y0), new Vector2(z.Box.X1, z.Box.Y1), z.Menace, z.Level)).ToList(),
         };
         Array.Fill(map.Heights, -PathDepth);
         uint noiseSeed = (uint)(Stage("noise").NextU64() >> 32);
@@ -328,21 +331,29 @@ public static class TopDownGenerator
         if (cave is null) throw new InvalidOperationException($"The map {hand.Name} cannot be built: {why}");
         var spurDirs = new Dictionary<int, Vector2>();
         RecordCave(map, cave, StartRadius, StartRadius, spurDirs);
+        Done("cave");
         var strata = new WallStrata(Stage("strata"));
         var tops = RaiseCaveWalls(map, cave.Open, hand.Seed, Stage("topo"), strata);
+        Done("walls");
         if (BuildFeatures(map, Stage("features"), spurDirs, strata) is { } problem)
             throw new InvalidOperationException($"The map {hand.Name} cannot be built: {problem}");
+        Done("features");
         FlattenSeabed(map);
         SoftenSlopes(map, Stage("slopes"), strata);
+        Done("slopes");
         // Its exit is a current station, not a way down.
         map.Shaft = NoShaft;
         ClampHeights(map);
         RoofShortcuts(map);
         SealWalls(map, tops, strata);
+        Done("seal walls");
         Decorate(map, Stage("cosmetic"), noiseSeed, strata);
+        Done("decor");
         PlaceKelp(map, Stage("kelp"));
+        Done("kelp");
         ClearSeals(map);
         Mountains.Fill(map);
+        Done("mountains");
         foreach (var bed in map.Kelp)
             for (int k = bed.Roots.Count - 1; k >= 0; k--)
                 if (map.HeightAt(bed.Roots[k]) > LevelMap.BlockHeight - 0.2f)
@@ -367,6 +378,7 @@ public static class TopDownGenerator
             }
             map.Mouths.Add(door ?? throw new InvalidOperationException($"The map {hand.Name} cannot be built: no wall near its {m.Name} mouth has room for an opening"));
         }
+        Done("mouths");
         // The mirror's pool and the Tide Fan's rock stand on bare floor: nothing grows or stands over them.
         if (hand.Mirror is { } mirror)
         {
@@ -1928,13 +1940,39 @@ public static class TopDownGenerator
     /// </summary>
     static void PlaceKelp(LevelMap map, Rng rng)
     {
-        int N = map.Samples;
-        int beds = map.Id.Depth == 2 ? KelpDepthMin + rng.Int(KelpDepthMax - KelpDepthMin + 1) : KelpBedsMin + rng.Int(KelpBedsMax - KelpBedsMin + 1);
+        float rim = LevelMap.RimWidth + 4f;
+        if (map.Zones.Count == 0)
+        {
+            int beds = map.Id.Depth == 2 ? KelpDepthMin + rng.Int(KelpDepthMax - KelpDepthMin + 1) : KelpBedsMin + rng.Int(KelpBedsMax - KelpBedsMin + 1);
+            var rock = Chamfer(map.Samples, i => map.Heights[i] > LevelMap.BlockHeight - 0.2f);
+            PlaceKelpIn(map, rng, rock, (uint)(rng.NextU64() >> 32), new Vector2(rim), new Vector2(map.Size - rim), beds, 600);
+            return;
+        }
         var toRock = Chamfer(map.Samples, i => map.Heights[i] > LevelMap.BlockHeight - 0.2f);
         uint seed = (uint)(rng.NextU64() >> 32);
-        for (int tries = 0; tries < 600 && map.Kelp.Count < beds; tries++)
+        // The reef's zones: as many beds as a seeded level of its biome would hold for every level's worth of its area,
+        // the Kelp Jungle thick with them and the deeper zones thinning out (KelpByLook).
+        foreach (var z in map.Zones)
         {
-            var c = new Vector2(rng.Range(LevelMap.RimWidth + 4f, map.Size - LevelMap.RimWidth - 4f), rng.Range(LevelMap.RimWidth + 4f, map.Size - LevelMap.RimWidth - 4f));
+            float levels = (z.Max.X - z.Min.X) * (z.Max.Y - z.Min.Y) / (LevelMap.Seeded * LevelMap.Seeded) * KelpByLook(z.Look);
+            int per = z.Look == 2 ? KelpDepthMin + rng.Int(KelpDepthMax - KelpDepthMin + 1) : KelpBedsMin + rng.Int(KelpBedsMax - KelpBedsMin + 1);
+            var lo = Vector2.Max(z.Min, new Vector2(rim));
+            var hi = Vector2.Min(z.Max, new Vector2(map.Size - rim));
+            int want = (int)MathF.Round(per * levels);
+            PlaceKelpIn(map, rng, toRock, seed, lo, hi, map.Kelp.Count + want, 600 + 150 * want);
+        }
+    }
+
+    /// <summary>How much kelp a reef zone of this look holds, for its area, against a seeded level of its depth.</summary>
+    static float KelpByLook(int look) => look switch { 2 => 1.6f, 3 => 0.4f, >= 4 => 0.25f, _ => 0.8f };
+
+    /// <summary>Kelp beds in the box from lo to hi, until the map holds so many (or so many places have been tried).</summary>
+    static void PlaceKelpIn(LevelMap map, Rng rng, float[] toRock, uint seed, Vector2 lo, Vector2 hi, int beds, int tries)
+    {
+        int N = map.Samples;
+        for (int tried = 0; tried < tries && map.Kelp.Count < beds; tried++)
+        {
+            var c = new Vector2(rng.Range(lo.X, hi.X), rng.Range(lo.Y, hi.Y));
             int ci = (int)MathF.Round(c.Y) * N + (int)MathF.Round(c.X);
             if (toRock[ci] < KelpClear || map.HeightAt(c) > LevelMap.BlockHeight - 0.5f) continue;
             float r = rng.Range(KelpRadiusMin, KelpRadiusMax);

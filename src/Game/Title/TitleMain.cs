@@ -1101,12 +1101,12 @@ public partial class TitleMain : Node3D
                 new()
                 {
                     Name = "Mira", Seed = "KELP 7Q2Z", Level = 4, Shells = 63, Passives = new List<string> { "triple_tentacle", "mitosis" },
-                    Sealed = new Dictionary<string, int> { ["shallows"] = 5 }, Look = new JellyLook { Glow = "#7FE7FF", Arms = "#B86BFF", Tips = "#7FFFB0", Gonads = "clover" },
+                    Sealed = new Dictionary<string, int> { ["reef"] = 5 }, Look = new JellyLook { Glow = "#7FE7FF", Arms = "#B86BFF", Tips = "#7FFFB0", Gonads = "clover" },
                     Played = DateTime.Now.AddMinutes(-42).ToString("s", CultureInfo.InvariantCulture),
                 },
                 new()
                 {
-                    Name = "Clementine", Seed = "REEF 2SEA", Level = 2, Shells = 12, Sealed = new Dictionary<string, int> { ["shallows"] = 1 },
+                    Name = "Clementine", Seed = "REEF 2SEA", Level = 2, Shells = 12, Sealed = new Dictionary<string, int> { ["reef"] = 1 },
                     Played = DateTime.Now.AddDays(-2).ToString("s", CultureInfo.InvariantCulture),
                 },
             },

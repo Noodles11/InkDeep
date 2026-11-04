@@ -14,12 +14,12 @@ namespace OctoShoots.Core.Tests;
 public class CaveAshTests
 {
     static readonly Lazy<HandLayout> Shallows = new(() =>
-        HandLayout.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "maps", "shallows.json"))));
+        HandLayout.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "maps", "reef.json"))));
 
     static readonly SeedCode Seed = SeedCode.TryParse("KELP7Q2Z", out var s) ? s : default;
 
     static readonly Lazy<LevelMap> Cave = new(() =>
-        TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("shallows", Shallows.Value.Depth, 0), 0f, 2));
+        TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("reef", Shallows.Value.Depth, 0), 0f, 2));
 
     static readonly Lazy<ItemCatalog> Catalog = new(() =>
         ItemCatalog.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "items.json"))));
@@ -99,7 +99,7 @@ public class CaveAshTests
         // The first of the region's caves that has a secret behind a sealed wall.
         for (int k = 0; k < 24; k++)
         {
-            var map = TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("shallows", Shallows.Value.Depth, k), 0f, 2);
+            var map = TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("reef", Shallows.Value.Depth, k), 0f, 2);
             var w = World(map);
             int seal = w.Seals.FindIndex(x => x.Kind == SealKind.Secret && !x.Open);
             if (seal < 0) continue;

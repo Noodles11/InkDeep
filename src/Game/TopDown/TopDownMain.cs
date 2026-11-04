@@ -664,7 +664,8 @@ public partial class TopDownMain : Node3D
         var hand = LoadMap(region);
         var jelly = _jelly!;
         int cave = OpenReef.CaveBehind(jelly, region, Math.Max(mouth, 0));
-        int level = OpenReef.CaveLevel(jelly, region, hand.Tier);
+        int level = OpenReef.CaveLevel(hand, mouth);
+        float menace = OpenReef.CaveMenace(hand, mouth);
         var id = OpenReef.CaveId(region, hand.Depth, cave);
         if (!SeedCode.TryParse(jelly.Seed, out var seed)) seed = _seed;
         // Its way in faces the mouth she swims into (the region is made already: she is coming from it).
@@ -673,7 +674,7 @@ public partial class TopDownMain : Node3D
         {
             var mouths = (await home).Map.Mouths;
             System.Numerics.Vector2? into = mouth >= 0 && mouth < mouths.Count ? mouths[mouth].Into : null;
-            return LevelShape.Prepare(TopDownGenerator.GenerateCave(seed, id, hand.Menace, level, into));
+            return LevelShape.Prepare(TopDownGenerator.GenerateCave(seed, id, menace, level, into));
         });
     }
 
@@ -845,15 +846,47 @@ public partial class TopDownMain : Node3D
     void ApplyLook() => ApplyLook(Look);
 
     /// <summary>
-    /// This level's look where she is: its depth's, or a cave's dark; in a haven's water the bay's summer evening, blending
-    /// into the region's over HavenFade metres past its edge.
+    /// This level's look where she is: its depth's, or a cave's dark; on the reef, her zone's, blending into the next one's
+    /// over ZoneFade metres either side of their border (docs/REEF-WORLD.md §2), and in a haven's water the bay's summer
+    /// evening, blending into it over HavenFade metres past its edge.
     /// </summary>
-    ReefLook Look => _map is { } map ? LookAt(map, HavenShare(map, _world?.Player.Position ?? map.Start.Position)) : ReefLook.For(_id.Depth);
+    ReefLook Look => _map is { } map ? LookAt(map, _world?.Player.Position ?? map.Start.Position) : ReefLook.For(_id.Depth);
 
-    static ReefLook LookOf(LevelMap map) => map.LeakCave ? ReefLook.Cave : ReefLook.For(map.LookDepth ?? map.Id.Depth);
+    /// <summary>A level's own look (a cave's dark; the reef's, its first zone's).</summary>
+    static ReefLook LookOf(LevelMap map) =>
+        map.LeakCave ? ReefLook.Cave : map.Zones.Count > 0 ? ReefLook.ForZone(map.Zones[0].Look) : ReefLook.For(map.LookDepth ?? map.Id.Depth);
 
-    static ReefLook LookAt(LevelMap map, float haven) =>
-        haven <= 0f ? LookOf(map) : haven >= 1f ? ReefLook.Bay : ReefLook.Blend(LookOf(map), ReefLook.Bay, haven);
+    static ReefLook LookAt(LevelMap map, System.Numerics.Vector2 p)
+    {
+        var look = ZoneLook(map, p) ?? LookOf(map);
+        float haven = HavenShare(map, p);
+        return haven <= 0f ? look : haven >= 1f ? ReefLook.Bay : ReefLook.Blend(look, ReefLook.Bay, haven);
+    }
+
+    /// <summary>
+    /// The reef's zones' looks at a point, each as much as the point is in it: all of its own inside its box, half on its
+    /// border, none ZoneFade metres outside (null where there are no zones).
+    /// </summary>
+    static ReefLook? ZoneLook(LevelMap map, System.Numerics.Vector2 p)
+    {
+        if (map.Zones.Count == 0 || map.LeakCave) return null;
+        ReefLook? look = null;
+        float held = 0f;
+        foreach (var (zone, w) in ZoneShares(map, p))
+        {
+            held += w;
+            look = look is null ? ReefLook.ForZone(zone.Look) : ReefLook.Blend(look, ReefLook.ForZone(zone.Look), w / held);
+        }
+        return look;
+    }
+
+    /// <summary>Each zone's share of the look at a point (strongest first; none past ZoneFade outside its box).</summary>
+    static IEnumerable<(ReefZone Zone, float Share)> ZoneShares(LevelMap map, System.Numerics.Vector2 p) =>
+        map.Zones.Select(z => (z, 1f - Mathf.SmoothStep(-ZoneFade, ZoneFade, z.Outside(p) - z.Inside(p))))
+            .Where(s => s.Item2 > 0.001f).OrderByDescending(s => s.Item2);
+
+    /// <summary>How far either side of a zone's border its look blends into the next one's (metres).</summary>
+    const float ZoneFade = 30f;
 
     /// <summary>How far past a haven's edge its look reaches, fading into the region's (metres).</summary>
     const float HavenFade = 24f;
@@ -862,16 +895,39 @@ public partial class TopDownMain : Node3D
     static float HavenShare(LevelMap map, System.Numerics.Vector2 p) =>
         map.Haven is null ? 0f : 1f - Mathf.SmoothStep(0f, HavenFade, map.OutOfHaven(p));
 
+    /// <summary>The haven's and the zones' shares the look was last made from (none yet: -1).</summary>
     float _havenShare = -1f;
+    float[] _zoneShares = System.Array.Empty<float>();
+    /// <summary>The zone she is in (her title shows as she crosses into another), -1 for none.</summary>
+    int _zone = -1;
 
-    /// <summary>Swimming out of the bay or back into it, the water's look changes with her: the bay's evening to the reef's.</summary>
-    void StepHavenLook()
+    /// <summary>
+    /// Swimming between zones, or out of the bay or back into it, the water's look changes with her: the bay's evening to
+    /// the Shallows', the Shallows' to the Kelp Jungle's. Crossing into another zone, its name and area level show.
+    /// </summary>
+    void StepPlaceLook()
     {
-        if (_map.Haven is null) return;
-        float share = HavenShare(_map, _world.Player.Position);
-        if (Mathf.Abs(share - _havenShare) < 0.01f && share is > 0f and < 1f || share == _havenShare) return;
-        _havenShare = share;
-        ApplyLook(LookAt(_map, share));
+        if (_map.Haven is null && _map.Zones.Count == 0) return;
+        var p = _world.Player.Position;
+        float share = HavenShare(_map, p);
+        var zones = _map.Zones.Select(z => 1f - Mathf.SmoothStep(-ZoneFade, ZoneFade, z.Outside(p) - z.Inside(p))).ToArray();
+        bool moved = Mathf.Abs(share - _havenShare) >= 0.01f || share != _havenShare && share is 0f or 1f
+            || zones.Length != _zoneShares.Length || zones.Where((w, i) => Mathf.Abs(w - _zoneShares[i]) >= 0.01f || w != _zoneShares[i] && w is 0f or 1f).Any();
+        if (moved)
+        {
+            _havenShare = share;
+            _zoneShares = zones;
+            ApplyLook(LookAt(_map, p));
+        }
+        int zone = _map.ZoneAt(p);
+        if (zone == _zone) return;
+        bool first = _zone < 0;
+        _zone = zone;
+        if (!first && !_world.InHaven)
+        {
+            var (title, where) = PlaceTitle();
+            _hud.ShowTitle(title, where);
+        }
     }
 
     /// <summary>The haven's edge as she crosses it: its name over her, and the fan's ribbons tied afresh as she comes home.</summary>
@@ -1390,6 +1446,8 @@ public partial class TopDownMain : Node3D
         if (map.InHaven(arriveAt ?? map.Start.Position)) _run.Hp = _run.MaxHp;
         _world = new PlaneWorld(_map, _tuning, _run, Reef ? PlaneOptions.OpenReef : DebugBoss());
         _havenShare = -1f;
+        _zoneShares = System.Array.Empty<float>();
+        _zone = -1;
         // A region's mouths whose caves she has sealed stay shut until the Leak seeps back.
         if (_place == ReefPlace.Region && _jelly is { } shutter) _world.ShutMouths = OpenReef.ShutMouths(shutter, _region);
         ShowMouths();
@@ -1532,12 +1590,17 @@ public partial class TopDownMain : Node3D
     /// The level's title and what lies over it, as she arrives: what the level is about (its template's name,
     /// DESIGN-TOPDOWN §4.1; the default template has none), else the depth's name on its first level, else the level;
     /// where it is over it (a new depth's first level names the depth too). On the open reef: Lantern Bay in the bay's
-    /// water, else the region; a leak cave, under its region's name.
+    /// water, else her zone and its area level; a leak cave, under its zone's name.
     /// </summary>
     (string Title, string Where) PlaceTitle()
     {
-        if (_map.Station) return _world.InHaven ? ("Lantern Bay", "Safe water") : (_map.Title, "The open reef");
-        if (_map.LeakCave) return ($"Leak cave · level {_map.CaveLevel}", LoadMap(_region).Title);
+        if (_map.Station)
+        {
+            if (_world.InHaven) return ("Lantern Bay", "Safe water");
+            int zone = _map.ZoneAt(_world.Player.Position);
+            return zone >= 0 ? (_map.Zones[zone].Title, $"Area level {_map.Zones[zone].Level}") : (_map.Title, "The open reef");
+        }
+        if (_map.LeakCave) return ($"Leak cave · level {_map.CaveLevel}", OpenReef.ZoneOf(LoadMap(_region), _mouth)?.Title ?? LoadMap(_region).Title);
         string title = _map.Template is { Name.Length: > 0 } template ? template.Name : _id.Level == 1 ? ReefLook.For(_id.Depth).Name : $"Level {_id.Level}";
         return (title, _id.Level == 1 ? $"{ReefLook.For(_id.Depth).Name} · {_id}" : _id.ToString());
     }
@@ -2072,6 +2135,12 @@ public partial class TopDownMain : Node3D
         if (at is not { } p) return;
         _world.Player.Position = _world.Player.PrevPosition = p;
         _world.SettleHaven();
+        // Where she is set down, its name (on the reef, her zone's).
+        if (Reef)
+        {
+            var (title, under) = PlaceTitle();
+            _hud.ShowTitle(title, under);
+        }
         if (where == "gate")
         {
             var toward = _world.ArenaCenter - p;
@@ -2645,7 +2714,7 @@ public partial class TopDownMain : Node3D
         // The Tide Fan's requests: its drawer at its foot, what she does in the caves, the ribbons and the maps' marks.
         StepRequests();
         // The bay's look as she swims out of it, or back in.
-        StepHavenLook();
+        StepPlaceLook();
         // Onto the bay's mirror: it shows her, and her look can change.
         if (_jelly is not null && _map.Mirror is not null)
         {

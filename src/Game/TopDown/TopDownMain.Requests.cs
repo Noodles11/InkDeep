@@ -63,9 +63,8 @@ public partial class TopDownMain
         foreach (string region in OpenReef.Regions)
         {
             var hand = LoadMap(region);
-            int level = OpenReef.CaveLevel(jelly, region, hand.Tier);
-            bool Den(int mouth) => LevelPlan.ForCave(seed, OpenReef.CaveId(region, hand.Depth, OpenReef.CaveBehind(jelly, region, mouth)), hand.Menace).Curses > 0;
-            Requests.Fill(jelly, region, level, hand.Mouths.Count, Den, _world.Run.CanOffer, _catalog);
+            bool Den(int mouth) => LevelPlan.ForCave(seed, OpenReef.CaveId(region, hand.Depth, OpenReef.CaveBehind(jelly, region, mouth)), OpenReef.CaveMenace(hand, mouth)).Curses > 0;
+            Requests.Fill(jelly, region, m => OpenReef.CaveLevel(hand, m), hand.Mouths.Count, Den, _world.Run.CanOffer, _catalog);
         }
     }
 

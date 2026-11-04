@@ -100,6 +100,19 @@ public sealed record ReefLook
     };
 
     /// <summary>
+    /// The Sunlit Shallows as the open reef's zone (docs/REEF-WORLD.md §1): the Shallows' own look with its glare taken
+    /// off, the sun and the caustics a little softer, so the picture never washes out; brighter than the bay's evening.
+    /// </summary>
+    public static readonly ReefLook OpenShallows = Shallows with
+    {
+        WaterShallow = C("#62BDB8"), WaterDeep = C("#2F9FA2"), Murk = C("#145F69"),
+        SunEnergy = 0.5f, Caustics = 0.75f, Rays = 0.75f, Fog = 0.3f, Contrast = 1.2f,
+    };
+
+    /// <summary>A reef zone's look by the depth it takes (HandZone.Look): the Shallows as the open reef's, the rest their own.</summary>
+    public static ReefLook ForZone(int look) => look <= 1 ? OpenShallows : For(look);
+
+    /// <summary>
     /// Lantern Bay (docs/RPG-PROPOSAL.md §3): the Sunlit Shallows themselves at the soft end of a summer day, safe and
     /// joyful. The same turquoise over sand, pink coral and saturated life, the same caustics and shafts, all of it
     /// gentler and dimmed, the sun low and pale gold; so Clementine's tangerine is the brightest thing in it, her light

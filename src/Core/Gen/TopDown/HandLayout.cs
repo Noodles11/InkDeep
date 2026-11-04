@@ -20,7 +20,7 @@ public sealed class HandLayout
     public string Seed { get; set; } = "";
     /// <summary>Its biome, as a depth (ReefLook): 1 the Shallows.</summary>
     public int Depth { get; set; } = 1;
-    /// <summary>The depth whose look (ReefLook) it takes, when not its own (the Sunlit Shallows region: the Sunken Galleon's).</summary>
+    /// <summary>The depth whose look (ReefLook) it takes, when not its own (a map without zones; the reef's zones each take their own).</summary>
     public int? Look { get; set; }
     public float Menace { get; set; }
     /// <summary>A haven's water (Lantern Bay, in a corner of the reef): the box it fills, where nothing harms her (LevelMap.Haven).</summary>
@@ -35,6 +35,8 @@ public sealed class HandLayout
     public List<HandPlace> Places { get; set; } = new();
     /// <summary>A region's cave mouths, each leading into a leak cave: an opening is cut in the wall nearest each point (LevelMap.Mouths).</summary>
     public List<HandPoint> Mouths { get; set; } = new();
+    /// <summary>The reef's biome zones (docs/REEF-WORLD.md §1): boxes that between them cover the map.</summary>
+    public List<HandZone> Zones { get; set; } = new();
     /// <summary>The bay's mirror (docs/RPG-PROPOSAL.md §8): a still pool of nacre where she changes her look.</summary>
     public HandPoint? Mirror { get; set; }
     /// <summary>The bay's Tide Fan (docs/QUESTS-PROPOSAL.md §2): the great sea fan where the bay ties its requests.</summary>
@@ -115,4 +117,17 @@ public sealed class HandPoint
     public float Y { get; set; }
     /// <summary>What the bay calls it (a region's cave mouth: "the east mouth"), if anything.</summary>
     public string Name { get; set; } = "";
+    /// <summary>A cave mouth's danger (0 to 2, docs/REEF-WORLD.md §3): its cave's level is its zone's area level plus this.</summary>
+    public int Danger { get; set; }
+}
+
+/// <summary>A biome zone (docs/REEF-WORLD.md §1): its box, the depth whose look it takes, its Menace and its area level.</summary>
+public sealed class HandZone
+{
+    public string Name { get; set; } = "";
+    public string Title { get; set; } = "";
+    public int Look { get; set; } = 1;
+    public float Menace { get; set; }
+    public int Level { get; set; } = 1;
+    public HandBox Box { get; set; } = new();
 }

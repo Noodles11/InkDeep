@@ -15,14 +15,14 @@ namespace OctoShoots.Core.Tests;
 public class OpenReefTests
 {
     static readonly Lazy<HandLayout> Shallows = new(() =>
-        HandLayout.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "maps", "shallows.json"))));
+        HandLayout.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "maps", "reef.json"))));
 
     static readonly Lazy<LevelMap> Region = new(() => TopDownGenerator.FromHand(Shallows.Value));
 
     static readonly SeedCode Seed = SeedCode.TryParse("KELP7Q2Z", out var s) ? s : default;
 
     static readonly Lazy<LevelMap> Cave = new(() =>
-        TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("shallows", Shallows.Value.Depth, 0), 0f, 2));
+        TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("reef", Shallows.Value.Depth, 0), 0f, 2));
 
     static readonly Lazy<ItemCatalog> Catalog = new(() =>
         ItemCatalog.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "items.json"))));
@@ -84,7 +84,7 @@ public class OpenReefTests
     {
         for (int k = 0; k < 24; k++)
         {
-            var map = TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("shallows", Shallows.Value.Depth, k), k % 3, 1 + k % 4);
+            var map = TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("reef", Shallows.Value.Depth, k), k % 3, 1 + k % 4);
             var way = Assert.NotNull(map.Way);
             AssertAnOpeningInAWall(map, way);
             Assert.True(Vector2.Distance(way.At, map.Start.Position) < 32f, $"cave {k}: its way out is {Vector2.Distance(way.At, map.Start.Position)} m from its start");
@@ -101,7 +101,7 @@ public class OpenReefTests
         for (int k = 0; k < 12; k++)
             foreach (var went in ways)
             {
-                var map = TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("shallows", Shallows.Value.Depth, k), 0f, 2, went);
+                var map = TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("reef", Shallows.Value.Depth, k), 0f, 2, went);
                 var way = Assert.NotNull(map.Way);
                 AssertAnOpeningInAWall(map, way);
                 Assert.NotEmpty(LevelValidator.ShortestPath(map, map.Exit.Position, way.At - way.Into * 1.5f, clearance: 0.5f));
@@ -232,12 +232,12 @@ public class OpenReefTests
     public void ASealedCavesMouthIsShut_UntilTheLeakSeepsBack_ThenItOpensOnAFreshCave()
     {
         var jelly = new Jelly { PlaySeconds = 100 };
-        Assert.Empty(OpenReef.ShutMouths(jelly, "shallows"));
-        OpenReef.Sealed(jelly, "shallows", 1, 3);
-        Assert.Equal(new[] { 1 }, OpenReef.ShutMouths(jelly, "shallows"));
+        Assert.Empty(OpenReef.ShutMouths(jelly, "reef"));
+        OpenReef.Sealed(jelly, "reef", 1, 3);
+        Assert.Equal(new[] { 1 }, OpenReef.ShutMouths(jelly, "reef"));
         // In the region, it stands closed with rock: she cannot go in by it.
         var w = World(Region.Value);
-        w.ShutMouths = OpenReef.ShutMouths(jelly, "shallows");
+        w.ShutMouths = OpenReef.ShutMouths(jelly, "reef");
         w.Player.Position = w.Player.PrevPosition = w.Map.Mouths[1].Inside;
         Assert.Equal(-1, w.AtMouth());
         Assert.False(w.Clear(w.Map.Mouths[1].Inside, 0.5f));
@@ -248,11 +248,11 @@ public class OpenReefTests
         Assert.Equal(0, w.AtMouth());
         // Not yet...
         jelly.PlaySeconds += ReefTuning.Recorrupt - 1;
-        Assert.Contains(1, OpenReef.ShutMouths(jelly, "shallows"));
+        Assert.Contains(1, OpenReef.ShutMouths(jelly, "reef"));
         // ...then it opens, on the next cave behind it.
         jelly.PlaySeconds += 2;
-        Assert.Empty(OpenReef.ShutMouths(jelly, "shallows"));
-        Assert.Equal(1 + 3, OpenReef.CaveBehind(jelly, "shallows", 1));
+        Assert.Empty(OpenReef.ShutMouths(jelly, "reef"));
+        Assert.Equal(1 + 3, OpenReef.CaveBehind(jelly, "reef", 1));
     }
 
     [Fact]
@@ -261,7 +261,7 @@ public class OpenReefTests
         bool curse = false;
         for (int k = 0; k < 16; k++)
         {
-            var map = TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("shallows", Shallows.Value.Depth, k), 0f, 2);
+            var map = TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("reef", Shallows.Value.Depth, k), 0f, 2);
             Assert.All(map.Pois, p => Assert.Contains(p.Kind, new[] { PoiKind.Start, PoiKind.Exit, PoiKind.Secret, PoiKind.CurseDen }));
             curse |= map.Pois.Exists(p => p.Kind == PoiKind.CurseDen);
         }
@@ -270,18 +270,37 @@ public class OpenReefTests
     }
 
     [Fact]
-    public void AMouthAlwaysLeadsToACave_ASealedOneMakesWayForAFreshOne_AndLevelsRiseWithThem()
+    public void TheReefHoldsFourZones_TheirLevelsRisingAwayFromTheBay_AndEveryZoneHasCavesOfEveryDanger()
+    {
+        var hand = Shallows.Value;
+        var map = Region.Value;
+        Assert.Equal(new[] { "shallows", "kelp", "galleon", "carnival" }, map.Zones.Select(z => z.Name));
+        Assert.Equal(0, map.ZoneAt(map.Start.Position));
+        Assert.True(map.Zones.Zip(map.Zones.Skip(1)).All(p => p.First.Level < p.Second.Level), "area levels rise zone by zone");
+        for (int z = 0; z < map.Zones.Count; z++)
+        {
+            var zone = map.Zones[z];
+            var mouths = Enumerable.Range(0, hand.Mouths.Count).Where(m => map.ZoneAt(map.Mouths[m].At) == z).ToList();
+            Assert.Equal(new[] { 0, 1, 2 }, mouths.Select(m => hand.Mouths[m].Danger).Distinct().OrderBy(d => d));
+            Assert.All(mouths, m => Assert.Equal(zone.Level + hand.Mouths[m].Danger, OpenReef.CaveLevel(hand, m)));
+            // She can swim to every one of its mouths from the bay.
+            Assert.All(mouths, m => Assert.NotEmpty(LevelValidator.ShortestPath(map, map.Start.Position, map.Mouths[m].At - map.Mouths[m].Into * 2f, clearance: 1f)));
+        }
+        Assert.Equal(map.Zones.Min(z => z.Level), OpenReef.CaveLevel(hand, -1));
+    }
+
+    [Fact]
+    public void AMouthAlwaysLeadsToACave_ASealedOneMakesWayForAFreshOne()
     {
         var jelly = new Jelly();
-        Assert.Equal(0, OpenReef.CaveBehind(jelly, "shallows", 0));
-        Assert.Equal(2, OpenReef.CaveBehind(jelly, "shallows", 2));
-        Assert.Equal(1, OpenReef.CaveLevel(jelly, "shallows", 1));
-        for (int i = 0; i < ReefTuning.CavesPerLevel; i++) OpenReef.Sealed(jelly, "shallows", 0, 3);
-        Assert.Equal(3 * ReefTuning.CavesPerLevel, OpenReef.CaveBehind(jelly, "shallows", 0));
-        Assert.Equal(1, OpenReef.CaveBehind(jelly, "shallows", 1));
-        Assert.Equal(2, OpenReef.CaveLevel(jelly, "shallows", 1));
+        Assert.Equal(0, OpenReef.CaveBehind(jelly, "reef", 0));
+        Assert.Equal(2, OpenReef.CaveBehind(jelly, "reef", 2));
+        for (int i = 0; i < 3; i++) OpenReef.Sealed(jelly, "reef", 0, 3);
+        Assert.Equal(9, OpenReef.CaveBehind(jelly, "reef", 0));
+        Assert.Equal(1, OpenReef.CaveBehind(jelly, "reef", 1));
+        Assert.Equal(3, OpenReef.SealedIn(jelly, "reef"));
         // Every cave its own: never one level id twice.
-        Assert.NotEqual(OpenReef.CaveId("shallows", 1, 0), OpenReef.CaveId("shallows", 1, 3));
+        Assert.NotEqual(OpenReef.CaveId("reef", 1, 0), OpenReef.CaveId("reef", 1, 3));
         Assert.True(ReefTuning.LeakXp(5) > ReefTuning.LeakXp(1));
         Assert.Equal(25, ReefTuning.LeakXp(1));
     }

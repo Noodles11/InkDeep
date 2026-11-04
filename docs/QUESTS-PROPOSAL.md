@@ -56,14 +56,15 @@ comes home to untie it. Its token and its experience are hers.
 
 ## 3. The requests
 
-Four kinds, all built from what the caves already hold. Each request is for one region (only the Sunlit Shallows for
-now). Each has a **level**: the level of that region's caves when it was tied (`OpenReef.CaveLevel`), which sets what
+Four kinds, all built from what the caves already hold. Each request is for one region (only the reef for now). Each
+has a **level**: the level of the cave behind the mouth it names, or of the reef's least caves for one that names none
+(`OpenReef.CaveLevel`: its zone's area level plus its danger, docs/REEF-WORLD.md §3), which sets what
 it pays (§4).
 
 ### 3.1 Close the bleeding mouth (seal a leak)
 
 - **Colour:** violet.
-- **Asks:** seal the leak in the cave behind one named mouth of the region (in the Shallows: kelp, north-west, spire, ridge, flats, east, south-east).
+- **Asks:** seal the leak in the cave behind one named mouth of the region (in the Shallows: seagrass, north-west, spire, ridge, flats, east, south-east), never one more than two levels past her own.
 - **Example:**
   - *Tied by a pufferfish mother:* "My little ones keep swimming toward the east mouth. It tastes warm, they say.
     Please shut it."

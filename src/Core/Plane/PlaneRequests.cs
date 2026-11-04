@@ -19,6 +19,8 @@ public static class RequestTuning
     public const int AshBase = 120, AshPerLevel = 30;
     /// <summary>How near the fan's foot she must swim to be at it (metres).</summary>
     public const float FanReach = 2.4f;
+    /// <summary>A request names no cave more than this many levels past her own.</summary>
+    public const int Reach = 2;
 
     /// <summary>A request's experience on untying: as much again as a leak of its level (on top of the leaks it sends her to).</summary>
     public static int Xp(int level) => ReefTuning.LeakXp(level);
@@ -107,11 +109,11 @@ public static class Requests
     /// among them; otherwise no kind twice where it can help it), its mouth, its level, its poster and what it pays, all
     /// from her seed and the count of ribbons tied for the region.
     /// </summary>
-    /// <param name="level">The region's cave level now.</param>
+    /// <param name="levelOf">A cave's level behind each mouth (-1: the region's least, for a request that names no mouth).</param>
     /// <param name="mouths">How many cave mouths the region has.</param>
     /// <param name="denBehind">Whether the cave behind a mouth holds a curse den now.</param>
     /// <param name="canOffer">Whether a pearl may be offered to her (unlocked, not held).</param>
-    public static void Fill(Jelly jelly, string region, int level, int mouths, Func<int, bool> denBehind, Func<string, bool> canOffer, ItemCatalog? catalog)
+    public static void Fill(Jelly jelly, string region, Func<int, int> levelOf, int mouths, Func<int, bool> denBehind, Func<string, bool> canOffer, ItemCatalog? catalog)
     {
         var places = Places(jelly, region);
         for (int i = 0; i < places.Count; i++)
@@ -119,11 +121,11 @@ public static class Requests
             if (places[i] is not null) continue;
             int number = jelly.Tied.TryGetValue(region, out int n) ? n : 0;
             jelly.Tied[region] = number + 1;
-            places[i] = Tie(jelly, region, number, level, mouths, denBehind, canOffer, catalog);
+            places[i] = Tie(jelly, region, number, levelOf, mouths, denBehind, canOffer, catalog);
         }
     }
 
-    static Request Tie(Jelly jelly, string region, int number, int level, int mouths, Func<int, bool> denBehind, Func<string, bool> canOffer, ItemCatalog? catalog)
+    static Request Tie(Jelly jelly, string region, int number, Func<int, int> levelOf, int mouths, Func<int, bool> denBehind, Func<string, bool> canOffer, ItemCatalog? catalog)
     {
         var rng = new Rng(Hash(jelly.Seed) ^ Hash(region) * 0x9E3779B97F4A7C15UL ^ (ulong)(number + 1) * 0xBF58476D1CE4E5B9UL);
         var others = Others(jelly, region).ToList();
@@ -141,7 +143,11 @@ public static class Requests
         if (kind is Seal or Den && mouths > 0)
         {
             // A mouth no other request names, where it can be (a den only where its cave holds one).
-            var open = Enumerable.Range(0, mouths).Where(m => kind == Seal || denBehind(m)).ToList();
+            // Only caves she can take on (none past her own level and RequestTuning.Reach; the least ones where there
+            // are none).
+            var near = Enumerable.Range(0, mouths).Where(m => levelOf(m) <= Math.Max(jelly.Level, 1) + RequestTuning.Reach).ToList();
+            if (near.Count == 0) near = Enumerable.Range(0, mouths).Where(m => levelOf(m) == Enumerable.Range(0, mouths).Min(levelOf)).ToList();
+            var open = near.Where(m => kind == Seal || denBehind(m)).ToList();
             var unnamed = open.Where(m => !others.Any(o => o.Kind == kind && o.Mouth == m)).ToList();
             var pick = unnamed.Count > 0 ? unnamed : open;
             if (pick.Count == 0) kind = Prime;
@@ -149,7 +155,7 @@ public static class Requests
         }
         var r = new Request
         {
-            Kind = kind, Region = region, Mouth = kind is Seal or Den ? mouth : -1, Level = Math.Max(level, 1), Number = number,
+            Kind = kind, Region = region, Mouth = kind is Seal or Den ? mouth : -1, Level = Math.Max(levelOf(kind is Seal or Den ? mouth : -1), 1), Number = number,
             Poster = rng.Int(Posters[kind].Length),
         };
         r.Goal = kind == Ash ? RequestTuning.AshBase + RequestTuning.AshPerLevel * r.Level : 1;

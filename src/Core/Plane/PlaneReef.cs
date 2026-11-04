@@ -36,8 +36,9 @@ public static class ReefTuning
     public const int CaveCap = 4;
     /// <summary>A minor leak is worth LeakXpBase × its cave's level^LeakXpPower experience.</summary>
     public const float LeakXpBase = 25f, LeakXpPower = 0.8f;
-    /// <summary>A region's caves go up a level every CavesPerLevel sealed in it.</summary>
-    public const int CavesPerLevel = 3;
+    /// <summary>A cave mouth's danger is 0 to MostDanger; each step adds MenacePerDanger to its cave's Menace.</summary>
+    public const int MostDanger = 2;
+    public const float MenacePerDanger = 0.1f;
     /// <summary>A sealed cave's mouth stays shut this long of her play time (s); then the Leak seeps back and it opens on a fresh cave.</summary>
     public const double Recorrupt = 15 * 60;
 
@@ -72,7 +73,7 @@ public sealed class PlaneLostLight
 public static class OpenReef
 {
     /// <summary>The regions' maps in their order (a region's number is its place here, from 1).</summary>
-    public static readonly string[] Regions = { "shallows" };
+    public static readonly string[] Regions = { "reef" };
 
     /// <summary>The region she wakes in: the one Lantern Bay lies in.</summary>
     public static string FirstRegion => Regions[0];
@@ -113,8 +114,26 @@ public static class OpenReef
 
     public static int SealedIn(Jelly jelly, string region) => jelly.Sealed.TryGetValue(region, out int n) ? n : 0;
 
-    /// <summary>The level of the region's caves now: its tier, one more every few sealed in it.</summary>
-    public static int CaveLevel(Jelly jelly, string region, int tier) => tier + SealedIn(jelly, region) / ReefTuning.CavesPerLevel;
+    /// <summary>The zone a region's mouth lies in (by its drawn point), if the region has zones.</summary>
+    public static HandZone? ZoneOf(HandLayout hand, int mouth)
+    {
+        if (mouth < 0 || mouth >= hand.Mouths.Count) return null;
+        var at = hand.Mouths[mouth];
+        return hand.Zones.FirstOrDefault(z => at.X >= z.Box.X0 && at.X < z.Box.X1 && at.Y >= z.Box.Y0 && at.Y < z.Box.Y1);
+    }
+
+    /// <summary>
+    /// The level of the cave behind a mouth (docs/REEF-WORLD.md §3): its zone's area level (the region's tier, without
+    /// zones) plus the mouth's danger, fixed as an area's is. Without a mouth (-1), the region's least.
+    /// </summary>
+    public static int CaveLevel(HandLayout hand, int mouth) =>
+        mouth < 0 || mouth >= hand.Mouths.Count
+            ? hand.Zones.Count > 0 ? hand.Zones.Min(z => z.Level) : hand.Tier
+            : (ZoneOf(hand, mouth)?.Level ?? hand.Tier) + Math.Clamp(hand.Mouths[mouth].Danger, 0, ReefTuning.MostDanger);
+
+    /// <summary>The Menace of the cave behind a mouth: its zone's (the region's, without zones), and more for its danger.</summary>
+    public static float CaveMenace(HandLayout hand, int mouth) =>
+        (ZoneOf(hand, mouth)?.Menace ?? hand.Menace) + ReefTuning.MenacePerDanger * (mouth >= 0 && mouth < hand.Mouths.Count ? hand.Mouths[mouth].Danger : 0);
 
     /// <summary>A cave's own level id (apart from every run level and hand-drawn map), from its region, depth and number.</summary>
     public static LevelId CaveId(string region, int depth, int cave) => new(1000 + RegionNumber(region), depth, cave + 1);

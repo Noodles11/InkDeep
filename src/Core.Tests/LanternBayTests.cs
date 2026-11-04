@@ -12,12 +12,12 @@ namespace OctoShoots.Core.Tests;
 
 /// <summary>
 /// Lantern Bay (docs/RPG-PROPOSAL.md §2.1): the haven in the Sunlit Shallows' south-west corner, drawn by hand on the
-/// reef's one map, and the jellies the player makes.
+/// reef's one map (docs/REEF-WORLD.md), and the jellies the player makes.
 /// </summary>
 public class LanternBayTests
 {
     static readonly Lazy<HandLayout> Reef = new(() =>
-        HandLayout.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "maps", "shallows.json"))));
+        HandLayout.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "maps", "reef.json"))));
 
     static readonly Lazy<LevelMap> ReefMap = new(() => TopDownGenerator.FromHand(Reef.Value));
 
@@ -27,15 +27,19 @@ public class LanternBayTests
     static PlaneWorld World(LevelMap map) => new(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), PlaneOptions.OpenReef);
 
     [Fact]
-    public void TheReefIsBuiltAsDrawn_NineTimesTheBay_WithTheBayAsAHavenInItsCorner()
+    public void TheReefIsBuiltAsDrawn_WithTheBayAsAHavenInTheShallowsCorner()
     {
         var map = ReefMap.Value;
-        Assert.Equal(420, map.Size);
-        Assert.Equal("Sunlit Shallows", map.Title);
+        Assert.Equal(840, map.Size);
+        Assert.Equal("The Reef", map.Title);
         var haven = Assert.NotNull(map.Haven);
-        Assert.Equal(new Vector2(0f, 280f), haven.Min);
-        Assert.Equal(new Vector2(140f, 420f), haven.Max);
-        Assert.Equal(9f, map.Size * map.Size / ((haven.Max.X - haven.Min.X) * (haven.Max.Y - haven.Min.Y)), 2);
+        Assert.Equal(new Vector2(0f, 700f), haven.Min);
+        Assert.Equal(new Vector2(140f, 840f), haven.Max);
+        // The bay fills the south-west corner of the Sunlit Shallows, nine times its size.
+        var shallows = map.Zones[map.ZoneAt(map.Start.Position)];
+        Assert.Equal("Sunlit Shallows", shallows.Title);
+        Assert.Equal(new Vector2(0f, 840f), new Vector2(shallows.Min.X, shallows.Max.Y));
+        Assert.Equal(9f, (shallows.Max.X - shallows.Min.X) * (shallows.Max.Y - shallows.Min.Y) / ((haven.Max.X - haven.Min.X) * (haven.Max.Y - haven.Min.Y)), 2);
         var hand = Reef.Value;
         var post = hand.Chambers.Single(c => c.Role == CaveLayout.Role.Start);
         Assert.Equal(new Vector2(post.X, post.Y), map.Start.Position);

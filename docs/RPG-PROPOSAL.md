@@ -55,6 +55,9 @@ it, and the reef remembers.**
 
 ### 2.2 Regions (static)
 
+The reef's first four biomes are zones of one map (docs/REEF-WORLD.md), not regions of their own; the Trench and the
+Abyss come later as a second map below the shelf.
+
 - **One biome per region,** following the depth order already in the game: Shallows, Kelp, Galleon, Carnival, Trench,
   Abyss.
 - **A fixed Menace per region.** Menace still drives everything it drives today: light, ink coverage, creature
@@ -291,13 +294,9 @@ Each step is playable on its own:
   arches and passes, decoration, kelp); the map's seed shapes only the details. A hand-drawn map (`LevelMap.Station`)
   holds no leaks and no main current. Its square is its own (`HandLayout.Size`; a seeded level's is 140 m,
   `LevelMap.Seeded`), and its exit is a current station only if it says so (`HandLayout.Station`, none yet).
-- **The Sunlit Shallows** (`data/maps/shallows.json`), the first region and her home: one map, 420 m a side, nine
-  times Lantern Bay, with the bay in its south-west corner. Out on the reef: the landing outside the bay's gate, the
-  kelp, a glade, the spire, the ridge, the flats, a crossroads, the meadow and the east, joined by long tunnels, and
-  seven cave mouths (kelp, north-west, spire, ridge, flats, east, south-east), openings in its walls (below). Out of
-  the bay it takes the Sunken Galleon's look (its map's `look`, `LevelMap.LookDepth`), not the open Shallows' glare.
-  Made once a session and kept (`TopDownMain.ShapeRegion`): it takes seconds to make, and coming back out of a cave
-  is quick.
+- **The reef** (`data/maps/reef.json`, docs/REEF-WORLD.md): one map, 840 m a side, of four biome zones, with the bay
+  in the Sunlit Shallows' south-west corner. Made once a session and kept (`TopDownMain.ShapeRegion`): it takes about
+  30 s to make (under way from the title screen), and coming back out of a cave is quick.
 - **Lantern Bay** (the reef map's `haven` box, `LevelMap.Haven`, 140 m a side): the lantern post where she wakes, the
   lagoon with the mirror, the commune with the Tide Fan, and the market with the shell shop's cave. Its gate (north)
   and the commune's way east lead out onto the reef. It is her haven:
@@ -305,7 +304,7 @@ Each step is playable on its own:
     again.
   - **Home:** swimming back into it heals her whole (`PlaneWorld.StepHaven`, `HavenEntered`), and the Tide Fan ties
     new ribbons; so it has no light spring (`LightSprings.Of` places none in it). Its name shows as she crosses in
-    ("Lantern Bay · Safe water"), the region's as she leaves ("Sunlit Shallows · The open reef").
+    ("Lantern Bay · Safe water"), her zone's as she leaves ("Sunlit Shallows · Area level 1").
   - **Its evening:** it is the Sunlit Shallows themselves (the first depth's look) at the soft end of a summer day,
     safe and joyful (`ReefLook.Bay`): the same turquoise over sand, pink coral and saturated life, the same caustics
     and shafts, all gentler and dimmed under a low pale-gold sun, so Clementine's light is the warmest and brightest

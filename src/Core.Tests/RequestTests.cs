@@ -21,14 +21,14 @@ public class RequestTests
     static Jelly NewJelly(string seed = "KELP7Q2Z") => new() { Name = "Mira", Seed = seed };
 
     static void Fill(Jelly j, Func<int, bool>? den = null) =>
-        Requests.Fill(j, "shallows", 1, 3, den ?? (_ => false), _ => true, Catalog.Value);
+        Requests.Fill(j, "reef", _ => 1, 3, den ?? (_ => false), _ => true, Catalog.Value);
 
     [Fact]
     public void The_fan_ties_three_ribbons_from_her_seed_a_seal_among_them_and_no_pearl_twice()
     {
         var a = NewJelly();
         Fill(a, m => m == 2);
-        var places = Requests.Places(a, "shallows");
+        var places = Requests.Places(a, "reef");
         Assert.Equal(RequestTuning.Places, places.Count);
         Assert.All(places, r => Assert.NotNull(r));
         Assert.Contains(places, r => r!.Kind == Requests.Seal);
@@ -44,8 +44,8 @@ public class RequestTests
         // The same jelly, the same ribbons; another jelly, her own.
         var again = NewJelly();
         Fill(again, m => m == 2);
-        Assert.Equal(places.Select(r => (r!.Kind, r.Mouth, r.Pearl, r.Poster)), Requests.Places(again, "shallows").Select(r => (r!.Kind, r.Mouth, r.Pearl, r.Poster)));
-        Assert.Equal(3, a.Tied["shallows"]);
+        Assert.Equal(places.Select(r => (r!.Kind, r.Mouth, r.Pearl, r.Poster)), Requests.Places(again, "reef").Select(r => (r!.Kind, r.Mouth, r.Pearl, r.Poster)));
+        Assert.Equal(3, a.Tied["reef"]);
     }
 
     [Fact]
@@ -53,17 +53,17 @@ public class RequestTests
     {
         var j = NewJelly();
         Fill(j);
-        var places = Requests.Places(j, "shallows");
+        var places = Requests.Places(j, "reef");
         int seal = places.FindIndex(r => r!.Kind == Requests.Seal);
         int mouth = places[seal]!.Mouth;
-        j.Shut["shallows"] = new Dictionary<int, double> { [mouth] = 0 };
-        Assert.True(Requests.Take(j, "shallows", seal));
-        Assert.DoesNotContain(mouth, j.Shut["shallows"].Keys);
+        j.Shut["reef"] = new Dictionary<int, double> { [mouth] = 0 };
+        Assert.True(Requests.Take(j, "reef", seal));
+        Assert.DoesNotContain(mouth, j.Shut["reef"].Keys);
         Assert.Null(places[seal]);
         int other = places.FindIndex(r => r is not null);
-        Assert.True(Requests.Take(j, "shallows", other));
+        Assert.True(Requests.Take(j, "reef", other));
         int third = places.FindIndex(r => r is not null);
-        Assert.False(Requests.Take(j, "shallows", third));
+        Assert.False(Requests.Take(j, "reef", third));
         Assert.Equal(RequestTuning.Carry, j.Carried.Count);
         Requests.LetGo(j, 1);
         Assert.Single(j.Carried);
@@ -77,18 +77,18 @@ public class RequestTests
     public void Each_kind_is_done_by_its_own_deed_in_its_own_region()
     {
         var j = NewJelly();
-        j.Carried.Add(new Request { Kind = Requests.Seal, Region = "shallows", Mouth = 1 });
-        j.Carried.Add(new Request { Kind = Requests.Ash, Region = "shallows", Goal = 150 });
-        Assert.Empty(Requests.Note(j, Requests.Seal, "shallows", mouth: 0));
+        j.Carried.Add(new Request { Kind = Requests.Seal, Region = "reef", Mouth = 1 });
+        j.Carried.Add(new Request { Kind = Requests.Ash, Region = "reef", Goal = 150 });
+        Assert.Empty(Requests.Note(j, Requests.Seal, "reef", mouth: 0));
         Assert.Empty(Requests.Note(j, Requests.Seal, "kelp", mouth: 1));
-        Assert.Single(Requests.Note(j, Requests.Seal, "shallows", mouth: 1));
+        Assert.Single(Requests.Note(j, Requests.Seal, "reef", mouth: 1));
         Assert.True(j.Carried[0].Done);
-        Assert.Empty(Requests.Note(j, Requests.Ash, "shallows", amount: 100));
+        Assert.Empty(Requests.Note(j, Requests.Ash, "reef", amount: 100));
         Assert.Equal(100, j.Carried[1].Progress);
-        Assert.Single(Requests.Note(j, Requests.Ash, "shallows", amount: 80));
+        Assert.Single(Requests.Note(j, Requests.Ash, "reef", amount: 80));
         Assert.Equal(150, j.Carried[1].Progress);
         // Only a done one unties.
-        j.Carried.Add(new Request { Kind = Requests.Prime, Region = "shallows" });
+        j.Carried.Add(new Request { Kind = Requests.Prime, Region = "reef" });
         Assert.Null(Requests.Untie(j, 2));
         Assert.NotNull(Requests.Untie(j, 0));
         Assert.Equal(2, j.Carried.Count);
@@ -98,7 +98,7 @@ public class RequestTests
     public void Freeing_a_caves_prime_lets_its_swallowed_school_out_streaming_for_the_mouth()
     {
         var seed = SeedCode.TryParse("KELP7Q2Z", out var s) ? s : default;
-        var map = TopDownGenerator.GenerateCave(seed, OpenReef.CaveId("shallows", 1, 0), 0f, 2);
+        var map = TopDownGenerator.GenerateCave(seed, OpenReef.CaveId("reef", 1, 0), 0f, 2);
         var w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), PlaneOptions.OpenReef);
         var prime = w.Murklings.First(m => m.Prime);
         Assert.Empty(w.ReefFish);
@@ -115,7 +115,7 @@ public class RequestTests
     public void Given_experience_is_paid_with_the_step_like_a_leaks()
     {
         var seed = SeedCode.TryParse("KELP7Q2Z", out var s) ? s : default;
-        var map = TopDownGenerator.GenerateCave(seed, OpenReef.CaveId("shallows", 1, 0), 0f, 2);
+        var map = TopDownGenerator.GenerateCave(seed, OpenReef.CaveId("reef", 1, 0), 0f, 2);
         var w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), PlaneOptions.OpenReef);
         w.Murklings.Clear();
         int before = w.Run.Xp;

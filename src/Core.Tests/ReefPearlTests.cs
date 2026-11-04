@@ -18,7 +18,7 @@ public class ReefPearlTests
     static PlaneRun Reef() => new(Catalog.Value, new Tuning()) { Reef = true };
 
     static readonly Lazy<LevelMap> Bay = new(() => TopDownGenerator.FromHand(
-        HandLayout.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "maps", "shallows.json")))));
+        HandLayout.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "maps", "reef.json")))));
 
     [Fact]
     public void OnlyLevelsChangeHerStats_APearlStillChangesWhatSheDoes()
