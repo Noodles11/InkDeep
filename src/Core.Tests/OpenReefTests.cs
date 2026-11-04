@@ -280,7 +280,7 @@ public class OpenReefTests
         for (int z = 0; z < map.Zones.Count; z++)
         {
             var zone = map.Zones[z];
-            var mouths = Enumerable.Range(0, hand.Mouths.Count).Where(m => map.ZoneAt(map.Mouths[m].At) == z).ToList();
+            var mouths = Enumerable.Range(0, OpenReef.MinorMouths(hand)).Where(m => map.ZoneAt(map.Mouths[m].At) == z).ToList();
             Assert.Equal(new[] { 0, 1, 2 }, mouths.Select(m => hand.Mouths[m].Danger).Distinct().OrderBy(d => d));
             Assert.All(mouths, m => Assert.Equal(zone.Level + hand.Mouths[m].Danger, OpenReef.CaveLevel(hand, m)));
             // She can swim to every one of its mouths from the bay.

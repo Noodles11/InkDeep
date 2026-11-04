@@ -241,9 +241,10 @@ public static class BossIntroArt
 
     /// <summary>
     /// The boss, by its body form, doing its gag (g: seconds since it slammed in), in its mood. The mutations that read
-    /// at this size show: ink sacs as dark bumps; more arms, spines, bells, flaps and whorls come from its Count.
+    /// at this size show: ink sacs as dark bumps; more arms, spines, bells, flaps and whorls come from its Count. Freed
+    /// (a neighbour's portrait in the bay), its true body: no ink on it.
     /// </summary>
-    public static void Boss(CanvasItem ci, BossSpec spec, float s, float g, float menace, Mood mood, float t)
+    public static void Boss(CanvasItem ci, BossSpec spec, float s, float g, float menace, Mood mood, float t, bool freed = false)
     {
         var (body, accent, rim) = Colours(spec, menace);
         // A cold rim of light behind it as the depths darken.
@@ -260,9 +261,10 @@ public static class BossIntroArt
             case BodyForm.Siphonophore: Siphonophore(ci, spec, s, g, menace, mood, t, body, accent, iris, blink); break;
             case BodyForm.SeaHare: SeaHare(ci, spec, s, g, menace, mood, t, body, accent, iris, blink); break;
             case BodyForm.Murkling: Drippus(ci, s, g, menace, mood, t, body, accent, iris, blink); break;
+            case BodyForm.Turtle: Turtle(ci, s, g, menace, mood, t, body, accent, iris, blink, freed); break;
             default: Snail(ci, spec, s, g, menace, mood, t, body, accent, iris, blink); break;
         }
-        if (spec.Theme == MutationTheme.InkSacs || spec.Minor == MutationTheme.InkSacs)
+        if (!freed && (spec.Theme == MutationTheme.InkSacs || spec.Minor == MutationTheme.InkSacs))
             for (int i = 0; i < 3; i++)
                 Blob(ci, new Vector2(-s * 0.55f + s * 0.5f * i, s * 0.55f + (i == 1 ? s * 0.12f : 0f)), s * 0.13f, s * 0.11f, new Color(0.12f, 0.03f, 0.2f), s, 0.04f);
     }
@@ -317,6 +319,51 @@ public static class BossIntroArt
                 Blob(ci, hand, s * 0.1f, s * 0.08f, body.Darkened(0.35f), s, 0.035f);
             }
         }
+    }
+
+    /// <summary>
+    /// Grandmother Tull, asleep under her overgrown shell: she lands with a bump, her head pokes out, and she gives one
+    /// enormous yawn (eyes shut, a slow stretch of the neck) before she blinks at Clementine.
+    /// </summary>
+    static void Turtle(CanvasItem ci, float s, float g, float menace, Mood mood, float t, Color body, Color accent, Color iris, float blink, bool freed)
+    {
+        // The yawn: from a beat after landing, her neck stretches up and her mouth opens wide, then she settles.
+        float yawn = g > 0.45f && g < 1.65f ? Mathf.Sin((g - 0.45f) / 1.2f * Mathf.Pi) : 0f;
+        float bob = 0.03f * Mathf.Sin(t * 1.4f);
+        // The flippers, under the shell's rim.
+        foreach (float side in new[] { -1f, 1f })
+        {
+            Inked(ci, Ellipse(new Vector2(side * s * 1.05f, s * (0.42f + bob)), s * 0.42f, s * 0.17f, 16), accent, s, 0.04f);
+            Inked(ci, Ellipse(new Vector2(side * s * 0.6f, s * 0.6f), s * 0.2f, s * 0.12f, 12), accent, s, 0.035f);
+        }
+        // The head, out from under the front of the shell (to the right), stretched up in the yawn.
+        var head = new Vector2(s * 1.2f, s * (0.05f - 0.35f * yawn + bob));
+        ci.DrawLine(new Vector2(s * 0.75f, s * 0.3f), head, Line, s * 0.42f, true);
+        ci.DrawLine(new Vector2(s * 0.75f, s * 0.3f), head, accent, s * 0.34f, true);
+        Inked(ci, Ellipse(head, s * 0.36f, s * 0.31f, 20), accent, s, 0.04f);
+        if (yawn > 0.15f)
+        {
+            Blob(ci, head + new Vector2(s * 0.05f, s * 0.12f), s * 0.16f * yawn, s * 0.18f * yawn, new Color(0.35f, 0.12f, 0.15f), s, 0.03f);
+            // Eyes shut tight in it.
+            for (int k = -1; k <= 1; k += 2)
+                ci.DrawArc(head + new Vector2(k * s * 0.13f, -s * 0.06f), s * 0.07f, 0.1f * Mathf.Pi, 0.9f * Mathf.Pi, 8, Line, s * 0.035f, true);
+        }
+        else Face(ci, head + new Vector2(0f, -s * 0.02f), s * 0.42f, mood, menace, 0.5f, blink, iris, t);
+        // The shell: a high dome, its scutes outlined, the overgrowth piled on top in ink.
+        var dome = Ellipse(new Vector2(0f, s * (0.4f + bob)), s * 1.05f, s * 0.95f, 32, Mathf.Pi, Mathf.Tau);
+        Inked(ci, dome, body, s);
+        var c = new Vector2(0f, s * (0.4f + bob));
+        ci.DrawArc(c, s * 0.62f, Mathf.Pi * 1.08f, Mathf.Pi * 1.92f, 18, body.Darkened(0.3f), s * 0.04f, true);
+        for (int i = 1; i < 5; i++)
+        {
+            float a = Mathf.Pi + Mathf.Pi * i / 5f;
+            ci.DrawLine(c + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * s * 0.62f, c + new Vector2(Mathf.Cos(a) * s * 1.0f, Mathf.Sin(a) * s * 0.9f), body.Darkened(0.3f), s * 0.035f, true);
+        }
+        // Corrupted, the overgrowth piled on top in ink; freed, her little garden of algae and barnacles instead.
+        for (int i = 0; i < 3; i++)
+            Blob(ci, c + new Vector2(-s * 0.35f + s * 0.32f * i, -s * (0.78f + (i == 1 ? 0.14f : 0.02f))), s * (freed ? 0.1f : 0.2f), s * (freed ? 0.07f : 0.1f),
+                freed ? (i == 1 ? new Color(0.85f, 0.82f, 0.72f) : new Color(0.35f, 0.6f, 0.3f)) : new Color(0.1f, 0.04f, 0.16f), s, 0.035f);
+        ci.DrawColoredPolygon(Ellipse(new Vector2(-s * 0.45f, -s * 0.2f + bob * s), s * 0.25f, s * 0.1f, 14), new Color(1f, 1f, 1f, 0.3f));
     }
 
     /// <summary>The giant clam: snaps its shell twice, then blows a bubble raspberry; a pearl crown on top.</summary>

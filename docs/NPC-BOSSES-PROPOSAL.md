@@ -354,3 +354,28 @@ built. It follows the boss rules of docs/BOSS-GENERATOR.md §0 and the Theme Bib
 **Shells have nothing to buy until the Galleon.** With the pearl collector fourth, the early reef pays in shells she
 can only carry (and, after Fennel, keep). Early pearls come from requests and caves. If that feels flat in play, the
 fallback is a small trade at Tull's fan: a pearl or two for shells, until Ottilie comes home.
+
+## 12. What is built so far
+
+- **The folk and their great caves** (`PlaneFolk.cs`: `Folk`, `Neighbour`, `BayService`): Grandmother Tull is in the
+  game. A great mouth names its neighbour (`HandPoint.Folk`) and comes after every minor mouth in `reef.json`
+  (`OpenReef.MinorMouths`: the Tide Fan names only those). Its cave's level and floors are hers (`OpenReef.CaveLevel`,
+  `CaveFloors`), its number is its own past every minor cave's (`OpenReef.GreatCave`), it is grown from the region's
+  seed, and its deepest floor is a boss's arena round its leak (`LevelPlan.ForCave`'s `boss`).
+- **The arena:** its walls stand open (its only leak is inside) and rise behind her only while its boss fights
+  (`PlaneWorld.PlaceSeals`). No prime waits by the leak and no murkling buds in the cave while the fight runs. The
+  boss lies over the leak: it cannot be sealed till she is freed. Sealed, the great cave is closed for good
+  (`OpenReef.SealedGreat`, `Jelly.GreatLeaks`, `OpenReef.ShutMouths`).
+- **Her boss** (`FolkBosses`): authored, its meter `700 × (1 + 0.25 × (level − 1))`. Its acts are written out by phase
+  (`BossSpec.Acts`); it holds still while it warns and acts (`BossSpec.ActsStill`). Tull: the flipper sweep (a fan of
+  five big drops at where she last felt Clementine), then the slam (a ring of sixteen drops with a gap of three), then
+  the sigh (her throat open for 2 s); from half her meter, a seam cracks and the slams come in pairs. Her body is
+  `TurtleRig`; her cut-in yawns (`BossIntroArt.Turtle`).
+- **The homecoming:** freed, she swims off, and the caption reads "Grandmother Tull has gone home to Lantern Bay"
+  (`Jelly.Freed`).
+- **At home** (`FolkView`, `FolkTalk`, `FolkPortrait`; `HandLayout.Homes`): her true body at her home by the Tide Fan,
+  turning to watch Clementine; within 5 m, a speech bubble with her portrait, her name and her next line.
+- **The bay's services** (`Folk.Opens`): the Tide Fan hangs bare, ties no ribbons and opens no drawer till Tull is
+  home. A service whose neighbour is not in the game yet (the mirror, the shell shop) is open as before.
+- **Verification:** `--reef=cave:22` starts in Tull's cave (`--at=boss-near` in front of her), `--dbg-freed=tull` has
+  her freed and home, and `--reef=bay --at=103,775 --dbg-freed=tull` sets Clementine down by her. Tests: `FolkTests`.

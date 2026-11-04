@@ -54,7 +54,15 @@ public sealed partial class PlaneWorld
         {
             var facing = rock.Thick > 0f ? rock.Facing : rock.Cave >= 0 && rock.Cave < Map.Caves.Count ? Map.Caves[rock.Cave].Facing : Vector2.UnitY;
             var emblem = rock.Thick > 0f ? rock.Center + facing * rock.Thick : rock.Center + facing * rock.Radius * SealTuning.EmblemOut;
-            Seals.Add(new SecretSeal { Rock = rock, Facing = facing, Emblem = emblem });
+            var seal = new SecretSeal { Rock = rock, Facing = facing, Emblem = emblem };
+            Seals.Add(seal);
+            // A great cave's arena holds its only leak: its walls stand open, rising behind her only while its boss fights.
+            if (rock.Kind == SealKind.Boss && Map.LeakCave)
+            {
+                seal.Open = true;
+                _rocks.Remove(rock);
+                _rocks.AddRange(rock.Remains());
+            }
         }
     }
 

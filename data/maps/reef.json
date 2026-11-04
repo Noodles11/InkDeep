@@ -46,6 +46,8 @@
     { "id": "east", "x": 370, "y": 695, "r": 13, "role": "Main" },
     { "id": "meadow", "x": 220, "y": 770, "r": 13, "role": "Main" },
     { "id": "southeast", "x": 330, "y": 785, "r": 12, "role": "Branch" },
+    // The ledge, west of the landing: the first mouth she sees past the bay's gate, Grandmother Tull's great cave.
+    { "id": "ledge", "x": 30, "y": 655, "r": 10, "role": "Branch" },
 
     // The Kelp Jungle: many small clearings in the kelp, joined by narrow green lanes.
     { "id": "fernhollow", "x": 60, "y": 372, "r": 11, "role": "Main" },
@@ -111,6 +113,7 @@
     { "a": "crossroads", "b": "meadow", "width": 8 },
     { "a": "meadow", "b": "southeast", "width": 7 },
     { "a": "southeast", "b": "east", "width": 7, "kind": "Side" },
+    { "a": "landing", "b": "ledge", "width": 7, "kind": "Side" },
 
     // The passes out of the Shallows: north into the Kelp Jungle, east into the Sunken Galleon.
     { "a": "northwest", "b": "fernhollow", "width": 6 },
@@ -175,6 +178,10 @@
   "mirror": { "x": 63, "y": 778 },
   // The Tide Fan: the great old sea fan in the commune, where the bay ties its requests (docs/QUESTS-PROPOSAL.md §2).
   "fan": { "x": 110, "y": 762 },
+  // The bay's folk at home, each once she is freed (docs/NPC-BOSSES-PROPOSAL.md): Tull's shell against the fan's foot.
+  "homes": [
+    { "x": 103, "y": 770, "folk": "tull" }
+  ],
   // The cave mouths, each by a chamber's north wall (an opening facing the camera is sought first), and each with its
   // danger: its cave's level is its zone's area level plus it, its floors one more (docs/REEF-WORLD.md §3).
   "mouths": [
@@ -202,6 +209,10 @@
     { "x": 560, "y": 40, "name": "juggler", "danger": 0 },
     { "x": 760, "y": 288, "name": "mirrors", "danger": 1 },
     { "x": 740, "y": 126, "name": "lanterns", "danger": 1 },
-    { "x": 780, "y": 40, "name": "finale", "danger": 2 }
+    { "x": 780, "y": 40, "name": "finale", "danger": 2 },
+
+    // The great caves (docs/NPC-BOSSES-PROPOSAL.md §2): each holds a neighbour of the bay, corrupted, at its bottom; her
+    // cave's level and floors are her own.
+    { "x": 30, "y": 646, "name": "ledge", "folk": "tull" }
   ]
 }

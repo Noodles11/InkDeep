@@ -98,9 +98,10 @@ public static class TopDownGenerator
     /// </param>
     /// <param name="floor">Which of its floors (from 1), and how many it has (docs/REEF-WORLD.md §3): only its first
     /// floor has a way in; she comes down into a deeper one from the hole above.</param>
-    public static LevelMap GenerateCave(SeedCode seed, LevelId id, float menace, int level, Vector2? into = null, int floor = 1, int floors = 1)
+    /// <param name="boss">A great cave: its deepest floor ends in a boss's arena round its leak (LevelPlan.ForCave).</param>
+    public static LevelMap GenerateCave(SeedCode seed, LevelId id, float menace, int level, Vector2? into = null, int floor = 1, int floors = 1, bool boss = false)
     {
-        var map = Generate(new RunStreams(seed), LevelPlan.ForCave(seed, id, menace, floor, floors), null, "", 0f);
+        var map = Generate(new RunStreams(seed), LevelPlan.ForCave(seed, id, menace, floor, floors, boss), null, "", 0f);
         map.CaveLevel = level;
         if (floor > 1) return map;
         // Its way in and out: an opening in its start chamber's wall (where that wall has no room, the nearest wall along

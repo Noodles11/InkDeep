@@ -148,13 +148,45 @@ public static class OpenReef
     /// zones) plus the mouth's danger, fixed as an area's is. Without a mouth (-1), the region's least.
     /// </summary>
     public static int CaveLevel(HandLayout hand, int mouth) =>
-        mouth < 0 || mouth >= hand.Mouths.Count
+        GreatOf(hand, mouth) is { } great ? great.Level
+        : mouth < 0 || mouth >= hand.Mouths.Count
             ? hand.Zones.Count > 0 ? hand.Zones.Min(z => z.Level) : hand.Tier
             : (ZoneOf(hand, mouth)?.Level ?? hand.Tier) + Math.Clamp(hand.Mouths[mouth].Danger, 0, ReefTuning.MostDanger);
 
-    /// <summary>How many floors the cave behind a mouth goes down (docs/REEF-WORLD.md §3): one more than its danger.</summary>
+    /// <summary>How many floors the cave behind a mouth goes down (docs/REEF-WORLD.md §3): one more than its danger (a great cave's, its neighbour's).</summary>
     public static int CaveFloors(HandLayout hand, int mouth) =>
-        1 + (mouth >= 0 && mouth < hand.Mouths.Count ? Math.Clamp(hand.Mouths[mouth].Danger, 0, ReefTuning.MostDanger) : 0);
+        GreatOf(hand, mouth) is { } great ? great.Floors
+        : 1 + (mouth >= 0 && mouth < hand.Mouths.Count ? Math.Clamp(hand.Mouths[mouth].Danger, 0, ReefTuning.MostDanger) : 0);
+
+    /// <summary>
+    /// The neighbour waiting at the bottom of the great cave behind a mouth (docs/NPC-BOSSES-PROPOSAL.md), or null for a
+    /// minor one.
+    /// </summary>
+    public static Neighbour? GreatOf(HandLayout hand, int mouth) =>
+        mouth >= 0 && mouth < hand.Mouths.Count ? Folk.Get(hand.Mouths[mouth].Folk) : null;
+
+    /// <summary>The region's minor mouths, the Tide Fan's to name: every one before the great caves', which come last.</summary>
+    public static int MinorMouths(HandLayout hand) => hand.Mouths.TakeWhile(m => m.Folk is null).Count();
+
+    /// <summary>
+    /// A great cave is the same for every jelly (grown from the region's own seed, its own number past every minor
+    /// cave's), and opens again never once its leak is sealed.
+    /// </summary>
+    public const int GreatCaves = 100000;
+
+    public static int GreatCave(Neighbour n) => GreatCaves + Array.IndexOf(Folk.All, n);
+
+    /// <summary>She sealed a great cave's leak: it is closed for good (its mouth shut forever).</summary>
+    public static void SealedGreat(Jelly jelly, Neighbour n) => jelly.GreatLeaks.Add(n.Id);
+
+    /// <summary>The region's mouths shut now: the minor ones sealed and not yet corrupted again, and the great ones closed for good.</summary>
+    public static HashSet<int> ShutMouths(Jelly jelly, string region, HandLayout hand)
+    {
+        var shut = ShutMouths(jelly, region);
+        for (int i = 0; i < hand.Mouths.Count; i++)
+            if (GreatOf(hand, i) is { } n && jelly.GreatLeaks.Contains(n.Id)) shut.Add(i);
+        return shut;
+    }
 
     /// <summary>
     /// A cave's name (docs/REEF-WORLD.md §3), from its zone's own words, her world's seed and the cave's number: "The
@@ -179,7 +211,8 @@ public static class OpenReef
 
     /// <summary>The Menace of the cave behind a mouth: its zone's (the region's, without zones), and more for its danger.</summary>
     public static float CaveMenace(HandLayout hand, int mouth) =>
-        (ZoneOf(hand, mouth)?.Menace ?? hand.Menace) + ReefTuning.MenacePerDanger * (mouth >= 0 && mouth < hand.Mouths.Count ? hand.Mouths[mouth].Danger : 0);
+        (ZoneOf(hand, mouth)?.Menace ?? hand.Menace) + ReefTuning.MenacePerDanger * (GreatOf(hand, mouth) is { } great ? great.Floors - 1
+            : mouth >= 0 && mouth < hand.Mouths.Count ? hand.Mouths[mouth].Danger : 0);
 
     /// <summary>A cave's own level id (apart from every run level and hand-drawn map), from its region, depth and number.</summary>
     public static LevelId CaveId(string region, int depth, int cave) => new(1000 + RegionNumber(region), depth, cave + 1);
@@ -364,8 +397,8 @@ public sealed partial class PlaneWorld
     {
         var path = LevelValidator.ShortestPath(Map, Map.Start.Position, Map.Exit.Position, clearance: 1f);
         if (path.Count == 0) return;
-        // The leak, on the deepest floor, is guarded (a floor above holds only its hole down).
-        var guard = Map.HoleDown ? default : path.LastOrDefault(q => Vector2.Distance(q, Map.Exit.Position) >= ReefTuning.CavePrimeBeforeLeak && Clear(q, BlightTuning.PrimeBody));
+        // The leak, on the deepest floor, is guarded (a floor above holds only its hole down; a great cave's by its boss).
+        var guard = Map.HoleDown || Map.HasBoss ? default : path.LastOrDefault(q => Vector2.Distance(q, Map.Exit.Position) >= ReefTuning.CavePrimeBeforeLeak && Clear(q, BlightTuning.PrimeBody));
         if (guard != default) Bud(guard, -1, prime: true, drink: false, born: true);
         int want = ReefTuning.CaveMurklings + (int)MathF.Round(ReefTuning.CaveMurklingsPerMenace * Menace);
         var spots = path.Where(q => Vector2.Distance(q, Map.Start.Position) >= ReefTuning.CaveMurkFromStart).ToList();
@@ -387,7 +420,8 @@ public sealed partial class PlaneWorld
     /// <summary>While its leak is open, a leak cave buds murklings out of its ink near her (and now and then a prime).</summary>
     void StepCaveMurklings(InkDots dots)
     {
-        if (!CaveLeakOpen || Defeated) return;
+        // (A great cave's boss fight is hers and the boss's alone.)
+        if (!CaveLeakOpen || Defeated || BossBattle) return;
         _caveBud -= Dt;
         if (_caveBud > 0f) return;
         _caveBud = ReefTuning.CaveBudEvery / (1f + 0.6f * Menace);

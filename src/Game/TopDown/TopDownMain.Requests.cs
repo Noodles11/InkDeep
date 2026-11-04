@@ -58,13 +58,14 @@ public partial class TopDownMain
     /// <summary>Home in the bay: new ribbons tied in each region's empty places on the fan.</summary>
     void FillFan()
     {
-        if (_jelly is not { } jelly || _world is null) return;
+        // Grandmother Tull ties the bay's troubles to the fan: none till she is home.
+        if (_jelly is not { } jelly || _world is null || !BayOpen(BayService.TideFan)) return;
         if (!SeedCode.TryParse(jelly.Seed, out var seed)) seed = _seed;
         foreach (string region in OpenReef.Regions)
         {
             var hand = LoadMap(region);
             bool Den(int mouth) => LevelPlan.ForCave(seed, OpenReef.CaveId(region, hand.Depth, OpenReef.CaveBehind(jelly, region, mouth)), OpenReef.CaveMenace(hand, mouth)).Curses > 0;
-            Requests.Fill(jelly, region, m => OpenReef.CaveLevel(hand, m), hand.Mouths.Count, Den, _world.Run.CanOffer, _catalog);
+            Requests.Fill(jelly, region, m => OpenReef.CaveLevel(hand, m), OpenReef.MinorMouths(hand), Den, _world.Run.CanOffer, _catalog);
         }
     }
 
@@ -176,7 +177,7 @@ public partial class TopDownMain
         if (jelly is not null && _map.Fan is not null)
         {
             if (!_world.AtFan) _fanArmed = true;
-            else if (_fanArmed && !_pause.IsOpen && !_mirror.IsOpen && !_debug.Visible) OpenFan();
+            else if (_fanArmed && !_pause.IsOpen && !_mirror.IsOpen && !_debug.Visible && BayOpen(BayService.TideFan)) OpenFan();
         }
         if (jelly is not null && _place == ReefPlace.Cave && _world.AshWashed > _ashSeen)
         {
@@ -194,7 +195,8 @@ public partial class TopDownMain
             if (_map.Fan is { } fan)
             {
                 var ribbons = new List<FanView.Ribbon>();
-                foreach (string region in OpenReef.Regions)
+                // (The fan hangs bare till its neighbour is home to tie its ribbons.)
+                foreach (string region in BayOpen(BayService.TideFan) ? OpenReef.Regions : System.Array.Empty<string>())
                     foreach (var r in Requests.Places(jelly, region))
                         if (r is not null) ribbons.Add(new FanView.Ribbon(RequestRibbons.KindColour(r.Kind), TokenColour(r), false));
                 foreach (var r in jelly.Carried.Where(r => r.Done)) ribbons.Add(new FanView.Ribbon(RequestRibbons.KindColour(r.Kind), TokenColour(r), true));

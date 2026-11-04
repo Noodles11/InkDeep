@@ -132,8 +132,8 @@ their own below the shelf.
 
 Each step is playable on its own:
 
-1. **The map and its zones** (built). `reef.json` at 840 m with the four zones, six passes and 22 mouths (seven in the
-   Shallows, five in each other zone, each zone with caves of every danger). Zone looks blend as she crosses
+1. **The map and its zones** (built). `reef.json` at 840 m with the four zones, six passes and 22 minor mouths (seven in the
+   Shallows, five in each other zone, each zone with caves of every danger), and after them the great caves' mouths (docs/NPC-BOSSES-PROPOSAL.md). Zone looks blend as she crosses
    (`TopDownMain.StepPlaceLook`, `ReefLook.ForZone`: the Shallows' own look with its glare taken off,
    `ReefLook.OpenShallows`), and zone titles and levels show. Kelp grows by zone (`TopDownGenerator.KelpByLook`: the
    Kelp Jungle 1.6 times a Kelp level's for its area, the Shallows 0.8, the Galleon 0.4, the Carnival 0.25). Caves

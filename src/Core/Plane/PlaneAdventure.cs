@@ -506,8 +506,10 @@ public sealed partial class PlaneWorld
             if (v.Wave >= 0f) Dissolve(dots, v, k);
             StepArms(v);
             if (v.Sealed) continue;
-            // Near it, her inner light works on it on its own (an Inkwarden in reach turns it aside).
+            // Near it, her inner light works on it on its own (an Inkwarden in reach turns it aside, and a great cave's
+            // boss lying over it until she is freed).
             if (Tick % 15 == 0) v.Warded = Ward(v, v.Position, 1f) <= 0f;
+            if (Boss is { Freed: false }) v.Warded = true;
             int staples = v.Staples, shut = v.ArmsShut;
             if (!Defeated && !v.Warded && Vector2.Distance(Player.Position, v.Position) <= AdventureTuning.LeakSealReach)
             {

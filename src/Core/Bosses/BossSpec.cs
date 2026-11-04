@@ -7,10 +7,13 @@ namespace OctoShoots.Core.Bosses;
 /// The body plans a boss can grow from (docs/BOSS-GENERATOR.md §3). Later passes add the rest. Ink is no animal: a
 /// creature of ink itself (Drippus Prime, authored, never generated).
 /// </summary>
-public enum BodyPlan { Bivalve, Echinoderm, Cnidarian, Gastropod, Ink }
+public enum BodyPlan { Bivalve, Echinoderm, Cnidarian, Gastropod, Ink, Reptile }
 
-/// <summary>The real animal a plan is drawn as (Murkling: Drippus Prime's body, a murkling prime grown huge).</summary>
-public enum BodyForm { GiantClam, SeaStar, Urchin, MoonJelly, Siphonophore, SeaHare, Snail, Murkling }
+/// <summary>
+/// The real animal a plan is drawn as (Murkling: Drippus Prime's body, a murkling prime grown huge; Turtle: Grandmother
+/// Tull's, docs/NPC-BOSSES-PROPOSAL.md, authored, never rolled).
+/// </summary>
+public enum BodyForm { GiantClam, SeaStar, Urchin, MoonJelly, Siphonophore, SeaHare, Snail, Murkling, Turtle }
 
 /// <summary>The designed fight ideas (§4): every boss is one of these (TheBrood: Drippus Prime's, authored).</summary>
 public enum BossConcept { TheLid, SnappingGate, TurningStar, SlamAndSigh, PulseBell, TrailingCurtain, TheSpreader, ShyShell, BoilHeart, TheBrood }
@@ -149,6 +152,17 @@ public sealed class BossSpec
     public BossSense Sense { get; set; }
     public List<BossPhase> Phases { get; } = new();
     public BossSpice Spice { get; set; }
+
+    // ── an authored boss's own ──
+    /// <summary>The bay's neighbour this boss is (docs/NPC-BOSSES-PROPOSAL.md), by her id; null for any other boss.</summary>
+    public string? Folk { get; set; }
+    /// <summary>
+    /// Its acts written out, by phase (the last for every phase after): each act's volleys in order, its window after the
+    /// last (an authored boss's, in place of the signature-and-fillers turn). Empty: the turn.
+    /// </summary>
+    public List<BossAttack[]> Acts { get; } = new();
+    /// <summary>It holds still while it warns and acts, moving only as it rests (a creeper that plants itself to strike).</summary>
+    public bool ActsStill { get; set; }
 
     /// <summary>Every attack it can throw in this fight (the signature, the fillers, and those phases bring).</summary>
     public IEnumerable<BossAttack> Kit

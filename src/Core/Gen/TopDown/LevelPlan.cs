@@ -285,7 +285,9 @@ public sealed class LevelPlan
     /// </summary>
     /// <param name="floor">Which of its floors (from 1; each its own layout), and how many it has: a floor above the last
     /// ends in a hole down instead of the leak, and each floor down is meaner (FloorMenace more).</param>
-    public static LevelPlan ForCave(SeedCode seed, LevelId id, float menace, int floor = 1, int floors = 1)
+    /// <param name="boss">A great cave (docs/NPC-BOSSES-PROPOSAL.md): its deepest floor's dead end is a boss's arena,
+    /// its leak in the middle.</param>
+    public static LevelPlan ForCave(SeedCode seed, LevelId id, float menace, int floor = 1, int floors = 1, bool boss = false)
     {
         var streams = new RunStreams(seed);
         if (floor > 1) id = id with { Cycle = id.Cycle + FloorCycles * (floor - 1) };
@@ -293,6 +295,7 @@ public sealed class LevelPlan
         return new LevelPlan
         {
             Id = id,
+            HasBoss = boss && floor >= floors,
             Secrets = rng.NextFloat() < LevelStocking.Secret ? 1 : 0,
             Curses = rng.NextFloat() < CaveCurse ? 1 : 0,
             EntryStamp = streams.StampSeed(id),

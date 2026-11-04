@@ -27,7 +27,7 @@ namespace OctoShoots.Game.TopDown;
 /// --autopilot, --dive (dives whenever it can), --dbg-pad (on the controller from the start), --calm (no creatures), --fire, --pearls=, --hp=, --luck=, --boss-hp=, --paused, --map, --f3, --no-focus, --dbg-nofog (no floor fog),
 /// --capture=dir --frames=a,b, --dbg-say=text (a message banner, a second in), --at=gate (swims into the boss arena through its
 /// opened way in), --dbg-free=seconds (the boss freed that long after it lands), --dbg-steer=x,y (she swims that way;
-/// --dbg-steer-fight: once the boss fights), --look=N (an art direction under study for the reef, docs/ART-LOOKS.md).
+/// --dbg-steer-fight: once the boss fights), --dbg-freed=tull,… (the bay's folk freed, at home), --look=N (an art direction under study for the reef, docs/ART-LOOKS.md).
 /// </summary>
 public partial class TopDownMain : Node3D
 {
@@ -121,6 +121,7 @@ public partial class TopDownMain : Node3D
     bool _autoFire, _autoActive, _dbgPop, _startPaused, _dbgBossLevel, _dbgGeyser, _dbgShells, _dbgMurkFish, _dbgThrow;
     /// <summary>Verification: `--boss=<Concept>` (or `queen`, or `drippus`) names the boss to meet; `--boss-level` starts on the depth's boss level.</summary>
     string? _dbgBoss;
+    string[] _dbgFreed = Array.Empty<string>();
     float? _startHp, _dbgLuck;
     /// <summary>Verification (`--xp=n`): experience she starts the run with.</summary>
     int _startXp;
@@ -513,6 +514,7 @@ public partial class TopDownMain : Node3D
             else if (arg == "--paused") _startPaused = true;
             else if (arg == "--dbg-lost") _dbgLost = true;
             else if (arg == "--dbg-requests") _dbgRequests = true;
+            else if (arg.StartsWith("--dbg-freed=")) _dbgFreed = Value("--dbg-freed=").Split(',', StringSplitOptions.RemoveEmptyEntries);
             else if (arg.StartsWith("--dbg-look=") && Value("--dbg-look=").Split(',') is { Length: 4 } tried)
                 _dbgLook = new JellyLook { Gonads = tried[0], Glow = tried[1], Arms = tried[2], Tips = tried[3] };
             else if (arg == "--dbg-burn") _dbgBurn = true;
@@ -543,6 +545,8 @@ public partial class TopDownMain : Node3D
             _recorder = new PlaneProfileRecorder(new Profile());
             // Verification on the open reef: a jelly of its own, never saved.
             if (Reef) _jelly = new Jelly { Name = "Clementine", Seed = _seed.ToString() };
+            // (--dbg-freed=tull,…: these of the bay's folk freed, home in the bay.)
+            if (_jelly is not null) foreach (string id in _dbgFreed) _jelly.Freed.Add(id);
             return;
         }
         RunLaunch.Pending = null;
@@ -681,7 +685,8 @@ public partial class TopDownMain : Node3D
 
     /// <summary>The name of the cave behind a region's mouth now ("The Flooded Hold"), from its zone and her seed.</summary>
     string CaveName(string region, int mouth) =>
-        _jelly is { } jelly
+        OpenReef.GreatOf(LoadMap(region), mouth) is { } great ? great.Cave
+        : _jelly is { } jelly
             ? OpenReef.CaveName(OpenReef.ZoneOf(LoadMap(region), mouth)?.Name ?? "shallows", jelly.Seed, OpenReef.CaveBehind(jelly, region, Math.Max(mouth, 0)))
             : "Leak cave";
 
@@ -694,20 +699,22 @@ public partial class TopDownMain : Node3D
         if (place == ReefPlace.Region) return ShapeRegion(region);
         var hand = LoadMap(region);
         var jelly = _jelly!;
-        int cave = OpenReef.CaveBehind(jelly, region, Math.Max(mouth, 0));
+        // A great cave is the same for every jelly: its own number and the region's seed, its deepest floor an arena.
+        var great = OpenReef.GreatOf(hand, mouth);
+        int cave = great is not null ? OpenReef.GreatCave(great) : OpenReef.CaveBehind(jelly, region, Math.Max(mouth, 0));
         int level = OpenReef.CaveLevel(hand, mouth);
         float menace = OpenReef.CaveMenace(hand, mouth);
         int floors = OpenReef.CaveFloors(hand, mouth);
         floor = Math.Clamp(floor, 1, floors);
         var id = OpenReef.CaveId(region, hand.Depth, cave);
-        if (!SeedCode.TryParse(jelly.Seed, out var seed)) seed = _seed;
+        if (!SeedCode.TryParse(great is not null ? hand.Seed : jelly.Seed, out var seed)) seed = _seed;
         // Its way in faces the mouth she swims into (the region is made already: she is coming from it).
         var home = ShapeRegion(region);
         return Task.Run(async () =>
         {
             var mouths = (await home).Map.Mouths;
             System.Numerics.Vector2? into = mouth >= 0 && mouth < mouths.Count ? mouths[mouth].Into : null;
-            return LevelShape.Prepare(TopDownGenerator.GenerateCave(seed, id, menace, level, into, floor, floors));
+            return LevelShape.Prepare(TopDownGenerator.GenerateCave(seed, id, menace, level, into, floor, floors, boss: great is not null));
         });
     }
 
@@ -1039,8 +1046,9 @@ public partial class TopDownMain : Node3D
         }
         var hand = LoadMap(_region);
         int floors = OpenReef.CaveFloors(hand, near);
-        string facts = _world.ShutMouths.Contains(near) ? "Sealed · the Leak will seep back"
-            : $"Level {OpenReef.CaveLevel(hand, near)} · {floors} {(floors == 1 ? "floor" : "floors")}";
+        bool great = OpenReef.GreatOf(hand, near) is not null;
+        string facts = _world.ShutMouths.Contains(near) ? great ? "Sealed for good" : "Sealed · the Leak will seep back"
+            : $"Level {OpenReef.CaveLevel(hand, near)} · {floors} {(floors == 1 ? "floor" : "floors")}{(great ? " · Great cave" : "")}";
         var door = _map.Mouths[near];
         var over = new Vector3(door.At.X, LevelMap.SwimBand + Doorway.FaceHeight + 0.8f, door.At.Y);
         var at = OctoShoots.Game.Fx.Fisheye.Shown(_camera.Camera.UnprojectPosition(over), GetViewport().GetVisibleRect().Size);
@@ -1236,6 +1244,7 @@ public partial class TopDownMain : Node3D
         _mirror.Reverted += RevertMirror;
         // The bay's Tide Fan and the requests she carries.
         BuildRequests(pauseLayer);
+        BuildFolk();
         _splash = new LoadingSplash();
         pauseLayer.AddChild(_splash);
         _pause.RestartPressed += () =>
@@ -1571,12 +1580,12 @@ public partial class TopDownMain : Node3D
         _run.Level = _id;
         // Waking in a haven (Lantern Bay): she is healed whole.
         if (map.InHaven(arriveAt ?? map.Start.Position)) _run.Hp = _run.MaxHp;
-        _world = new PlaneWorld(_map, _tuning, _run, Reef ? PlaneOptions.OpenReef : DebugBoss());
+        _world = new PlaneWorld(_map, _tuning, _run, Reef ? ReefOptions() : DebugBoss());
         _havenShare = -1f;
         _zoneShares = System.Array.Empty<float>();
         _zone = -1;
         // A region's mouths whose caves she has sealed stay shut until the Leak seeps back.
-        if (_place == ReefPlace.Region && _jelly is { } shutter) _world.ShutMouths = OpenReef.ShutMouths(shutter, _region);
+        if (_place == ReefPlace.Region && _jelly is { } shutter) _world.ShutMouths = OpenReef.ShutMouths(shutter, _region, LoadMap(_region));
         ShowMouths();
         if (_captureDir is not null)
             foreach (var door in map.Way is { } way ? map.Mouths.Append(way) : map.Mouths) GD.Print($"Ride door at {door.At} into {door.Into}");
@@ -1584,6 +1593,7 @@ public partial class TopDownMain : Node3D
         _lostLight.Show(_world);
         _mirrorView.Show(map);
         _fanView.Show(map);
+        _folkView.Show(map, Reef ? LoadMap(_region) : null, _jelly);
         _ashSeen = 0;
         // Back on the reef with the bay on it: new troubles tied on the Tide Fan (and each time she comes home to it).
         if (Reef && map.Fan is not null) FillFan();
@@ -2674,7 +2684,8 @@ public partial class TopDownMain : Node3D
                 // A leak cave sealed: a fresh one waits behind its mouth, and the region counts it.
                 else if (e.Type == PlaneEventType.LeakSealed && _place == ReefPlace.Cave && _jelly is { } sealer)
                 {
-                    OpenReef.Sealed(sealer, _region, Math.Max(_mouth, 0), _regionMouths);
+                    if (GreatHere is { } great) OpenReef.SealedGreat(sealer, great);
+                    else OpenReef.Sealed(sealer, _region, Math.Max(_mouth, 0), _regionMouths);
                     SaveJelly();
                     // The Leak's pull turns: an upwelling where the leak was carries her up and out.
                     _portals.Upwell(_map.Exit.Position);
@@ -2833,7 +2844,8 @@ public partial class TopDownMain : Node3D
                 else if (e.Type == PlaneEventType.BossFreed)
                 {
                     _camera.Shake(0.4f);
-                    Say($"{_world.Boss?.Spec.Name ?? PlaneBossTuning.Name} is freed!");
+                    if (_world.Boss?.Spec.Folk is not null) FolkFreed();
+                    else Say($"{_world.Boss?.Spec.Name ?? PlaneBossTuning.Name} is freed!");
                 }
             }
         }
@@ -2879,7 +2891,7 @@ public partial class TopDownMain : Node3D
         if (_place == ReefPlace.Region && _jelly is { } reopen && _world.ShutMouths.Count > 0 && (_shutCheck -= dt) <= 0f)
         {
             _shutCheck = 2f;
-            var shut = OpenReef.ShutMouths(reopen, _region);
+            var shut = OpenReef.ShutMouths(reopen, _region, LoadMap(_region));
             if (!shut.SetEquals(_world.ShutMouths))
             {
                 _world.ShutMouths = shut;
@@ -2889,11 +2901,12 @@ public partial class TopDownMain : Node3D
         }
         // The Tide Fan's requests: its drawer at its foot, what she does in the caves, the ribbons and the maps' marks.
         StepRequests();
+        StepFolk(dt);
         // The bay's look as she swims out of it, or back in.
         StepPlaceLook();
         StepMouthLabel();
         // Onto the bay's mirror: it shows her, and her look can change.
-        if (_jelly is not null && _map.Mirror is not null)
+        if (_jelly is not null && _map.Mirror is not null && BayOpen(BayService.Mirror))
         {
             if (!_world.AtMirror) _mirrorArmed = true;
             else if (_mirrorArmed && !_pause.IsOpen && !_debug.Visible) OpenMirror();

@@ -233,6 +233,8 @@ public sealed partial class PlaneWorld
     void PlaceBoss()
     {
         if (!Map.HasBoss || Map.Rift) return;
+        // The open reef's bosses are the bay's folk, each named by the game for her great cave (none once she is freed).
+        if (Options.Reef && Options.Boss is null) return;
         var spec = Options.Boss ?? BossRoster.For(Map.Seed, Map.Cycle, Math.Max(1, Map.Depth - LevelPlan.Tutorial));
         Boss = new PlaneBoss { Spec = spec, Position = ArenaCenter, Hp = spec.Hp, MaxHp = spec.Hp, TelegraphLength = spec.Telegraph };
         if (IsDrippus(Boss)) Boss.Mass = DrippusTuning.Mass;
@@ -461,7 +463,7 @@ public sealed partial class PlaneWorld
             case BossAct.Act:
                 if (boss.ActTime >= spec.VolleyInterval)
                 {
-                    if (boss.Fired >= spec.Volleys)
+                    if (boss.Fired >= VolleysOf(boss))
                     {
                         EndAct(boss);
                         break;
@@ -574,11 +576,27 @@ public sealed partial class PlaneWorld
     {
         var spec = boss.Spec;
         if (IsDrippus(boss)) return boss.Next;
+        if (ActNow(boss) is { } act) return act[Math.Min(i, act.Length - 1)];
         var others = boss.Active.Skip(1 + spec.Fillers.Count).Where(IsVolley).Concat(spec.Fillers.Where(IsVolley)).ToList();
         bool signature = IsVolley(spec.Signature) || spec.Signature == BossAttack.Homing;
         if (i % 2 == 0 && signature || others.Count == 0) return spec.Signature;
         return others[(i / 2) % others.Count];
     }
+
+    /// <summary>An authored boss's act for its phase, written out (BossSpec.Acts), or null for the turn.</summary>
+    public static BossAttack[]? ActNow(PlaneBoss boss) =>
+        boss.Spec.Acts.Count == 0 ? null : boss.Spec.Acts[Math.Clamp(boss.Phase - 1, 0, boss.Spec.Acts.Count - 1)];
+
+    /// <summary>How many volleys its act has.</summary>
+    static int VolleysOf(PlaneBoss boss) => ActNow(boss)?.Length ?? boss.Spec.Volleys;
+
+    /// <summary>The volley coming next in its act (what its warning, or the pause before the next volley, warns of).</summary>
+    public static BossAttack? Coming(PlaneBoss boss) => boss.Act switch
+    {
+        BossAct.Telegraph => ActNow(boss) is { } act ? act[0] : boss.Spec.Signature,
+        BossAct.Act when ActNow(boss) is { } act && boss.Fired < act.Length => act[boss.Fired],
+        _ => null,
+    };
 
     static void SetAct(PlaneBoss boss, BossAct act)
     {
@@ -613,7 +631,7 @@ public sealed partial class PlaneWorld
     {
         var spec = boss.Spec;
         var p = Player;
-        bool still = boss.Act is BossAct.Window or BossAct.Stagger;
+        bool still = boss.Act is BossAct.Window or BossAct.Stagger || spec.ActsStill && boss.Act is BossAct.Telegraph or BossAct.Act or BossAct.Helix;
         switch (spec.Move)
         {
             case BossMove.Turn:
@@ -691,6 +709,8 @@ public sealed partial class PlaneWorld
                 Brood(boss);
                 break;
             case BossAttack.Fan:
+                // Drippus Prime's aim was locked through its warning; any other body sweeps at her as it strikes.
+                if (!IsDrippus(boss)) boss.Aim = AimFrom(boss, boss.Position);
                 Fan(boss);
                 break;
             case BossAttack.ArcBombs:

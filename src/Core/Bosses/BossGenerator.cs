@@ -64,11 +64,12 @@ public static class BossGenerator
         BodyForm.SeaStar or BodyForm.Urchin => BodyPlan.Echinoderm,
         BodyForm.MoonJelly or BodyForm.Siphonophore => BodyPlan.Cnidarian,
         BodyForm.Murkling => BodyPlan.Ink,
+        BodyForm.Turtle => BodyPlan.Reptile,
         _ => BodyPlan.Gastropod,
     };
 
-    /// <summary>A body only authored, never rolled (Drippus Prime's).</summary>
-    public static bool Authored(BodyForm form) => form == BodyForm.Murkling;
+    /// <summary>A body only authored, never rolled (Drippus Prime's, the bay's folk's).</summary>
+    public static bool Authored(BodyForm form) => form is BodyForm.Murkling or BodyForm.Turtle;
 
     /// <summary>What each body can throw: an attack only comes from anatomy that could make it (§7.1).</summary>
     public static bool Can(BodyForm form, BossAttack attack) => attack switch

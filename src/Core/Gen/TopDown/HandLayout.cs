@@ -41,6 +41,8 @@ public sealed class HandLayout
     public HandPoint? Mirror { get; set; }
     /// <summary>The bay's Tide Fan (docs/QUESTS-PROPOSAL.md §2): the great sea fan where the bay ties its requests.</summary>
     public HandPoint? Fan { get; set; }
+    /// <summary>The bay's folk at home (docs/NPC-BOSSES-PROPOSAL.md): where each lives once she is freed (Folk names her).</summary>
+    public List<HandPoint> Homes { get; set; } = new();
     /// <summary>A region's tier: its caves' first level.</summary>
     public int Tier { get; set; } = 1;
     /// <summary>Its square, metres a side (a seeded level's unless it asks for more).</summary>
@@ -119,6 +121,11 @@ public sealed class HandPoint
     public string Name { get; set; } = "";
     /// <summary>A cave mouth's danger (0 to 2, docs/REEF-WORLD.md §3): its cave's level is its zone's area level plus this.</summary>
     public int Danger { get; set; }
+    /// <summary>
+    /// A great cave's mouth: the neighbour waiting at its bottom (Folk, docs/NPC-BOSSES-PROPOSAL.md), whose cave's level
+    /// and floors are her own. A bay home: the neighbour who lives there.
+    /// </summary>
+    public string? Folk { get; set; }
 }
 
 /// <summary>A biome zone (docs/REEF-WORLD.md §1): its box, the depth whose look it takes, its Menace and its area level.</summary>
