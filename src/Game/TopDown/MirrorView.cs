@@ -7,14 +7,15 @@ namespace OctoShoots.Game.TopDown;
 /// <summary>
 /// The bay's mirror (docs/RPG-PROPOSAL.md §8): a still pool of polished nacre on the floor in a low pearl rim. Its face
 /// shows the water above as a pale sheen, and her as she swims over it: her glow mirrored under her, rings spreading from it
-/// (mirror_pool.gdshader). Swimming onto it opens the mirror's drawer (MirrorMenu).
+/// (mirror_pool.gdshader). Swimming onto it opens the mirror's drawer (MirrorMenu). Till Kip is home to clean it
+/// (docs/NPC-BOSSES-PROPOSAL.md §5.3), silt lies over it and it shows nothing.
 /// </summary>
 public partial class MirrorView : Node3D
 {
     ShaderMaterial? _face;
     float _near;
 
-    public void Show(LevelMap map)
+    public void Show(LevelMap map, bool silted = false)
     {
         foreach (var child in GetChildren()) child.QueueFree();
         _face = null;
@@ -49,6 +50,16 @@ public partial class MirrorView : Node3D
             Scale = new Vector3(1f, 0.45f, 1f),
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         });
+        if (!silted) return;
+        // Silted: a skin of sand over the nacre, inside the rim; the pool shows nothing.
+        AddChild(new MeshInstance3D
+        {
+            Mesh = new CylinderMesh { TopRadius = r - 0.05f, BottomRadius = r - 0.05f, Height = 0.05f, RadialSegments = 40 },
+            MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.62f, 0.56f, 0.44f), Roughness = 1f },
+            Position = new Vector3(0f, 0.04f, 0f),
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+        });
+        _face = null;
     }
 
     /// <summary>Her over it: her glow shows in it as she comes near.</summary>

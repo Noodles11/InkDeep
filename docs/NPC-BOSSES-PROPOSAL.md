@@ -357,8 +357,8 @@ fallback is a small trade at Tull's fan: a pearl or two for shells, until Ottili
 
 ## 12. What is built so far
 
-- **The folk and their great caves** (`PlaneFolk.cs`: `Folk`, `Neighbour`, `BayService`): Grandmother Tull is in the
-  game. A great mouth names its neighbour (`HandPoint.Folk`) and comes after every minor mouth in `reef.json`
+- **The folk and their great caves** (`PlaneFolk.cs`: `Folk`, `Neighbour`, `BayService`): Grandmother Tull and Kip
+  are in the game. A great mouth names its neighbour (`HandPoint.Folk`) and comes after every minor mouth in `reef.json`
   (`OpenReef.MinorMouths`: the Tide Fan names only those). Its cave's level and floors are hers (`OpenReef.CaveLevel`,
   `CaveFloors`), its number is its own past every minor cave's (`OpenReef.GreatCave`), it is grown from the region's
   seed, and its deepest floor is a boss's arena round its leak (`LevelPlan.ForCave`'s `boss`).
@@ -371,11 +371,19 @@ fallback is a small trade at Tull's fan: a pearl or two for shells, until Ottili
   five big drops at where she last felt Clementine), then the slam (a ring of sixteen drops with a gap of three), then
   the sigh (her throat open for 2 s); from half her meter, a seam cracks and the slams come in pairs. Her body is
   `TurtleRig`; her cut-in yawns (`BossIntroArt.Turtle`).
+- **Kip** (The Cleaning Station, east of the spur, three floors, level 3): she keeps to her station in the arena's middle
+  (`BossMove.Station`), flicks a ring of fourteen drops with a gap of three, then darts 14 m along her aim at 16 m/s
+  (`BossAttack.Dart`) and waits side-on for 1.4 s, the pearl on her flank turned toward Clementine. Past half her
+  meter her rests quicken, she darts twice, and six of her old clients come, blue tangs turned to lesser murklings
+  (`BossSpec.Clients`). Her body is `FishRig`: it bobs at her station, tucks its fins on the dart's warning, and rolls
+  onto its side in the wait. Her cut-in dances (`BossIntroArt.Wrasse`).
 - **The homecoming:** freed, she swims off, and the caption reads "Grandmother Tull has gone home to Lantern Bay"
   (`Jelly.Freed`).
 - **At home** (`FolkView`, `FolkTalk`, `FolkPortrait`; `HandLayout.Homes`): her true body at her home by the Tide Fan,
   turning to watch Clementine; within 5 m, a speech bubble with her portrait, her name and her next line.
 - **The bay's services** (`Folk.Opens`): the Tide Fan hangs bare, ties no ribbons and opens no drawer till Tull is
-  home. A service whose neighbour is not in the game yet (the mirror, the shell shop) is open as before.
-- **Verification:** `--reef=cave:22` starts in Tull's cave (`--at=boss-near` in front of her), `--dbg-freed=tull` has
-  her freed and home, and `--reef=bay --at=103,775 --dbg-freed=tull` sets Clementine down by her. Tests: `FolkTests`.
+  home; silt lies over the mirror, which opens no drawer, till Kip is home (beside it). A service whose neighbour is
+  not in the game yet (the shell shop) is open as before.
+- **Verification:** `--reef=cave:22` starts in Tull's cave and `--reef=cave:23 --floor=3` on Kip's deepest floor
+  (`--at=boss-near` in front of either), `--dbg-freed=tull,kip` has them freed and home, and `--reef=bay --at=103,775`
+  or `--at=57,777.5` sets Clementine down by Tull or Kip. Tests: `FolkTests`.

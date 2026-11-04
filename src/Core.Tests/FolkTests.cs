@@ -150,6 +150,44 @@ public class FolkTests
     }
 
     [Fact]
+    public void Kip_FlicksARingThenDartsPastHer_ThenWaitsSideOnHerStripeToHer_AndHerQueueComesPastHalf()
+    {
+        var w = GreatCave("kip");
+        var boss = w.Boss!;
+        Assert.Equal(BodyForm.Wrasse, boss.Spec.Form);
+        Assert.Equal(3, w.Map.Floors);
+        var her = w.ArenaCenter + new Vector2(0f, 8f);
+        Hold(w, her, 3f, () => boss.Stage == BossStage.Fight);
+        Assert.Equal(BossStage.Fight, boss.Stage);
+        var volleys = new System.Collections.Generic.List<BossAttack>();
+        float farthest = 0f;
+        bool openOutside = false;
+        for (int i = 0; i < 12 * PlaneWorld.TickRate && boss.Act != BossAct.Window; i++)
+        {
+            w.Player.Position = w.Player.PrevPosition = her;
+            w.Player.Hp = w.Run.MaxHp;
+            w.Step(default);
+            foreach (var e in w.Events.Where(e => e.Type == PlaneEventType.BossVolley)) volleys.Add((BossAttack)(int)e.Size);
+            farthest = MathF.Max(farthest, Vector2.Distance(boss.Position, w.ArenaCenter));
+            if (boss.Open && boss.Act != BossAct.Window) openOutside = true;
+        }
+        Assert.Equal(BossAct.Window, boss.Act);
+        Assert.False(openOutside, "her stripe is shut but in her wait");
+        Assert.Equal(new[] { BossAttack.Ring, BossAttack.Dart }, volleys);
+        Assert.True(farthest > 6f, $"she darts out from her station ({farthest} m)");
+        // Waiting, she turns her flank, the pearl on it, toward her.
+        Hold(w, her, 0.8f);
+        Assert.True(boss.Open);
+        Assert.True(Vector2.Distance(boss.PearlAt, her) < Vector2.Distance(boss.Position, her) - 0.3f, "her pearl's flank is toward her");
+        // Past half her meter, her clients come: six lesser murklings, the fish she used to clean.
+        int before = w.Murklings.Count(m => m.Alive && m.Lesser);
+        w.DebugHurtBoss(boss.MaxHp * 0.55f);
+        Assert.Equal(2, boss.Phase);
+        Assert.Equal(before + 6, w.Murklings.Count(m => m.Alive && m.Lesser));
+        Assert.Equal(new[] { BossAttack.Ring, BossAttack.Dart, BossAttack.Dart }, PlaneWorld.ActNow(boss));
+    }
+
+    [Fact]
     public void AServiceOpensOnlyOnceItsNeighbourIsHome_AndHerGreatCaveClosesForGoodOnceSealed()
     {
         var jelly = new Jelly();

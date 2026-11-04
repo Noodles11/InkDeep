@@ -17,6 +17,7 @@ public static class FolkBosses
     public static BossSpec? For(string folk, int level, float menace) => folk switch
     {
         "tull" => Tull(level, menace),
+        "kip" => Kip(level, menace),
         _ => null,
     };
 
@@ -65,6 +66,43 @@ public static class FolkBosses
         spec.Sites.Add(new BodySite(-MathF.PI * 0.7f, 0.65f, 0.4f, false));
         spec.Sites.Add(new BodySite(MathF.PI * 0.35f, 0.6f, 0.35f, false));
         spec.Sites.Add(new BodySite(-MathF.PI * 0.35f, 0.6f, 0.35f, false));
+        return spec;
+    }
+
+    /// <summary>
+    /// Nine-Fin Kip (§5.2): a cleaner wrasse with fins crowding along her flanks, bobbing over her station in the
+    /// arena's middle. The cleaning dance: she flicks a ring of drops from her fins, then darts straight at Clementine
+    /// and on past her, and turns side-on, the pearl on her stripe toward her, as if waiting for a client to hold still.
+    /// She senses her through the water. At half her meter she darts twice in a row, and her queue comes: six of the
+    /// fish she used to clean, turned, cling to Clementine.
+    /// </summary>
+    static BossSpec Kip(int level, float menace)
+    {
+        var spec = new BossSpec
+        {
+            Seed = SeedOf("kip"), Cycle = 1, Depth = 1, Menace = menace, Tier = BossTier.Common,
+            Plan = BodyPlan.Fish, Form = BodyForm.Wrasse, Concept = BossConcept.CleaningDance, Blockade = true,
+            Name = "Nine-Fin Kip", Folk = "kip",
+            // 4 m long mutated (a slender body: its disc 2.6 m, stretched along her), 2.4 m freed.
+            Radius = 1.3f, Stretch = 1.55f, Count = 9, Bulk = 0.5f, TrueScale = 0.6f,
+            // Pale blue-white, the electric-blue stripe and the black band along her (the accent, the groove).
+            TrueColor = new Vector3(0.78f, 0.84f, 0.92f), Accent = new Vector3(0.12f, 0.45f, 1f),
+            Theme = MutationTheme.ExtraFins, Mutation = 0.4f,
+            // On her stripe, on her flank: open only as she waits side-on after a dart.
+            Exposure = Exposure.Stagger, Pearl = new BodySite(MathF.PI * 0.5f, 0.45f, 0.5f, false), PearlRadius = 0.7f,
+            Hp = MeterAt(level), Damage = 12f, Telegraph = 0.9f, Rest = 2f, Volleys = 2, VolleyInterval = 1f, Window = 1.4f,
+            PearlSpeed = 6.5f, RingCount = 14, WallCount = 0, HelixArms = 3,
+            Signature = BossAttack.Dart, Move = BossMove.Station, MoveRate = 3f, Tempo = BossTempo.Duelist,
+            Sense = BossSense.Water, Clients = 6, Spice = BossSpice.FastLongWindows,
+        };
+        spec.Fillers.Add(BossAttack.Ring);
+        spec.Acts.Add(new[] { BossAttack.Ring, BossAttack.Dart });
+        spec.Acts.Add(new[] { BossAttack.Ring, BossAttack.Dart, BossAttack.Dart });
+        spec.Phases.Add(new BossPhase(0.5f, PhaseChange.Quicken, null));
+        // The extra fins: crowding along both flanks, front to back.
+        foreach (float side in new[] { 1f, -1f })
+            for (int i = 0; i < 4; i++)
+                spec.Sites.Add(new BodySite(side * (0.55f + 0.6f * i), 0.85f, 0.35f + 0.05f * i, false));
         return spec;
     }
 }

@@ -64,6 +64,8 @@ public static class PlaneBossTuning
     public const float CreepStop = 4f, RimKeep = 3f;
     /// <summary>A drifting boss's pulse eases in over this long.</summary>
     public const float DriftEase = 3f;
+    /// <summary>A dart: this far along its aim, at this speed (it overshoots her); a stationed body turns this fast.</summary>
+    public const float DartReach = 14f, DartSpeed = 16f, StationTurn = 4f;
     /// <summary>Freed, she shudders this long as her pearl bursts, then leaves (a clam leaps aside and stays open).</summary>
     public const float FreedShudder = 0.3f, ShuffleAside = 6.5f, LeaveSpeed = 1.4f, LeaveSeconds = 25f;
 }
@@ -133,6 +135,9 @@ public sealed class PlaneBoss
     public Vector2 Heard;
     /// <summary>A shy shell: the meter it has lost this opening.</summary>
     public float LostThisAct;
+    /// <summary>A dart under way: its way and how far it has left to go (0: none).</summary>
+    public Vector2 DartDir = Vector2.UnitY;
+    public float DartLeft;
     public readonly List<BossSac> Sacs = new();
     public readonly List<BossRing> Rings = new();
     /// <summary>How long its current warning lasts (Drippus Prime's is its next attack's own; the others' their spec's).</summary>
@@ -517,7 +522,8 @@ public sealed partial class PlaneWorld
                 break;
         }
 
-        Move(boss);
+        if (boss.DartLeft > 0f) StepDart(boss);
+        else Move(boss);
         StepRings(boss);
 
         // A clam snaps at Clementine when she comes close while it is open (once per opening).
@@ -651,6 +657,19 @@ public sealed partial class PlaneWorld
             case BossMove.DriftPulse:
                 boss.Position = Vector2.Lerp(boss.Position, boss.DriftTo, 1f - MathF.Exp(-PlaneBossTuning.DriftEase * Dt));
                 break;
+            case BossMove.Station:
+            {
+                // Between acts it glides back to its station; it faces her while it warns, and in its window it turns side-on
+                // to her, the flank its pearl is on toward her (as a cleaner waits for a client to hold still).
+                var home = ArenaCenter;
+                if (boss.Act == BossAct.Rest && Vector2.Distance(boss.Position, home) > 0.3f)
+                    boss.Position += SafeNormalize(home - boss.Position) * MathF.Min(spec.MoveRate * Dt, Vector2.Distance(boss.Position, home));
+                var toHer = SafeNormalize(p.Position - boss.Position);
+                if (toHer == Vector2.Zero) break;
+                var want = boss.Act == BossAct.Window ? Rotate(toHer, -spec.Pearl.Angle) : boss.Act == BossAct.Rest && Vector2.Distance(boss.Position, home) > 0.3f ? SafeNormalize(home - boss.Position) : toHer;
+                if (want != Vector2.Zero) boss.Facing = Turn(boss.Facing, want, PlaneBossTuning.StationTurn * Dt);
+                break;
+            }
             case BossMove.Circle:
                 if (still) break;
                 float r = MathF.Min(7f, ArenaRadius - boss.Radius - PlaneBossTuning.RimKeep);
@@ -708,6 +727,12 @@ public sealed partial class PlaneWorld
             case BossAttack.Brood:
                 Brood(boss);
                 break;
+            case BossAttack.Dart:
+                // Straight at her, and on past where she was.
+                boss.DartDir = AimFrom(boss, boss.Position);
+                boss.DartLeft = PlaneBossTuning.DartReach;
+                boss.Facing = boss.DartDir;
+                break;
             case BossAttack.Fan:
                 // Drippus Prime's aim was locked through its warning; any other body sweeps at her as it strikes.
                 if (!IsDrippus(boss)) boss.Aim = AimFrom(boss, boss.Position);
@@ -741,6 +766,42 @@ public sealed partial class PlaneWorld
                 Events.Add(new PlaneEvent(PlaneEventType.BombThrown, boss.Position, boss.Facing));
                 break;
             }
+        }
+    }
+
+    /// <summary>A dart under way: fast along its way, stopping at the arena's rim or the rock (touching her hurts, as its body always does).</summary>
+    void StepDart(PlaneBoss boss)
+    {
+        float step = MathF.Min(PlaneBossTuning.DartSpeed * Dt, boss.DartLeft);
+        var to = boss.Position + boss.DartDir * step;
+        var kept = KeepInArena(boss, to);
+        if (kept != to || !Clear(kept, boss.Radius * 0.8f)) boss.DartLeft = 0f;
+        else
+        {
+            boss.Position = kept;
+            boss.DartLeft -= step;
+        }
+    }
+
+    /// <summary>
+    /// Its clients come (Kip's, at her first phase change): lesser murklings round its station, the fish it once cared
+    /// for, turned. Each is freed by her light as any is, and swims home.
+    /// </summary>
+    void ReleaseClients(PlaneBoss boss)
+    {
+        int id = ReefFish.Count == 0 ? 0 : ReefFish.Max(f => f.Id) + 1;
+        for (int i = 0; i < boss.Spec.Clients; i++)
+        {
+            float a = MathF.Tau * i / boss.Spec.Clients + _bossRng.Range(-0.2f, 0.2f);
+            var at = ArenaCenter + new Vector2(MathF.Cos(a), MathF.Sin(a)) * (boss.Radius + 2.5f);
+            if (!Clear(at, 0.4f)) at = boss.Position;
+            var fish = new PlaneReefFish
+            {
+                Kind = ReefFishKind.BlueTang, Id = id++, Position = at, Home = at, Heading = a, Velocity = new Vector2(MathF.Cos(a), MathF.Sin(a)) * 2f,
+                Rng = new Rng(_bossRng.NextU64()),
+            };
+            ReefFish.Add(fish);
+            TurnFish(fish);
         }
     }
 
@@ -898,6 +959,7 @@ public sealed partial class PlaneWorld
     void NextPhase(PlaneBoss boss, float at)
     {
         boss.Phase++;
+        if (boss.Phase == 2 && boss.Spec.Clients > 0) ReleaseClients(boss);
         foreach (var phase in boss.Spec.Phases.Where(p => p.At == at))
             switch (phase.Change)
             {
@@ -924,6 +986,12 @@ public sealed partial class PlaneWorld
         Events.Add(new PlaneEvent(PlaneEventType.BossStagger, boss.Position, boss.Facing, 1f));
     }
 
+    /// <summary>Tests and verification: the fighting boss's pearl takes this much light, as her shot's would.</summary>
+    public void DebugHurtBoss(float damage)
+    {
+        if (Boss is { Stage: BossStage.Fight } boss) DamageBoss(boss, damage, Vector2.UnitY);
+    }
+
     /// <summary>Verification: the fighting boss is freed at once.</summary>
     public void DebugFreeBoss()
     {
@@ -936,6 +1004,7 @@ public sealed partial class PlaneWorld
         boss.Stage = BossStage.Freed;
         boss.StageTime = 0f;
         boss.SnapTimer = -1f;
+        boss.DartLeft = 0f;
         boss.Rings.Clear();
         // Its pearl bursts into light: it washes the whole arena clean of corruption and turns white. Its pearls still in
         // the water burst with it.

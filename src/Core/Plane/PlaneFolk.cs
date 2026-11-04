@@ -30,6 +30,12 @@ public static class Folk
             "You found me asleep under all that. Don't tell the others how long it took.",
             "The bay ties its troubles to the fan. I tie the knots. Take what you can carry.",
         }),
+        new("kip", "Kip", "cleaner wrasse", "Nine-Fin Kip", "The Cleaning Station", 3, 3, BayService.Mirror, new[]
+        {
+            "Hold still. You've got Leak in your frills. …There. Family colour, all the way through.",
+            "Your sister glowed just like that. I did her rim twice, she was so proud of it.",
+            "The mirror's clean. Mostly. Don't look at the corners, I'm getting to them.",
+        }),
     };
 
     /// <summary>The neighbours whose boss waits in a great cave now (the rest come with theirs).</summary>

@@ -1591,7 +1591,7 @@ public partial class TopDownMain : Node3D
             foreach (var door in map.Way is { } way ? map.Mouths.Append(way) : map.Mouths) GD.Print($"Ride door at {door.At} into {door.Into}");
         if (Reef) PlaceLostLight();
         _lostLight.Show(_world);
-        _mirrorView.Show(map);
+        _mirrorView.Show(map, silted: Reef && !BayOpen(BayService.Mirror));
         _fanView.Show(map);
         _folkView.Show(map, Reef ? LoadMap(_region) : null, _jelly);
         _ashSeen = 0;

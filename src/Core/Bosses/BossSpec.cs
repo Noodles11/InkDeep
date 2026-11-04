@@ -7,16 +7,19 @@ namespace OctoShoots.Core.Bosses;
 /// The body plans a boss can grow from (docs/BOSS-GENERATOR.md §3). Later passes add the rest. Ink is no animal: a
 /// creature of ink itself (Drippus Prime, authored, never generated).
 /// </summary>
-public enum BodyPlan { Bivalve, Echinoderm, Cnidarian, Gastropod, Ink, Reptile }
+public enum BodyPlan { Bivalve, Echinoderm, Cnidarian, Gastropod, Ink, Reptile, Fish }
 
 /// <summary>
 /// The real animal a plan is drawn as (Murkling: Drippus Prime's body, a murkling prime grown huge; Turtle: Grandmother
-/// Tull's, docs/NPC-BOSSES-PROPOSAL.md, authored, never rolled).
+/// Tull's, Wrasse: Kip's, docs/NPC-BOSSES-PROPOSAL.md, authored, never rolled).
 /// </summary>
-public enum BodyForm { GiantClam, SeaStar, Urchin, MoonJelly, Siphonophore, SeaHare, Snail, Murkling, Turtle }
+public enum BodyForm { GiantClam, SeaStar, Urchin, MoonJelly, Siphonophore, SeaHare, Snail, Murkling, Turtle, Wrasse }
 
-/// <summary>The designed fight ideas (§4): every boss is one of these (TheBrood: Drippus Prime's, authored).</summary>
-public enum BossConcept { TheLid, SnappingGate, TurningStar, SlamAndSigh, PulseBell, TrailingCurtain, TheSpreader, ShyShell, BoilHeart, TheBrood }
+/// <summary>
+/// The designed fight ideas (§4): every boss is one of these (TheBrood: Drippus Prime's; CleaningDance: Kip's, darting
+/// at her and turning side-on after; both authored).
+/// </summary>
+public enum BossConcept { TheLid, SnappingGate, TurningStar, SlamAndSigh, PulseBell, TrailingCurtain, TheSpreader, ShyShell, BoilHeart, TheBrood, CleaningDance }
 
 public enum BossTier { Common, Rare, Legendary }
 
@@ -37,11 +40,12 @@ public enum Exposure
 
 /// <summary>
 /// What it throws (§7.1). All of it is ink her light cannot clear. Brood and Fan are Drippus Prime's: murklings born out
-/// of its body, and a fan of big drops slung at her.
+/// of its body, and a fan of big drops slung at her. Dart: a fish's straight charge along its aim (Kip's).
 /// </summary>
-public enum BossAttack { Ring, Wall, Helix, Homing, Snap, ArcBombs, PulseRing, SacBurst, Brood, Fan }
+public enum BossAttack { Ring, Wall, Helix, Homing, Snap, ArcBombs, PulseRing, SacBurst, Brood, Fan, Dart }
 
-public enum BossMove { Hold, Turn, Spin, Creep, DriftPulse, Circle }
+/// <summary>How it moves (§7.2). Station: it keeps to its station in the arena's middle, gliding back to it between acts (Kip's).</summary>
+public enum BossMove { Hold, Turn, Spin, Creep, DriftPulse, Circle, Station }
 
 public enum BossTempo { Metronome, Relentless, Duelist, SurgeAndRest, Territorial }
 
@@ -49,7 +53,7 @@ public enum BossTempo { Metronome, Relentless, Duelist, SurgeAndRest, Territoria
 public enum BossSense { Blind, Water, Vibration }
 
 /// <summary>The Leak's rewrite of the body (§5): one dominant theme per boss.</summary>
-public enum MutationTheme { OvergrownShell, InkSacs, ExtraLid, ExtraArms, InvertedSpines, FusedBells, ExtraTentacles, ExtraFlaps }
+public enum MutationTheme { OvergrownShell, InkSacs, ExtraLid, ExtraArms, InvertedSpines, FusedBells, ExtraTentacles, ExtraFlaps, ExtraFins }
 
 /// <summary>What changes when a phase begins (§7.3).</summary>
 public enum PhaseChange { NewAttack, Quicken, ShorterWindow, MutationAdvances }
@@ -163,6 +167,8 @@ public sealed class BossSpec
     public List<BossAttack[]> Acts { get; } = new();
     /// <summary>It holds still while it warns and acts, moving only as it rests (a creeper that plants itself to strike).</summary>
     public bool ActsStill { get; set; }
+    /// <summary>At its first phase change it lets out this many lesser murklings, the fish it once cared for (Kip's clients).</summary>
+    public int Clients { get; set; }
 
     /// <summary>Every attack it can throw in this fight (the signature, the fillers, and those phases bring).</summary>
     public IEnumerable<BossAttack> Kit

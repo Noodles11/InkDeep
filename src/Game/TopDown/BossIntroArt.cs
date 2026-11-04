@@ -262,6 +262,7 @@ public static class BossIntroArt
             case BodyForm.SeaHare: SeaHare(ci, spec, s, g, menace, mood, t, body, accent, iris, blink); break;
             case BodyForm.Murkling: Drippus(ci, s, g, menace, mood, t, body, accent, iris, blink); break;
             case BodyForm.Turtle: Turtle(ci, s, g, menace, mood, t, body, accent, iris, blink, freed); break;
+            case BodyForm.Wrasse: Wrasse(ci, s, g, menace, mood, t, body, accent, iris, blink, freed); break;
             default: Snail(ci, spec, s, g, menace, mood, t, body, accent, iris, blink); break;
         }
         if (!freed && (spec.Theme == MutationTheme.InkSacs || spec.Minor == MutationTheme.InkSacs))
@@ -364,6 +365,45 @@ public static class BossIntroArt
             Blob(ci, c + new Vector2(-s * 0.35f + s * 0.32f * i, -s * (0.78f + (i == 1 ? 0.14f : 0.02f))), s * (freed ? 0.1f : 0.2f), s * (freed ? 0.07f : 0.1f),
                 freed ? (i == 1 ? new Color(0.85f, 0.82f, 0.72f) : new Color(0.35f, 0.6f, 0.3f)) : new Color(0.1f, 0.04f, 0.16f), s, 0.035f);
         ci.DrawColoredPolygon(Ellipse(new Vector2(-s * 0.45f, -s * 0.2f + bob * s), s * 0.25f, s * 0.1f, 14), new Color(1f, 1f, 1f, 0.3f));
+    }
+
+    /// <summary>
+    /// Kip, the cleaner wrasse: she bobs up and down in her cleaning dance (come, hold still), her stripe flashing, then
+    /// gives Clementine a brisk look-over. Corrupted, ragged inked fins crowd out of her flanks; freed, she is sleek.
+    /// </summary>
+    static void Wrasse(CanvasItem ci, float s, float g, float menace, Mood mood, float t, Color body, Color accent, Color iris, float blink, bool freed)
+    {
+        float bob = Mathf.Sin(t * 5.5f) * s * (g < 1.6f ? 0.12f : 0.05f);
+        var c = new Vector2(0f, s * 0.15f + bob);
+        // The tail (left) and the fins.
+        var tail = new[] { c + new Vector2(-s * 1.05f, 0f), c + new Vector2(-s * 1.55f, -s * 0.38f), c + new Vector2(-s * 1.45f, 0f), c + new Vector2(-s * 1.55f, s * 0.38f) };
+        Inked(ci, tail, body.Darkened(0.15f), s, 0.04f);
+        Inked(ci, Ellipse(c + new Vector2(-s * 0.1f, -s * 0.38f), s * 0.75f, s * 0.14f, 18, Mathf.Pi, Mathf.Tau), body.Darkened(0.1f), s, 0.035f);
+        if (!freed)
+            for (int i = 0; i < 4; i++)
+            {
+                var root = c + new Vector2(-s * 0.55f + s * 0.38f * i, (i % 2 == 0 ? -1f : 1f) * s * 0.3f);
+                var tip = root + new Vector2(-s * 0.15f, (i % 2 == 0 ? -1f : 1f) * s * 0.35f);
+                Inked(ci, new[] { root + new Vector2(-s * 0.12f, 0f), tip, root + new Vector2(s * 0.12f, 0f) }, new Color(0.1f, 0.04f, 0.16f), s, 0.03f);
+            }
+        // The body: long and slim, the black band along it under the blue stripe.
+        var hull = Ellipse(c, s * 1.15f, s * 0.42f, 32);
+        Inked(ci, hull, body, s);
+        var band = new List<Vector2>();
+        for (int i = 0; i <= 16; i++)
+        {
+            float x = -s * 1.05f + s * 2.0f * i / 16f;
+            band.Add(c + new Vector2(x, -s * (0.02f + 0.1f * (1f - i / 16f))));
+        }
+        for (int i = 16; i >= 0; i--)
+        {
+            float x = -s * 1.05f + s * 2.0f * i / 16f;
+            band.Add(c + new Vector2(x, s * (0.05f + 0.12f * (1f - i / 16f))));
+        }
+        ci.DrawColoredPolygon(band.ToArray(), new Color(0.08f, 0.07f, 0.1f));
+        ci.DrawLine(c + new Vector2(-s * 0.95f, -s * 0.16f), c + new Vector2(s * 0.9f, -s * 0.12f), accent.Lightened(0.2f), s * 0.07f, true);
+        ci.DrawColoredPolygon(Ellipse(c + new Vector2(s * 0.2f, -s * 0.28f), s * 0.35f, s * 0.07f, 12), new Color(1f, 1f, 1f, 0.35f));
+        Face(ci, c + new Vector2(s * 0.62f, -s * 0.04f), s * 0.38f, mood, menace, 0.6f, blink, iris, t);
     }
 
     /// <summary>The giant clam: snaps its shell twice, then blows a bubble raspberry; a pearl crown on top.</summary>
