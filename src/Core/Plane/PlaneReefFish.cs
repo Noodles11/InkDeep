@@ -41,6 +41,11 @@ public static class ReefFishTuning
     public const float Room = 1.5f, DashRoom = 4f;
     /// <summary>None live this close to the level's start, so the opening stays calm.</summary>
     public const float StartClear = 20f;
+    /// <summary>The reef's zones (docs/REEF-WORLD.md §4): so many times a level's fish over its whole map.</summary>
+    public const float ZoneFishMore = 6f;
+
+    /// <summary>The share of the places fish may live in that they do, in a reef zone of this look: the Galleon few, the Carnival's hiding.</summary>
+    public static float ZoneLife(int look) => look switch { <= 1 => 1f, 2 => 0.8f, 3 => 0.4f, _ => 0.25f };
 
     /// <summary>
     /// How many live on a level of this depth (THEME-BIBLE §7: the reef empties as she dives): plenty in the Shallows
@@ -137,6 +142,16 @@ public sealed partial class PlaneWorld
     /// <summary>A secret she has not found yet: the schools can guide her to it.</summary>
     bool SecretHidden => _secret >= 0 && !(Visited.Length > _secret && Visited[_secret]);
 
+    /// <summary>A point's own number in 0..1, the same every time (for which places a zone keeps for its life).</summary>
+    static float Hash01(Vector2 p)
+    {
+        uint h = (uint)(MathF.Round(p.X * 4f)) * 73856093u ^ (uint)(MathF.Round(p.Y * 4f)) * 19349663u;
+        h ^= h >> 13;
+        h *= 0x5bd1e995u;
+        h ^= h >> 15;
+        return (h & 0xFFFFFF) / (float)0x1000000;
+    }
+
     void PlaceReefFish()
     {
         _secret = Map.Pois.FindIndex(p => p.Kind == PoiKind.Secret);
@@ -160,11 +175,14 @@ public sealed partial class PlaneWorld
             n.SizeMax = AdventureTuning.SchoolMax;
             more *= AdventureTuning.FishMore * AdventureTuning.Rate(AdventureTuning.BaseHome, LifeDepth);
         }
+        // The reef's zones: so many more for its area, each zone keeping its share (the deeper, the emptier: ZoneLife).
+        if (Map.Zones.Count > 0) more *= ReefFishTuning.ZoneFishMore;
         int More(int count) => (int)MathF.Round(count * more);
         int ids = 0;
         var exit = Map.Exit;
         bool Allowed(Vector2 q) => Vector2.Distance(q, Map.Start.Position) >= ReefFishTuning.StartClear
-            && Vector2.Distance(q, exit.Position) >= exit.Radius + 4f;
+            && Vector2.Distance(q, exit.Position) >= exit.Radius + 4f
+            && (Map.ZoneAt(q) is not (var z and >= 0) || ReefFishTuning.ZoneLife(Map.Zones[z].Look) > Hash01(q));
 
         var anchors = Map.Plazas.Select(z => z.Center).Concat(Map.Spawns.Where(s => s.Role != SpawnRole.Ambush).Select(s => s.Position)).ToList();
         var channel = new List<Vector2>();

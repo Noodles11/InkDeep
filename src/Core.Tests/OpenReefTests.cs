@@ -290,6 +290,22 @@ public class OpenReefTests
     }
 
     [Fact]
+    public void CreaturesHoldMoreCorruptionTheHigherTheLevelWhereTheyLive()
+    {
+        var map = Region.Value;
+        var w = World(map);
+        Assert.Equal(1, w.LevelAt(map.Start.Position));
+        float MeterIn(int zone) => w.Murklings.Where(m => !m.Prime && map.ZoneAt(m.Position) == zone).Average(m => m.Corruption.Max);
+        Assert.True(MeterIn(3) > MeterIn(0) * 2f, $"Carnival {MeterIn(3)} against Shallows {MeterIn(0)}");
+        // In a cave, its own level.
+        var id = OpenReef.CaveId("reef", 1, 0);
+        var low = World(TopDownGenerator.GenerateCave(Seed, id, 0f, 1));
+        var high = World(TopDownGenerator.GenerateCave(Seed, id, 0f, 9));
+        Assert.Equal(9, high.LevelAt(high.Player.Position));
+        Assert.True(high.Murklings.Where(m => !m.Prime).Average(m => m.Corruption.Max) > low.Murklings.Where(m => !m.Prime).Average(m => m.Corruption.Max) * 2f);
+    }
+
+    [Fact]
     public void ADangerousCaveGoesDownFloors_EachAboveTheDeepestEndingInAHole_TheDeepestInItsGuardedLeak()
     {
         var hand = Shallows.Value;

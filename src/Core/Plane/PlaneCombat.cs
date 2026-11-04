@@ -291,8 +291,17 @@ public sealed partial class PlaneWorld
     /// <summary>She may dive now (DESIGN-TOPDOWN §4.6): over the shaft, the way open, and no battle on.</summary>
     public bool CanDive => OverShaft && ExitOpen && !InBattle && !Defeated;
 
-    /// <summary>Menace as the sim applies it (DESIGN-TOPDOWN §6.2), capped so later loops stay playable.</summary>
-    public float Menace => MathF.Min(Map.Menace, 3f);
+    /// <summary>
+    /// Menace as the sim applies it (DESIGN-TOPDOWN §6.2), capped so later loops stay playable; on the reef, the zone's
+    /// she is in (docs/REEF-WORLD.md §2).
+    /// </summary>
+    public float Menace => MathF.Min(Map.ZoneAt(Player.Position) is var z and >= 0 ? Map.Zones[z].Menace : Map.Menace, 3f);
+
+    /// <summary>The level of what lives at a point (docs/REEF-WORLD.md §4): a cave's own, the reef's zone's there, else 1.</summary>
+    public int LevelAt(Vector2 p) => Map.LeakCave ? Math.Max(Map.CaveLevel, 1) : Map.ZoneAt(p) is var z and >= 0 ? Map.Zones[z].Level : 1;
+
+    /// <summary>How much more corruption a creature of the open reef holds at this level.</summary>
+    float LevelMeter(Vector2 at) => Options.Reef ? 1f + ReefTuning.MeterPerLevel * (LevelAt(at) - 1) : 1f;
 
     /// <summary>
     /// Mob spawn points: the level's spawn table first, then spots in the canyons she can swim to (in a seeded order) —
@@ -683,8 +692,8 @@ public sealed partial class PlaneWorld
         return true;
     }
 
-    /// <summary>How much harder what hurts her is at this level's Menace.</summary>
-    float HurtScale => 1f + PlaneCombatTuning.HurtPerMenace * Menace;
+    /// <summary>How much harder what hurts her is at this level's Menace, and on the open reef at the level where she is (docs/REEF-WORLD.md §4).</summary>
+    float HurtScale => (1f + PlaneCombatTuning.HurtPerMenace * Menace) * (Options.Reef ? 1f + ReefTuning.HarmPerLevel * (LevelAt(Player.Position) - 1) : 1f);
 
     /// <summary>How much of a plain shot's light this shot carries (at most all of it): what a leak or a seal counts.</summary>
     float ShotLight(PlaneShot shot) => MathF.Min(shot.Damage / (PlaneCombatTuning.ShotDamage * DamageScale), 1f);

@@ -160,6 +160,8 @@ public sealed partial class PlaneWorld
         PlaceSeals();
         if (Options.Corruption || adventure) PlaceCorruption();
         if (adventure) PlaceAdventure();
+        // The reef's zones: its murkling packs.
+        if (Options.Reef && Map.Station && Map.Zones.Count > 0) PlaceReefPacks();
         PlaceAsh();
         PlaceExperience();
     }

@@ -39,6 +39,22 @@ public static class ReefTuning
     /// <summary>A cave mouth's danger is 0 to MostDanger; each step adds MenacePerDanger to its cave's Menace.</summary>
     public const int MostDanger = 2;
     public const float MenacePerDanger = 0.1f;
+    /// <summary>Each level past the first adds MeterPerLevel to a creature's corruption meter, and HarmPerLevel to the harm it does (docs/REEF-WORLD.md §4).</summary>
+    public const float MeterPerLevel = 0.25f, HarmPerLevel = 0.12f;
+
+    /// <summary>
+    /// The reef's murkling packs in a zone of this look (docs/REEF-WORLD.md §4): how many, how many murklings in each,
+    /// and the share led by a prime.
+    /// </summary>
+    public static (int Packs, int Least, int Most, float PrimeShare) Packs(int look) => look switch
+    {
+        <= 1 => (4, 1, 2, 0f),
+        2 => (8, 2, 3, 0f),
+        3 => (10, 3, 4, 0.1f),
+        _ => (12, 4, 5, 0.3f),
+    };
+    /// <summary>No pack within this of a cave's mouth or the haven (twice it of her start).</summary>
+    public const float PackClear = 14f;
     /// <summary>A sealed cave's mouth stays shut this long of her play time (s); then the Leak seeps back and it opens on a fresh cave.</summary>
     public const double Recorrupt = 15 * 60;
 
@@ -302,6 +318,38 @@ public sealed partial class PlaneWorld
 
     /// <summary>She is at the bay's Tide Fan (its foot), where requests are taken and untied.</summary>
     public bool AtFan => Map.Fan is { } fan && !Defeated && Vector2.Distance(Player.Position, fan) < RequestTuning.FanReach;
+
+    /// <summary>
+    /// The reef's packs (docs/REEF-WORLD.md §4): murklings roaming its zones' chambers in packs, more and bigger the
+    /// farther the zone from the bay (ReefTuning.Packs), now and then led by a prime; none in the haven, by her start or
+    /// at a cave's mouth.
+    /// </summary>
+    void PlaceReefPacks()
+    {
+        var sites = Map.Plazas.Select(z => z.Center).ToList();
+        Shuffle(sites, _blightRng);
+        foreach (var zone in Map.Zones)
+        {
+            var (packs, least, most, primeShare) = ReefTuning.Packs(zone.Look);
+            int placed = 0;
+            foreach (var site in sites)
+            {
+                if (placed >= packs) break;
+                if (Map.ZoneAt(site) != Map.Zones.IndexOf(zone) || Map.InHaven(site, ReefTuning.PackClear) || Vector2.Distance(site, Map.Start.Position) < ReefTuning.PackClear * 2f
+                    || Map.Mouths.Any(m => Vector2.Distance(m.At, site) < ReefTuning.PackClear) || !Clear(site, BlightTuning.PrimeBody)) continue;
+                placed++;
+                bool prime = _blightRng.NextFloat() < primeShare;
+                if (prime) Bud(site, -1, prime: true, drink: false, born: true);
+                int n = least + _blightRng.Int(most - least + 1);
+                for (int k = 0; k < n; k++)
+                {
+                    float a = _blightRng.Range(0f, MathF.Tau);
+                    var at = site + new Vector2(MathF.Cos(a), MathF.Sin(a)) * _blightRng.Range(prime ? 3.5f : 1.5f, prime ? 6f : 4f);
+                    if (Clear(at, BlightTuning.MurkRadius)) Bud(at, -1, drink: false, born: true);
+                }
+            }
+        }
+    }
 
     /// <summary>A leak cave's murklings at its start: a few along its path, and a prime short of its leak.</summary>
     void PlaceCaveMurklings()

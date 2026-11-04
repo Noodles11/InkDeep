@@ -68,7 +68,7 @@ public class LanternBayTests
         Assert.Equal(ReefMap.Value.ToBytes(), TopDownGenerator.FromHand(Reef.Value).ToBytes());
 
     [Fact]
-    public void ItsWaterIsClean_NoLeaksNoInkNothingCorrupted_AndNoStationTakesHerAnywhere()
+    public void TheBaysWaterIsClean_PacksRoamOnlyTheReef_AndNoStationTakesHerAnywhere()
     {
         var map = ReefMap.Value;
         var w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), PlaneOptions.OpenReef);
@@ -79,9 +79,13 @@ public class LanternBayTests
         Assert.Empty(w.Currents);
         Assert.Null(w.Boss);
         Assert.Contains(w.Stands, s => s.Kind == StandKind.Pearl);
+        // The reef's packs (docs/REEF-WORLD.md §4): in every zone, more the farther from the bay, none in it.
+        var packs = map.Zones.Select((_, z) => w.Murklings.Count(m => map.ZoneAt(m.Position) == z)).ToList();
+        Assert.All(packs, n => Assert.True(n > 0));
+        Assert.True(packs[0] < packs[^1], "the Carnival's packs outnumber the Shallows'");
+        Assert.DoesNotContain(w.Murklings, m => map.InHaven(m.Position));
         for (int i = 0; i < 600; i++) w.Step(default);
-        Assert.All(w.ReefFish, f => Assert.False(f.Corrupted));
-        Assert.Empty(w.Murklings);
+        Assert.DoesNotContain(w.ReefFish, f => f.Corrupted && map.InHaven(f.Position));
         Assert.False(w.Defeated);
         Assert.False(w.CanDive);
         w.Player.Position = w.Player.PrevPosition = map.Exit.Position;

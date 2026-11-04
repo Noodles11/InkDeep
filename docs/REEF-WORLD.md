@@ -85,15 +85,27 @@ their own below the shelf.
 
 ## 4. Creatures by zone and level
 
-- **Rosters.** Each zone has a roster drawn from the creatures the game already has, tinted by its look. New
+- **Rosters.** Each zone has a roster drawn from the creatures the open reef's adventure already has: its reef fish
+  (clownfish, blue tangs and chromis schools, which the Leak can turn), its flounders (Hearthguards once turned) and
+  its murklings. The corruption-field creatures of the seeded runs (blightroots, blotters, thumpsquirts, lashjaws,
+  inkwardens) need the ground's ink, which the reef has none of, so they stay out until they are reworked for it. New
   creatures for each biome are designed separately, design first.
+  - **Fish** (`ReefFishTuning.ZoneFishMore`, `ZoneLife`): six times a level's over the whole map. Every zone keeps a
+    share of the places they could live in: the Shallows all, the Kelp Jungle 80%, the Galleon 40% (few fish) and the
+    Carnival 25% (the fish hide).
+  - **Packs** (`PlaneWorld.PlaceReefPacks`, `ReefTuning.Packs`): murklings roaming a zone's chambers, none in the
+    haven, by her start or within 14 m of a cave's mouth.
 
-  | Zone | Open reef | Caves |
-  |---|---|---|
-  | Shallows | reef fish that turn, pufferlings, flounders (hearthguards) | murklings, primes |
-  | Kelp Jungle | more fish that turn, lashjaws in the kelp, blightroots | murklings, primes, blightroots |
-  | Sunken Galleon | blotters on the flats, thumpsquirts, inkwardens | murklings, primes, blotters, thumpsquirts |
-  | Coral Carnival | everything above, more of it and meaner | everything above, primes common |
+    | Zone | Packs | Murklings in each | Led by a prime |
+    |---|---|---|---|
+    | Shallows | 4 | 1–2 | never |
+    | Kelp Jungle | 8 | 2–3 | never |
+    | Sunken Galleon | 10 | 3–4 | 10% |
+    | Coral Carnival | 12 | 4–5 | 30% |
+
+  - **Caves:** murklings and primes, more on every floor down (its Menace).
+  - **Menace** on the open reef is the zone's she is in (`PlaneWorld.Menace`), so what lives round her is as fierce as
+    her zone.
 
 - **Level.** A creature's level is its zone's area level on the open reef, or its cave's level in a cave. Each level
   past the first adds 25% to its corruption meter (its health) and 12% to the harm it does. Her own levels keep pace
@@ -138,5 +150,7 @@ Each step is playable on its own:
    - **Experience:** a sealed leak pays its experience once for every floor of its cave.
    - **Verification:** `--reef=cave:N` starts in the cave behind mouth N, `--floor=N` on its floor N, `--at=hole` over
      a floor's hole and `--at=leak-on` on its leak (with `--dbg-sealvent`, the upwelling then carries her out).
-3. **Rosters and levels.** Each zone's creatures, and level scaling on the open reef and in caves.
+3. **Rosters and levels** (built). Each zone's fish and packs (§4), and level scaling: a murkling's meter
+   (`PlaneWorld.LevelMeter`, `ReefTuning.MeterPerLevel`) by the level where it buds, and the harm she takes
+   (`PlaneWorld.HurtScale`, `ReefTuning.HarmPerLevel`) by the level where she is (`PlaneWorld.LevelAt`).
 4. **The homeward current.**
