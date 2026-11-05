@@ -1259,7 +1259,7 @@ The FP staging ("look up through the surface") is replaced:
   (DESIGN-3D §7.2); in Trench/Abyss, sound *is* the off-screen warning system.
 - SFX pitch lowers with depth (inherited presentation shift); muffled glass
   thumps from Depth 4+; filter-intake hum in the Tank.
-- Music: post-v1 (inherited decision). The soundtrack is off for now (`MusicManager.SoundtrackOn`): nothing plays.
+- Music: post-v1 (inherited decision). The soundtrack is off for now (`MusicManager.SoundtrackOn`): no track is loaded or played, only the sound effects.
 - **Heard through water** (`Sfx`): every game sound goes through the Sfx bus, whose low-pass filter takes the treble off
   as water does — 7 kHz in the Shallows, falling off to 1.5 kHz at the deepest (`SetDepth`, by the depth shown).
 - **Her light thrown pops** (`Sfx.PlayThrow`, on every volley): one of ten recorded pops (audio/sfx/pop1–pop10.wav)

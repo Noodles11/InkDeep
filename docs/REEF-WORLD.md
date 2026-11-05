@@ -142,8 +142,8 @@ Each step is playable on its own:
 
 1. **The map and its zones** (built). `reef.json` at 840 m with the four zones, six passes and 22 minor mouths (seven in the
    Shallows, five in each other zone, each zone with caves of every danger), and after them the great caves' mouths (docs/NPC-BOSSES-PROPOSAL.md). Zone looks blend as she crosses
-   (`TopDownMain.StepPlaceLook`, `ReefLook.ForZone`: the Shallows' own look with its glare taken off,
-   `ReefLook.OpenShallows`), and zone titles and levels show. Kelp grows by zone (`TopDownGenerator.KelpByLook`: the
+   (`TopDownMain.StepPlaceLook`, `ReefLook.ForZone`: the Shallows' own palette dimmed toward the bay's,
+   with deeper water, toned-down sand and a softer sun, `ReefLook.OpenShallows`), and zone titles and levels show. Kelp grows by zone (`TopDownGenerator.KelpByLook`: the
    Kelp Jungle 1.6 times a Kelp level's for its area, the Shallows 0.8, the Galleon 0.4, the Carnival 0.25). Caves
    take their level and Menace from their zone and danger (`OpenReef.CaveLevel`, `CaveMenace`), and the Tide Fan's
    requests name no cave more than two levels past hers (`RequestTuning.Reach`).

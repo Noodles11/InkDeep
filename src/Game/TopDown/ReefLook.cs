@@ -100,13 +100,15 @@ public sealed record ReefLook
     };
 
     /// <summary>
-    /// The Sunlit Shallows as the open reef's zone (docs/REEF-WORLD.md §1): the Shallows' own look with its glare taken
-    /// off, the sun and the caustics a little softer, so the picture never washes out; brighter than the bay's evening.
+    /// The Sunlit Shallows as the open reef's zone (docs/REEF-WORLD.md §1): the Shallows' own palette, dimmed so the wide
+    /// open sand never washes out: a deeper turquoise, a toned-down sand and a softer sun, a little brighter than the
+    /// bay's evening, so the characters stay the brightest things in it.
     /// </summary>
     public static readonly ReefLook OpenShallows = Shallows with
     {
-        WaterShallow = C("#62BDB8"), WaterDeep = C("#2F9FA2"), Murk = C("#145F69"),
-        SunEnergy = 0.5f, Caustics = 0.75f, Rays = 0.75f, Fog = 0.3f, Contrast = 1.2f,
+        WaterShallow = C("#4AA3AE"), WaterDeep = C("#25839A"), Murk = C("#0F4D5E"),
+        Sand = C("#BDAE84"), Rock = C("#A9A595"),
+        SunEnergy = 0.4f, AmbientEnergy = 0.1f, Caustics = 0.7f, Rays = 0.7f, Fog = 0.24f, Vignette = 0.42f, Contrast = 1.2f,
     };
 
     /// <summary>A reef zone's look by the depth it takes (HandZone.Look): the Shallows as the open reef's, the rest their own.</summary>

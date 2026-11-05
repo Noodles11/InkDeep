@@ -51,12 +51,13 @@ public partial class MusicManager : Node
         // Music keeps playing under the pause menu.
         ProcessMode = ProcessModeEnum.Always;
         EnsureBuses();
-        _theme = MakePlayer(Load("theme"), BusTheme);
-        _dark = MakePlayer(Load("corruption_dark"), BusDark);
-        _eerie = MakePlayer(Load("corruption_eerie"), BusEerie);
-        _combat = MakePlayer(Load("combat"), BusCombat);
-        // The music is off for now (audio/theme.mp3 is a placeholder, not ours to ship): no stem starts, and the music bus
-        // is muted, so the combat layer (started on encounters) stays silent too. Set SoundtrackOn to hear it again.
+        // The music is off for now (audio/theme.mp3 is a placeholder, not ours to ship): no stem is even loaded, nothing
+        // starts, and the music bus is muted, so only the game's sounds play. Set SoundtrackOn to hear it again.
+        AudioStream? Stem(string name) => SoundtrackOn ? Load(name) : null;
+        _theme = MakePlayer(Stem("theme"), BusTheme);
+        _dark = MakePlayer(Stem("corruption_dark"), BusDark);
+        _eerie = MakePlayer(Stem("corruption_eerie"), BusEerie);
+        _combat = MakePlayer(Stem("combat"), BusCombat);
         if (SoundtrackOn) StartAllStems();
         AudioServer.SetBusMute(AudioServer.GetBusIndex(BusMusic), !SoundtrackOn);
         static string Of(AudioStreamPlayer p) => p.Stream is null ? "none" : $"{p.Stream.ResourcePath.GetFile()} ({p.Stream.GetLength():0} s)";
