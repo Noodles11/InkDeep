@@ -733,6 +733,7 @@ public sealed partial class PlaneWorld
         if (wakes && LeaksLeft == 0 && Currents.Count > 0) Events.Add(new PlaneEvent(PlaneEventType.MainCurrentWoke, v.Position, Vector2.UnitY));
         if (Map.LeakCave) DissolveAsh(v.Position);
         if (drunk) return;
+        if (Options.DiveCave) RewardDiveCave(v);
         // Her reward: shells burst out of it (in a leak cave, out in a ring clear of the upwelling that rises where it was,
         // so taking them never carries her out of the cave).
         for (int i = 0; i < AdventureTuning.LeakShells; i++)
@@ -751,6 +752,29 @@ public sealed partial class PlaneWorld
         if (LeaksLeft > 0 || ExitOpen || Boss is { Freed: false }) return;
         ExitOpen = true;
         Events.Add(new PlaneEvent(PlaneEventType.ExitOpened, Map.Exit.Position, Vector2.Zero));
+    }
+
+    /// <summary>
+    /// A dive's leak cave (docs/DIVE.md §6): while its leak is open the Leak's water drinks her light, a steady drain at
+    /// any depth; sealed, it stops at once.
+    /// </summary>
+    void StepDiveCave()
+    {
+        if (!Options.DiveCave || !CaveLeakOpen) return;
+        Drain(DiveCaveTuning.Sting * Dt, DamageSource.LeakWater);
+    }
+
+    /// <summary>Its leak sealed: she is healed whole, and a pearl she could be offered rises beside it, clear of its upwelling.</summary>
+    void RewardDiveCave(PlaneLeak v)
+    {
+        Player.Hp = Run.MaxHp;
+        var offer = PlaneRun.PortedPearls.Where(id => Run.CanOffer(id) && Pearls.All(q => q.ItemId != id)).ToList();
+        if (offer.Count == 0) return;
+        var toHer = Player.Position - v.Position;
+        var dir = toHer.LengthSquared() > 1e-4f ? Vector2.Normalize(toHer) : Vector2.UnitY;
+        var at = v.Position + dir * (AdventureTuning.ShellsClear + 0.8f);
+        for (int k = 0; k < 4 && !Clear(at, 0.4f); k++) at = Vector2.Lerp(at, v.Position, 0.3f);
+        Pearls.Add(new PlanePearl { ItemId = Run.Pick(offer, _drops), Position = at, Placed = true });
     }
 
     /// <summary>Verification: this leak (or the first open one) sealed at once.</summary>

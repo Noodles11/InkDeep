@@ -58,12 +58,21 @@ later haven, and from then on her depth's boss is the Leak's own, Drippus Prime.
 
 ## 6. Leak caves
 
-The curse dens become leak caves: a cave mouth in a level's rock, leading down into a sub-level half a level's size.
+The curse dens are leak caves now: where a level's curse den would be, at the end of its spur, a mouth is cut in the
+rock (`PoiKind.LeakCave`, `TopDownGenerator.CutLeakMouths`, `LevelMap.Mouths`), weeping the Leak's ink. It leads into
+a cave of its own, half a level's water (`DiveCaveTuning.Area`, `CaveLayout`'s area scale), a little meaner than its
+level, its leak at its dead end.
 
-- **Inside, it harms her** for as long as she stays, until its leak is sealed.
-- **She can leave at any time,** back out of its mouth into the level.
-- **Sealing its leak** stops the harm at once, heals her whole and leaves a pearl.
+- **Inside, it harms her** (`PlaneOptions.DiveCave`, `DiveCaveTuning.Sting`, 1.6 HP a second at any depth) for as long
+  as its leak is open.
+- **She can leave at any time,** by its way out, back out of its mouth into the level (`TopDownMain.DiveCaveWay`).
+- **Sealing its leak** stops the harm at once, heals her whole and leaves a pearl she could be offered beside it
+  (`RewardDiveCave`); its upwelling carries her out, and the mouth closes behind her.
+- **The level waits as she left it:** going in keeps its state (`PlaneWorld.SaveLevelAnchors`, which leaves her run as
+  it is) and coming out puts it back, with all she gained in the cave and its harm still hers.
 - **The level keeps its own leak:** sealing that opens the hole onward, so the caves are a choice, never the way down.
+- **Verification:** `--dbg-dive --at=mouth` starts by a level's mouth, `--dbg-steer=x,y` swims her in, and
+  `--dbg-caveback=seconds` takes her back out that long after.
 
 ## 7. Requests and chains
 
@@ -80,6 +89,6 @@ Each step is playable on its own:
 2. **The camera** stands back (§3) (built).
 3. **Havens** and their services (§4) (built; the Tide Fan's requests wait for step 6).
 4. **Folk bosses** for the depths (§5) (built).
-5. **Leak caves** in place of the curse dens (§6).
+5. **Leak caves** in place of the curse dens (§6) (built).
 6. **Requests and chains** as dive goals (§7).
 7. **The open reef removed:** its map, zones, mouths, homeward current and charts.

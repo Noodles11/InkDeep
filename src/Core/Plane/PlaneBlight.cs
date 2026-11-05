@@ -460,8 +460,8 @@ public sealed partial class PlaneWorld
     {
         var p = Player;
         if (Defeated || InHaven || amount <= 0f || p.ShieldTimer > 0f || p.DashInvulnerableTimer > 0f) return;
-        // (The curse den's dark drains the same at any depth.)
-        if (source != DamageSource.Curse) amount *= HurtScale;
+        // (The curse den's dark, and a dive's leak cave's water, drain the same at any depth.)
+        if (source is not (DamageSource.Curse or DamageSource.LeakWater)) amount *= HurtScale;
         p.Hp -= amount;
         Stats.DamageTaken += amount;
         LastHitSource = _drainSource = source;

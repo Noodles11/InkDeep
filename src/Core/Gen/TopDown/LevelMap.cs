@@ -353,6 +353,8 @@ public sealed class LevelMap
     public bool HasBoss;
     /// <summary>The tutorial's open rift: the arena holds no boss, and the Crack stands open from the start.</summary>
     public bool Rift;
+    /// <summary>Its share of a level's water (a dive's leak cave half, docs/DIVE.md §6): the validator's area and the way down scale with it.</summary>
+    public float AreaScale = 1f;
     public float Menace;
     /// <summary>
     /// A haven's water on a hand-drawn map (HandLayout.Haven: Lantern Bay, in a corner of the reef), the box it fills:

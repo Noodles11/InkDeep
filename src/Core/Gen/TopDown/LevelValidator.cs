@@ -86,9 +86,10 @@ public static class LevelValidator
                 return "a leak cave's mouth cannot be reached from the start";
         // The playable area: the water she can reach.
         int area = WaterArea(map);
-        if (area is < (int)AreaMin or > (int)AreaMax) return $"{area} m² of water to swim (want {AreaMin:0}–{AreaMax:0} m²)";
+        float lo = AreaMin * map.AreaScale, hi = AreaMax * map.AreaScale, least = MinExitGeodesic * MathF.Sqrt(map.AreaScale);
+        if (area < (int)lo || area > (int)hi) return $"{area} m² of water to swim (want {lo:0}–{hi:0} m²)";
         float geodesic = DistanceAt(dist, exit.Position);
-        if (geodesic < MinExitGeodesic) return $"the exit is only {geodesic:0} m from the start (want ≥ {MinExitGeodesic:0} m)";
+        if (geodesic < least) return $"the exit is only {geodesic:0} m from the start (want ≥ {least:0} m)";
         return null;
     }
 

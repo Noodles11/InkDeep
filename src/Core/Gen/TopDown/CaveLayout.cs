@@ -29,6 +29,15 @@ public sealed class CaveLayout
     /// <summary>Reachable water the level aims for (m²), and how far it may stray (the validator's band).</summary>
     public const float Area = 4000f, AreaSlack = 0.15f;
     public const float AreaMin = Area * (1f - AreaSlack), AreaMax = Area * (1f + AreaSlack);
+    /// <summary>
+    /// This layout's share of a level's water (a dive's leak cave half, docs/DIVE.md §6): its area aimed for and its band,
+    /// and, by the square root, how far apart its ends lie.
+    /// </summary>
+    float _scale = 1f;
+    float Goal => Area * _scale;
+    float Lo => AreaMin * _scale;
+    float Hi => AreaMax * _scale;
+    float Reach => MathF.Sqrt(_scale);
     const float MinPath = LevelValidator.MinExitGeodesic, MinStraight = 56f;
     /// <summary>How far apart chambers lie: on the route, a quick detour off it, and a special room off it (rooms keep rock round them).</summary>
     static readonly (float Lo, float Hi) StepMain = (16f, 22f), StepBranch = (11f, 16f), StepRoom = (14f, 21f);
@@ -115,29 +124,29 @@ public sealed class CaveLayout
     /// One cave for the level, or why it failed. <paramref name="kinds"/> are the plan's places in order of preference
     /// for the early one; <paramref name="radius"/> gives each its room or clearing.
     /// </summary>
-    public static (CaveLayout? Layout, string? Why) Build(Rng rng, bool boss, bool fromArena, IReadOnlyList<PoiKind> kinds, Func<PoiKind, float> radius, LayoutRule? shape = null)
+    public static (CaveLayout? Layout, string? Why) Build(Rng rng, bool boss, bool fromArena, IReadOnlyList<PoiKind> kinds, Func<PoiKind, float> radius, LayoutRule? shape = null, float areaScale = 1f)
     {
-        var g = new CaveLayout { _shape = shape ?? new LayoutRule() };
+        var g = new CaveLayout { _shape = shape ?? new LayoutRule(), _scale = areaScale };
         uint seed = (uint)(rng.NextU64() >> 34);
         g.MainChain(rng, boss, fromArena);
-        if (Vector2.Distance(g.Exit.At, g.Start.At) < MinStraight) return (null, "the way down is too close to the start");
+        if (Vector2.Distance(g.Exit.At, g.Start.At) < MinStraight * g.Reach) return (null, "the way down is too close to the start");
         // Special rooms first, off the main chain, while the rock round it is still whole.
         if (g.PlaceRooms(rng, kinds, radius) is { } why) return (null, why);
 
         // Grow side branches until the water covers the area: first by estimate (cheap), then measured.
         g.Rasterise(seed);
         float ratio = g.OpenArea / g.Estimate();
-        for (int misses = 0; g.Estimate() * ratio < Area && misses < Misses;)
+        for (int misses = 0; g.Estimate() * ratio < g.Goal && misses < Misses;)
             if (!g.TryBranch(rng)) misses++;
         g.Rasterise(seed);
         g.GrowMeasured(rng, seed);
         // Where branches no longer fit (rooms crowding the rock), the chambers swell instead.
         g.Swell(seed);
-        if (g.OpenArea < AreaMin || g.OpenArea > AreaMax) return (null, $"cave water {g.OpenArea} m² (want {AreaMin:0}–{AreaMax:0})");
+        if (g.OpenArea < g.Lo || g.OpenArea > g.Hi) return (null, $"cave water {g.OpenArea} m² (want {g.Lo:0}–{g.Hi:0})");
 
         var fromStart = g.Geodesic(g.Start.At);
         g.PathToExit = fromStart[g.Index(g.Exit.At)];
-        if (!float.IsFinite(g.PathToExit) || g.PathToExit < MinPath) return (null, $"the way down is {g.PathToExit:0} m from the start along the water");
+        if (!float.IsFinite(g.PathToExit) || g.PathToExit < MinPath * g.Reach) return (null, $"the way down is {g.PathToExit:0} m from the start along the water");
         if (g.PlaceOpen(kinds, radius) is { } missing) return (null, missing);
         return (g, null);
     }
@@ -255,8 +264,9 @@ public sealed class CaveLayout
     void MainChain(Rng rng, bool boss, bool fromArena)
     {
         int side = rng.Int(4);
-        // The start and the way down lie on opposite sides, 38 m in from the edge: about 62 m apart, or more across.
-        float inset = 38f, along = rng.Range(0.33f, 0.67f) * Size, far = rng.Range(0.28f, 0.72f) * Size;
+        // The start and the way down lie on opposite sides, 38 m in from the edge: about 62 m apart, or more across (a
+        // smaller layout's further in).
+        float inset = 38f + (1f - Reach) * 32f, along = rng.Range(0.33f, 0.67f) * Size, far = rng.Range(0.28f, 0.72f) * Size;
         Vector2 P(int s, float t, float d) => s switch
         {
             0 => new Vector2(t, d),
@@ -379,7 +389,7 @@ public sealed class CaveLayout
     /// <summary>Adds branches one at a time, measuring the water, until it covers the area (never past the band).</summary>
     void GrowMeasured(Rng rng, uint seed)
     {
-        for (int misses = 0; OpenArea < Area && misses < Misses;)
+        for (int misses = 0; OpenArea < Goal && misses < Misses;)
         {
             if (Branch(rng) is not { } added)
             {
@@ -390,7 +400,7 @@ public sealed class CaveLayout
             int before = OpenArea;
             var open = Open;
             Rasterise(seed);
-            if (OpenArea > AreaMax)
+            if (OpenArea > Hi)
             {
                 Undo(added);
                 Open = open;
@@ -403,7 +413,7 @@ public sealed class CaveLayout
     /// <summary>Widens the chambers a step at a time, clear of the rooms' rock and the rim, until the water covers the area.</summary>
     void Swell(uint seed)
     {
-        for (int pass = 0; pass < 8 && OpenArea < AreaMin + 400f; pass++)
+        for (int pass = 0; pass < 8 && OpenArea < Lo + 400f * _scale; pass++)
         {
             var was = Chambers.Select(c => c.R).ToArray();
             int before = OpenArea;
@@ -417,7 +427,7 @@ public sealed class CaveLayout
                 c.R = r;
             }
             Rasterise(seed);
-            if (OpenArea > AreaMax)
+            if (OpenArea > Hi)
             {
                 for (int i = 0; i < Chambers.Count; i++) Chambers[i].R = was[i];
                 Open = open;

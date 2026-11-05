@@ -111,7 +111,7 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     AshCleared }
 
 /// <summary>What hurt Clementine (the killing blow names what ended a run; saved by number, so Gloomvine stays though nothing deals it now).</summary>
-public enum DamageSource { None, PufferNeedle, PufferSpines, BossPearl, RoyalPearl, BossSnap, BossContact, Murkling, MurkShot, Gloomvine, Blightroot, Blotter, Thumpsquirt, Lashjaw, Curse, Hearthguard, Leak }
+public enum DamageSource { None, PufferNeedle, PufferSpines, BossPearl, RoyalPearl, BossSnap, BossContact, Murkling, MurkShot, Gloomvine, Blightroot, Blotter, Thumpsquirt, Lashjaw, Curse, Hearthguard, Leak, LeakWater }
 
 /// <summary>
 /// Direction: for ShotPopped, the unit direction from the bubble's centre to where its film gave way. Size: a popped
@@ -315,6 +315,7 @@ public sealed partial class PlaneWorld
         StepPushWave();
         StepLostLight();
         StepHaven();
+        StepDiveCave();
         // Murklings made during the step (a prime's pieces) join the others now, never while a loop walks them.
         Murklings.AddRange(_madeLater);
         _madeLater.Clear();

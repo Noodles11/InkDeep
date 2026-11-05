@@ -30,6 +30,11 @@ public sealed class PlaneOptions
     /// (ReefTuning.LeakXp), and no level-up is held back on a first level.
     /// </summary>
     public bool Reef;
+    /// <summary>
+    /// A dive's leak cave (docs/DIVE.md §6): the Leak's water harms her while its leak is open (DiveCaveTuning.Sting);
+    /// sealing it heals her whole and leaves a pearl. Her way out is open the whole time.
+    /// </summary>
+    public bool DiveCave;
 
     public static PlaneOptions Default { get; set; } = new() { Adventure = true };
 

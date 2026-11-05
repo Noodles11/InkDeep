@@ -73,6 +73,8 @@ public sealed class LevelPlan
     public LevelId Id { get; init; }
     /// <summary>The exit is an arena round the Crack: a boss level, or the tutorial's open rift.</summary>
     public bool HasBoss { get; init; }
+    /// <summary>Its share of a level's water (a dive's leak cave half, docs/DIVE.md §6).</summary>
+    public float AreaScale { get; init; } = 1f;
     /// <summary>The tutorial's last level: its arena holds no boss, and the Crack in it stands open (with HasBoss).</summary>
     public bool Rift { get; init; }
     public int Treasures { get; init; }
@@ -294,7 +296,7 @@ public sealed class LevelPlan
     /// ends in a hole down instead of the leak, and each floor down is meaner (FloorMenace more).</param>
     /// <param name="boss">A great cave (docs/NPC-BOSSES-PROPOSAL.md): its deepest floor's dead end is a boss's arena,
     /// its leak in the middle.</param>
-    public static LevelPlan ForCave(SeedCode seed, LevelId id, float menace, int floor = 1, int floors = 1, bool boss = false)
+    public static LevelPlan ForCave(SeedCode seed, LevelId id, float menace, int floor = 1, int floors = 1, bool boss = false, float areaScale = 1f)
     {
         var streams = new RunStreams(seed);
         if (floor > 1) id = id with { Cycle = id.Cycle + FloorCycles * (floor - 1) };
@@ -314,6 +316,7 @@ public sealed class LevelPlan
             LeakCave = true,
             Floor = floor,
             Floors = Math.Max(floors, floor),
+            AreaScale = areaScale,
         };
     }
 

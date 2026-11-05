@@ -457,6 +457,8 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--level=") && int.TryParse(Value("--level="), out int l)) _id = _id with { Level = Math.Clamp(l, 1, 5) };
             // Verification: the haven before that level (docs/DIVE.md §4).
             else if (arg == "--dbg-haven") _id = _id with { Haven = true };
+            // Verification: that many seconds into a dive's leak cave, she is taken back out of it (docs/DIVE.md §6).
+            else if (arg.StartsWith("--dbg-caveback=") && float.TryParse(Value("--dbg-caveback="), NumberStyles.Float, CultureInfo.InvariantCulture, out float back)) _dbgCaveBack = back;
             else if (arg == "--dive") _autoDive = true;
             else if (arg == "--calm") _calm = true;
             else if (arg.StartsWith("--reef="))
@@ -875,7 +877,8 @@ public partial class TopDownMain : Node3D
             SaveJelly();
             return;
         }
-        // A jelly's dive keeps the moment on her (docs/DIVE.md §1).
+        // A jelly's dive keeps the moment on her (docs/DIVE.md §1); in a leak cave, the level's start is what is kept.
+        if (InDiveCave) return;
         if (!_persist || _debugRun || (_jelly is { } diver ? diver.Dive : GameSave.Current.Run) is not { } saved) return;
         if (saved.Cycle != _id.Cycle || saved.Depth != _id.Depth || saved.Level != _id.Level) return;
         saved.State = Moment();
@@ -887,15 +890,15 @@ public partial class TopDownMain : Node3D
     }
 
     /// <summary>This very moment of the level (null while she is dying, diving or between levels, or if it cannot be saved).</summary>
-    LevelState? Moment()
+    LevelState? Moment(bool levelOnly = false)
     {
-        if (_run is null || _anchors is null) return null;
+        if (_run is null || (levelOnly ? _levelAnchors : _anchors) is null) return null;
         if (_transition != Transition.None || _deathSplash || _diving || _world.Player.Hp <= 0f) return null;
         try
         {
             return new LevelState
             {
-                World = Convert.ToBase64String(_world.SaveState(_anchors)),
+                World = Convert.ToBase64String(_world.SaveState(levelOnly ? _levelAnchors! : _anchors!)),
                 Fog = _fog.Save(),
                 Visited = _visited.ToList(),
                 LevelTime = _levelTime,
@@ -1615,7 +1618,11 @@ public partial class TopDownMain : Node3D
         _map = map;
         _levelTime = 0f;
         // Continuing a run left mid-level: the moment it was left (restored once the level is made again).
-        var moment = keepRun ? null : _resume?.State;
+        // Back from a dive's cave: the level as she left it (else a resumed run's moment).
+        bool returning = _returnState is not null;
+        var moment = _returnState ?? (keepRun ? null : _resume?.State);
+        _returnState = null;
+        if (!returning && !InDiveCave) _caveMouth = -1;
         // The look where she arrives (her world is the last place's still).
         ApplyLook(Reef ? LookAt(map, arriveAt ?? map.Start.Position) : Look);
         // Where the sun reaches into this level's water (its god rays and caustics end at the rock that shades them).
@@ -1674,7 +1681,7 @@ public partial class TopDownMain : Node3D
         _run.Level = _id;
         // Waking in a haven (Lantern Bay): she is healed whole.
         if (map.InHaven(arriveAt ?? map.Start.Position)) _run.Hp = _run.MaxHp;
-        _world = new PlaneWorld(_map, _tuning, _run, Reef ? ReefOptions() : DebugBoss() ?? DiveBoss());
+        _world = new PlaneWorld(_map, _tuning, _run, Reef ? ReefOptions() : InDiveCave ? DiveCaveOptions() : DebugBoss() ?? DiveBoss());
         _havenShare = -1f;
         _zoneShares = System.Array.Empty<float>();
         _zone = -1;
@@ -1706,6 +1713,7 @@ public partial class TopDownMain : Node3D
         // Nor round the Tide Fan's rock.
         if (map.Fan is { } fanAt) _level.KeepClear(new[] { fanAt }, LevelMap.FanClear);
         _anchors = _world.SaveAnchors(_recorder.Profile, _achievements, _recorder);
+        _levelAnchors = Reef || InDiveCave ? null : _world.SaveLevelAnchors(_recorder.Profile);
         // Synergies she came in with (a resumed run, debug pearls) are not news.
         foreach (string id in _run.Loadout.Synergies) _announced.Add(id);
         if (arriveAt is { } at)
@@ -1736,9 +1744,9 @@ public partial class TopDownMain : Node3D
         _recorder.EnterLevel(_world, _id);
         // Back at the moment she left (the save keeps it, should she leave again before saving anew); else the level's
         // start is saved.
-        if (moment is not null && !RestoreMoment(moment)) moment = null;
+        if (moment is not null && !(returning ? RestoreLevel(moment, arriveAt) : RestoreMoment(moment))) moment = null;
         if (_id.Haven && _jelly is { } banker) BankDive(banker);
-        if (moment is null) SaveRun();
+        if (moment is null && !InDiveCave) SaveRun();
         if (_dbgMoment > 0f && _dbgMomentStart is null) _dbgMomentStart = RunRecord();
         _combat.Show(_world, _catalog, fresh);
         _currents.Clear(_camera);
@@ -1822,7 +1830,7 @@ public partial class TopDownMain : Node3D
         _fullMap.Title = title;
         _fullMap.Subtitle = Reef ? where : _id.ToString();
         GD.Print($"Top-down level {_seed} {_id}: attempt {_map.Attempt + 1}, {ms} ms, {_map.Pois.Count} POIs{(_map.HasBoss ? ", boss" : "")}, {_map.Canopies.Count} canopy pieces, {_map.Decor.Count} decor{(_world.Options.Adventure ? $", {_world.Leaks.Count} leaks, {_world.ReefFish.Count} fish, {_world.Murklings.Count} murklings ({_world.Murklings.Count(m => m.Prime)} prime)" : "")}");
-        if (!Reef) _belowTask = Shape(Dives.NextOf(_seed, _id), background: true);
+        if (!Reef && !InDiveCave) _belowTask = Shape(Dives.NextOf(_seed, _id), background: true);
     }
 
     /// <summary>
@@ -1839,6 +1847,7 @@ public partial class TopDownMain : Node3D
             int zone = _map.ZoneAt(_world.Player.Position);
             return zone >= 0 ? (_map.Zones[zone].Title, $"Area level {_map.Zones[zone].Level}") : (_map.Title, "The open reef");
         }
+        if (InDiveCave) return ("A leak cave", "Its water stings till its leak is sealed");
         if (_map.LeakCave) return (CaveName(_region, _mouth), $"{OpenReef.ZoneOf(LoadMap(_region), _mouth)?.Title ?? LoadMap(_region).Title} · {CaveFacts(_map.CaveLevel, _floor, _map.Floors)}");
         string title = _map.Template is { Name.Length: > 0 } template ? template.Name : _id.Level == 1 ? ReefLook.For(_id.Depth).Name : $"Level {_id.Level}";
         return (title, _id.Level == 1 ? $"{ReefLook.For(_id.Depth).Name} · {_id}" : _id.ToString());
@@ -1974,11 +1983,15 @@ public partial class TopDownMain : Node3D
     }
 
     /// <summary>She is swept off on the current: the next place starts being made.</summary>
-    void BeginRide(ReefPlace to, string region, int mouth, Func<LevelMap, Landing?> arrive, Doorway? by, int floor = 1, RideWay rideWay = RideWay.Current)
+    void BeginRide(ReefPlace to, string region, int mouth, Func<LevelMap, Landing?> arrive, Doorway? by, int floor = 1, RideWay rideWay = RideWay.Current, Task<LevelShape>? shape = null)
     {
         _accumulator = 0;
-        AddToRun();
-        SaveJelly();
+        // (A dive's cave counts its own: TopDownMain.DiveCaves.)
+        if (Reef)
+        {
+            AddToRun();
+            SaveJelly();
+        }
         if (to == ReefPlace.Cave && mouth >= 0 && mouth < _map.Mouths.Count) _mouthAt = _map.Mouths[mouth];
         _rideTo = to;
         _rideRegion = region;
@@ -1986,7 +1999,7 @@ public partial class TopDownMain : Node3D
         _rideArrive = arrive;
         _rideFloor = floor;
         _rideWay = rideWay;
-        _rideTask = ShapePlace(to, region, mouth, floor);
+        _rideTask = shape ?? ShapePlace(to, region, mouth, floor);
         _riding = true;
         _rideTime = 0f;
         _rideFrom = _world.Player.Position;
@@ -2093,6 +2106,7 @@ public partial class TopDownMain : Node3D
             _closeBehind = _mouth;
             ShowMouths();
         }
+        DiveCaveArrived();
         foreach (var view in LevelLife) ResetFade(view);
         _portals.Visible = true;
         _minimap.Arrive();
@@ -2149,7 +2163,9 @@ public partial class TopDownMain : Node3D
     void ShowMouths()
     {
         _portals.Homeward(Reef && _place == ReefPlace.Region && _homeReturn is not null ? HomewardSwirl : null);
-        _portals.Show(_map, _world.ShutMouths, Reef && _place == ReefPlace.Region ? LoadMap(_region).Mouths.Select(m => m.Danger).ToList() : null);
+        // (A dive's leak caves weep the Leak's ink, every one: docs/DIVE.md §6.)
+        _portals.Show(_map, _world.ShutMouths, Reef && _place == ReefPlace.Region ? LoadMap(_region).Mouths.Select(m => m.Danger).ToList()
+            : !Reef ? Enumerable.Repeat(ReefTuning.MostDanger, _map.Mouths.Count).ToList() : null);
         _level.ShutDoors(_world.ShutMouths);
     }
 
@@ -2981,6 +2997,12 @@ public partial class TopDownMain : Node3D
             BeginRide(way.To, way.Region, way.Mouth, way.Arrive, way.By, way.Floor, way.Way);
             return;
         }
+        // A dive's leak cave: in by its mouth, out by its way (docs/DIVE.md §6).
+        if (!Reef && DiveCaveWay() is { } cave)
+        {
+            BeginDiveRide(cave);
+            return;
+        }
         // Holding the homeward current's key, it gathers round her; gathered, it carries her home.
         if (Reef && StepHomeward(dt)) return;
         // A leak cave's way out is held by the Leak's current till its leak is sealed: said once each time she comes back to it.
@@ -3373,6 +3395,7 @@ public partial class TopDownMain : Node3D
     /// <summary>The death splash: how far the run got, then a new run with a new seed.</summary>
     void BeginDeath()
     {
+        ForgetDiveCaves();
         ResetMenu();
         _accumulator = 0;
         AddToRun();

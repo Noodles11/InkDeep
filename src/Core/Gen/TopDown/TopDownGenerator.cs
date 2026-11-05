@@ -99,9 +99,9 @@ public static class TopDownGenerator
     /// <param name="floor">Which of its floors (from 1), and how many it has (docs/REEF-WORLD.md §3): only its first
     /// floor has a way in; she comes down into a deeper one from the hole above.</param>
     /// <param name="boss">A great cave: its deepest floor ends in a boss's arena round its leak (LevelPlan.ForCave).</param>
-    public static LevelMap GenerateCave(SeedCode seed, LevelId id, float menace, int level, Vector2? into = null, int floor = 1, int floors = 1, bool boss = false)
+    public static LevelMap GenerateCave(SeedCode seed, LevelId id, float menace, int level, Vector2? into = null, int floor = 1, int floors = 1, bool boss = false, float areaScale = 1f)
     {
-        var map = Generate(new RunStreams(seed), LevelPlan.ForCave(seed, id, menace, floor, floors, boss), null, "", 0f);
+        var map = Generate(new RunStreams(seed), LevelPlan.ForCave(seed, id, menace, floor, floors, boss, areaScale), null, "", 0f);
         map.CaveLevel = level;
         if (floor > 1) return map;
         // Its way in and out: an opening in its start chamber's wall (where that wall has no room, the nearest wall along
@@ -283,6 +283,7 @@ public static class TopDownGenerator
                 Seed = streams.Seed.Value, Id = id, Attempt = attempt, HasBoss = plan.HasBoss, Rift = plan.Rift, Menace = plan.Menace,
                 EntryStampSeed = plan.EntryStamp, ExitStampSeed = plan.ExitStamp, EntryFromArena = plan.EntryFromArena,
                 Template = plan.Template, Luck = luck, LeakCave = plan.LeakCave, Floor = plan.Floor, Floors = plan.Floors,
+                AreaScale = plan.AreaScale,
             };
             Array.Fill(map.Heights, -PathDepth);
             // The wall tops come from the reef prototype's terrain for this text (the run's first try: the seed itself).
@@ -516,7 +517,7 @@ public static class TopDownGenerator
             kinds.Insert(0, earlyKind);
         }
 
-        var (cave, why) = CaveLayout.Build(rng, plan.HasBoss, plan.EntryFromArena, kinds, RadiusOf, plan.Template?.Layout);
+        var (cave, why) = CaveLayout.Build(rng, plan.HasBoss, plan.EntryFromArena, kinds, RadiusOf, plan.Template?.Layout, plan.AreaScale);
         open = cave?.Open ?? Array.Empty<bool>();
         if (cave is null) return why;
         RecordCave(map, cave, plan.EntryFromArena ? ArenaRadius : StartRadius, plan.HasBoss ? ArenaRadius : StartRadius, spurDirs);

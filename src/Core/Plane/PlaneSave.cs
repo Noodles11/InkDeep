@@ -29,6 +29,16 @@ public sealed partial class PlaneWorld
         return Snapshot.Anchor(roots);
     }
 
+    /// <summary>
+    /// The same, but her run left as it is (a dive's level kept while she is in a leak cave, docs/DIVE.md §6): what she
+    /// gains in the cave stays hers when the level is put back.
+    /// </summary>
+    public Snapshot.Anchors SaveLevelAnchors(object? profile = null) => Snapshot.Anchor(new List<(object?, bool, bool)>
+    {
+        (this, false, true), (Run, false, false), (Map, true, true), (Run.Unlocked, false, false), (profile, false, false),
+        (Run.Catalog, true, false), (Options, true, false), (Tuning, true, false),
+    });
+
     /// <summary>The level as it stands now.</summary>
     public byte[] SaveState(Snapshot.Anchors anchors) => Snapshot.Take(anchors);
 
