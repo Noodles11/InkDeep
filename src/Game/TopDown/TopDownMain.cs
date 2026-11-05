@@ -878,6 +878,8 @@ public partial class TopDownMain : Node3D
 
     void BuildEnvironment()
     {
+        // In the game, no god rays: the drawn look states its light without them.
+        ReefLook.DrawRays = !OctoShoots.Game.Fx.ArtLook.IsDrawn;
         _environment = MakeEnvironment(ReefLook.For(_id.Depth));
         AddChild(_environment);
     }

@@ -23,9 +23,11 @@ drawn out into a dash or a line; where its stretch on screen passes 1.25 it fade
   dark it is a fluorescent teal instead of navy, as a highlighter on black paper. Laid on before the water's veil, so
   what lies deep is softened with it.
 - **Depth** by flat layers of water (2.2 m steps), each hazier, barely blurred: no lens blur below her plane.
-- **Lights like a highlighter:** her glow on the floor a flat, vivid wash with a slightly ragged edge; her glow in the
-  water and her bubbles' halos stronger; the environment's glow stronger and wider (`ArtLook.Apply`), no ambient
-  occlusion, a little more saturation, the vignette heavier for contrast.
+- **Lights like a highlighter:** her glow on the floor a small flat wash with a slightly ragged edge, in her light's own
+  colour paled toward white (not her warm orange tint), faint; her glow in the water and on the reef round her fainter
+  and nearer white too; her bubbles' halos stronger; the environment's glow stronger and wider (`ArtLook.Apply`), no
+  ambient occlusion, a little more saturation, the vignette heavier for contrast.
+- **No god rays in the game** (`ReefLook.DrawRays`): the sun's shafts are drawn only on the title's sea.
 - **The paper:** a fine tooth and the faint unevenness of a dried wash over the whole sheet.
 - **Kept as they are**, drawn after the water pass over the drawing: Clementine, her light's shots, the magic and
   corruption particles, and the shimmer of hot water over a leak.

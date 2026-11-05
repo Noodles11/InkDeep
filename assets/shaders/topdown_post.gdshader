@@ -416,11 +416,11 @@ void fragment() {
 		vec3 warm = her_warm;
 		if (reef_art == 6) {
 			// A highlighter's wash: flat to its edge, the edge a little ragged, the colour vivid.
-			float r = d / (her_glow.w * 0.6) + (value_noise(world.xz * 1.3) - 0.5) * 0.12;
+			float r = d / (her_glow.w * 0.45) + (value_noise(world.xz * 1.3) - 0.5) * 0.12;
 			pool = (1.0 - smoothstep(0.78, 0.9, r)) * k * her_sight(world);
-			float wl = max(dot(warm, vec3(0.299, 0.587, 0.114)), 0.05);
-			warm = mix(vec3(wl), warm, 1.35) / wl * 0.7;
-			col = mix(col, col * warm * 1.3 + warm * 0.06, pool * 0.38);
+			// Her light's own colour, paled toward white, not the orange of her warm tint.
+			warm = mix(her_light, vec3(1.0), 0.45);
+			col = mix(col, col * warm * 1.15 + warm * 0.04, pool * 0.18);
 		}
 		else col = mix(col, col * warm * 1.15 + warm * 0.06, pool * 0.65);
 		float shadow = (1.0 - smoothstep(0.1, 0.62, d)) * k * (1.0 - smoothstep(2.0, 5.0, gap));
@@ -453,14 +453,18 @@ void fragment() {
 	// glow round her.
 	vec3 on_layer = cam + ray * ((player_pos.y - cam.y) / min(ray.y, -1e-3));
 	float ign = fract(52.9829189 * fract(dot(FRAGCOORD.xy, vec2(0.06711056, 0.00583715))));
+	// (The drawn look's bubbles' halos are stronger, for their fluorescence; her own glow in the water fainter and
+	// nearer white, so the floor round her is not washed orange.)
 	float glow_boost = reef_art == 6 ? 1.35 : 1.0;
-	col += her_warm * her_inscatter(cam, ray, t0, open_deep ? t0 + 120.0 : t1, ign) * glow_boost;
+	vec3 her_tint = reef_art == 6 ? mix(her_warm, vec3(1.0), 0.4) : her_warm;
+	float her_k = reef_art == 6 ? 0.55 : 1.0;
+	col += her_tint * her_inscatter(cam, ray, t0, open_deep ? t0 + 120.0 : t1, ign) * her_k;
 	// Her light: a faint glow in the water all round her, and where it falls on the reef a warm lift of what is there
 	// (its own colour brightened, not a haze laid over it), fading as a lamp's light does.
-	col += her_warm * her_water(cam, ray, t0, open_deep ? t0 + 120.0 : t1, ign) * 0.15;
+	col += her_tint * her_water(cam, ray, t0, open_deep ? t0 + 120.0 : t1, ign) * 0.15 * her_k;
 	if (!open_deep) {
-		float on = her_reach(world);
-		col = col * (1.0 + her_warm * on * 0.6 * her_lantern) + her_warm * on * on * 0.05 * her_lantern;
+		float on = her_reach(world) * her_k;
+		col = col * (1.0 + her_tint * on * 0.6 * her_lantern) + her_tint * on * on * 0.05 * her_lantern;
 	}
 	// Her bubbles carry light: each a small halo of its own on the same layer, the same depth-darkness scaling as hers
 	// (subtle in the bright Shallows, glorious in the deep).
