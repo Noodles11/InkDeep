@@ -313,16 +313,18 @@ public static class TopDownGenerator
     /// <summary>
     /// A map drawn by hand (<see cref="HandLayout"/>, docs/RPG-PROPOSAL.md §2): its cave as drawn, then the seeded level's
     /// own stages on it — the rock, its rooms, arches and passes, the decoration and the kelp — but no seals, pickups or
-    /// spawns. A haven has no shaft. One attempt: a map that cannot be built is a mistake in the map.
+    /// spawns. A haven has no shaft, but a dive's haven its hole (HandLayout.Hole). One attempt: a map that cannot be built
+    /// is a mistake in the map. <paramref name="asLevel"/>: the level it counts as, when not its own (a dive's haven, the
+    /// level it stands before).
     /// </summary>
-    public static LevelMap FromHand(HandLayout hand, Action<string>? log = null)
+    public static LevelMap FromHand(HandLayout hand, Action<string>? log = null, LevelId? asLevel = null)
     {
         if (!SeedCode.TryParse(hand.Seed, out var seed)) throw new InvalidOperationException($"The map {hand.Name} has no seed code ({hand.Seed})");
         var clock = System.Diagnostics.Stopwatch.StartNew();
         void Done(string what) => log?.Invoke($"{hand.Name}: {what} by {clock.ElapsedMilliseconds} ms");
         var streams = new RunStreams(seed);
-        var id = hand.Id;
-        Rng Stage(string name) => streams.TopDown(id, 0, name);
+        var id = asLevel ?? hand.Id;
+        Rng Stage(string name) => streams.TopDown(hand.Id, 0, name);
         var map = new LevelMap(hand.Size)
         {
             Seed = seed.Value, Id = id, Menace = hand.Menace, Title = hand.Title, Station = true, CurrentStation = hand.Station, LookDepth = hand.Look,
@@ -345,8 +347,9 @@ public static class TopDownGenerator
         FlattenSeabed(map);
         SoftenSlopes(map, Stage("slopes"), strata);
         Done("slopes");
-        // Its exit is a current station, not a way down.
-        map.Shaft = NoShaft;
+        // Its exit is a current station, not a way down (a dive's haven: its hole, as a seeded level's).
+        if (hand.Hole) CutShaft(map, Stage("shaft"));
+        else map.Shaft = NoShaft;
         ClampHeights(map);
         RoofShortcuts(map);
         SealWalls(map, tops, strata);

@@ -1,0 +1,40 @@
+// A dive's haven (docs/DIVE.md §4): Lantern Bay's water as a calm stop between levels. She arrives at the lantern post,
+// the folk she has freed live round the lagoon, the shop opens off the market, and the gate's floor is the hole down to
+// the level it stands before. The whole map is haven water: nothing harms her here.
+{
+  "name": "haven",
+  "title": "Lantern Bay",
+  "seed": "HAVENS23",
+  "number": 2,
+  "depth": 1,
+  "size": 140,
+  "menace": 0,
+  "hole": true,
+  "haven": { "x0": 0, "y0": 0, "x1": 140, "y1": 140 },
+  "chambers": [
+    { "id": "post", "x": 70, "y": 108, "r": 10, "role": "Start" },
+    { "id": "lagoon", "x": 70, "y": 70, "r": 16, "role": "Main" },
+    { "id": "gate", "x": 70, "y": 26, "r": 11, "role": "Exit" },
+    { "id": "commune", "x": 110, "y": 64, "r": 12, "role": "Branch" },
+    { "id": "market", "x": 30, "y": 66, "r": 10, "role": "Branch" }
+  ],
+  "tunnels": [
+    { "a": "post", "b": "lagoon", "width": 9 },
+    { "a": "lagoon", "b": "gate", "width": 8 },
+    { "a": "lagoon", "b": "commune", "width": 7, "kind": "Side" },
+    { "a": "lagoon", "b": "market", "width": 7, "kind": "Side" },
+    { "a": "commune", "b": "gate", "width": 5, "kind": "Side" }
+  ],
+  "rooms": [
+    { "kind": "Shop", "from": "market", "angle": 100, "distance": 14 }
+  ],
+  "mirror": { "x": 63, "y": 78 },
+  "fan": { "x": 110, "y": 62 },
+  "homes": [
+    { "x": 103, "y": 70, "folk": "tull" },
+    { "x": 57, "y": 73, "folk": "kip" },
+    { "x": 81, "y": 81, "folk": "fennel" },
+    { "x": 26, "y": 86, "folk": "ottilie" },
+    { "x": 62, "y": 62, "folk": "bubbles" }
+  ]
+}

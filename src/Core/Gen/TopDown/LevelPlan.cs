@@ -23,7 +23,14 @@ public readonly record struct LevelId(int Cycle, int Depth, int Level)
 
     public bool IsTutorial => Depth == LevelPlan.Tutorial;
 
-    public override string ToString() => Cycle > 1 ? $"Cycle {Cycle} · Depth {ShownDepth} · Level {Level}" : $"Depth {ShownDepth} · Level {Level}";
+    /// <summary>
+    /// A haven (docs/DIVE.md §4): the calm stop before this level, not the level itself. Its hole leads on to the level
+    /// (Run.Dives.NextOf).
+    /// </summary>
+    public bool Haven { get; init; }
+
+    public override string ToString() => Haven ? $"A haven · Depth {ShownDepth}"
+        : Cycle > 1 ? $"Cycle {Cycle} · Depth {ShownDepth} · Level {Level}" : $"Depth {ShownDepth} · Level {Level}";
 }
 
 /// <summary>

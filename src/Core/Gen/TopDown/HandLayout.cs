@@ -27,6 +27,8 @@ public sealed class HandLayout
     public HandBox? Haven { get; set; }
     /// <summary>Its exit chamber is a current station, where the ride to another map starts.</summary>
     public bool Station { get; set; }
+    /// <summary>Its exit chamber is a hole down, as a seeded level's (a dive's haven, docs/DIVE.md §4).</summary>
+    public bool Hole { get; set; }
     public List<HandChamber> Chambers { get; set; } = new();
     public List<HandTunnel> Tunnels { get; set; } = new();
     /// <summary>

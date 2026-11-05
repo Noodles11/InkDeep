@@ -257,9 +257,11 @@ public sealed class SuspendedRun
     public int Cycle { get; set; } = 1;
     public int Depth { get; set; } = 1;
     public int Level { get; set; } = 1;
+    /// <summary>A dive's haven before that level (docs/DIVE.md §4), not the level itself.</summary>
+    public bool Haven { get; set; }
 
     /// <summary>Where the run stands, as the HUD names it.</summary>
-    public string Where => new OctoShoots.Core.Gen.TopDown.LevelId(Cycle, Depth, Level).ToString();
+    public string Where => new OctoShoots.Core.Gen.TopDown.LevelId(Cycle, Depth, Level) { Haven = Haven }.ToString();
     public List<string> Items { get; set; } = new();
     /// <summary>Her active pearls owned, and what each of her slots holds.</summary>
     public List<string> Actives { get; set; } = new();

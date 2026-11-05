@@ -455,6 +455,8 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--cycle=") && int.TryParse(Value("--cycle="), out int c)) _id = _id with { Cycle = Math.Max(1, c) };
             else if (arg.StartsWith("--depth=") && int.TryParse(Value("--depth="), out int d)) _id = _id with { Depth = Math.Clamp(d, 1, LevelPlan.Depths) };
             else if (arg.StartsWith("--level=") && int.TryParse(Value("--level="), out int l)) _id = _id with { Level = Math.Clamp(l, 1, 5) };
+            // Verification: the haven before that level (docs/DIVE.md §4).
+            else if (arg == "--dbg-haven") _id = _id with { Haven = true };
             else if (arg == "--dive") _autoDive = true;
             else if (arg == "--calm") _calm = true;
             else if (arg.StartsWith("--reef="))
@@ -621,6 +623,7 @@ public partial class TopDownMain : Node3D
             Cycle = _id.Cycle,
             Depth = _id.Depth,
             Level = _id.Level,
+            Haven = _id.Haven,
             Items = _run.Items.ToList(),
             Actives = _run.OwnedActives.ToList(),
             Slots = _run.Slots.ToList(),
@@ -661,7 +664,24 @@ public partial class TopDownMain : Node3D
         jelly.Dive is { } dive && SeedCode.TryParse(dive.Seed, out var seed) ? (seed, DiveLevel(dive), dive.Luck) : (Dives.SeedOf(jelly), Dives.StartOf(jelly), 0f);
 
     /// <summary>A saved dive's level (the tutorial's too).</summary>
-    static LevelId DiveLevel(SuspendedRun dive) => new(Math.Max(1, dive.Cycle), Math.Clamp(dive.Depth, LevelPlan.Tutorial, LevelPlan.Depths), Math.Clamp(dive.Level, 1, 5));
+    static LevelId DiveLevel(SuspendedRun dive) => new(Math.Max(1, dive.Cycle), Math.Clamp(dive.Depth, LevelPlan.Tutorial, LevelPlan.Depths), Math.Clamp(dive.Level, 1, 5)) { Haven = dive.Haven };
+
+    /// <summary>A dive's haven's map (data/maps/haven.json).</summary>
+    const string HavenMap = "haven";
+
+    /// <summary>
+    /// A haven reached (docs/DIVE.md §4): all she carries is banked, hers for good, dim as she may later.
+    /// </summary>
+    void BankDive(Jelly jelly)
+    {
+        if (_run is null) return;
+        int found = _run.Items.Concat(_run.OwnedActives).Count(id => !jelly.Passives.Contains(id) && !jelly.Actives.Contains(id));
+        jelly.Passives = _run.Items.ToList();
+        jelly.Actives = _run.OwnedActives.ToList();
+        jelly.Slots = _run.Slots.ToList();
+        jelly.Shells = _run.Shells;
+        if (found > 0) Say($"Safe in the haven: {found} pearl{(found == 1 ? "" : "s")} and {_run.Shells} shells banked");
+    }
 
     /// <summary>The loading page as a jelly dives: her level, where the dive stands, what she has banked.</summary>
     public static void FillDiveSplash(LoadingSplash splash, Jelly jelly, LevelId id)
@@ -789,6 +809,12 @@ public partial class TopDownMain : Node3D
 
     public static Task<LevelShape> Shape(SeedCode seed, LevelId id, float luck, bool background = false)
     {
+        // A dive's haven: Lantern Bay's water, the same every time (docs/DIVE.md §4).
+        if (id.Haven)
+        {
+            var hand = LoadMap(HavenMap);
+            return Task.Run(() => LevelShape.Prepare(TopDownGenerator.FromHand(hand, asLevel: id)));
+        }
         var streams = new RunStreams(seed);
         return Task.Run(() => LevelShape.Prepare(Abyss(TopDownGenerator.Generate(streams, id, background: background, luck: luck))));
     }
@@ -1426,7 +1452,7 @@ public partial class TopDownMain : Node3D
             _seed = parsed;
         }
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        var shape = Reef ? ShapePlace(_place, _region, _mouth, _floor).Result : LevelShape.Prepare(Abyss(TopDownGenerator.Generate(new RunStreams(_seed), _id, luck: Luck)));
+        var shape = Reef ? ShapePlace(_place, _region, _mouth, _floor).Result : _id.Haven ? Shape(_id).Result : LevelShape.Prepare(Abyss(TopDownGenerator.Generate(new RunStreams(_seed), _id, luck: Luck)));
         ShowLevel(shape, keepRun, watch.ElapsedMilliseconds);
     }
 
@@ -1647,9 +1673,9 @@ public partial class TopDownMain : Node3D
             foreach (var door in map.Way is { } way ? map.Mouths.Append(way) : map.Mouths) GD.Print($"Ride door at {door.At} into {door.Into}");
         if (Reef) PlaceLostLight();
         _lostLight.Show(_world);
-        _mirrorView.Show(map, silted: Reef && !BayOpen(BayService.Mirror));
+        _mirrorView.Show(map, silted: (Reef || _id.Haven) && !BayOpen(BayService.Mirror));
         _fanView.Show(map);
-        _folkView.Show(map, Reef ? LoadMap(_region) : null, _jelly);
+        _folkView.Show(map, Reef ? LoadMap(_region) : _id.Haven ? LoadMap(HavenMap) : null, _jelly);
         _ashSeen = 0;
         // Back on the reef with the bay on it: new troubles tied on the Tide Fan (and each time she comes home to it).
         if (Reef && map.Fan is not null) FillFan();
@@ -1699,6 +1725,7 @@ public partial class TopDownMain : Node3D
         // Back at the moment she left (the save keeps it, should she leave again before saving anew); else the level's
         // start is saved.
         if (moment is not null && !RestoreMoment(moment)) moment = null;
+        if (_id.Haven && _jelly is { } banker) BankDive(banker);
         if (moment is null) SaveRun();
         if (_dbgMoment > 0f && _dbgMomentStart is null) _dbgMomentStart = RunRecord();
         _combat.Show(_world, _catalog, fresh);
@@ -1783,7 +1810,7 @@ public partial class TopDownMain : Node3D
         _fullMap.Title = title;
         _fullMap.Subtitle = Reef ? where : _id.ToString();
         GD.Print($"Top-down level {_seed} {_id}: attempt {_map.Attempt + 1}, {ms} ms, {_map.Pois.Count} POIs{(_map.HasBoss ? ", boss" : "")}, {_map.Canopies.Count} canopy pieces, {_map.Decor.Count} decor{(_world.Options.Adventure ? $", {_world.Leaks.Count} leaks, {_world.ReefFish.Count} fish, {_world.Murklings.Count} murklings ({_world.Murklings.Count(m => m.Prime)} prime)" : "")}");
-        if (!Reef) _belowTask = Shape(LevelPlan.NextOf(_seed, _id), background: true);
+        if (!Reef) _belowTask = Shape(Dives.NextOf(_seed, _id), background: true);
     }
 
     /// <summary>
@@ -1796,7 +1823,7 @@ public partial class TopDownMain : Node3D
     {
         if (_map.Station)
         {
-            if (_world.InHaven) return ("Lantern Bay", "Safe water");
+            if (_world.InHaven) return ("Lantern Bay", _id.Haven ? _id.ToString() : "Safe water");
             int zone = _map.ZoneAt(_world.Player.Position);
             return zone >= 0 ? (_map.Zones[zone].Title, $"Area level {_map.Zones[zone].Level}") : (_map.Title, "The open reef");
         }
@@ -3146,9 +3173,9 @@ public partial class TopDownMain : Node3D
         OctoShoots.Game.Fx.SunMap.Enable(false);
         _diveTime = 0f;
         _diveFrom = _world.Player.Position;
-        var next = LevelPlan.NextOf(_seed, _id);
-        _lookFrom = ReefLook.For(_id.Depth);
-        _lookTo = ReefLook.For(next.Depth);
+        var next = Dives.NextOf(_seed, _id);
+        _lookFrom = _id.Haven ? ReefLook.Bay : ReefLook.For(_id.Depth);
+        _lookTo = next.Haven ? ReefLook.Bay : ReefLook.For(next.Depth);
         _bell.Kick();
         _hud.Diving = true;
         if (_captureDir is not null) GD.Print($"Dive begins at frame {_frame}");
@@ -3243,8 +3270,8 @@ public partial class TopDownMain : Node3D
         _bell.DiveTurn = 0f;
         _hud.Diving = false;
         _diving = false;
-        bool leftTutorial = _id.IsTutorial && !LevelPlan.NextOf(_seed, _id).IsTutorial;
-        _id = LevelPlan.NextOf(_seed, _id);
+        bool leftTutorial = _id.IsTutorial && !Dives.NextOf(_seed, _id).IsTutorial;
+        _id = Dives.NextOf(_seed, _id);
         if (leftTutorial) TutorialPassed();
         EnterLevel(map, keepRun: true, 0, arrived);
         _minimap.Arrive();

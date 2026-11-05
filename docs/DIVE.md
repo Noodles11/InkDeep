@@ -21,7 +21,7 @@ maps of docs/RPG-PROPOSAL.md.
 - **Always hers:** her level, experience, skill points and skills, the folk she has freed, and what is banked.
 - **Banked:** the pearls she owns between dives (`Jelly.Passives`, `Actives`, `Slots`) and her shells (`Jelly.Shells`).
   A new jelly starts with the run's starting pearls.
-- **Carried:** everything found in a dive since the last haven, pearls and shells alike. A haven banks it all (§4).
+- **Carried:** everything found in a dive since the last haven, pearls and shells alike. Reaching a haven banks it all (§4).
 - **Dimmed** (her meter full): the dive ends. What she carried is lost, what is banked and always hers stays, and the
   next dive starts at the top again.
 
@@ -34,14 +34,20 @@ their dimmed look (`ReefLook.OpenShallows`) so the wider view never washes out.
 
 ## 4. Havens
 
-A haven is a level of its own between two others: a small clearing in the bay's warm look, safe (no corruption, no
-creatures), its hole open onward.
+A haven is a level of its own between two others: Lantern Bay's water (`data/maps/haven.json`, drawn by hand, the same
+every time), in the bay's warm look, all of it haven water where nothing harms her. Its gate chamber's floor is the
+hole on to the level it stands before (`HandLayout.Hole`), open from the start.
 
-- **When:** never straight after a haven; after two levels without one, 35% of the time; after three, always. A haven
-  never takes a boss level's place.
-- **Who is there:** a home for every neighbour she has freed, each with their service (docs/NPC-BOSSES-PROPOSAL.md):
-  Tull's Tide Fan, Kip's mirror, Fennel's brood bed, Ottilie's pearl collector, Bubbles's dusk dance.
-- **Always:** a shop and a light spring, and reaching it banks what she carries.
+- **When** (`Dives.NextOf`, `HavenTuning`): never straight after a haven, nor in the tutorial; after two levels without
+  one, 35% of the time (rolled from the dive's seed and the level); after three, always. A haven never takes a level's
+  place: it is `LevelId.Haven`, the stop before that level.
+- **Who is there:** a home round the lagoon for every neighbour she has freed, each with their service
+  (docs/NPC-BOSSES-PROPOSAL.md): Tull's Tide Fan, Kip's mirror, Fennel's brood bed, Ottilie's pearl collector, Bubbles's
+  dusk dance. The mirror stays silted until Kip is home.
+- **Always:** the shop off the market. Arriving heals her whole and banks all she carries (`BankDive`): her pearls and
+  shells are hers for good from then on.
+- **Verification:** `--dbg-dive --dbg-haven --depth=N --level=L` starts in the haven before that level (with
+  `--dbg-freed=tull,kip,…` for its folk).
 
 ## 5. Folk as the depths' bosses
 
@@ -71,7 +77,7 @@ Each step is playable on its own:
 
 1. **Jellies dive** (built): the slots start and continue dives, and dimming ends one (§1, §2).
 2. **The camera** stands back (§3) (built).
-3. **Havens** and their services (§4).
+3. **Havens** and their services (§4) (built; the Tide Fan's requests wait for step 6).
 4. **Folk bosses** for the depths (§5).
 5. **Leak caves** in place of the curse dens (§6).
 6. **Requests and chains** as dive goals (§7).
