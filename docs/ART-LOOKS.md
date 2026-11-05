@@ -12,13 +12,14 @@ drawn out into a dash or a line; where its stretch on screen passes 1.25 it fade
 - **The reef held back, so the creatures carry the picture.** Each material one flat marker tone, a whisper of its own
   colour left, held toward the depth's water; shading evenly with height, no bands or lines up the walls (the deeper,
   the more of the water's blue); the marker's faint parallel streaks for its only texture. Light in two tones.
-- **The felt tip on the reef:** a bold wavering navy line where the walls meet her plane, and nothing up the walls.
+- **No felt tip on the reef's own surface:** no line where the walls meet her plane, nothing up the walls.
 - **The drawing over everything drawn before the water pass** (the reef, the creatures, the bosses, the kelp): filled
   in four flat marker tones (stepped in perceived brightness, the steps soft) at her plane, where the creatures are;
   the floor below it and the walls above keep their even shading (stepped, their gradients would show as stripes).
   The colour is lifted at her plane (×1.25) and held back on the floor and the walls (×0.85); and a felt tip's line round every
-  silhouette, where the depth breaks by a third of a metre or more between a pixel and its neighbours, along both sides
-  of the break, its width wavering. The line is boldest at her plane and light on the floor's own things. On a cave's
+  silhouette at her plane, where the depth breaks by a third of a metre or more between a pixel and its neighbours
+  and the break's nearer side stands within about a metre and a half of her plane (so a wall's lip over the floor, the
+  reef's own silhouette, draws nothing), along both sides of the break, its width wavering. The line is boldest at her plane and light on the floor's own things. On a cave's
   dark it is a fluorescent teal instead of navy, as a highlighter on black paper. Laid on before the water's veil, so
   what lies deep is softened with it.
 - **Depth** by flat layers of water (2.2 m steps), each hazier, barely blurred: no lens blur below her plane.

@@ -18,8 +18,7 @@
 //   6 Felt tip and highlighter (the game's look, docs/ART-LOOKS.md): a minimal illustration. The reef held back so the
 //     creatures carry the picture: each material a flat marker tone, a whisper of its own colour left, shading evenly
 //     with height (the deeper, the more of the water's blue; no bands, no lines up the walls); the marker's faint
-//     streaks for texture. A bold wavering felt-tip line where the walls meet her plane; light in two tones; no
-//     caustics.
+//     streaks for texture. No ink on the reef at all; light in two tones; no caustics.
 //
 // The caller (in fragment) works out what needs derivatives (hw: how much the height changes across a pixel) and calls
 // art_paint, then art_ink; its light() bands the light through art_light.
@@ -270,16 +269,8 @@ vec2 art_shading(vec3 w, vec3 local, vec3 n) {
 // The felt tip (looks 2-5, a light touch of it in 3): x how much ink lies here, 0..1; y how much of the water beyond a
 // hole through the wall shows (looks 4 and 5). hw: the height's change across a pixel (fwidth); px: metres per pixel.
 vec2 art_ink(vec3 w, vec3 local, vec3 n, float hw, float px) {
-	if (reef_art < 2 || reef_art > 6) return vec2(0.0);
-	if (reef_art == 6) {
-		// The felt tip: a bold wavering line where the walls meet her plane.
-		float h = local.y;
-		float wob = art_noise(w.xz * 0.4);
-		float d = abs(h - 0.25) / max(hw, 1e-4);
-		float wide = 2.8 * (0.65 + 0.6 * wob);
-		float ink = 1.0 - smoothstep(wide * 0.5, wide * 0.5 + 1.0, d);
-		return vec2(clamp(ink, 0.0, 1.0), 0.0);
-	}
+	// (The drawn look, 6, puts no ink of its own on the reef: its lines are the post pass's, round the creatures.)
+	if (reef_art < 2 || reef_art > 5) return vec2(0.0);
 	if (reef_art >= 4) return art_shading(w, local, n);
 	float h = local.y;
 	float ink = 0.0;

@@ -193,18 +193,29 @@ vec3 art_marker_fill(vec3 c, float sat, float steps) {
 	return max(mix(vec3(lo), o, sat), vec3(0.0));
 }
 
+// The height over her plane (the swim level) of what is drawn at this point of the screen.
+float art_height(vec2 at, mat4 inv_projection, mat4 inv_view) {
+	vec4 v = inv_projection * vec4(at * 2.0 - 1.0, texture(depth_tex, at).r, 1.0);
+	return (inv_view * vec4(v.xyz / v.w, 1.0)).y - swim_level;
+}
+
 // The felt tip's line: how much ink lies here, where the depth breaks between this pixel and its neighbours (a
 // silhouette): a step of a third of a metre or more (the camera hangs some 30 m off, so a slope's own gentle change
-// never draws one). The line runs along both sides of the break, round the whole shape, its width wavering as a
-// hand-held tip's does.
-float art_outline(vec2 uv, vec2 frag, mat4 inv_projection, vec2 viewport) {
+// never draws one). Only what swims or lies at her plane is inked: a break whose nearer side stands well above or below
+// it (a wall's lip over the floor) draws nothing, so the reef has no line. The line runs along both sides of the
+// break, round the whole shape, its width wavering as a hand-held tip's does.
+float art_outline(vec2 uv, vec2 frag, mat4 inv_projection, mat4 inv_view, vec2 viewport) {
 	float wob = value_noise(frag * 0.045) * 0.7 + value_noise(frag * 0.011 + 5.0) * 0.3;
 	vec2 px = (0.8 + 1.1 * wob) / viewport;
 	float zc = view_depth(uv, inv_projection);
+	float hc = art_height(uv, inv_projection, inv_view);
 	float step_m = 0.0;
 	for (int k = 0; k < 8; k++) {
 		float a = float(k) * 0.785398;
-		float zk = view_depth(uv + vec2(cos(a), sin(a)) * px, inv_projection);
+		vec2 at = uv + vec2(cos(a), sin(a)) * px;
+		float zk = view_depth(at, inv_projection);
+		float near_h = zk < zc ? art_height(at, inv_projection, inv_view) : hc;
+		if (near_h > 1.5 || near_h < -1.3) continue;
 		step_m = max(step_m, abs(zk - zc));
 	}
 	return smoothstep(0.2, 0.45, step_m) * (0.82 + 0.18 * value_noise(frag * 0.3));
@@ -355,7 +366,7 @@ void fragment() {
 		col = art_marker_fill(col, mix(1.25, 0.85, reef), 1.0 - reef);
 		// The boldest line on what is at her plane (the creatures, the bosses); the floor's own things under it lightly,
 		// so the reef never takes the eye from them.
-		float line = art_outline(uv, FRAGCOORD.xy, INV_PROJECTION_MATRIX, VIEWPORT_SIZE) * mix(1.0, 0.3, smoothstep(0.9, 2.2, below));
+		float line = art_outline(uv, FRAGCOORD.xy, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX, VIEWPORT_SIZE) * mix(1.0, 0.3, smoothstep(0.9, 2.2, below));
 		// Navy ink on the lit page; in a cave's dark a fluorescent line instead, as a highlighter on black paper.
 		col = mix(col, mix(vec3(0.025, 0.035, 0.085), vec3(0.12, 0.55, 0.7), reef_dark), line * mix(0.9, 0.45, reef_dark));
 	}
@@ -533,6 +544,6 @@ void fragment() {
 		float g = dot(textureLod(screen_tex, uv, 0.0).rgb, vec3(0.3, 0.6, 0.1));
 		col = vec3(g * 0.35) + vec3(0.9, 0.8, 0.1) * sun_lit(world) * 0.35 + vec3(1.0, 0.35, 0.0) * her_vis(world) * smoothstep(her_light_at.w, her_light_at.w * 0.8, distance(world, her_light_at.xyz)) * 0.6;
 	}
-	if (debug_view == 7) col = vec3(art_outline(uv, FRAGCOORD.xy, INV_PROJECTION_MATRIX, VIEWPORT_SIZE)) * (reef_art == 6 ? vec3(1.0, 0.2, 0.2) : vec3(0.2, 1.0, 0.2));
+	if (debug_view == 7) col = vec3(art_outline(uv, FRAGCOORD.xy, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX, VIEWPORT_SIZE)) * (reef_art == 6 ? vec3(1.0, 0.2, 0.2) : vec3(0.2, 1.0, 0.2));
 	ALBEDO = max(col, vec3(0.0));
 }
