@@ -596,6 +596,18 @@ public partial class TopDownMain : Node3D
         return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Boss = spec };
     }
 
+    /// <summary>
+    /// A dive's boss level: the neighbour waiting there as the Leak made her (docs/DIVE.md §5), at her own level; null for
+    /// the depth's own boss.
+    /// </summary>
+    PlaneOptions? DiveBoss()
+    {
+        if (!_map.HasBoss || _map.Rift || _jelly is not { } jelly || Dives.FolkBossOf(_id, jelly) is not { } folk || Folk.Get(folk) is not { } n
+            || OctoShoots.Core.Bosses.FolkBosses.For(n.Id, n.Level, _map.Menace) is not { } spec) return null;
+        var d = PlaneOptions.Default;
+        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Boss = spec };
+    }
+
     /// <summary>Saves the run as it stands at the start of this level (continuing puts her back here).</summary>
     void SaveRun()
     {
@@ -1662,7 +1674,7 @@ public partial class TopDownMain : Node3D
         _run.Level = _id;
         // Waking in a haven (Lantern Bay): she is healed whole.
         if (map.InHaven(arriveAt ?? map.Start.Position)) _run.Hp = _run.MaxHp;
-        _world = new PlaneWorld(_map, _tuning, _run, Reef ? ReefOptions() : DebugBoss());
+        _world = new PlaneWorld(_map, _tuning, _run, Reef ? ReefOptions() : DebugBoss() ?? DiveBoss());
         _havenShare = -1f;
         _zoneShares = System.Array.Empty<float>();
         _zone = -1;

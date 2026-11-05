@@ -54,7 +54,9 @@ public partial class TopDownMain
     {
         if (_world.Boss?.Spec.Folk is not { } id || Folk.Get(id) is not { } n || _jelly is not { } jelly) return;
         jelly.Freed.Add(n.Id);
-        SaveJelly();
+        // Hers for good at once, dim as she may later in the dive.
+        if (Reef) SaveJelly();
+        else if (_jellySaved && !_debugRun) OctoShoots.Game.Settings.GameSave.Write();
         Say(Folk.HomeCaption(n));
     }
 

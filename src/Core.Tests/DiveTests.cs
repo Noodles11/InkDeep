@@ -26,4 +26,18 @@ public class DiveTests
         jelly.Tutored = true;
         Assert.Equal(LevelId.FirstRun, Dives.StartOf(jelly));
     }
+
+    [Fact]
+    public void EachDepthsBossIsItsNeighbour_TillSheIsFreed()
+    {
+        var jelly = new Jelly { Seed = "KELP7Q2Z" };
+        string[] order = { "tull", "kip", "fennel", "ottilie", "bubbles" };
+        for (int shown = 1; shown <= order.Length; shown++)
+            Assert.Equal(order[shown - 1], Dives.FolkBossOf(new LevelId(1, LevelPlan.Tutorial + shown, 5), jelly));
+        Assert.Null(Dives.FolkBossOf(new LevelId(1, LevelPlan.Tutorial, 2), jelly));
+        Assert.Null(Dives.FolkBossOf(new LevelId(1, LevelPlan.Tutorial + 1, 5) { Haven = true }, jelly));
+        jelly.Freed.Add("tull");
+        Assert.Null(Dives.FolkBossOf(new LevelId(1, LevelPlan.Tutorial + 1, 5), jelly));
+        Assert.Equal("kip", Dives.FolkBossOf(new LevelId(2, LevelPlan.Tutorial + 2, 5), jelly));
+    }
 }

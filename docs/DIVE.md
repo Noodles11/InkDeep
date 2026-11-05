@@ -9,7 +9,7 @@ maps of docs/RPG-PROPOSAL.md.
 
 - **A jelly is a save slot.** The title's jellyfish cards (docs/TITLE-MENU-PROPOSAL.md) are the three slots. Choosing
   one continues her dive where it stands, or starts a new one.
-- **A dive** (`Jelly.Dive`, a `SuspendedRun`) runs Depth 1 to Depth 6, five levels a depth with a boss on the fifth,
+- **A dive** (`Jelly.Dive`, a `SuspendedRun`) runs Depth 1 to Depth 5, five levels a depth with a boss on the fifth,
   then loops to the next cycle as runs always have (`LevelPlan.NextOf`). It is saved at the start of every level.
 - **Its seed** comes from the jelly's own seed and how many dives she has ended (`Dives.SeedOf`), so every dive is a
   different reef.
@@ -51,9 +51,10 @@ hole on to the level it stands before (`HandLayout.Hole`), open from the start.
 
 ## 5. Folk as the depths' bosses
 
-Depth 1's boss is Grandmother Tull, Depth 2's Kip, Depth 3's Fennel, Depth 4's Ottilie, Depth 5's Bubbles; Depth 6 ends
-with Drippus Prime. Freeing a neighbour unlocks her for every later haven; once she is freed, her depth's boss in later
-dives is a generated one again.
+The dive has five depths below the tutorial, and each one's boss (on its fifth level) is a neighbour as the Leak made
+her (`Dives.FolkBossOf`, `TopDownMain.DiveBoss`, `FolkBosses`): Depth 1 Grandmother Tull, Depth 2 Kip, Depth 3 Fennel,
+Depth 4 Ottilie, Depth 5 Bubbles, each at her own level. Freeing her saves her as freed at once, unlocks her for every
+later haven, and from then on her depth's boss is the Leak's own, Drippus Prime.
 
 ## 6. Leak caves
 
@@ -78,7 +79,7 @@ Each step is playable on its own:
 1. **Jellies dive** (built): the slots start and continue dives, and dimming ends one (§1, §2).
 2. **The camera** stands back (§3) (built).
 3. **Havens** and their services (§4) (built; the Tide Fan's requests wait for step 6).
-4. **Folk bosses** for the depths (§5).
+4. **Folk bosses** for the depths (§5) (built).
 5. **Leak caves** in place of the curse dens (§6).
 6. **Requests and chains** as dive goals (§7).
 7. **The open reef removed:** its map, zones, mouths, homeward current and charts.

@@ -29,6 +29,18 @@ public static class Dives
     public static LevelId StartOf(Jelly jelly) => jelly.Tutored ? LevelId.FirstRun : LevelId.First;
 
     /// <summary>
+    /// The neighbour waiting as a depth's boss (docs/DIVE.md §5): Depth 1 Grandmother Tull, then Kip, Fennel, Ottilie and
+    /// Bubbles, each until she is freed (then the depth's boss is the Leak's own again, as is Depth 6's). Null: none.
+    /// </summary>
+    public static string? FolkBossOf(LevelId id, Jelly jelly)
+    {
+        int depth = id.ShownDepth;
+        if (id.Haven || id.IsTutorial || depth < 1 || depth > OctoShoots.Core.Plane.Folk.All.Length) return null;
+        string folk = OctoShoots.Core.Plane.Folk.All[depth - 1].Id;
+        return jelly.Freed.Contains(folk) ? null : folk;
+    }
+
+    /// <summary>
     /// What her hole leads to: from a haven, the level it stands before; from a level, the next level, or a haven before
     /// it when one comes (never in the tutorial, nor straight after a haven).
     /// </summary>
