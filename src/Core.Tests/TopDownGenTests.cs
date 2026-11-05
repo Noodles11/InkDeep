@@ -310,8 +310,11 @@ public class TopDownGenTests
     {
         var map = Map(seed);
         var dist = LevelValidator.Distances(map, map.Start.Position);
-        foreach (var poi in map.Pois)
+        // (A leak cave's place is in the rock behind its mouth: the water out of the mouth is what she reaches.)
+        foreach (var poi in map.Pois.Where(p => p.Kind != PoiKind.LeakCave))
             Assert.False(float.IsPositiveInfinity(LevelValidator.DistanceAt(dist, poi.Position)), $"{poi.Kind} unreachable");
+        foreach (var mouth in map.Mouths)
+            Assert.Contains(Enumerable.Range(6, 19).Select(k => mouth.At - mouth.Into * (k * 0.5f)), q => map.IsOpen(q) && float.IsFinite(LevelValidator.DistanceAt(dist, q)));
     }
 
     [Theory]
@@ -447,7 +450,10 @@ public class TopDownGenTests
             int Count(PoiKind k) => map.Pois.Count(p => p.Kind == k);
             Assert.Equal(plan.Treasures, Count(PoiKind.TreasureCave));
             Assert.Equal(plan.Secrets, Count(PoiKind.Secret));
-            Assert.Equal(plan.Curses, Count(PoiKind.CurseDen));
+            // The curse dens are leak caves, each with its mouth (docs/DIVE.md §6).
+            Assert.Equal(plan.Curses, Count(PoiKind.LeakCave));
+            Assert.Equal(plan.Curses, map.Mouths.Count);
+            Assert.Equal(0, Count(PoiKind.CurseDen));
             Assert.Equal(plan.Shops, Count(PoiKind.Shop));
             Assert.Equal(plan.Caches, Count(PoiKind.ShellCache));
 

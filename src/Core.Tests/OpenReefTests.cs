@@ -256,16 +256,13 @@ public class OpenReefTests
     }
 
     [Fact]
-    public void LeakCavesHoldOnlySecretsCurseDensAndLightSprings_AndTheBayNoSpring()
+    public void LeakCavesHoldOnlySecretsAndLightSprings_NoCaveWithinACave_AndTheBayNoSpring()
     {
-        bool curse = false;
         for (int k = 0; k < 16; k++)
         {
             var map = TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("reef", Shallows.Value.Depth, k), 0f, 2);
-            Assert.All(map.Pois, p => Assert.Contains(p.Kind, new[] { PoiKind.Start, PoiKind.Exit, PoiKind.Secret, PoiKind.CurseDen }));
-            curse |= map.Pois.Exists(p => p.Kind == PoiKind.CurseDen);
+            Assert.All(map.Pois, p => Assert.Contains(p.Kind, new[] { PoiKind.Start, PoiKind.Exit, PoiKind.Secret }));
         }
-        Assert.True(curse, "no cave of sixteen had a curse den");
         Assert.All(World(Region.Value).Springs, s => Assert.False(Region.Value.InHaven(s.Position)));
     }
 

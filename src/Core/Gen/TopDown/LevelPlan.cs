@@ -304,7 +304,8 @@ public sealed class LevelPlan
             Id = id,
             HasBoss = boss && floor >= floors,
             Secrets = rng.NextFloat() < LevelStocking.Secret ? 1 : 0,
-            Curses = rng.NextFloat() < CaveCurse ? 1 : 0,
+            // (No curse den, nor a cave within the cave.)
+            Curses = 0,
             EntryStamp = streams.StampSeed(id),
             ExitStamp = streams.StampSeed(id with { Level = id.Level + 1 }),
             Menace = menace + FloorMenace * (floor - 1),
@@ -320,9 +321,6 @@ public sealed class LevelPlan
     public const int FloorCycles = 100;
     /// <summary>Each floor down a cave adds this to its Menace.</summary>
     public const float FloorMenace = 0.1f;
-
-    /// <summary>How often a leak cave holds a curse den.</summary>
-    public const float CaveCurse = 0.35f;
 
     /// <summary>The tutorial's levels: every kind of place between its two, set rather than rolled.</summary>
     static LevelPlan Tutorial_(SeedCode seed, RunStreams streams, LevelId id)

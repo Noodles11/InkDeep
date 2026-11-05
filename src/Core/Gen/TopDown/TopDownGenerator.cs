@@ -449,6 +449,33 @@ public static class TopDownGenerator
         PlacePickups(map, Stage("pickups"));
         PlaceSpawns(map, Stage("spawns"), plan.Menace);
         ClearSeals(map);
+        return CutLeakMouths(map, spurDirs);
+    }
+
+    /// <summary>
+    /// Each leak cave's mouth (docs/DIVE.md §6): an opening cut in the rock at the end of its spur, the way the spur runs
+    /// (else any way the wall there has room), into the cave below.
+    /// </summary>
+    static string? CutLeakMouths(LevelMap map, Dictionary<int, Vector2> spurDirs)
+    {
+        for (int pi = 0; pi < map.Pois.Count; pi++)
+        {
+            var poi = map.Pois[pi];
+            if (poi.Kind != PoiKind.LeakCave) continue;
+            var facing = spurDirs.TryGetValue(pi, out var f) ? f : CameraWard;
+            // Cut from the open water at its spur's end (its place, or round it).
+            var froms = new List<Vector2> { poi.Position };
+            for (int k = 0; k < 8; k++) froms.Add(poi.Position + new Vector2(MathF.Cos(k * MathF.Tau / 8f), MathF.Sin(k * MathF.Tau / 8f)) * (poi.Radius + 2f));
+            Doorway? door = null;
+            foreach (float least in DoorFacings)
+            {
+                foreach (var from in froms.Where(map.IsOpen))
+                    if ((door = CutDoorway(map, from, poi.Radius + DoorReach, facing, least)) is not null) break;
+                if (door is not null) break;
+            }
+            if (door is not { } mouth) return "no wall at the leak cave's spur has room for its mouth";
+            map.Mouths.Add(mouth);
+        }
         return null;
     }
 
@@ -464,7 +491,7 @@ public static class TopDownGenerator
 
     /// <summary>A special room's cave, or an open place's clearing.</summary>
     static float RadiusOf(PoiKind kind) =>
-        Poi.IsCaveHosted(kind) ? (kind is PoiKind.TreasureCave or PoiKind.CurseDen ? ChamberRadius : PocketRadius) : ClearingRadius;
+        Poi.IsCaveHosted(kind) ? (kind is PoiKind.TreasureCave or PoiKind.CurseDen or PoiKind.LeakCave ? ChamberRadius : PocketRadius) : ClearingRadius;
 
     /// <summary>
     /// Lays out the level's cave (<see cref="CaveLayout"/>, docs/CAVEGEN.md) and records it: the start and the way down,
@@ -478,7 +505,8 @@ public static class TopDownGenerator
         for (int i = 0; i < plan.Treasures; i++) kinds.Add(PoiKind.TreasureCave);
         for (int i = 0; i < plan.Secrets; i++) kinds.Add(PoiKind.Secret);
         for (int i = 0; i < plan.Crabs; i++) kinds.Add(PoiKind.CrabDeal);
-        for (int i = 0; i < plan.Curses; i++) kinds.Add(PoiKind.CurseDen);
+        // The curse dens are leak caves now (docs/DIVE.md §6): a mouth in the rock at the end of the spur.
+        for (int i = 0; i < plan.Curses; i++) kinds.Add(PoiKind.LeakCave);
         for (int i = 0; i < plan.Caches; i++) kinds.Add(PoiKind.ShellCache);
         if (kinds.Count > 0)
         {
@@ -1542,7 +1570,8 @@ public static class TopDownGenerator
         for (int pi = 0; pi < map.Pois.Count; pi++)
         {
             var poi = map.Pois[pi];
-            if (!Poi.IsCaveHosted(poi.Kind)) continue;
+            // (A leak cave's mouth is cut once the rock is done, CutLeakMouths.)
+            if (!Poi.IsCaveHosted(poi.Kind) || poi.Kind == PoiKind.LeakCave) continue;
             Vector2 facing = spurDirs[pi];
             if (poi.Kind == PoiKind.CurseDen)
             {

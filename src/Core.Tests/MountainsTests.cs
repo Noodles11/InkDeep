@@ -45,7 +45,7 @@ public class MountainsTests
             Assert.True(stranded <= 3, $"{seed} {id}: {stranded} open cells she cannot reach");
             // Everywhere she could reach before is still reachable (the places, the exit).
             Assert.True(float.IsFinite(LevelValidator.DistanceAt(dist, map.Exit.Position)));
-            foreach (var poi in map.Pois) Assert.True(float.IsFinite(LevelValidator.DistanceAt(dist, poi.Position)) || poi.Kind == PoiKind.Secret, $"{poi.Kind}");
+            foreach (var poi in map.Pois) Assert.True(float.IsFinite(LevelValidator.DistanceAt(dist, poi.Position)) || poi.Kind is PoiKind.Secret or PoiKind.LeakCave, $"{poi.Kind}");
         }
     }
 }

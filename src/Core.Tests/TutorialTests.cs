@@ -43,7 +43,7 @@ public class TutorialTests
             var plan = LevelPlan.For(code, id);
             Assert.Equal(plan.Treasures, map.Pois.Count(p => p.Kind == PoiKind.TreasureCave));
             Assert.Equal(plan.Shops, map.Pois.Count(p => p.Kind == PoiKind.Shop));
-            Assert.Equal(plan.Curses, map.Pois.Count(p => p.Kind == PoiKind.CurseDen));
+            Assert.Equal(plan.Curses, map.Pois.Count(p => p.Kind == PoiKind.LeakCave));
             if (!plan.Rift) continue;
             var w = new PlaneWorld(map, new Tuning(), new PlaneRun(null, new Tuning()), new PlaneOptions { Corruption = true });
             Assert.Null(w.Boss);

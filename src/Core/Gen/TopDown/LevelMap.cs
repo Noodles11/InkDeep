@@ -12,7 +12,8 @@ namespace OctoShoots.Core.Gen.TopDown;
 /// A named place on the level (DESIGN-TOPDOWN §4.1 stage 1). Exit: the way down — a blue hole, or on a boss level the
 /// boss arena with the Crack across its floor. ShellCache: a guarded clearing of shells.
 /// </summary>
-public enum PoiKind { Start, ShellCache, Exit, Shop, Secret, CurseDen, TreasureCave, CrabDeal }
+/// <summary>A level's places. LeakCave: a leak cave's mouth in the rock (docs/DIVE.md §6), where a curse den once was.</summary>
+public enum PoiKind { Start, ShellCache, Exit, Shop, Secret, CurseDen, TreasureCave, CrabDeal, LeakCave }
 
 public sealed class Poi
 {
@@ -26,7 +27,7 @@ public sealed class Poi
     public int Cave = -1;
 
     /// <summary>Special rooms live in caves (DESIGN-TOPDOWN §4.2).</summary>
-    public static bool IsCaveHosted(PoiKind kind) => kind is PoiKind.Shop or PoiKind.Secret or PoiKind.CurseDen or PoiKind.TreasureCave or PoiKind.CrabDeal;
+    public static bool IsCaveHosted(PoiKind kind) => kind is PoiKind.Shop or PoiKind.Secret or PoiKind.CurseDen or PoiKind.TreasureCave or PoiKind.CrabDeal or PoiKind.LeakCave;
 }
 
 /// <summary>Main: a route canyon start→rift. Spur: to a place. Pass: a narrow cut. Side: a labyrinth canyon (dead end or loop).</summary>

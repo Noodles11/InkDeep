@@ -20,7 +20,7 @@ public static class LevelValidator
     {
         int Count(PoiKind k) => map.Pois.Count(p => p.Kind == k);
         if (Count(PoiKind.Start) != 1 || Count(PoiKind.Exit) != 1) return "missing start or exit";
-        if (Count(PoiKind.TreasureCave) > 2 || Count(PoiKind.Shop) > 1 || Count(PoiKind.Secret) > 1 || Count(PoiKind.CurseDen) > 1
+        if (Count(PoiKind.TreasureCave) > 2 || Count(PoiKind.Shop) > 1 || Count(PoiKind.Secret) > 1 || Count(PoiKind.CurseDen) > 1 || Count(PoiKind.LeakCave) > 1
             || Count(PoiKind.ShellCache) > 1) return "optional POI counts out of range";
 
         // Scatter rules.
@@ -78,8 +78,12 @@ public static class LevelValidator
 
         // Reachability and the exit's distance.
         var dist = Distances(map, start.Position);
+        // (A leak cave's place is in the rock behind its mouth: the water out of its mouth must be reached.)
         foreach (var poi in map.Pois)
-            if (float.IsPositiveInfinity(DistanceAt(dist, poi.Position))) return $"the {poi.Kind} cannot be reached from the start";
+            if (poi.Kind != PoiKind.LeakCave && float.IsPositiveInfinity(DistanceAt(dist, poi.Position))) return $"the {poi.Kind} cannot be reached from the start";
+        foreach (var mouth in map.Mouths)
+            if (!Enumerable.Range(6, 19).Select(k => mouth.At - mouth.Into * (k * 0.5f)).Any(q => map.IsOpen(q) && !float.IsPositiveInfinity(DistanceAt(dist, q))))
+                return "a leak cave's mouth cannot be reached from the start";
         // The playable area: the water she can reach.
         int area = WaterArea(map);
         if (area is < (int)AreaMin or > (int)AreaMax) return $"{area} m² of water to swim (want {AreaMin:0}–{AreaMax:0} m²)";

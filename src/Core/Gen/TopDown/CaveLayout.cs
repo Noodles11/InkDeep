@@ -47,7 +47,7 @@ public sealed class CaveLayout
     /// Rock kept round a room's chamber, past its radius: its walls and the crag's reach, more for the curse den's winding
     /// tunnel.
     /// </summary>
-    static float RoomKeep(PoiKind kind) => kind == PoiKind.CurseDen ? 9f : 6f;
+    static float RoomKeep(PoiKind kind) => kind is PoiKind.CurseDen or PoiKind.LeakCave ? 9f : 6f;
     const int RoomTries = 600;
     /// <summary>The scatter rules (the validator checks them): how far every place keeps from the start and the way down
     /// and from each other (rooms further), and how far from the start the early place may lie.</summary>
