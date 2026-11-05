@@ -543,8 +543,8 @@ public partial class TopDownMain : Node3D
         {
             _customSeed = OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--seed="));
             _recorder = new PlaneProfileRecorder(new Profile());
-            // Verification on the open reef: a jelly of its own, never saved.
-            if (Reef) _jelly = new Jelly { Name = "Clementine", Seed = _seed.ToString() };
+            // Verification on the open reef, or a dive (--dbg-dive): a jelly of its own, never saved.
+            if (Reef || OS.GetCmdlineUserArgs().Contains("--dbg-dive")) _jelly = new Jelly { Name = "Clementine", Seed = _seed.ToString(), Tutored = _id.Depth > LevelPlan.Tutorial };
             // (--dbg-freed=tull,…: these of the bay's folk freed, home in the bay.)
             if (_jelly is not null) foreach (string id in _dbgFreed) _jelly.Freed.Add(id);
             return;
@@ -552,15 +552,14 @@ public partial class TopDownMain : Node3D
         RunLaunch.Pending = null;
         _persist = true;
         _recorder = new PlaneProfileRecorder(GameSave.Current.Profile);
-        if (mode == LaunchMode.Reef && RunLaunch.Jelly >= 0 && RunLaunch.Jelly < GameSave.Current.Jellies.Count)
+        if (mode == LaunchMode.Jelly && RunLaunch.Jelly >= 0 && RunLaunch.Jelly < GameSave.Current.Jellies.Count)
         {
+            // A jelly dives (docs/DIVE.md §1): her dive where it stands, or a new one.
             _jelly = GameSave.Current.Jellies[RunLaunch.Jelly];
             _jellySaved = true;
-            _place = ReefPlace.Region;
-            _region = OpenReef.FirstRegion;
-            SeedCode.TryParse(_jelly.Seed, out _seed);
-            _id = HomeId;
             RunLaunch.Jelly = -1;
+            (_seed, _id, _) = DiveStart(_jelly);
+            _resume = _jelly.Dive;
             return;
         }
         if (mode == LaunchMode.Continue && GameSave.Current.Run is { } saved && SeedCode.TryParse(saved.Seed, out var seed))
@@ -603,6 +602,11 @@ public partial class TopDownMain : Node3D
             SaveJelly();
             return;
         }
+        if (_jelly is { } diver)
+        {
+            SaveDive(diver, ended: false);
+            return;
+        }
         if (!_persist || _debugRun || _run is null) return;
         GameSave.Current.Run = RunRecord();
         GameSave.Write();
@@ -618,6 +622,8 @@ public partial class TopDownMain : Node3D
             Depth = _id.Depth,
             Level = _id.Level,
             Items = _run.Items.ToList(),
+            Actives = _run.OwnedActives.ToList(),
+            Slots = _run.Slots.ToList(),
             Hp = _run.Hp,
             ArmCuts = _run.ArmCuts,
             Shells = _run.Shells,
@@ -638,6 +644,7 @@ public partial class TopDownMain : Node3D
     void StartFirstLevel()
     {
         if (Reef && _jelly is not null) FillBaySplash(_splash, _jelly);
+        else if (_jelly is not null) FillDiveSplash(_splash, _jelly, _id);
         else FillFirstSplash(_splash, _seed, _customSeed, _id, _resume, _catalog, _tuning);
         if (RunLaunch.Frame is { } frame) _splash.Over(frame);
         RunLaunch.Frame = null;
@@ -647,6 +654,48 @@ public partial class TopDownMain : Node3D
         _firstMap = RunLaunch.Shaping is { } made && made.Seed.Equals(_seed) && made.Id == _id && made.Luck == Luck ? made.Shape
             : Reef ? ShapePlace(_place, _region, _mouth, _floor) : Shape(_id);
         RunLaunch.Shaping = null;
+    }
+
+    /// <summary>Where a jelly's dive takes up (docs/DIVE.md §1): her dive under way, or a new one from her seed.</summary>
+    public static (SeedCode Seed, LevelId Id, float Luck) DiveStart(Jelly jelly) =>
+        jelly.Dive is { } dive && SeedCode.TryParse(dive.Seed, out var seed) ? (seed, DiveLevel(dive), dive.Luck) : (Dives.SeedOf(jelly), Dives.StartOf(jelly), 0f);
+
+    /// <summary>A saved dive's level (the tutorial's too).</summary>
+    static LevelId DiveLevel(SuspendedRun dive) => new(Math.Max(1, dive.Cycle), Math.Clamp(dive.Depth, LevelPlan.Tutorial, LevelPlan.Depths), Math.Clamp(dive.Level, 1, 5));
+
+    /// <summary>The loading page as a jelly dives: her level, where the dive stands, what she has banked.</summary>
+    public static void FillDiveSplash(LoadingSplash splash, Jelly jelly, LevelId id)
+    {
+        var stats = new List<(string, string)>
+        {
+            ("Level", $"{jelly.Level}"),
+            (jelly.Dive is null ? "Diving to" : "Back down to", id.ToString()),
+            ("Banked", $"{jelly.Passives.Count + jelly.Actives.Count} pearls · {jelly.Shells} shells"),
+        };
+        splash.Fill(jelly.Name, stats, jelly.Dive is null ? $"Dive {jelly.Dives + 1}: down into the reef" : "Back into the dive");
+    }
+
+    /// <summary>
+    /// Her dive as it stands (docs/DIVE.md §2): her level, experience and skills are hers at once; the dive itself, with
+    /// all she carries, saved at its level's start, or (ended) gone, and her next dive a new one.
+    /// </summary>
+    void SaveDive(Jelly jelly, bool ended)
+    {
+        if (_run is null) return;
+        jelly.Level = _run.XpLevel;
+        jelly.Xp = _run.Xp;
+        jelly.Points = _run.Points;
+        jelly.Skills = _run.Skills.ToDictionary(k => k.Key.ToString(), k => k.Value);
+        if (ended)
+        {
+            jelly.Dive = null;
+            jelly.Dives++;
+            // What she spent of her banked shells is spent.
+            jelly.Shells = Math.Min(jelly.Shells, _run.Shells);
+        }
+        else jelly.Dive = RunRecord();
+        jelly.Played = DateTime.Now.ToString("s", CultureInfo.InvariantCulture);
+        if (_jellySaved && !_debugRun) GameSave.Write();
     }
 
     /// <summary>The loading page as a jelly wakes in Lantern Bay.</summary>
@@ -788,7 +837,8 @@ public partial class TopDownMain : Node3D
             SaveJelly();
             return;
         }
-        if (!_persist || _debugRun || GameSave.Current.Run is not { } saved) return;
+        // A jelly's dive keeps the moment on her (docs/DIVE.md §1).
+        if (!_persist || _debugRun || (_jelly is { } diver ? diver.Dive : GameSave.Current.Run) is not { } saved) return;
         if (saved.Cycle != _id.Cycle || saved.Depth != _id.Depth || saved.Level != _id.Level) return;
         saved.State = Moment();
         if (saved.State is null) return;
@@ -1544,7 +1594,8 @@ public partial class TopDownMain : Node3D
             _run.Unlocked = _recorder.Profile.Achievements;
             _achievements = new PlaneAchievements(_recorder.Profile, _customSeed);
             // The open reef: she is her jelly, with all she keeps.
-            if (Reef && _jelly is { } jelly) LoadJelly(jelly);
+            // A dive's first level: she is her jelly, with all she has banked (a resumed dive brings back what it carried).
+            if (_jelly is { } jelly && (Reef || _resume is null)) LoadJelly(jelly);
             // Every run starts with these (a resumed one brings back what it carried).
             else if (_resume is null)
                 foreach (string id in PlaneRun.StartingPearls)
@@ -1559,8 +1610,10 @@ public partial class TopDownMain : Node3D
             if (_resume is { } saved)
             {
                 // Back where the save left her: what she carried onto this level, and the run's totals so far.
-                foreach (string id in saved.Items)
+                foreach (string id in saved.Items.Concat(saved.Actives))
                     if (_catalog?.Contains(id) == true) _run.Add(id);
+                for (int i = 0; i < PlaneRun.SlotCount && i < saved.Slots.Count; i++)
+                    _run.Slots[i] = saved.Slots[i] is { } held && _run.OwnedActives.Contains(held) ? held : null;
                 _run.ArmCuts = saved.ArmCuts;
                 _run.Xp = saved.Xp;
                 _run.XpLevel = Math.Max(saved.XpLevel, 1);
@@ -1760,7 +1813,7 @@ public partial class TopDownMain : Node3D
     {
         // Her look: her bell and arms, her glow (her light, her shots), her tentacle tips, her gonads' shape.
         OctoShoots.Game.Fx.HerColor.SetLook(jelly.Look);
-        _run!.Reef = true;
+        _run!.Reef = Reef;
         bool fresh = jelly.Played.Length == 0 && jelly.Passives.Count == 0 && jelly.Actives.Count == 0;
         foreach (string id in fresh ? PlaneRun.StartingPearls : jelly.Passives.Concat(jelly.Actives))
             if (_catalog?.Contains(id) == true) _run.Add(id);
@@ -3258,6 +3311,7 @@ public partial class TopDownMain : Node3D
     void TutorialPassed()
     {
         _recorder.Profile.TutorialPassed = true;
+        if (_jelly is { } jelly) jelly.Tutored = true;
         ResetRunTotals();
         if (_run is not null) _recorder.StartRun(_seed.ToString(), _customSeed, _run.Items, continuing: false);
     }
@@ -3285,7 +3339,7 @@ public partial class TopDownMain : Node3D
         AddToRun();
         _recorder.RunDied(_world, _runTime);
         // The run is over: nothing to continue (a debug run leaves the save as it was).
-        if (_persist && !_debugRun && !Reef)
+        if (_persist && !_debugRun && !Reef && _jelly is null)
         {
             GameSave.Current.Run = null;
             GameSave.Write();
@@ -3315,6 +3369,17 @@ public partial class TopDownMain : Node3D
             _place = ReefPlace.Region;
             _region = OpenReef.FirstRegion;
             _mouth = -1;
+        }
+        else if (_jelly is { } diver)
+        {
+            // The dive is over (docs/DIVE.md §2): what she carried is lost; her level and what is banked are hers.
+            int found = _run.Items.Concat(_run.OwnedActives).Count(id => !diver.Passives.Contains(id) && !diver.Actives.Contains(id));
+            int shells = Math.Max(0, _run.Shells - diver.Shells);
+            SaveDive(diver, ended: true);
+            stats.Insert(1, ("Lost", $"{found} pearls · {shells} shells"));
+            stats.Insert(2, ("Kept", $"level {diver.Level} · {diver.Passives.Count + diver.Actives.Count} pearls · {diver.Shells} shells"));
+            stats.RemoveAll(s => s.Item1 is "Pearls absorbed" or "Seed");
+            _splash.Fill($"The Leak dimmed {diver.Name}", stats, "Her next dive starts at the top of the reef.");
         }
         else _splash.Fill("The corruption took Clementine", stats, "Her meter filled with ink. Everything she carried is lost.");
         OpenSplash();
@@ -3401,6 +3466,15 @@ public partial class TopDownMain : Node3D
                 if (_deathSplash && Reef)
                 {
                     _splash.Working("Waking at the lantern post");
+                    StartLoading();
+                }
+                else if (_deathSplash && _jelly is { } diver)
+                {
+                    // Her next dive: a new reef from her seed, at the top, with what she has banked.
+                    (_seed, _id, _) = DiveStart(diver);
+                    _customSeed = false;
+                    ResetRunTotals();
+                    _splash.Working("Shaping a new reef");
                     StartLoading();
                 }
                 else if (_deathSplash)

@@ -30,8 +30,8 @@ namespace OctoShoots.Game.Title;
 /// Review flags: --title-sample (an example profile, never saved), --title-card=stats|pedia|creatures|save|settings|seed,
 /// --title-pick=id (that item focused, then chosen: her shot at it), --dbg-stick=x,y (the left stick held that way),
 /// --title-look=glow,arms,tips,gonads (the jelly card's form, e.g. #7FE7FF,#B44FD0,#FF4FA3,star),
-/// --title-launch=new|continue (starts that run after a moment; the game then takes --capture), --title-launch=reef (with
-/// --title-sample: a sample jelly wakes in Lantern Bay), --capture=dir --frames=a,b.
+/// --title-launch=new|continue (starts that run after a moment; the game then takes --capture), --title-launch=jelly (with
+/// --title-sample: a sample jelly dives), --capture=dir --frames=a,b.
 /// </summary>
 public partial class TitleMain : Node3D
 {
@@ -504,9 +504,9 @@ public partial class TitleMain : Node3D
             TitleStyle.Bloom(button.GetParent<Control>(), 0.55f + 0.06f * i++, Reduced);
         }
         _items.First(it => it.Button.GetParent<Control>().Visible).Button.GrabFocus();
-        if (_autoLaunch == "reef" && GameSave.ReadOnly)
+        if (_autoLaunch is "jelly" or "reef" && GameSave.ReadOnly)
         {
-            // Review: a jelly of the sample save (never written) wakes in the bay.
+            // Review: a jelly of the sample save (never written) dives.
             if (GameSave.Current.Jellies.Count == 0)
                 GameSave.Current.Jellies.Add(new Jelly { Name = "Mira", Seed = SeedCode.NewRandom().ToString(), Look = new JellyLook { Glow = "#7FE7FF" } });
             GetTree().CreateTimer(1.2).Timeout += () => PlayJelly(0);
@@ -737,7 +737,7 @@ public partial class TitleMain : Node3D
         }
         OctoShoots.Game.Fx.HerColor.SetLook(save.Jellies[index].Look);
         SeedCode.TryParse(save.Jellies[index].Seed, out var seed);
-        Launch(LaunchMode.Reef, seed);
+        Launch(LaunchMode.Jelly, seed);
     }
 
     /// <summary>
@@ -757,11 +757,12 @@ public partial class TitleMain : Node3D
             saved = run;
             seed = kept;
         }
-        if (mode == LaunchMode.Reef && GameSave.Current.Current is { } jelly)
+        if (mode == LaunchMode.Jelly && GameSave.Current.Current is { } jelly)
         {
-            var home = TopDownMain.HomeId;
-            RunLaunch.Shaping = (seed, home, 0f, TopDownMain.ShapeHome());
-            TopDownMain.FillBaySplash(_splash, jelly);
+            // Her dive, shaped behind the page (docs/DIVE.md §1).
+            var (diveSeed, id, luck) = TopDownMain.DiveStart(jelly);
+            RunLaunch.Shaping = (diveSeed, id, luck, TopDownMain.Shape(diveSeed, id, luck));
+            TopDownMain.FillDiveSplash(_splash, jelly, id);
         }
         else
         {

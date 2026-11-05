@@ -9,7 +9,7 @@ using OctoShoots.Game.TopDown;
 
 namespace OctoShoots.Game.Title;
 
-public enum LaunchMode { New, Seeded, Continue, Reef }
+public enum LaunchMode { New, Seeded, Continue, Jelly }
 
 /// <summary>What the title screen asks the game scene to start: a new run, a seeded one, or the saved run.</summary>
 public static class RunLaunch
@@ -19,7 +19,7 @@ public static class RunLaunch
 
     /// <summary>Set by the title before it opens the game scene; the game reads and clears it.</summary>
     public static LaunchMode? Pending { get; set; }
-    /// <summary>The open reef: which jelly wakes in Lantern Bay (an index into the save's jellies).</summary>
+    /// <summary>Which jelly dives (an index into the save's jellies, docs/DIVE.md §1).</summary>
     public static int Jelly { get; set; } = -1;
     public static SeedCode Seed { get; set; }
     /// <summary>The first level, shaped behind the title's own loading page; the game takes it instead of making it again.</summary>

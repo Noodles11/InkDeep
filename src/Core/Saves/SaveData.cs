@@ -66,6 +66,12 @@ public sealed class Jelly
     public Dictionary<string, int> Tied { get; set; } = new();
     /// <summary>Her lost light, where she last dimmed (null: none, or she took it back).</summary>
     public LostLight? Lost { get; set; }
+    /// <summary>Her dive under way (docs/DIVE.md §1), as it stood at the start of its level; null between dives.</summary>
+    public SuspendedRun? Dive { get; set; }
+    /// <summary>How many dives she has ended (a new one's seed comes from her own and this, Run.Dives.SeedOf).</summary>
+    public int Dives { get; set; }
+    /// <summary>She has dived out of the tutorial: her dives start in Depth 1.</summary>
+    public bool Tutored { get; set; }
     /// <summary>When she was made and last played, as ISO 8601 local times.</summary>
     public string Made { get; set; } = "";
     public string Played { get; set; } = "";
@@ -255,6 +261,9 @@ public sealed class SuspendedRun
     /// <summary>Where the run stands, as the HUD names it.</summary>
     public string Where => new OctoShoots.Core.Gen.TopDown.LevelId(Cycle, Depth, Level).ToString();
     public List<string> Items { get; set; } = new();
+    /// <summary>Her active pearls owned, and what each of her slots holds.</summary>
+    public List<string> Actives { get; set; } = new();
+    public List<string?> Slots { get; set; } = new();
     public float Hp { get; set; }
     /// <summary>The Crab Deals she has struck.</summary>
     public int ArmCuts { get; set; }

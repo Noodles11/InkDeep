@@ -14,7 +14,7 @@ namespace OctoShoots.Game.Title;
 /// side in the title's sea: the title draws each jelly as herself, floating where her slot is (TitleMain.SyncSlots,
 /// a BellView wearing her look), and this lays out what goes with them — a card under each with her details, and over an
 /// empty slot a round, see-through (+) button. The slot chosen lights up (its jelly shines; the others are switched off
-/// like lamps) and its card holds Dive (wake her in Lantern Bay) and Delete (asked twice). The (+) makes a new jelly: one
+/// like lamps) and its card holds Dive (her dive, continued or begun, docs/DIVE.md) and Delete (asked twice). The (+) makes a new jelly: one
 /// swims into that slot wearing the form under her as it is set — her name (unique here), the shape of her gonads, and
 /// her glow, arm and tentacle-tip colours — and Dive wakes her. With every slot taken, one must be deleted first.
 /// </summary>
@@ -198,8 +198,9 @@ public partial class JellyCard : Control
             c.Box.AddChild(Centred(DrawerStyle.Line(j.Name, DrawerStyle.Text, 22)));
             if (i == save.Chosen) c.Box.AddChild(Centred(DrawerStyle.Line("played last", DrawerStyle.Gold, 13)));
             c.Box.AddChild(Centred(DrawerStyle.Line($"Level {j.Level}", DrawerStyle.Soft, 15)));
-            c.Box.AddChild(Centred(DrawerStyle.Line($"{j.Shells} shells · {j.Passives.Count} pearls", DrawerStyle.Soft, 15)));
-            c.Box.AddChild(Centred(DrawerStyle.Line($"{j.Sealed.Values.Sum()} leaks sealed", DrawerStyle.Soft, 15)));
+            c.Box.AddChild(Centred(DrawerStyle.Line($"{j.Shells} shells · {j.Passives.Count + j.Actives.Count} pearls banked", DrawerStyle.Soft, 15)));
+            // Where her dive stands (docs/DIVE.md §1), or that the next one is new.
+            c.Box.AddChild(Centred(DrawerStyle.Line(j.Dive is { } dive ? $"Diving · {dive.Where}" : $"Dive {j.Dives + 1} to begin", DrawerStyle.Soft, 15)));
             c.Box.AddChild(Centred(DrawerStyle.Line(Played(j), DrawerStyle.Soft, 13)));
             var buttons = new VBoxContainer();
             buttons.AddThemeConstantOverride("separation", 4);
