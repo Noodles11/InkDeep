@@ -10,14 +10,13 @@ drawn out into a dash or a line; where its stretch on screen passes 1.25 it fade
 ## Look 6: felt tip and highlighter (the game's look)
 
 - **The reef held back, so the creatures carry the picture.** Each material one flat marker tone, a whisper of its own
-  colour left, held toward the depth's water; the height stepped into wide flat layers 2.6 m apart (the deeper, the
-  more of the water's blue); the marker's faint parallel streaks for its only texture. Light in two tones. A pale
-  catch of light along the walls' tops.
-- **The felt tip on the reef:** a bold wavering navy line where the walls meet her plane, and faint broken strokes along
-  each layer's edge up the walls.
+  colour left, held toward the depth's water; shading evenly with height, no bands or lines up the walls (the deeper,
+  the more of the water's blue); the marker's faint parallel streaks for its only texture. Light in two tones.
+- **The felt tip on the reef:** a bold wavering navy line where the walls meet her plane, and nothing up the walls.
 - **The drawing over everything drawn before the water pass** (the reef, the creatures, the bosses, the kelp): filled
-  in four flat marker tones (stepped in perceived brightness, the steps soft), the colour lifted for what is at her
-  plane (×1.25) and held back on the floor below it and the walls above (×0.85); and a felt tip's line round every
+  in four flat marker tones (stepped in perceived brightness, the steps soft) at her plane, where the creatures are;
+  the floor below it and the walls above keep their even shading (stepped, their gradients would show as stripes).
+  The colour is lifted at her plane (×1.25) and held back on the floor and the walls (×0.85); and a felt tip's line round every
   silhouette, where the depth breaks by a third of a metre or more between a pixel and its neighbours, along both sides
   of the break, its width wavering. The line is boldest at her plane and light on the floor's own things. On a cave's
   dark it is a fluorescent teal instead of navy, as a highlighter on black paper. Laid on before the water's veil, so

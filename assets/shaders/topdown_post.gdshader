@@ -180,13 +180,14 @@ float view_depth(vec2 at, mat4 inv_projection) {
 // light are laid like a highlighter, vivid and flat-edged; the whole sheet has a paper's grain. What is drawn after it
 // (Clementine, her light's shots, the particles, the shimmer of hot water) keeps its own look.
 
-// The marker's fill: the light stepped into a few flat tones (in perceived brightness, the step between them soft), its
-// colour lifted by sat (the creatures at her plane vivid, the reef round them held back).
-vec3 art_marker_fill(vec3 c, float sat) {
+// The marker's fill: the light stepped into a few flat tones (in perceived brightness, the step between them soft) as
+// far as steps says (the creatures at her plane; the reef's walls and floor keep their even shading, or its gradients
+// would step into stripes), its colour lifted by sat (the creatures vivid, the reef round them held back).
+vec3 art_marker_fill(vec3 c, float sat, float steps) {
 	float l = max(dot(c, vec3(0.299, 0.587, 0.114)), 1e-4);
 	float x = sqrt(l) * 4.0;
 	float q = (floor(x) + smoothstep(0.65, 1.0, fract(x))) / 4.0;
-	q = max(q * q, l * 0.55);
+	q = mix(l, max(q * q, l * 0.55), steps);
 	vec3 o = c * (q / l);
 	float lo = dot(o, vec3(0.299, 0.587, 0.114));
 	return max(mix(vec3(lo), o, sat), vec3(0.0));
@@ -351,7 +352,7 @@ void fragment() {
 	// before the water, so what lies deep has its line softened by the water over it, as all else there.
 	if (reef_art == 6 && !open_deep) {
 		float reef = max(smoothstep(0.9, 2.2, below), smoothstep(0.6, 2.0, above));
-		col = art_marker_fill(col, mix(1.25, 0.85, reef));
+		col = art_marker_fill(col, mix(1.25, 0.85, reef), 1.0 - reef);
 		// The boldest line on what is at her plane (the creatures, the bosses); the floor's own things under it lightly,
 		// so the reef never takes the eye from them.
 		float line = art_outline(uv, FRAGCOORD.xy, INV_PROJECTION_MATRIX, VIEWPORT_SIZE) * mix(1.0, 0.3, smoothstep(0.9, 2.2, below));
