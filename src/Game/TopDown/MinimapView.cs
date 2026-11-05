@@ -52,6 +52,8 @@ public partial class MinimapView : Control
         {
             MetresAcross = Span, Size = new Vector2(Diameter, Diameter), ShowDetail = false, EdgesOnly = true,
             ArrowScale = 1.7f, ArrowColor = new Color(1f, 0.72f, 0.35f),
+            // Her requests' places past the edge: arrows just inside the rim, as the north mark.
+            Pointers = true, PointerRadius = Diameter * 0.5f - 2f,
         };
         viewport.AddChild(_map);
 

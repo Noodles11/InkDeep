@@ -57,6 +57,12 @@ public partial class TopoMap : Control
     public readonly List<(System.Numerics.Vector2 At, bool Bathing)> Springs = new();
     /// <summary>Places the requests she carries name (a cave mouth, the Tide Fan with one to untie): ringed in its colour.</summary>
     public readonly List<(System.Numerics.Vector2 At, Color Colour)> Marks = new();
+    /// <summary>
+    /// The minimap's pointers: a mark beyond the round map's edge shows as an arrow at its rim, in the mark's colour,
+    /// pointing the way to it, its tip PointerRadius pixels out from the middle.
+    /// </summary>
+    public bool Pointers;
+    public float PointerRadius;
     /// <summary>Short notes on places, shown once she has charted them (a cave mouth's level: "Lv 8").</summary>
     public readonly List<(System.Numerics.Vector2 At, string Text)> Notes = new();
     /// <summary>The main current's course while it runs: a faint line to the way down.</summary>
@@ -202,6 +208,32 @@ public partial class TopoMap : Control
         QueueRedraw();
     }
 
+    /// <summary>
+    /// Each mark past the minimap's edge: an arrow of her own marker's shape, in the mark's colour (its ring's, its
+    /// request's), pointing the way to it, its tip just inside the rim as the north mark is (marks in the same direction
+    /// stand side by side along the rim rather than on top of one another).
+    /// </summary>
+    void DrawPointers()
+    {
+        var mid = Size * 0.5f;
+        const float k = 1.25f;
+        var placed = new List<float>();
+        foreach (var (at, colour) in Marks)
+        {
+            Vector2 to = P(at) - mid;
+            // (A mark whose ring still shows inside the map needs no pointer.)
+            if (to.Length() < PointerRadius - 14f) continue;
+            float ang = to.Angle();
+            for (int tries = 0; tries < 8 && placed.Exists(a => Mathf.Abs(Mathf.AngleDifference(a, ang)) < 0.16f); tries++) ang += 0.16f;
+            placed.Add(ang);
+            Vector2 f = Vector2.FromAngle(ang), s = new Vector2(-f.Y, f.X);
+            Vector2 p = mid + f * (PointerRadius - 8f * k);
+            var arrow = new[] { p + f * 8f * k, p - f * 5f * k + s * 5f * k, p - f * 2f * k, p - f * 5f * k - s * 5f * k };
+            DrawColoredPolygon(arrow, colour);
+            DrawPolyline(arrow.Append(arrow[0]).ToArray(), Colors.Black, 1.5f * k * 0.9f, true);
+        }
+    }
+
     public override void _Draw()
     {
         if (_map is null || Size.X < 1f) return;
@@ -291,6 +323,7 @@ public partial class TopoMap : Control
             DrawArc(q, 13f * EmblemScale, 0f, Mathf.Tau, 32, Ink, 5f * EmblemScale, true);
             DrawArc(q, 13f * EmblemScale, 0f, Mathf.Tau, 32, colour, 2.6f * EmblemScale, true);
         }
+        if (Pointers) DrawPointers();
         foreach (var (at, text) in Notes)
         {
             if (Fog is { } charted && charted.At(at) < 0.5f) continue;

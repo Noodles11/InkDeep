@@ -172,7 +172,9 @@ it pays (§4).
 - **The pause menu's Requests tab** (beside Level up, Stats, Pearls and Achievements): the requests she carries, with
   their poster's line, what they ask, how far along they are, and Let go.
 - **On the maps:** in its region, a carried request's named mouth is ringed in its kind's colour on the minimap and
-  the Tab map; while a done one waits, the fan is ringed gold.
+  the Tab map; while a done one waits, the fan is ringed gold. A ringed place past the minimap's edge shows as an
+  arrow just inside its rim (as the north mark), her own marker's shape in the ring's colour, pointing the way to it
+  (`TopoMap.Pointers`); the folk's chain steps' places point the same way, in gold.
 - **As she goes:** "Request done · back to the Tide Fan" when one is done, and "Request untied" at the fan.
 
 ## 7. Theme tests (Bible §12)
