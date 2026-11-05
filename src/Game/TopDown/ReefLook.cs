@@ -203,9 +203,6 @@ public sealed record ReefLook
         Caustics = 0f, Rays = 0f, Menace = 1f, Saturation = 1.2f, Vignette = 0.1f, Fog = 0.05f, Lantern = 0.6f,
     };
 
-    /// <summary>The sun's god rays are drawn: on the title's sea, not in the game (the drawn look, docs/ART-LOOKS.md).</summary>
-    public static bool DrawRays { get; set; } = true;
-
     /// <summary>Sets the reef globals the shaders read (colours converted to linear).</summary>
     public void Apply()
     {
@@ -226,7 +223,7 @@ public sealed record ReefLook
         V("reef_butter", Butter);
         V("reef_sun", Sun);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_caustics"), Caustics);
-        RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_rays"), DrawRays ? Rays : 0f);
+        RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_rays"), Rays);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_menace"), Menace);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_saturation"), Saturation);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_vignette"), Vignette);

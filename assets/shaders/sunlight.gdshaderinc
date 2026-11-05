@@ -9,6 +9,7 @@
 //   sun_shadow      per surface point: the height where its light ray first hits rock (R channel)
 //   sun_has_shadow  0 when there is no shadow map (the grey-box cave)
 //   light_strength  overall strength of shafts and caustics (an option)
+//   sun_caustic     how much of the caustics' moving filaments is drawn (0 in the drawn look, docs/ART-LOOKS.md)
 
 global uniform vec3 sun_dir;
 global uniform float sea_surface_y;
@@ -16,6 +17,7 @@ global uniform vec2 reef_extent;
 global uniform float sun_has_shadow;
 global uniform sampler2D sun_shadow : filter_linear, repeat_disable;
 global uniform float light_strength;
+global uniform float sun_caustic;
 
 float sl_hash(vec2 p) {
 	// Stable at large coordinates (pixel positions in the thousands).
@@ -82,7 +84,7 @@ float sun_caustics(vec3 p, float time) {
 	float c = mix(a * 1.2 + b * 0.5, (a + b) * 0.45 + 0.3, blur);
 	// Big slow swells of the surface make whole patches brighten and dim.
 	float swell = 0.65 + 0.55 * sl_noise(q * 0.025 + vec2(time * 0.05, time * 0.03));
-	return c * swell * exp(-depth / 45.0);
+	return c * swell * exp(-depth / 45.0) * sun_caustic;
 }
 
 // The density of light shafts in the water at p: soft beams that sway with the surface and fade with depth.

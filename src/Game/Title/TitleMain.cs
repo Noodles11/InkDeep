@@ -171,7 +171,6 @@ public partial class TitleMain : Node3D
         _catalog = LoadCatalog();
         Engine.MaxFps = _captureDir is null ? _view.MaxFps : 0;
 
-        ReefLook.DrawRays = true;
         AddChild(TopDownMain.MakeEnvironment(ReefLook.Shallows));
         ReefLook.SetExtent(LevelMap.Seeded);
         _sun = new SunLight();

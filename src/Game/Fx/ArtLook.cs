@@ -20,7 +20,11 @@ public static class ArtLook
     {
         Current = look;
         RenderingServer.GlobalShaderParameterSet(SN.Of("reef_art"), look);
+        ApplyGlobals();
     }
+
+    /// <summary>The drawn look's own globals: no caustics (the surface's moving filaments of light) on anything.</summary>
+    public static void ApplyGlobals() => RenderingServer.GlobalShaderParameterSet(SN.Of("sun_caustic"), IsDrawn ? 0f : 1f);
 
     /// <summary>
     /// The drawn look's light: no ambient occlusion (flat fills, not photographic contact shadows), the fluorescent
@@ -28,6 +32,7 @@ public static class ArtLook
     /// </summary>
     public static void Apply(Godot.Environment env)
     {
+        ApplyGlobals();
         if (!IsDrawn) return;
         env.SsaoEnabled = false;
         env.GlowIntensity = 0.95f;

@@ -19,7 +19,7 @@
 //     creatures carry the picture: each material a flat marker tone, a whisper of its own colour left, the height
 //     stepped into wide flat layers (the deeper, the more of the water's blue); the marker's faint streaks for texture.
 //     A bold wavering felt-tip line where the walls meet her plane and faint contour strokes up them at each layer;
-//     light in two tones; the sun's dapples as a few crisp flat patches, as a highlighter lays them.
+//     light in two tones; no caustics.
 //
 // The caller (in fragment) works out what needs derivatives (hw: how much the height changes across a pixel) and calls
 // art_paint, then art_ink; its light() bands the light through art_light.
@@ -356,8 +356,8 @@ float art_light(float ndl) {
 // The caustics, painted: fewer, softer dapples (none in the flat look).
 float art_caustic(float caustic) {
 	if (reef_art <= 0) return caustic;
-	// A few crisp flat patches of sun, as a highlighter lays them.
-	if (reef_art == 6) return smoothstep(0.5, 0.56, caustic) * 0.45;
+	// None in the drawn look.
+	if (reef_art == 6) return 0.0;
 	if (reef_art >= 3) return 0.0;
 	return smoothstep(0.25, 0.6, caustic) * 0.35;
 }

@@ -11,8 +11,8 @@ drawn out into a dash or a line; where its stretch on screen passes 1.25 it fade
 
 - **The reef held back, so the creatures carry the picture.** Each material one flat marker tone, a whisper of its own
   colour left, held toward the depth's water; the height stepped into wide flat layers 2.6 m apart (the deeper, the
-  more of the water's blue); the marker's faint parallel streaks for its only texture. Light in two tones. The sun's
-  dapples as a few crisp flat patches. A pale catch of light along the walls' tops.
+  more of the water's blue); the marker's faint parallel streaks for its only texture. Light in two tones. A pale
+  catch of light along the walls' tops.
 - **The felt tip on the reef:** a bold wavering navy line where the walls meet her plane, and faint broken strokes along
   each layer's edge up the walls.
 - **The drawing over everything drawn before the water pass** (the reef, the creatures, the bosses, the kelp): filled
@@ -27,7 +27,8 @@ drawn out into a dash or a line; where its stretch on screen passes 1.25 it fade
   colour paled toward white (not her warm orange tint), faint; her glow in the water and on the reef round her fainter
   and nearer white too; her bubbles' halos stronger; the environment's glow stronger and wider (`ArtLook.Apply`), no
   ambient occlusion, a little more saturation, the vignette heavier for contrast.
-- **No god rays in the game** (`ReefLook.DrawRays`): the sun's shafts are drawn only on the title's sea.
+- **No caustics** (the `sun_caustic` global, 0 in this look, `ArtLook.ApplyGlobals`): the sea surface's moving
+  filaments of light fall on nothing, reef, flora, kelp or creature. The god rays stay.
 - **The paper:** a fine tooth and the faint unevenness of a dried wash over the whole sheet.
 - **Kept as they are**, drawn after the water pass over the drawing: Clementine, her light's shots, the magic and
   corruption particles, and the shimmer of hot water over a leak.
