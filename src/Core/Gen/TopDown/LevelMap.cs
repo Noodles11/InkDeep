@@ -522,7 +522,43 @@ public sealed class LevelMap
     }
 
     /// <summary>True when the swim band is open at p (terrain low enough; weak rock not counted).</summary>
-    public bool IsOpen(Vector2 p) => p.X >= 0f && p.Y >= 0f && p.X <= Size && p.Y <= Size && HeightAt(p) <= BlockHeight;
+    public bool IsOpen(Vector2 p) => p.X >= 0f && p.Y >= 0f && p.X <= Size && p.Y <= Size && HeightAt(p) <= BlockHeight && !Blocked(p);
+
+    /// <summary>A woven reef's pieces (WovenReef; empty on any other level).</summary>
+    public List<ReefPiece> Pieces = new();
+    /// <summary>What of a woven reef's pieces crosses her plane: circles that block her, by 4 m cells.</summary>
+    public IReadOnlyList<(Vector2 At, float R)> Blocks => _blocks;
+    readonly List<(Vector2 At, float R)> _blocks = new();
+    List<int>[]? _blockCells;
+    const float BlockCell = 4f;
+
+    public void SetBlocks(IEnumerable<(Vector2 At, float R)> blocks)
+    {
+        _blocks.Clear();
+        _blocks.AddRange(blocks);
+        int cells = (int)MathF.Ceiling(Size / BlockCell) + 1;
+        _blockCells = new List<int>[cells * cells];
+        for (int i = 0; i < _blocks.Count; i++)
+        {
+            var (c, r) = _blocks[i];
+            int x0 = Math.Max(0, (int)((c.X - r) / BlockCell)), x1 = Math.Min(cells - 1, (int)((c.X + r) / BlockCell));
+            int y0 = Math.Max(0, (int)((c.Y - r) / BlockCell)), y1 = Math.Min(cells - 1, (int)((c.Y + r) / BlockCell));
+            for (int y = y0; y <= y1; y++)
+            for (int x = x0; x <= x1; x++) (_blockCells[y * cells + x] ??= new List<int>()).Add(i);
+        }
+    }
+
+    /// <summary>Whether a woven reef's piece stands at p across her plane.</summary>
+    public bool Blocked(Vector2 p)
+    {
+        if (_blockCells is null) return false;
+        int cells = (int)MathF.Ceiling(Size / BlockCell) + 1;
+        int x = Math.Clamp((int)(p.X / BlockCell), 0, cells - 1), y = Math.Clamp((int)(p.Y / BlockCell), 0, cells - 1);
+        if (_blockCells[y * cells + x] is not { } list) return false;
+        foreach (int i in list)
+            if (Vector2.DistanceSquared(p, _blocks[i].At) < _blocks[i].R * _blocks[i].R) return true;
+        return false;
+    }
 
     /// <summary>Index of the canopy overhead at p, or −1.</summary>
     public int CanopyAt(Vector2 p)

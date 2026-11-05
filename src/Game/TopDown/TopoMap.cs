@@ -106,6 +106,11 @@ public partial class TopoMap : Control
         for (int y = 0; y < N; y++)
         for (int x = 0; x < N; x++)
             shown[y * N + x] = float.IsNaN(map.LidAt(x, y)) ? map[x, y] : map.LidAt(x, y);
+        // A woven reef's coral across her plane shows as reef (WovenReef).
+        foreach (var (at, r) in map.Blocks)
+            for (int y = Math.Max(0, (int)(at.Y - r - 1)); y <= Math.Min(N - 1, (int)(at.Y + r + 1)); y++)
+            for (int x = Math.Max(0, (int)(at.X - r - 1)); x <= Math.Min(N - 1, (int)(at.X + r + 1)); x++)
+                if (System.Numerics.Vector2.Distance(new System.Numerics.Vector2(x, y), at) < r + 0.5f) shown[y * N + x] = Mathf.Max(shown[y * N + x], 2f);
         if (sealedCaves is not null)
             foreach (int c in sealedCaves)
             {

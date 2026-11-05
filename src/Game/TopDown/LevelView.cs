@@ -121,6 +121,10 @@ public partial class LevelView : Node3D
         return m;
     }
     FloraViews _flora = null!;
+    WovenFish? _wovenFish;
+
+    /// <summary>A woven reef's schools (the look prototype): they wander, and bolt from her (her world position).</summary>
+    public void TickWoven(Vector3 her, float dt) => _wovenFish?.Tick(her - Position, dt);
     readonly List<(System.Numerics.Vector2 At, MeshInstance3D Wall, MeshInstance3D? Remains, float Height)> _seals = new();
 
     /// <summary>A sealed wall's slide down into the sand: how long it takes, and how far down it has gone at t (0..1 of its height).</summary>
@@ -211,6 +215,21 @@ public partial class LevelView : Node3D
         _below = below;
 
         foreach (var surface in shape.Ground) AddChild(new MeshInstance3D { Mesh = ToMesh(surface), MaterialOverride = _ground });
+        // A woven reef's coral (WovenReef, the look prototype), in its own paint.
+        if (map.Pieces.Count > 0)
+        {
+            var woven = new WovenReefView();
+            AddChild(woven);
+            woven.Build(map);
+            Track(woven.Rigid);
+            Track(woven.Soft);
+            Track(woven.Fans);
+            _wovenFish = new WovenFish();
+            AddChild(_wovenFish);
+            _wovenFish.Build(map);
+            Track(_wovenFish.Material);
+        }
+        else _wovenFish = null;
 
         _lids.Clear();
         _sealedCaves.Clear();

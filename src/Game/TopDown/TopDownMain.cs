@@ -817,7 +817,17 @@ public partial class TopDownMain : Node3D
     bool HasMap => !_world.Options.Adventure || _world.Run.Loadout.Flags.Contains("minimap");
 
     /// <summary>The adventure's levels are abyss reefs (AbyssReef): no seabed outside the caves and tunnels.</summary>
-    static LevelMap Abyss(LevelMap map) => PlaneOptions.Default.Adventure ? AbyssReef.Apply(map) : map;
+    static LevelMap Abyss(LevelMap map)
+    {
+        if (PlaneOptions.Default.Adventure) map = AbyssReef.Apply(map);
+        // The look prototype (--woven, docs/REEF-REDO-PROPOSAL.md): the walls give way to a woven reef of coral.
+        return Woven ? WovenReef.Apply(map) : map;
+    }
+
+    /// <summary>The look prototype (--woven): levels are woven reefs (WovenReef), and the water she stirs bends what is soft.</summary>
+    static bool Woven => _woven ??= OS.GetCmdlineUserArgs().Contains("--woven");
+    static bool? _woven;
+    readonly OctoShoots.Game.Fx.FlowField _flow = new();
 
     Task<LevelShape> Shape(LevelId id, bool background = false) => Shape(_seed, id, Luck, background);
 
@@ -3142,6 +3152,13 @@ public partial class TopDownMain : Node3D
         // In the curse den's dark her own light is dimmed too, to about half.
         _bell.Dim = 1f - 0.475f * _dark.Amount;
         _minimap.Blackout = _dark.Amount;
+        // The water she stirs (FlowField): her wake, and the creatures'; soft things bend in it.
+        _flow.Follow(Focus(alpha));
+        _flow.Stir(_world.Player.Position, _world.Player.Velocity, 1.3f + 0.12f * _world.Player.Velocity.Length(), 0.55f);
+        foreach (var mob in _world.Mobs)
+            if (mob.Alive && mob.Velocity.LengthSquared() > 0.5f) _flow.Stir(mob.Position, mob.Velocity, 1.4f, 0.35f);
+        _flow.Step(dt);
+        _level.TickWoven(_bell.GlobalPosition, dt);
         _snow.Her(_bell.GlobalPosition, new Vector3(_world.Player.Velocity.X, 0f, _world.Player.Velocity.Y));
         _snow.Tick(dt, Focus(alpha) + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
         _plankton.Tick(dt, Focus(alpha) + Vector3.Up * 2f, _camera.Camera.GlobalBasis);

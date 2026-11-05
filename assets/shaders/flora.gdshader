@@ -8,6 +8,7 @@ render_mode cull_disabled;
 
 #include "res://assets/shaders/sunlight.gdshaderinc"
 #include "res://assets/shaders/level_frame.gdshaderinc"
+#include "res://assets/shaders/flow_field.gdshaderinc"
 
 varying vec3 sun_world;
 varying float sun_light;
@@ -55,6 +56,13 @@ void vertex() {
 	VERTEX.z += sin(TIME * sway_speed * 0.8 + ph * 1.3 + VERTEX.y * 1.7) * sway * 0.6 * w;
 	tint = INSTANCE_CUSTOM.rgb;
 	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	// The water she stirs bends it away (FlowField), the tips most, then it springs back as the stir fades.
+	vec2 bend = flow_bend(world_pos.xz, w * (sway > 0.0 ? 1.0 : 0.25), max(-world_pos.y, 0.0));
+	if (dot(bend, bend) > 1e-6) {
+		vec3 local_bend = (inverse(MODEL_MATRIX) * vec4(bend.x, -0.25 * length(bend), bend.y, 0.0)).xyz;
+		VERTEX += local_bend;
+		world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	}
 	sun_world = lf_pattern(lf_local(world_pos));
 	// The true height, so the light does not jump when the dive moves the level below up to the swim level.
 	sun_world.y = world_pos.y;
