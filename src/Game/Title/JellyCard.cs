@@ -29,7 +29,7 @@ public partial class JellyCard : Control
         public Button Hit = null!;
         public PanelContainer Card = null!;
         public VBoxContainer Box = null!;
-        public Control Buttons = null!;
+        public Control? Buttons;
         public Button Dive = null!, Delete = null!;
         public Vector2 At;
     }
@@ -147,6 +147,15 @@ public partial class JellyCard : Control
     }
 
     /// <summary>Where a slot's jelly is on the page: her box over her, her card under her.</summary>
+    /// <summary>
+    /// The form is out of the tree whenever no jelly is being made (Rebuild takes it out of its slot's card): freed with
+    /// the card, or it and all it holds (its pickers' popups are windows of their own) would be left behind.
+    /// </summary>
+    public override void _Notification(int what)
+    {
+        if (what == NotificationPredelete && IsInstanceValid(_form) && _form.GetParent() is null) _form.Free();
+    }
+
     public void Place(int slot, Vector2 at)
     {
         var c = _columns[slot];
@@ -175,14 +184,14 @@ public partial class JellyCard : Control
             {
                 c.Box.AddChild(Centred(DrawerStyle.Line("A new jelly of the bloom", DrawerStyle.Gold, 18)));
                 c.Box.AddChild(_form);
-                c.Buttons = new Control();
+                c.Buttons = null;
                 continue;
             }
             if (!taken)
             {
                 c.Box.AddChild(Centred(DrawerStyle.Line("Empty slot", DrawerStyle.Soft, 19)));
                 c.Box.AddChild(Centred(DrawerStyle.Line("Press + for a new jelly", DrawerStyle.Soft, 14)));
-                c.Buttons = new Control();
+                c.Buttons = null;
                 continue;
             }
             var j = save.Jellies[i];
@@ -257,7 +266,7 @@ public partial class JellyCard : Control
         {
             var c = _columns[i];
             c.Card.AddThemeStyleboxOverride("panel", DrawerStyle.TileBox(chosen: i == Selected, margin: 14));
-            c.Buttons.Visible = i == Selected;
+            if (c.Buttons is not null) c.Buttons.Visible = i == Selected;
             c.Card.Modulate = new Color(1f, 1f, 1f, i == Selected || Making == i ? 1f : 0.7f);
         }
     }
