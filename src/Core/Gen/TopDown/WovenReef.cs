@@ -164,6 +164,44 @@ public static class WovenReef
             }
         }
 
+        // The rim: a wall of tall pinnacles shoulder to shoulder all round, on a bank (no blank wall of rock).
+        for (int y = 0; y < n; y++)
+        for (int x = 0; x < n; x++)
+        {
+            int i = y * n + x;
+            if (!inRim(x, y) || keep[i]) continue;
+            float e = MathF.Min(MathF.Min(x, y), MathF.Min(n - 1 - x, n - 1 - y));
+            map.Heights[i] = MathF.Min(bank + 0.8f * TerrainNoise.Fbm(x / 7f, y / 7f, noise + 3u, 2), -1.6f) + (rim - e) * 0.15f;
+        }
+        for (int side = 0; side < 4; side++)
+            for (float t = rim * 0.5f; t < n - 1 - rim * 0.5f; t += rng.Range(3.2f, 4.6f))
+            {
+                float inset = rng.Range(2.5f, rim - 0.5f);
+                var p = side switch
+                {
+                    0 => new Vector2(t, inset),
+                    1 => new Vector2(n - 1 - inset, t),
+                    2 => new Vector2(t, n - 1 - inset),
+                    _ => new Vector2(inset, t),
+                };
+                float r = rng.Range(2.6f, 4.2f);
+                pieces.Add(new ReefPiece(PieceKind.Pinnacle, p, Floor(p), rng.Range(3f, 9f), r, rng.Range(0f, MathF.Tau), Seed()));
+                blocking.Add((p, r));
+            }
+        // And behind them, nothing lets her out: the band itself blocks.
+        for (int side = 0; side < 4; side++)
+            for (float t = 0f; t <= n - 1; t += 3f)
+            {
+                var p = side switch
+                {
+                    0 => new Vector2(t, 1.5f),
+                    1 => new Vector2(n - 2.5f, t),
+                    2 => new Vector2(t, n - 2.5f),
+                    _ => new Vector2(1.5f, t),
+                };
+                blocking.Add((p, 3f));
+            }
+
         // Arches over the lanes: two feet in the banks either side, the span high over her plane.
         for (int k = 0, arches = 0; k < 900 && arches < 6; k++)
         {
@@ -200,7 +238,8 @@ public static class WovenReef
             }
             else
             {
-                if (!InWater(p) || Floor(p) > -3.5f) continue;
+                // Low plates only on the banks (in a lane, seen through its deep water, they would read as pale pads).
+                if (!InWater(p) || Floor(p) > -3.5f || !Bank(p, 0.5f) || rng.NextFloat() < 0.5f) continue;
                 pieces.Add(new ReefPiece(PieceKind.Table, p, Floor(p), MathF.Min(Floor(p) + rng.Range(1.5f, 3f), -1.4f), r, rng.Range(0f, MathF.Tau), Seed()));
             }
         }

@@ -24,6 +24,8 @@ public partial class WovenFish : Node3D
         public readonly List<Vector3> Fish = new();
         public readonly List<Vector3> Ways = new();
         public float Colour;
+        /// <summary>How big its fish are (the mesh is 0.3 m long).</summary>
+        public float Scale;
     }
 
     readonly List<School> _schools = new();
@@ -45,6 +47,7 @@ public partial class WovenFish : Node3D
                 Heading = _rng.Range(0f, MathF.Tau),
                 Speed = _rng.Range(1.1f, 2f),
                 Colour = _rng.NextFloat(),
+                Scale = _rng.Range(1.6f, 2.4f),
             };
             int count = 10 + _rng.Int(16);
             for (int i = 0; i < count; i++)
@@ -102,7 +105,7 @@ public partial class WovenFish : Node3D
             s.At += new Vector3(MathF.Cos(s.Heading), 0f, MathF.Sin(s.Heading)) * speed * dt;
             // Keep under her plane, over the floor.
             float floor = _map.HeightAt(new System.Numerics.Vector2(s.At.X, s.At.Z));
-            s.At.Y = Mathf.Clamp(s.At.Y, floor + 0.8f, -1.4f);
+            s.At.Y = MathF.Min(MathF.Max(s.At.Y, floor + 0.8f), -1.4f);
 
             var basis = new Basis(Vector3.Up, -s.Heading + MathF.PI / 2f);
             for (int i = 0; i < s.Fish.Count; i++)
@@ -117,7 +120,7 @@ public partial class WovenFish : Node3D
                 var fwd = new Vector3(s.Ways[i].X, s.Ways[i].Y * 0.3f, s.Ways[i].Z).Normalized();
                 var side = Vector3.Up.Cross(fwd).Normalized();
                 var up = fwd.Cross(side);
-                _mm.SetInstanceTransform(k, new Transform3D(new Basis(side, up, fwd), s.Fish[i]));
+                _mm.SetInstanceTransform(k, new Transform3D(new Basis(side, up, fwd).Scaled(Vector3.One * s.Scale), s.Fish[i]));
                 _mm.SetInstanceCustomData(k, new Color(10f / 16f, s.Colour, s.Fright, (i * 0.137f) % 1f));
                 k++;
             }

@@ -90,8 +90,8 @@ vec3 wr_base(float kind, float rnd, vec3 p) {
 	else if (k == 6) {
 		// A brain coral: its valleys meander.
 		c = mix(reef_coral2 * 0.55, reef_butter * 0.55, 0.3 + 0.5 * rnd);
-		float m = sin(p.x * 5.0 + 3.0 * wr_noise(p * 1.5)) * sin(p.z * 5.0 - 2.0 * wr_noise(p * 1.7 + 4.0));
-		c *= 1.0 - 0.35 * (1.0 - smoothstep(0.0, 0.3, abs(m)));
+		float m = sin(p.x * 2.6 + 4.0 * wr_noise(p * 0.9)) + sin(p.z * 2.3 - 3.0 * wr_noise(p * 1.1 + 4.0));
+		c *= 1.0 - 0.18 * (1.0 - smoothstep(0.0, 0.45, abs(m)));
 	}
 	else if (k == 7) c = mix(reef_coral2, reef_coral, rnd) * 0.8;
 	else if (k == 8) c = mix(reef_sponge * 0.55, reef_coral * 0.6, 0.3 + 0.4 * rnd);
