@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using OctoShoots.Core.Items;
 using OctoShoots.Core.Plane;
@@ -336,8 +337,10 @@ public partial class HudView : Control
             }
             if (_shells > 0) _shellsSeen = true;
             _leaks.Clear();
-            int leaksSealed = world.Leaks.Count - world.LeaksOpen;
-            for (int i = 0; i < world.Leaks.Count; i++) _leaks.Add(i < leaksSealed);
+            // (A great cave's hidden leak is its boss: no dot of its own.)
+            var shown = world.Leaks.Where(v => !v.Hidden).ToList();
+            int leaksSealed = shown.Count(v => v.Sealed);
+            for (int i = 0; i < shown.Count; i++) _leaks.Add(i < leaksSealed);
         }
         _titleAge += dt;
         _titleShown = _titleAge < TitleIn ? _titleAge / TitleIn : _titleAge < TitleIn + TitleStay ? 1f : Mathf.Max(0f, 1f - (_titleAge - TitleIn - TitleStay) / TitleOut);

@@ -431,6 +431,14 @@ public sealed partial class PlaneWorld
         var boss_ = offer.Where(id => Run.Catalog!.TryGet(id, out var item) && item.Pools.Contains("boss")).ToList();
         var pick = boss_.Count > 0 ? boss_ : offer;
         var pearlAt = boss.PearlAt;
+        // In a great cave, its reward lies clear of the upwelling that rises where its leak was.
+        if (Map.LeakCave && Vector2.Distance(pearlAt, ArenaCenter) < AdventureTuning.ShellsClear)
+        {
+            var off = SafeNormalize(pearlAt - ArenaCenter);
+            if (off == Vector2.Zero) off = SafeNormalize(Player.Position - ArenaCenter);
+            if (off == Vector2.Zero) off = Vector2.UnitY;
+            pearlAt = ArenaCenter + off * AdventureTuning.ShellsClear;
+        }
         boss.LeapFrom = boss.Position;
         if (IsDrippus(boss)) ReleaseSwallowed(boss);
         else if (boss.Spec.Form == BodyForm.GiantClam)
@@ -455,6 +463,9 @@ public sealed partial class PlaneWorld
         if (pick.Count > 0) Pearls.Add(new PlanePearl { ItemId = Run.Pick(pick, _bossRng), Position = pearlAt, Placed = true });
         Stats.BossesFreed++;
         Events.Add(new PlaneEvent(PlaneEventType.BossFreed, boss.Position, Vector2.Zero));
+        // A great cave's leak was the boss: freed, it is sealed.
+        foreach (var v in Leaks)
+            if (v.Hidden && !v.Sealed) SealLeak(v);
     }
 
     /// <summary>Freed and released: a clam's one leap aside; anything else swimming or creeping away until it is gone.</summary>

@@ -61,7 +61,8 @@ built. It follows the boss rules of docs/BOSS-GENERATOR.md §0 and the Theme Bib
 
 - **Great caves are fixed:** a fixed mouth in `reef.json` (beside the 22 minor ones), a fixed layout and a fixed seed,
   so every jelly meets the same cave. Each floor is darker and tighter than the last, as a minor cave's is. The boss
-  arena is the deepest floor's dead end, where its leak is.
+  arena is the deepest floor's dead end, where a minor cave's leak would be: it is either a boss or a leak, and here the
+  boss is the leak.
 - **Its mouth reads from far off:** a great mouth weeps more ink than any danger 2 mouth, and its label shows its name
   and level from 20 m.
 - **The Shallows has two,** so the first boss is close and short (one floor, near the gate) and the region still has
@@ -361,11 +362,15 @@ fallback is a small trade at Tull's fan: a pearl or two for shells, until Ottili
   are in the game. A great mouth names its neighbour (`HandPoint.Folk`) and comes after every minor mouth in `reef.json`
   (`OpenReef.MinorMouths`: the Tide Fan names only those). Its cave's level and floors are hers (`OpenReef.CaveLevel`,
   `CaveFloors`), its number is its own past every minor cave's (`OpenReef.GreatCave`), it is grown from the region's
-  seed, and its deepest floor is a boss's arena round its leak (`LevelPlan.ForCave`'s `boss`).
-- **The arena:** its walls stand open (its only leak is inside) and rise behind her only while its boss fights
-  (`PlaneWorld.PlaceSeals`). No prime waits by the leak and no murkling buds in the cave while the fight runs. The
-  boss lies over the leak: it cannot be sealed till she is freed. Sealed, the great cave is closed for good
-  (`OpenReef.SealedGreat`, `Jelly.GreatLeaks`, `OpenReef.ShutMouths`).
+  seed, and its deepest floor's dead end is a boss's arena (`LevelPlan.ForCave`'s `boss`), named "The arena" on the
+  maps.
+- **The arena:** its walls stand open and rise behind her only while its boss fights (`PlaneWorld.PlaceSeals`). No
+  prime waits there and no murkling buds in the cave while the fight runs. **The boss is the cave's leak**
+  (`PlaneLeak.Hidden`): no leak is drawn, on the HUD's dots, in the hot water or on the maps, and there is nothing to
+  tie; freeing the boss seals it, with all a seal brings: its experience, the ink and ash dissolving, its upwelling
+  where the boss lay, and the great cave closed for good (`OpenReef.SealedGreat`, `Jelly.GreatLeaks`,
+  `OpenReef.ShutMouths`). Its pearl and its shells land at least 3 m from the upwelling, so taking them never carries
+  her out (every leak cave's sealed leak bursts its shells out in that ring, `AdventureTuning.ShellsClear`).
 - **Her boss** (`FolkBosses`): authored, its meter `700 × (1 + 0.25 × (level − 1))`. Its acts are written out by phase
   (`BossSpec.Acts`); it holds still while it warns and acts (`BossSpec.ActsStill`). Tull: the flipper sweep (a fan of
   five big drops at where she last felt Clementine), then the slam (a ring of sixteen drops with a gap of three), then

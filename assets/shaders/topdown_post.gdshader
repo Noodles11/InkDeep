@@ -206,7 +206,7 @@ float art_height(vec2 at, mat4 inv_projection, mat4 inv_view) {
 // break, round the whole shape, its width wavering as a hand-held tip's does.
 float art_outline(vec2 uv, vec2 frag, mat4 inv_projection, mat4 inv_view, vec2 viewport) {
 	float wob = value_noise(frag * 0.045) * 0.7 + value_noise(frag * 0.011 + 5.0) * 0.3;
-	vec2 px = (0.8 + 1.1 * wob) / viewport;
+	vec2 px = (0.55 + 0.7 * wob) / viewport;
 	float zc = view_depth(uv, inv_projection);
 	float hc = art_height(uv, inv_projection, inv_view);
 	float step_m = 0.0;
@@ -368,7 +368,7 @@ void fragment() {
 		// so the reef never takes the eye from them.
 		float line = art_outline(uv, FRAGCOORD.xy, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX, VIEWPORT_SIZE) * mix(1.0, 0.3, smoothstep(0.9, 2.2, below));
 		// Navy ink on the lit page; in a cave's dark a fluorescent line instead, as a highlighter on black paper.
-		col = mix(col, mix(vec3(0.025, 0.035, 0.085), vec3(0.12, 0.55, 0.7), reef_dark), line * mix(0.9, 0.45, reef_dark));
+		col = mix(col, mix(vec3(0.025, 0.035, 0.085), vec3(0.12, 0.55, 0.7), reef_dark), line * mix(0.7, 0.35, reef_dark));
 	}
 
 	// How much water this pixel is seen through (the painted looks: as deep as it lies).

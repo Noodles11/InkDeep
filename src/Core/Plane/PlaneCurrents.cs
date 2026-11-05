@@ -228,7 +228,7 @@ public sealed partial class PlaneWorld
     {
         foreach (var v in Leaks)
         {
-            if (v.Sealed) continue;
+            if (v.Sealed || v.Hidden) continue;
             var off = at - v.Position;
             float d = off.Length();
             if (d >= AdventureTuning.LeakClear) continue;

@@ -10,6 +10,8 @@ namespace OctoShoots.Core.Plane;
 /// <summary>The adventure's numbers (docs/ADVENTURE.md): first guesses, tuned in play.</summary>
 public static class AdventureTuning
 {
+    /// <summary>A leak cave's sealed leak bursts its shells out at least this far (metres), clear of its upwelling.</summary>
+    public const float ShellsClear = 3f;
     /// <summary>
     /// The ink dots lie on an even grid this far apart, each this big, over a seeded level's square (the leaks' levels
     /// and caves; the open reef's big map has none); at most MaxDots on a level.
@@ -313,6 +315,11 @@ public sealed class PlaneLeak
     /// <summary>An Inkwarden guards it this moment.</summary>
     public bool Warded;
     public bool Sealed;
+    /// <summary>
+    /// A great cave's leak (docs/NPC-BOSSES-PROPOSAL.md): its boss is all there is of it. Never drawn, never tied, never
+    /// stinging; freeing the boss seals it, with all a seal brings (its experience, its upwelling, the cave closed).
+    /// </summary>
+    public bool Hidden;
     /// <summary>Shut by the boss as it rose, not by her.</summary>
     public bool Drunk;
     /// <summary>She has come near it (it roused the fish round it).</summary>
@@ -381,8 +388,14 @@ public sealed partial class PlaneWorld
         if (Map.Station) return;
         if (Map.LeakCave)
         {
-            // (A floor above its deepest holds a hole down there instead.)
-            if (!Map.HoleDown) Leaks.Add(NewLeak(Map.Exit.Position));
+            // (A floor above its deepest holds a hole down there instead; a great cave's deepest, its boss in place of a
+            // leak to be seen.)
+            if (!Map.HoleDown)
+            {
+                var leak = NewLeak(Map.Exit.Position);
+                leak.Hidden = Map.HasBoss && Boss is not null;
+                Leaks.Add(leak);
+            }
             return;
         }
         // Where she can swim with the boss's walls shut: they wait for the leaks, so none may lie behind them.
@@ -505,7 +518,7 @@ public sealed partial class PlaneWorld
             var v = Leaks[k];
             if (v.Wave >= 0f) Dissolve(dots, v, k);
             StepArms(v);
-            if (v.Sealed) continue;
+            if (v.Sealed || v.Hidden) continue;
             // Near it, her inner light works on it on its own (an Inkwarden in reach turns it aside, and a great cave's
             // boss lying over it until she is freed).
             if (Tick % 15 == 0) v.Warded = Ward(v, v.Position, 1f) <= 0f;
@@ -596,7 +609,7 @@ public sealed partial class PlaneWorld
         var p = Player;
         foreach (var v in Leaks)
         {
-            if (v.Sealed) continue;
+            if (v.Sealed || v.Hidden) continue;
             for (int i = 0; i < v.Arms.Length; i++)
             {
                 var arm = v.Arms[i];
@@ -720,11 +733,19 @@ public sealed partial class PlaneWorld
         if (wakes && LeaksLeft == 0 && Currents.Count > 0) Events.Add(new PlaneEvent(PlaneEventType.MainCurrentWoke, v.Position, Vector2.UnitY));
         if (Map.LeakCave) DissolveAsh(v.Position);
         if (drunk) return;
-        // Her reward: shells burst out of it.
+        // Her reward: shells burst out of it (in a leak cave, out in a ring clear of the upwelling that rises where it was,
+        // so taking them never carries her out of the cave).
         for (int i = 0; i < AdventureTuning.LeakShells; i++)
         {
             float a = _drops.Range(0f, MathF.Tau);
-            Shells.Add(new PlaneShell { Position = v.Position, Velocity = new Vector2(MathF.Cos(a), MathF.Sin(a)) * _drops.Range(3f, 6f) });
+            var dir = new Vector2(MathF.Cos(a), MathF.Sin(a));
+            var at = v.Position;
+            if (Map.LeakCave)
+            {
+                at = v.Position + dir * _drops.Range(AdventureTuning.ShellsClear, AdventureTuning.ShellsClear + 1.5f);
+                for (int k = 0; k < 4 && !Clear(at, 0.3f); k++) at = Vector2.Lerp(at, v.Position + dir * AdventureTuning.ShellsClear, 0.5f);
+            }
+            Shells.Add(new PlaneShell { Position = at, Velocity = dir * (Map.LeakCave ? _drops.Range(0.5f, 1.5f) : _drops.Range(3f, 6f)) });
         }
         // A boss level's way down waits for its boss too (PlaneBoss's Release opens it once both are done).
         if (LeaksLeft > 0 || ExitOpen || Boss is { Freed: false }) return;

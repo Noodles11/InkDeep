@@ -1450,6 +1450,7 @@ public partial class LevelView : Node3D
     public static string PlaceName(LevelMap map, PoiKind kind) => kind switch
     {
         PoiKind.Exit when map.Station => "Current station",
+        PoiKind.Exit when map.LeakCave && map.HasBoss => "The arena",
         PoiKind.Exit when map.LeakCave => "The leak",
         PoiKind.Exit when map.HasBoss => "The Crack",
         PoiKind.Start when map.LeakCave => "Cave mouth",

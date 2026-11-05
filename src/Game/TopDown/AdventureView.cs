@@ -258,6 +258,13 @@ public partial class AdventureView : Node3D
         {
             var v = world.Leaks[k];
             var node = _leaks[k];
+            // A great cave's leak is its boss: nothing of it is drawn.
+            if (v.Hidden)
+            {
+                node.Arms.Visible = node.Disc.Visible = node.Light.Visible = false;
+                foreach (var s in node.Staples) s.Visible = false;
+                continue;
+            }
             float d = System.Numerics.Vector2.Distance(v.Position, her);
             if (v.Sealed && node.Shut < 0f) node.Shut = 0f;
             float shut = node.Shut < 0f ? 0f : Mathf.Clamp(node.Shut / SealSeconds, 0f, 1f);

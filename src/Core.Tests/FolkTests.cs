@@ -81,7 +81,9 @@ public class FolkTests
         var w = GreatCave("tull");
         Assert.True(w.Map.HasBoss);
         Assert.True(w.Map.LeakCave);
+        // Its boss in place of a leak to be seen: the leak is hidden in it.
         var leak = Assert.Single(w.Leaks);
+        Assert.True(leak.Hidden);
         Assert.Equal(w.Map.Exit.Position, leak.Position);
         Assert.NotNull(w.Boss);
         Assert.Equal("tull", w.Boss!.Spec.Folk);
@@ -100,7 +102,7 @@ public class FolkTests
     }
 
     [Fact]
-    public void HerLeakCannotBeSealedWhileTheBossLiesOverIt_OnceSheIsFreedItCan()
+    public void AGreatCavesBossIsItsLeak_NothingToTie_FreeingItSealsTheCave_ItsShellsAndPearlClearOfTheUpwelling()
     {
         var w = GreatCave("tull");
         var leak = w.Leaks[0];
@@ -110,11 +112,23 @@ public class FolkTests
         Assert.Equal(0f, leak.Light);
         Assert.Equal(BossStage.Fight, w.Boss.Stage);
         w.DebugFreeBoss();
-        Hold(w, near, 1f);
+        var sealedAt = -1;
+        for (int i = 0; i < 2 * PlaneWorld.TickRate && sealedAt < 0; i++)
+        {
+            w.Player.Position = w.Player.PrevPosition = near;
+            w.Player.Hp = w.Run.MaxHp;
+            w.Step(default);
+            if (w.Events.Exists(e => e.Type == PlaneEventType.LeakSealed)) sealedAt = i;
+        }
         Assert.True(w.Boss.Freed);
-        Assert.All(w.Seals.Where(x => x.Kind == SealKind.Boss), x => Assert.True(x.Open));
-        Hold(w, leak.Position, 40f, () => leak.Sealed);
+        Assert.True(sealedAt >= 0, "freeing the boss seals its leak");
         Assert.True(leak.Sealed);
+        Assert.False(w.CaveLeakOpen);
+        Assert.All(w.Seals.Where(x => x.Kind == SealKind.Boss), x => Assert.True(x.Open));
+        // Neither the shells it bursts nor the boss's pearl lie in the upwelling where the leak was.
+        Assert.NotEmpty(w.Shells);
+        Assert.All(w.Shells, sh => Assert.True(Vector2.Distance(sh.Position, leak.Position) >= AdventureTuning.ShellsClear - 0.3f));
+        Assert.All(w.Pearls.Where(p => !p.Taken), p => Assert.True(Vector2.Distance(p.Position, leak.Position) >= AdventureTuning.ShellsClear - 0.01f));
     }
 
     [Fact]
