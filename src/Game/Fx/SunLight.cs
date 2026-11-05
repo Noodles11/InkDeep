@@ -38,7 +38,7 @@ public partial class SunLight : Node3D
             ShadowBias = 0.06f,
             ShadowNormalBias = 2.2f,
             DirectionalShadowMode = DirectionalLight3D.ShadowMode.Parallel2Splits,
-            DirectionalShadowMaxDistance = 90f,
+            DirectionalShadowMaxDistance = 140f,
             LightAngularDistance = 2.5f,
         };
         light.Transform = new Transform3D(Basis.LookingAt(Direction, Vector3.Forward), Vector3.Zero);

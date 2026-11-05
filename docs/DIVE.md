@@ -27,7 +27,10 @@ maps of docs/RPG-PROPOSAL.md.
 
 ## 3. Camera
 
-The camera stands back far enough that one screen shows about 15% of a level (about 2.2 times as far as before).
+The camera stands back far enough that one screen shows about 15% of a level: 55 m from her at zoom 1, 69 m at the
+players' 0.8, about 44 × 67 m of ground (`CameraRig.Distance`). The sun's shadows reach 140 m to match
+(`SunLight`), and the minimap spans 150 m, about the whole level (`MinimapView.Span`). The Sunlit Shallows take
+their dimmed look (`ReefLook.OpenShallows`) so the wider view never washes out.
 
 ## 4. Havens
 
@@ -67,7 +70,7 @@ The curse dens become leak caves: a cave mouth in a level's rock, leading down i
 Each step is playable on its own:
 
 1. **Jellies dive** (built): the slots start and continue dives, and dimming ends one (§1, §2).
-2. **The camera** stands back (§3).
+2. **The camera** stands back (§3) (built).
 3. **Havens** and their services (§4).
 4. **Folk bosses** for the depths (§5).
 5. **Leak caves** in place of the curse dens (§6).

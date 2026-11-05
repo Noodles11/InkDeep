@@ -78,7 +78,7 @@ public sealed record ReefLook
     /// <summary>The seven depths (THEME-BIBLE §6.3). Depth 1 is tuned; the rest follow the palette table, to be tuned as they are built.</summary>
     public static ReefLook For(int depth) => depth switch
     {
-        <= 1 => Shallows,
+        <= 1 => OpenShallows,
         2 => Kelp,
         3 => Galleon,
         4 => Carnival,
@@ -100,8 +100,8 @@ public sealed record ReefLook
     };
 
     /// <summary>
-    /// The Sunlit Shallows as the open reef's zone (docs/REEF-WORLD.md §1): the Shallows' own palette, dimmed so the wide
-    /// open sand never washes out: a deeper turquoise, a toned-down sand and a softer sun, a little brighter than the
+    /// The Sunlit Shallows as she swims them (Depth 1 and the tutorial, and the open reef's zone): the Shallows' own
+    /// palette, dimmed so the wide sand never washes out: a deeper turquoise, a toned-down sand and a softer sun, a little brighter than the
     /// bay's evening, so the characters stay the brightest things in it.
     /// </summary>
     public static readonly ReefLook OpenShallows = Shallows with

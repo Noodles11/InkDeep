@@ -16,7 +16,7 @@ public partial class MinimapView : Control
     public const float Diameter = 220f;
     public const float Margin = 18f;
     /// <summary>Metres across the disc.</summary>
-    public const float Span = 90f;
+    public const float Span = 150f;
     /// <summary>
     /// She reveals the fog around her to a third of the minimap's radius: the gradient (RevealSoft wide) is centred
     /// where the old 5 m rim was, so the area reads the same size with a softer edge.

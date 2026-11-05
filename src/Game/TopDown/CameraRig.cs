@@ -13,17 +13,20 @@ public partial class CameraRig : Node3D
     /// <summary>Downward tilt from the horizontal.</summary>
     public const float Tilt = 60f;
     public const float Fov = 35f;
-    /// <summary>Distance from the followed point; puts ~22 m of ground top to bottom and ~33 m across at 16:9.</summary>
-    public const float Distance = 34f;
+    /// <summary>
+    /// Distance from the followed point: ~36 m of ground top to bottom and ~54 m across at 16:9; at the players' zoom
+    /// about 44 × 67 m, so a screen shows about 15% of a 140 m level (docs/DIVE.md §3).
+    /// </summary>
+    public const float Distance = 55f;
     const float Follow = 6f;
-    /// <summary>The zoom: fixed for players at 0.8 (42.5 m); the debug menu alone moves it, from 0.5 (farther) to 2 (closer).</summary>
+    /// <summary>The zoom: fixed for players at 0.8 (69 m); the debug menu alone moves it, from 0.5 (farther) to 2 (closer).</summary>
     public const float DefaultZoom = 0.8f, MinZoom = 0.5f, MaxZoom = 2f;
     /// <summary>Verification: `--dbg-zoom=metres` brings the camera closer (to inspect Clementine); it overrides the setting.</summary>
     readonly float? _dbgDistance = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--dbg-zoom=")) is { } zoom
         && float.TryParse(zoom["--dbg-zoom=".Length..], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float d) ? d : null;
     float _distance = Distance / DefaultZoom;
 
-    /// <summary>The camera-zoom setting (1 is the 34 m framing). The dive's Zoom multiplies it.</summary>
+    /// <summary>The camera-zoom setting (1 is the 55 m framing). The dive's Zoom multiplies it.</summary>
     public float ZoomSetting
     {
         set => _distance = _dbgDistance ?? Distance / Mathf.Clamp(value, MinZoom, MaxZoom);
