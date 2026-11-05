@@ -257,7 +257,7 @@ public sealed record ReefLook
         env.FogDensity = 0.0015f + 0.006f * Menace;
         env.AdjustmentEnabled = true;
         env.AdjustmentContrast = Contrast;
-        env.AdjustmentSaturation = 1f;
+        env.AdjustmentSaturation = OctoShoots.Game.Fx.ArtLook.IsDrawn ? 1.12f : 1f;
         env.AdjustmentBrightness = 1f;
     }
 }

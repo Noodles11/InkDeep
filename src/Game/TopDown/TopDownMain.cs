@@ -500,9 +500,9 @@ public partial class TopDownMain : Node3D
                 && float.TryParse(steer[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float sx) && float.TryParse(steer[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float sy))
                 _dbgSteer = new Vector2(sx, sy).Normalized();
             else if (arg == "--dbg-steer-fight") _dbgSteerFight = true;
-            // Verification: an art direction under study for the reef (docs/ART-LOOKS.md: 0 the game's own; 1–5).
+            // Verification: another art direction (docs/ART-LOOKS.md: 6 the game's own; 0 the old look; 1–5 the studies).
             else if (arg.StartsWith("--look=") && int.TryParse(Value("--look="), out int look))
-                RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_art"), look);
+                OctoShoots.Game.Fx.ArtLook.Set(look);
             else if (arg == "--reset-profile")
             {
                 // Verification: the saved profile's achievements (and so its unlocked pearls) are cleared.
@@ -1113,6 +1113,7 @@ public partial class TopDownMain : Node3D
         };
         look.ApplyTo(env);
         look.Apply();
+        OctoShoots.Game.Fx.ArtLook.Apply(env);
         if (OS.GetCmdlineUserArgs().Contains("--dbg-nossao")) env.SsaoEnabled = false;
         return new WorldEnvironment { Environment = env };
     }

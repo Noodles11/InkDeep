@@ -15,6 +15,11 @@
 //     pocked like a sponge with holes and craters, shallow, deep or right through.
 //   5 Felt tip over the reef's own colours: look 4's flat light, stippling and sponge, on the game's own textures and
 //     colours, and the game's own blur and murk below her plane (topdown_post treats it as look 0).
+//   6 Felt tip and highlighter (the game's look, docs/ART-LOOKS.md): a minimal illustration. The reef held back so the
+//     creatures carry the picture: each material a flat marker tone, a whisper of its own colour left, the height
+//     stepped into wide flat layers (the deeper, the more of the water's blue); the marker's faint streaks for texture.
+//     A bold wavering felt-tip line where the walls meet her plane and faint contour strokes up them at each layer;
+//     light in two tones; the sun's dapples as a few crisp flat patches, as a highlighter lays them.
 //
 // The caller (in fragment) works out what needs derivatives (hw: how much the height changes across a pixel) and calls
 // art_paint, then art_ink; its light() bands the light through art_light.
@@ -59,9 +64,28 @@ vec3 art_mute(vec3 c, float keep, vec3 water) {
 }
 
 // The painted albedo: the reef's own colour (c) reworked by the look. local.y is the height over her plane.
+// The marker's streaks (look 6): faint, long and parallel, all laid one way across the reef, as a broad felt tip fills.
+float art_marker(vec3 w) {
+	vec2 along = vec2(0.8, 0.6);
+	vec2 p = vec2(dot(w.xz, along), dot(w.xz, vec2(-along.y, along.x)));
+	return art_noise(vec2(p.x * 0.18, p.y * 3.4)) * 0.7 + art_noise(vec2(p.x * 0.5 + 3.0, p.y * 9.0)) * 0.3;
+}
+
 vec3 art_paint(vec3 c, vec3 w, vec3 local, vec3 n, vec3 water, vec3 rock, vec3 sand) {
 	if (reef_art <= 0 || reef_art == 5) return c;
 	float h = local.y;
+	if (reef_art == 6) {
+		// Each material one marker tone, a whisper of its own colour left, held back toward the water's hue.
+		float up = smoothstep(0.7, 0.92, n.y) * (1.0 - smoothstep(-0.4, 0.6, h));
+		c = mix(mix(rock, sand, up), c, 0.2);
+		c = art_mute(c, 0.6, water);
+		// Wide flat layers: higher ones a touch lighter, deeper ones taking more of the water's blue.
+		float layer = art_layer(w, h, 2.6);
+		c *= 1.0 + 0.08 * clamp(layer, -4.0, 3.0);
+		c = mix(c, water * 0.85, clamp(-layer * 0.1, 0.0, 0.55));
+		c *= 0.95 + 0.07 * art_marker(w);
+		return c;
+	}
 	if (reef_art == 4) {
 		// Flat: rock and sand each one tone (a whisper of their own colour left), nothing else.
 		float up = smoothstep(0.7, 0.92, n.y) * (1.0 - smoothstep(-0.4, 0.6, h));
@@ -246,7 +270,19 @@ vec2 art_shading(vec3 w, vec3 local, vec3 n) {
 // The felt tip (looks 2-5, a light touch of it in 3): x how much ink lies here, 0..1; y how much of the water beyond a
 // hole through the wall shows (looks 4 and 5). hw: the height's change across a pixel (fwidth); px: metres per pixel.
 vec2 art_ink(vec3 w, vec3 local, vec3 n, float hw, float px) {
-	if (reef_art < 2 || reef_art > 5) return vec2(0.0);
+	if (reef_art < 2 || reef_art > 6) return vec2(0.0);
+	if (reef_art == 6) {
+		// The felt tip: a bold wavering line where the walls meet her plane, and faint strokes along each layer's edge.
+		float h = local.y;
+		float wob = art_noise(w.xz * 0.4);
+		float d = abs(h - 0.25) / max(hw, 1e-4);
+		float wide = 2.8 * (0.65 + 0.6 * wob);
+		float ink = 1.0 - smoothstep(wide * 0.5, wide * 0.5 + 1.0, d);
+		float c = abs(fract((h + (art_noise(w.xz * 0.35) - 0.5) * 1.3) / 2.6) - 0.5) * 2.6 / max(hw, 1e-4);
+		float broken = step(0.3, art_noise(w.xz * 0.5 + h * 0.7));
+		ink = max(ink, 0.4 * broken * (1.0 - smoothstep(0.4, 1.3, c)) * step(0.5, abs(h)));
+		return vec2(clamp(ink, 0.0, 1.0), 0.0);
+	}
 	if (reef_art >= 4) return art_shading(w, local, n);
 	float h = local.y;
 	float ink = 0.0;
@@ -289,6 +325,8 @@ vec2 art_ink(vec3 w, vec3 local, vec3 n, float hw, float px) {
 
 // The felt tip's ink: near black, a little of the depth's water in it.
 vec3 art_ink_colour(vec3 water) {
+	// (Look 6's felt tip: a deep navy, as the reference's ink.)
+	if (reef_art == 6) return mix(vec3(0.04, 0.06, 0.13), water * 0.25, 0.25);
 	return mix(vec3(0.07, 0.07, 0.09), water * 0.2, 0.3);
 }
 
@@ -299,14 +337,16 @@ vec3 art_beyond(vec3 water) {
 
 // A pale rim catching the light along the walls' tops (look 3): where a steep wall turns over into a top.
 float art_rim(vec3 local, vec3 n, float hw) {
-	if (reef_art != 3) return 0.0;
+	if (reef_art != 3 && reef_art != 6) return 0.0;
 	float top = smoothstep(0.45, 0.7, n.y) * (1.0 - smoothstep(0.75, 0.95, n.y)) * step(0.3, local.y);
-	return top * 0.5;
+	return top * (reef_art == 6 ? 0.3 : 0.5);
 }
 
 // Light in bands (looks 1–3): soft-edged steps, as a painter states light and shade, not a smooth photographic ramp.
 float art_light(float ndl) {
 	if (reef_art <= 0) return ndl;
+	// Two tones, the step between them soft.
+	if (reef_art == 6) return mix(0.55, 1.0, smoothstep(0.15, 0.3, ndl));
 	if (reef_art >= 4) return 0.85;
 	if (reef_art == 3) return mix(0.3, 1.0, smoothstep(0.18, 0.3, ndl));
 	float b = 0.22 + 0.4 * smoothstep(0.1, 0.22, ndl) + 0.38 * smoothstep(0.5, 0.62, ndl);
@@ -316,6 +356,8 @@ float art_light(float ndl) {
 // The caustics, painted: fewer, softer dapples (none in the flat look).
 float art_caustic(float caustic) {
 	if (reef_art <= 0) return caustic;
+	// A few crisp flat patches of sun, as a highlighter lays them.
+	if (reef_art == 6) return smoothstep(0.5, 0.56, caustic) * 0.45;
 	if (reef_art >= 3) return 0.0;
 	return smoothstep(0.25, 0.6, caustic) * 0.35;
 }

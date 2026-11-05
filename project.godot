@@ -40,7 +40,7 @@ anti_aliasing/quality/screen_space_aa=1
 
 reef_art={
 "type": "int",
-"value": 0
+"value": 6
 }
 
 her_body={

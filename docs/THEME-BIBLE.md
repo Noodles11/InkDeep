@@ -209,7 +209,7 @@ The comic onomatopoeia is retired. Bosses are met in an anime cut-in (“CLEMENT
 
 ### 6.9 Post stack (fixed, restated)
 
-Marine snow between camera and level · faint refraction wobble · vignette deepening with depth · a dark violet low-health veil closing in from the edges, radially blurred (DESIGN-TOPDOWN §2.5) · chromatic aberration on hurt only · cool grade · depth-focus blur. God rays rake across the view, never into the lens. Caustics on upward faces, fading with depth.
+The picture is a minimal illustration drawn in digital felt tip and highlighter (docs/ART-LOOKS.md, look 6): the reef held back in flat marker tones and wide layers so the creatures carry it, a wavering navy felt-tip line round every silhouette (fluorescent on a cave's dark), vivid colour where life is, lights laid like a highlighter, a paper's grain over all. Marine snow between camera and level · faint refraction wobble · vignette deepening with depth · a dark violet low-health veil closing in from the edges, radially blurred (DESIGN-TOPDOWN §2.5) · chromatic aberration on hurt only · cool grade · depth told by flat layers of water, not a lens's blur. God rays rake across the view, never into the lens. The sun's dapples as a few crisp flat patches on upward faces, fading with depth. Clementine, her light's shots, the particles and the shimmer of hot water keep their own look over the drawing.
 
 ## 7. The seven depths as themed acts
 

@@ -174,6 +174,41 @@ float view_depth(vec2 at, mat4 inv_projection) {
 	return -v.z / v.w;
 }
 
+// Felt tip and highlighter (look 6, docs/ART-LOOKS.md): the picture as a minimal illustration. What is drawn before
+// this pass (the reef, the creatures, the bosses, the kelp) is filled in a few flat marker tones and inked with a felt
+// tip's wavering line wherever its depth breaks (a silhouette against what lies behind it); her glow and her bubbles'
+// light are laid like a highlighter, vivid and flat-edged; the whole sheet has a paper's grain. What is drawn after it
+// (Clementine, her light's shots, the particles, the shimmer of hot water) keeps its own look.
+
+// The marker's fill: the light stepped into a few flat tones (in perceived brightness, the step between them soft), its
+// colour lifted by sat (the creatures at her plane vivid, the reef round them held back).
+vec3 art_marker_fill(vec3 c, float sat) {
+	float l = max(dot(c, vec3(0.299, 0.587, 0.114)), 1e-4);
+	float x = sqrt(l) * 4.0;
+	float q = (floor(x) + smoothstep(0.65, 1.0, fract(x))) / 4.0;
+	q = max(q * q, l * 0.55);
+	vec3 o = c * (q / l);
+	float lo = dot(o, vec3(0.299, 0.587, 0.114));
+	return max(mix(vec3(lo), o, sat), vec3(0.0));
+}
+
+// The felt tip's line: how much ink lies here, where the depth breaks between this pixel and its neighbours (a
+// silhouette): a step of a third of a metre or more (the camera hangs some 30 m off, so a slope's own gentle change
+// never draws one). The line runs along both sides of the break, round the whole shape, its width wavering as a
+// hand-held tip's does.
+float art_outline(vec2 uv, vec2 frag, mat4 inv_projection, vec2 viewport) {
+	float wob = value_noise(frag * 0.045) * 0.7 + value_noise(frag * 0.011 + 5.0) * 0.3;
+	vec2 px = (0.8 + 1.1 * wob) / viewport;
+	float zc = view_depth(uv, inv_projection);
+	float step_m = 0.0;
+	for (int k = 0; k < 8; k++) {
+		float a = float(k) * 0.785398;
+		float zk = view_depth(uv + vec2(cos(a), sin(a)) * px, inv_projection);
+		step_m = max(step_m, abs(zk - zc));
+	}
+	return smoothstep(0.2, 0.45, step_m) * (0.82 + 0.18 * value_noise(frag * 0.3));
+}
+
 void fragment() {
 	vec2 uv = SCREEN_UV;
 	float depth = texture(depth_tex, uv).r;
@@ -312,6 +347,18 @@ void fragment() {
 		}
 	}
 
+	// Felt tip and highlighter (look 6): the marker's flat tones, and the felt tip's line round every silhouette. Laid on
+	// before the water, so what lies deep has its line softened by the water over it, as all else there.
+	if (reef_art == 6 && !open_deep) {
+		float reef = max(smoothstep(0.9, 2.2, below), smoothstep(0.6, 2.0, above));
+		col = art_marker_fill(col, mix(1.25, 0.85, reef));
+		// The boldest line on what is at her plane (the creatures, the bosses); the floor's own things under it lightly,
+		// so the reef never takes the eye from them.
+		float line = art_outline(uv, FRAGCOORD.xy, INV_PROJECTION_MATRIX, VIEWPORT_SIZE) * mix(1.0, 0.3, smoothstep(0.9, 2.2, below));
+		// Navy ink on the lit page; in a cave's dark a fluorescent line instead, as a highlighter on black paper.
+		col = mix(col, mix(vec3(0.025, 0.035, 0.085), vec3(0.12, 0.55, 0.7), reef_dark), line * mix(0.9, 0.45, reef_dark));
+	}
+
 	// How much water this pixel is seen through (the painted looks: as deep as it lies).
 	bool one_reef = (reef_art == 0 || reef_art == 5) && !open_deep;
 	float seen = !floor_fog ? 0.0 : one_reef ? mix(reef_water, below, smoothstep(far_water, far_water + 6.0, below)) : layered;
@@ -367,7 +414,15 @@ void fragment() {
 		// Only where her light reaches: the reef's walls and rises keep it from what lies behind them.
 		float pool = exp(-pow(d / (her_glow.w * 0.55), 2.0)) * k * her_sight(world);
 		vec3 warm = her_warm;
-		col = mix(col, col * warm * 1.15 + warm * 0.06, pool * 0.65);
+		if (reef_art == 6) {
+			// A highlighter's wash: flat to its edge, the edge a little ragged, the colour vivid.
+			float r = d / (her_glow.w * 0.6) + (value_noise(world.xz * 1.3) - 0.5) * 0.12;
+			pool = (1.0 - smoothstep(0.78, 0.9, r)) * k * her_sight(world);
+			float wl = max(dot(warm, vec3(0.299, 0.587, 0.114)), 0.05);
+			warm = mix(vec3(wl), warm, 1.35) / wl * 0.7;
+			col = mix(col, col * warm * 1.3 + warm * 0.06, pool * 0.38);
+		}
+		else col = mix(col, col * warm * 1.15 + warm * 0.06, pool * 0.65);
 		float shadow = (1.0 - smoothstep(0.1, 0.62, d)) * k * (1.0 - smoothstep(2.0, 5.0, gap));
 		col *= 1.0 - 0.6 * shadow;
 	}
@@ -398,7 +453,8 @@ void fragment() {
 	// glow round her.
 	vec3 on_layer = cam + ray * ((player_pos.y - cam.y) / min(ray.y, -1e-3));
 	float ign = fract(52.9829189 * fract(dot(FRAGCOORD.xy, vec2(0.06711056, 0.00583715))));
-	col += her_warm * her_inscatter(cam, ray, t0, open_deep ? t0 + 120.0 : t1, ign);
+	float glow_boost = reef_art == 6 ? 1.35 : 1.0;
+	col += her_warm * her_inscatter(cam, ray, t0, open_deep ? t0 + 120.0 : t1, ign) * glow_boost;
 	// Her light: a faint glow in the water all round her, and where it falls on the reef a warm lift of what is there
 	// (its own colour brightened, not a haze laid over it), fading as a lamp's light does.
 	col += her_warm * her_water(cam, ray, t0, open_deep ? t0 + 120.0 : t1, ign) * 0.15;
@@ -414,7 +470,7 @@ void fragment() {
 		vec2 ob = on_layer.xz - b.xy;
 		bubbles += exp(-dot(ob, ob) / (b.z * b.z)) * b.w;
 	}
-	col += bubble_color * bubbles * halo_strength * (0.35 + 0.65 * fog) * (1.0 - smoothstep(0.0, 4.0, above)) * (0.6 + 0.8 * reef_menace);
+	col += bubble_color * bubbles * halo_strength * glow_boost * glow_boost * (0.35 + 0.65 * fog) * (1.0 - smoothstep(0.0, 4.0, above)) * (0.6 + 0.8 * reef_menace);
 	// The clam rooms' light, each in its pearl's colour: lifting what lies in them toward it, and a haze of it in the
 	// water over them, so a room shows from afar what it holds.
 	vec3 clam = vec3(0.0);
@@ -446,10 +502,17 @@ void fragment() {
 		col += vec3(0.2, 0.25, 0.4) * edge * 0.22 * reef_dark * (1.0 - lit);
 	}
 
-	// Vignette, oval to the screen, tinted by the deep water; heavier as the depths darken.
+	// The sheet's paper (look 6): a fine tooth, and the faint unevenness of a wash dried on it.
+	if (reef_art == 6) {
+		float tooth = hash12(floor(FRAGCOORD.xy * 0.5));
+		float wash = value_noise(FRAGCOORD.xy * 0.006) * 0.6 + value_noise(FRAGCOORD.xy * 0.02 + 9.0) * 0.4;
+		col *= 0.955 + 0.05 * tooth + 0.06 * (wash - 0.5);
+	}
+	// Vignette, oval to the screen, tinted by the deep water; heavier as the depths darken (and for the drawn look's
+	// contrast).
 	vec2 d = (uv - 0.5) * vec2(VIEWPORT_SIZE.x / VIEWPORT_SIZE.y, 1.0);
 	float v = smoothstep(0.32, 1.05, length(d) * 1.3);
-	col = mix(col, reef_murk * 0.25, v * reef_vignette);
+	col = mix(col, reef_murk * 0.25, v * reef_vignette * (reef_art == 6 ? 1.3 : 1.0));
 	// A big-merge kill lifts the screen's edges toward white for an instant (never its middle).
 	col = mix(col, vec3(1.0, 0.97, 0.9), edge_flash * 0.55 * smoothstep(0.45, 1.15, length(d) * 1.3));
 
@@ -465,5 +528,6 @@ void fragment() {
 		float g = dot(textureLod(screen_tex, uv, 0.0).rgb, vec3(0.3, 0.6, 0.1));
 		col = vec3(g * 0.35) + vec3(0.9, 0.8, 0.1) * sun_lit(world) * 0.35 + vec3(1.0, 0.35, 0.0) * her_vis(world) * smoothstep(her_light_at.w, her_light_at.w * 0.8, distance(world, her_light_at.xyz)) * 0.6;
 	}
+	if (debug_view == 7) col = vec3(art_outline(uv, FRAGCOORD.xy, INV_PROJECTION_MATRIX, VIEWPORT_SIZE)) * (reef_art == 6 ? vec3(1.0, 0.2, 0.2) : vec3(0.2, 1.0, 0.2));
 	ALBEDO = max(col, vec3(0.0));
 }

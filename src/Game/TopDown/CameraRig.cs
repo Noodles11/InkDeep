@@ -203,6 +203,8 @@ public partial class CameraRig : Node3D
         // The depth focus: the swim level sharp, the deeps blurred into fog, high rock blurred into silhouette (Below's look).
         _post = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/topdown_post.gdshader"), RenderPriority = -100 };
         if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--dbg-lightview") >= 0) _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("debug_view"), 1);
+        // (--dbg-inkview: the felt tip's lines alone, white on black.)
+        if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--dbg-inkview") >= 0) _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("debug_view"), 7);
         Camera.AddChild(new MeshInstance3D
         {
             Mesh = new QuadMesh { Size = new Vector2(2f, 2f) },
