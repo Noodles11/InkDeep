@@ -290,8 +290,8 @@ it `PlaneHeart`. She takes one only when corrupted at all; otherwise it waits.
   already worn down bursts. The dash shows as a small light burst, not an ink cloud.
 - **Killed by light:** its corruption meter is 36 × (1 + 1.2 × Menace), so four default shots in a row burst it in
   the Shallows. Nothing regrows it (only a leak heals).8 s without a hit, and one strong (merged) shot empties it at once. Each shot bursts on it, and
-  a piercing one flies on. Passing through a throw halves a shot's light. A murkling burst over cleansed ground drops
-  its ember, which blooms a 2.6 m patch of colour.
+  a piercing one flies on. Passing through a throw halves a shot's light. A murkling burst leaves one shell, and over
+  cleansed ground it drops its ember, which blooms a 2.6 m patch of colour.
 
 ## Murkling primes (`Murkling.Prime`)
 
@@ -345,7 +345,7 @@ The reef's fish (DESIGN-TOPDOWN, Reef fish) are what the murklings corrupt.
   healthy school swims on, fleeing them.
 - **Freed:** emptied, its ink cracks off in flakes with a little burst of its own colour and a chime, and it is its fish
   again, where it was, and it swims off away from her at an easy pace and is gone (once 22 m from her, or after 40 s
-  wherever it is), never to be turned again. Freed fish drop nothing.
+  wherever it is), never to be turned again. It leaves one shell where it was freed.
 
 ## Corruption meters (`CorruptionMeter`)
 

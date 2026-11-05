@@ -1090,9 +1090,10 @@ public sealed partial class PlaneWorld
         m.Draw = null;
         if (m.Lesser)
         {
-            // A lesser one is a fish again.
+            // A lesser one is a fish again, and leaves a shell.
             Events.Add(new PlaneEvent(PlaneEventType.MurklingBurst, m.Position, Vector2.Zero, 0f));
             FreeFish(m);
+            Shells.Add(new PlaneShell { Position = m.Position, Velocity = Fling(2f, 4f) });
             if (damage > 0f) Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, m.Position, Vector2.Zero, damage));
             return;
         }
@@ -1131,6 +1132,8 @@ public sealed partial class PlaneWorld
             return;
         }
         Corruption?.Release(matter);
+        // Every freed murkling leaves a shell (a prime its handful, above).
+        Shells.Add(new PlaneShell { Position = m.Position, Velocity = Fling(2f, 4f) });
         bool blooms = ember && Corruption is { } field && field.At(m.Position) < CorruptionTuning.Clean;
         if (blooms) Corruption!.Cleanse(m.Position, CorruptionTuning.EmberRadius, 1f);
         Events.Add(new PlaneEvent(PlaneEventType.MurklingBurst, m.Position, Vector2.Zero, blooms ? CorruptionTuning.EmberRadius : 0f));

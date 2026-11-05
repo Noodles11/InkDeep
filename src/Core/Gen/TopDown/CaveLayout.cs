@@ -98,6 +98,12 @@ public sealed class CaveLayout
 
     public readonly List<Chamber> Chambers = new();
     public readonly List<Tunnel> Tunnels = new();
+    /// <summary>
+    /// An open-sea map (a hand-drawn one with mountains, HandLayout.Mountains): the water is everywhere but in its
+    /// mountains, rough-edged masses of reef rising out of the sea; its chambers and tunnels still carve through them
+    /// (a tunnel through a mountain, a cave's mouth in its side).
+    /// </summary>
+    public readonly List<Chamber> Mountains = new();
     public readonly List<Place> Places = new();
     public Chamber Start = null!, Exit = null!;
     /// <summary>Open water joined to the start, on the grid points (index y·Samples + x).</summary>
@@ -182,6 +188,7 @@ public sealed class CaveLayout
         }
         foreach (var place in hand.Places)
             g.Places.Add(new Place { Kind = place.Kind, At = new Vector2(place.X, place.Y), Radius = place.R });
+        foreach (var m in hand.Mountains) g.Mountains.Add(MakeChamber(rng, new Vector2(m.X, m.Y), m.R, Role.Main));
         g.Rasterise(seed);
         g.PathToExit = g.Geodesic(g.Start.At)[g.Index(g.Exit.At)];
         if (!float.IsFinite(g.PathToExit)) return (null, "the exit cannot be reached from the start");
@@ -468,6 +475,26 @@ public sealed class CaveLayout
                     if (along < 1.6f) core[i] = true;
                 }
             }
+        }
+        // An open-sea map: open wherever it is outside every mountain, or carved (a chamber, a tunnel).
+        if (Mountains.Count > 0)
+        {
+            var rock = new float[N * N];
+            Array.Fill(rock, 1e9f);
+            foreach (var m in Mountains)
+            {
+                float reach = m.R * 1.6f + 2f;
+                for (int y = Math.Max(0, (int)MathF.Floor(m.At.Y - reach)); y <= Math.Min(N - 1, (int)MathF.Ceiling(m.At.Y + reach)); y++)
+                for (int x = Math.Max(0, (int)MathF.Floor(m.At.X - reach)); x <= Math.Min(N - 1, (int)MathF.Ceiling(m.At.X + reach)); x++)
+                {
+                    float ang = MathF.Atan2(y - m.At.Y, x - m.At.X), k = 1f;
+                    foreach (var (hk, ha, hp) in m.Harm) k += ha * MathF.Cos(hk * ang + hp);
+                    float d = Vector2.Distance(new Vector2(x, y), m.At) - m.R * k;
+                    int i = y * N + x;
+                    if (d < rock[i]) rock[i] = d;
+                }
+            }
+            for (int i = 0; i < N * N; i++) sdf[i] = MathF.Min(sdf[i], -rock[i]);
         }
         var open = new bool[N * N];
         for (int y = 0; y < N; y++)

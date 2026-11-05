@@ -270,6 +270,35 @@ public class OpenReefTests
     }
 
     [Fact]
+    public void TheReefIsMostlyOpenSea_ItsRockInMountains_EveryMouthInAMountainsSide()
+    {
+        var map = Region.Value;
+        int open = 0, all = 0;
+        for (float y = 1f; y < map.Size; y += 2f)
+        for (float x = 1f; x < map.Size; x += 2f)
+        {
+            all++;
+            if (map.IsOpen(new Vector2(x, y))) open++;
+        }
+        float share = open / (float)all;
+        Assert.InRange(share, 0.62f, 0.78f);
+        // A dump of the chart for looking at (OCTO_DUMP_REEF=path writes it as a greyscale PGM, rock light).
+        if (Environment.GetEnvironmentVariable("OCTO_DUMP_REEF") is { Length: > 0 } dump)
+        {
+            int n = map.Size / 2;
+            using var f = File.Create(dump);
+            var head = System.Text.Encoding.ASCII.GetBytes($"P5 {n} {n} 255 ");
+            f.Write(head);
+            for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                var at = new Vector2(x * 2 + 1, y * 2 + 1);
+                f.WriteByte(map.IsOpen(at) ? (byte)(map.InHaven(at) ? 90 : 30) : (byte)(140 + Math.Clamp((int)(map.HeightAt(at) * 8f), 0, 115)));
+            }
+        }
+    }
+
+    [Fact]
     public void TheReefHoldsFourZones_TheirLevelsRisingAwayFromTheBay_AndEveryZoneHasCavesOfEveryDanger()
     {
         var hand = Shallows.Value;

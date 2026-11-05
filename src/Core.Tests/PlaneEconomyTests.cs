@@ -80,10 +80,10 @@ public class PlaneEconomyTests
     }
 
     [Fact]
-    public void FreedMobsDropAHeartShellsOrNothing()
+    public void EveryFreedMobDropsOneShell_SometimesAHeartToo()
     {
-        // Free every mob of several levels: each leaves a heart, one or two shells, or nothing, in about the tuned shares.
-        int mobs = 0, hearts = 0, shellDrops = 0, nothing = 0;
+        // Free every mob of several levels: each leaves exactly one shell, and now and then a heart beside it.
+        int mobs = 0, hearts = 0;
         foreach (var id in TestLevels.All(p => !p.HasBoss).Take(6))
         {
             var w = new PlaneWorld(TestLevels.Get(id), new Tuning(), new PlaneRun(Catalog.Value, new Tuning()));
@@ -95,18 +95,12 @@ public class PlaneEconomyTests
                 w.Step(default);
                 if (mob.Alive) continue;
                 mobs++;
-                int newShells = w.Shells.Count - shellsBefore, newHearts = w.Hearts.Count - heartsBefore;
-                Assert.True(newHearts == 0 || newShells == 0, "a heart or shells, never both");
-                Assert.InRange(newShells, 0, 2);
-                if (newHearts > 0) hearts++;
-                else if (newShells > 0) shellDrops++;
-                else nothing++;
+                Assert.Equal(1, w.Shells.Count - shellsBefore);
+                if (w.Hearts.Count > heartsBefore) hearts++;
             }
         }
         Assert.True(mobs >= 60, $"{mobs} mobs");
         Assert.InRange(hearts / (float)mobs, 0f, 0.16f);
-        Assert.InRange(shellDrops / (float)mobs, 0.15f, 0.45f);
-        Assert.True(nothing > shellDrops, $"{nothing} empty, {shellDrops} shells, {hearts} hearts");
     }
 
     [Fact]

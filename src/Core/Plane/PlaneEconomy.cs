@@ -15,11 +15,8 @@ public static class PlaneEconomyTuning
     public const float RichCaches = 1.5f;
     /// <summary>Remora Sucker: shells drift to her from this far instead.</summary>
     public const float RemoraMagnet = 7.5f;
-    /// <summary>
-    /// What a freed mob leaves, one roll each: a heart (HeartChance), else shells (ShellChance: one, or two at
-    /// TwoShells of those), else nothing. About one heart and six shells a level from mobs.
-    /// </summary>
-    public const float HeartChance = 0.06f, ShellChance = 0.3f, TwoShells = 0.25f;
+    /// <summary>What a freed mob leaves: always one shell, and a heart HeartChance of the time.</summary>
+    public const float HeartChance = 0.06f;
     /// <summary>
     /// A light orb (the sim still calls it a heart): a bubble of her light that washes some of her corruption away
     /// (12, of 100 at the start). She takes it only when corrupted at all; otherwise it waits.
@@ -161,15 +158,9 @@ public sealed partial class PlaneWorld
         // Lucky Sea Glass: each point of luck is one more shell from every freed foe.
         int lucky = (int)MathF.Round(Run.Loadout.Stats.Luck);
         for (int i = 0; i < lucky; i++) Shells.Add(new PlaneShell { Position = at, Velocity = Fling(2f, 4f) });
-        float roll = _drops.NextFloat();
-        if (roll < PlaneEconomyTuning.HeartChance)
-        {
-            Hearts.Add(new PlaneHeart { Position = at, Velocity = Fling(1.5f, 2.5f) });
-            return;
-        }
-        if (roll >= PlaneEconomyTuning.HeartChance + PlaneEconomyTuning.ShellChance) return;
-        int count = _drops.NextFloat() < PlaneEconomyTuning.TwoShells ? 2 : 1;
-        for (int i = 0; i < count; i++) Shells.Add(new PlaneShell { Position = at, Velocity = Fling(2f, 4f) });
+        // Every freed mob leaves one shell, and now and then a heart too.
+        Shells.Add(new PlaneShell { Position = at, Velocity = Fling(2f, 4f) });
+        if (_drops.NextFloat() < PlaneEconomyTuning.HeartChance) Hearts.Add(new PlaneHeart { Position = at, Velocity = Fling(1.5f, 2.5f) });
     }
 
     /// <summary>A drop flung a little way in a random direction.</summary>

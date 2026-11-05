@@ -42,8 +42,16 @@ their own below the shelf.
   | Sunken Galleon | SE | Galleon | 0.35 | 7 |
   | Coral Carnival | NE | Carnival | 0.5 | 10 |
 
-- **Passes.** Each zone meets its neighbours through one or two passes, narrow gorges between its last chambers and
-  the next zone's first. The Carnival can be reached only through the Kelp Jungle or the Galleon. A zone's chambers
+- **Open sea and mountains** (`HandLayout.Mountains`, `CaveLayout.Mountains`). About 70% of the map is open water.
+  The rock stands in mountains: rough-edged masses of reef, each a disc with its outline broken by harmonics and
+  crags. The map's chambers and tunnels still carve through them, so a tunnel can run through a mountain.
+  - **The bay's massif** shelters Lantern Bay's corner; the bay's chambers are carved in it.
+  - **Ridges** run along the zones' borders (x = 420 m and y = 420 m), a mountain every 28 m.
+  - **Mouths in mountains:** every cave mouth has a mountain at its back, the opening in the mountain's side.
+  - **Scattered mountains** fill the open sea's widest gaps.
+  - `OpenReefTests` holds the open share between 62% and 78% (`OCTO_DUMP_REEF` writes the chart as a PGM).
+- **Passes.** Each zone meets its neighbours through one or two passes, tunnels through the ridge between its last
+  chambers and the next zone's first. The Carnival can be reached only through the Kelp Jungle or the Galleon. A zone's chambers
   are drawn in its own terms:
   - **Kelp Jungle:** many small chambers, with kelp beds thick in every one.
   - **Sunken Galleon:** wide open flats strewn with rubble, broken by long ridges.

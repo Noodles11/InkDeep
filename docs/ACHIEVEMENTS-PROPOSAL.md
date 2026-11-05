@@ -215,9 +215,8 @@ achievement.
   Big Bubble Energy, as planned.
 - **Big Bubble Energy needs Bubble Coral.** Bubbles merge only with that pearl now, so a full bubble needs it. Bubble
   Coral is in the basic set, so the achievement stays reachable.
-- **Hermit Hoarder is not reachable yet (open).** Since this was written, freed foes drop shells only 30% of the
-  time. A fully cleared level yields about 25–40 shells; with Lucky Sea Glass (+2 a foe) about 53–90 (measured over
-  14 levels of Depths 1–3). The threshold stays at 100 as decided, pending a new number.
+- **Hermit Hoarder's threshold (open).** Every freed foe drops one shell (primes 4–6). The threshold stays at 100
+  as decided, pending a measurement of a cleared level's yield.
 - **The banner** is drawn in one control rather than built of nodes: the title's per-letter drop is drawn letter by
   letter instead of a `RichTextEffect`, and the card is 800 px wide (not 760) so the pearl's lines fit the stub.
   Banners keep running during the dive (there is no rift splash any more); they wait while paused and under the

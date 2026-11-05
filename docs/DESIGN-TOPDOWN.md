@@ -1514,9 +1514,9 @@ at mist distance (inherited fade rule).
     while before fading, and a puff of silt rises. It leaves **2–3 shells** (50%), **a heart** (20%) or nothing.
 - **Shells (the currency, first pass, `PlaneEconomy.cs`):** small shells lie in caches at the shell cache (6–9),
   and secret rooms (8–12; one secret room in ten holds a pearl in its middle instead, one she lacks or another copy
-  of a non-unique one, from its own roll); they drift to her from 2.5 m. A freed mob leaves a **heart** (6%: it heals 20 HP; she
-  takes it only when hurt, otherwise it waits where it fell, a small red heart), else **shells** (30%: one, or two
-  a quarter of the time), else nothing — about one heart and six shells a level from mobs. The shop
+  of a non-unique one, from its own roll); they drift to her from 2.5 m. A freed mob (and every freed murkling, lesser or
+  not) leaves **one shell**, and 6% of the time a **heart** beside it (it heals 20 HP; she takes it only when hurt,
+  otherwise it waits where it fell, a small red heart). The shop
   has three stand slots: a pearl she does not have on half the visits (100 shells), always her gonad emblem in gold (a health top-up:
   +25 HP, 15 shells, only when hurt), and a third slot kept empty for wares to come. The
   goods float on their own (pearls as in a clam room, the top-up as a red heart), each with a small price tag on a

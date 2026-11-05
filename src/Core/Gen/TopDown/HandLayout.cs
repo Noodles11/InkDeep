@@ -29,6 +29,12 @@ public sealed class HandLayout
     public bool Station { get; set; }
     public List<HandChamber> Chambers { get; set; } = new();
     public List<HandTunnel> Tunnels { get; set; } = new();
+    /// <summary>
+    /// An open-sea map's mountains (docs/REEF-WORLD.md §1): masses of reef rock at (X, Y), R metres across their middle,
+    /// rough-edged; everywhere else is open water but the rim. Its chambers and tunnels carve through them. None: the
+    /// map is rock but its chambers and tunnels.
+    /// </summary>
+    public List<HandChamber> Mountains { get; set; } = new();
     /// <summary>Places in caves (the shop): each off a chamber, its tunnel ending at the cave's mouth.</summary>
     public List<HandRoom> Rooms { get; set; } = new();
     /// <summary>Open places: clearings in the water.</summary>
