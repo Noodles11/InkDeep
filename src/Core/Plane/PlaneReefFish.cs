@@ -41,12 +41,6 @@ public static class ReefFishTuning
     public const float Room = 1.5f, DashRoom = 4f;
     /// <summary>None live this close to the level's start, so the opening stays calm.</summary>
     public const float StartClear = 20f;
-    /// <summary>The reef's zones (docs/REEF-WORLD.md §4): so many times a level's fish over its whole map.</summary>
-    public const float ZoneFishMore = 6f;
-
-    /// <summary>The share of the places fish may live in that they do, in a reef zone of this look: the Galleon few, the Carnival's hiding.</summary>
-    public static float ZoneLife(int look) => look switch { <= 1 => 1f, 2 => 0.8f, 3 => 0.4f, _ => 0.25f };
-
     /// <summary>
     /// How many live on a level of this depth (THEME-BIBLE §7: the reef empties as she dives): plenty in the Shallows
     /// and Depth 1, thinning to a lone school and a tang by Depth 5, none in Depth 6 (internal depth = shown + 1).
@@ -177,14 +171,11 @@ public sealed partial class PlaneWorld
             n.SizeMax = AdventureTuning.SchoolMax;
             more *= AdventureTuning.FishMore * AdventureTuning.Rate(AdventureTuning.BaseHome, LifeDepth);
         }
-        // The reef's zones: so many more for its area, each zone keeping its share (the deeper, the emptier: ZoneLife).
-        if (Map.Zones.Count > 0) more *= ReefFishTuning.ZoneFishMore;
         int More(int count) => (int)MathF.Round(count * more);
         int ids = 0;
         var exit = Map.Exit;
         bool Allowed(Vector2 q) => Vector2.Distance(q, Map.Start.Position) >= ReefFishTuning.StartClear
-            && Vector2.Distance(q, exit.Position) >= exit.Radius + 4f
-            && (Map.ZoneAt(q) is not (var z and >= 0) || ReefFishTuning.ZoneLife(Map.Zones[z].Look) > Hash01(q));
+            && Vector2.Distance(q, exit.Position) >= exit.Radius + 4f;
 
         var anchors = Map.Plazas.Select(z => z.Center).Concat(Map.Spawns.Where(s => s.Role != SpawnRole.Ambush).Select(s => s.Position)).ToList();
         var channel = new List<Vector2>();
@@ -293,7 +284,7 @@ public sealed partial class PlaneWorld
     void StepReefFish()
     {
         foreach (var s in Schools)
-            if (!Asleep(s.Position)) StepSchool(s);
+            StepSchool(s);
         foreach (var f in ReefFish)
         {
             if (f.Corrupted || f.Gone) continue;
@@ -312,7 +303,6 @@ public sealed partial class PlaneWorld
                 continue;
             }
             // A chromis lives with its school (asleep with it).
-            if (Asleep(f.Kind == ReefFishKind.Chromis ? Schools[f.Host].Position : f.Position)) continue;
             switch (f.Kind)
             {
                 case ReefFishKind.Clownfish: StepClownfish(f); break;

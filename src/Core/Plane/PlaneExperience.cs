@@ -85,7 +85,7 @@ public sealed partial class PlaneWorld
     }
 
     /// <summary>The first level of a run: her first level-up waits for the next one, however much she does here.</summary>
-    public bool OpeningLevel => !Options.Reef && Map.Cycle == 1 && Map.Level == 1 && Map.Depth <= Gen.TopDown.LevelId.FirstRun.Depth;
+    public bool OpeningLevel => Map.Cycle == 1 && Map.Level == 1 && Map.Depth <= Gen.TopDown.LevelId.FirstRun.Depth;
 
     void PlaceExperience() => _cleanseMarks = Corruption is { } field ? Marks(field.Cleansed) : 0;
 
@@ -95,7 +95,7 @@ public sealed partial class PlaneWorld
     void StepExperience()
     {
         int gained = 0;
-        if (!Options.Reef && Corruption is { } field)
+        if (Corruption is { } field)
         {
             int marks = Marks(field.Cleansed);
             if (marks > _cleanseMarks)
@@ -109,12 +109,7 @@ public sealed partial class PlaneWorld
         _givenXp = 0;
         foreach (var e in Events)
         {
-            // On the open reef only a sealed leak counts, for its cave's level.
-            if (Options.Reef)
-            {
-                if (e.Type == PlaneEventType.LeakSealed) gained += ReefTuning.LeakXp(Map.CaveLevel) * Math.Max(Map.Floors, 1);
-            }
-            else if (e.Type == PlaneEventType.FishFreed) gained += ExperienceTuning.FishXp;
+            if (e.Type == PlaneEventType.FishFreed) gained += ExperienceTuning.FishXp;
             else if (e.Type == PlaneEventType.LeakSealed) gained += AdventureTuning.LeakXp;
             else if (e.Type == PlaneEventType.BossFreed) gained += ExperienceTuning.BossXp;
             if (e.Type == PlaneEventType.PlayerHit) hurt = true;

@@ -96,7 +96,7 @@ public static class TopDownGenerator
     /// of it still swimming the way she went (in by a mouth on the right, out of the cave's left wall). Null: a wall
     /// facing the camera.
     /// </param>
-    /// <param name="floor">Which of its floors (from 1), and how many it has (docs/REEF-WORLD.md §3): only its first
+    /// <param name="floor">Which of its floors (from 1), and how many it has (docs/DIVE.md §6): only its first
     /// floor has a way in; she comes down into a deeper one from the hole above.</param>
     /// <param name="boss">A great cave: its deepest floor ends in a boss's arena round its leak (LevelPlan.ForCave).</param>
     public static LevelMap GenerateCave(SeedCode seed, LevelId id, float menace, int level, Vector2? into = null, int floor = 1, int floors = 1, bool boss = false, float areaScale = 1f)
@@ -328,9 +328,8 @@ public static class TopDownGenerator
         Rng Stage(string name) => streams.TopDown(hand.Id, 0, name);
         var map = new LevelMap(hand.Size)
         {
-            Seed = seed.Value, Id = id, Menace = hand.Menace, Title = hand.Title, Station = true, CurrentStation = hand.Station, LookDepth = hand.Look,
+            Seed = seed.Value, Id = id, Menace = hand.Menace, Title = hand.Title, Station = true, LookDepth = hand.Look,
             Haven = hand.Haven is { } h ? (new Vector2(h.X0, h.Y0), new Vector2(h.X1, h.Y1)) : null,
-            Zones = hand.Zones.Select(z => new ReefZone(z.Name, z.Title, z.Look, new Vector2(z.Box.X0, z.Box.Y0), new Vector2(z.Box.X1, z.Box.Y1), z.Menace, z.Level)).ToList(),
         };
         Array.Fill(map.Heights, -PathDepth);
         uint noiseSeed = (uint)(Stage("noise").NextU64() >> 32);
@@ -370,23 +369,6 @@ public static class TopDownGenerator
                     bed.Lengths.RemoveAt(k);
                 }
         map.Kelp.RemoveAll(bed => bed.Roots.Count < KelpLeast);
-        // Its cave mouths: openings cut in the wall nearest each drawn point (one facing the camera if it can be; where
-        // the walls by the point have no room, those a few metres round it).
-        foreach (var m in hand.Mouths)
-        {
-            Doorway? door = null;
-            var at = new Vector2(m.X, m.Y);
-            var froms = new List<Vector2> { at };
-            for (int k = 0; k < 8; k++) froms.Add(at + new Vector2(MathF.Cos(k * MathF.Tau / 8f), MathF.Sin(k * MathF.Tau / 8f)) * 7f);
-            foreach (float facing in DoorFacings)
-            {
-                foreach (var from in froms.Where(map.IsOpen))
-                    if ((door = CutDoorway(map, from, DoorReach, CameraWard, facing)) is not null) break;
-                if (door is not null) break;
-            }
-            map.Mouths.Add(door ?? throw new InvalidOperationException($"The map {hand.Name} cannot be built: no wall near its {m.Name} mouth has room for an opening"));
-        }
-        Done("mouths");
         // The mirror's pool and the Tide Fan's rock stand on bare floor: nothing grows or stands over them.
         if (hand.Mirror is { } mirror)
         {
@@ -1990,30 +1972,10 @@ public static class TopDownGenerator
     static void PlaceKelp(LevelMap map, Rng rng)
     {
         float rim = LevelMap.RimWidth + 4f;
-        if (map.Zones.Count == 0)
-        {
-            int beds = map.Id.Depth == 2 ? KelpDepthMin + rng.Int(KelpDepthMax - KelpDepthMin + 1) : KelpBedsMin + rng.Int(KelpBedsMax - KelpBedsMin + 1);
-            var rock = Chamfer(map.Samples, i => map.Heights[i] > LevelMap.BlockHeight - 0.2f);
-            PlaceKelpIn(map, rng, rock, (uint)(rng.NextU64() >> 32), new Vector2(rim), new Vector2(map.Size - rim), beds, 600);
-            return;
-        }
-        var toRock = Chamfer(map.Samples, i => map.Heights[i] > LevelMap.BlockHeight - 0.2f);
-        uint seed = (uint)(rng.NextU64() >> 32);
-        // The reef's zones: as many beds as a seeded level of its biome would hold for every level's worth of its area,
-        // the Kelp Jungle thick with them and the deeper zones thinning out (KelpByLook).
-        foreach (var z in map.Zones)
-        {
-            float levels = (z.Max.X - z.Min.X) * (z.Max.Y - z.Min.Y) / (LevelMap.Seeded * LevelMap.Seeded) * KelpByLook(z.Look);
-            int per = z.Look == 2 ? KelpDepthMin + rng.Int(KelpDepthMax - KelpDepthMin + 1) : KelpBedsMin + rng.Int(KelpBedsMax - KelpBedsMin + 1);
-            var lo = Vector2.Max(z.Min, new Vector2(rim));
-            var hi = Vector2.Min(z.Max, new Vector2(map.Size - rim));
-            int want = (int)MathF.Round(per * levels);
-            PlaceKelpIn(map, rng, toRock, seed, lo, hi, map.Kelp.Count + want, 600 + 150 * want);
-        }
+        int beds = map.Id.Depth == 2 ? KelpDepthMin + rng.Int(KelpDepthMax - KelpDepthMin + 1) : KelpBedsMin + rng.Int(KelpBedsMax - KelpBedsMin + 1);
+        var rock = Chamfer(map.Samples, i => map.Heights[i] > LevelMap.BlockHeight - 0.2f);
+        PlaceKelpIn(map, rng, rock, (uint)(rng.NextU64() >> 32), new Vector2(rim), new Vector2(map.Size - rim), beds, 600);
     }
-
-    /// <summary>How much kelp a reef zone of this look holds, for its area, against a seeded level of its depth.</summary>
-    static float KelpByLook(int look) => look switch { 2 => 1.6f, 3 => 0.4f, >= 4 => 0.25f, _ => 0.8f };
 
     /// <summary>Kelp beds in the box from lo to hi, until the map holds so many (or so many places have been tried).</summary>
     static void PlaceKelpIn(LevelMap map, Rng rng, float[] toRock, uint seed, Vector2 lo, Vector2 hi, int beds, int tries)

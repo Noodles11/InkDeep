@@ -7,9 +7,8 @@ built. It follows the boss rules of docs/BOSS-GENERATOR.md §0 and the Theme Bib
 
 ## 1. The rule
 
-- **Bosses are the bay's folk.** On the reef, a boss waits only at the bottom of a great cave, and every one is a named
-  creature of the bay. A minor cave still ends in a murkling prime (docs/REEF-WORLD.md §3). Every boss added later,
-  on the second map below the shelf too, follows the same rule: a new boss is a new neighbour.
+- **Bosses are the bay's folk.** Each depth of the dive ends in its neighbour's boss fight, till she is freed (docs/DIVE.md
+  §5). A leak cave ends in its leak. Every boss added later follows the same rule: a new boss is a new neighbour.
 - **They are authored.** These bosses are written as Drippus Prime is (docs/CORRUPTION.md), not rolled: each has its
   own body, fight and cave, the same for every jelly.
 - **Once each.** Freeing one seals its great leak for good (RPG-PROPOSAL §2.3). If she dims in the fight, the boss

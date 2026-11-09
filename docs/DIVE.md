@@ -2,8 +2,9 @@
 
 The game is a dive: generated levels, one after another, deeper and deeper. Each level's hole opens when its leak is
 sealed, and swimming over it sinks her into the next level. There is no open map. Lantern Bay's folk are met in havens,
-calm levels that come now and then between the others. This replaces the open reef of docs/REEF-WORLD.md and the region
-maps of docs/RPG-PROPOSAL.md.
+calm levels that come now and then between the others. This replaces the open reef and the region maps of
+docs/RPG-PROPOSAL.md: its bay, folk, mirror, Tide Fan and leak caves live on here, as this document describes, and the
+reef's map, zones, cave mouths in regions, homeward current, charts, lost light and three active slots are gone.
 
 ## 1. Jellies and dives
 
@@ -19,7 +20,8 @@ maps of docs/RPG-PROPOSAL.md.
 ## 2. What she keeps
 
 - **Always hers:** her level, experience, skill points and skills, the folk she has freed, and what is banked.
-- **Banked:** the pearls she owns between dives (`Jelly.Passives`, `Actives`, `Slots`) and her shells (`Jelly.Shells`).
+- **Banked:** the pearls she owns between dives (`Jelly.Passives`, her active one among them: she carries one at a
+  time, as a run always has) and her shells (`Jelly.Shells`).
   A new jelly starts with the run's starting pearls.
 - **Carried:** everything found in a dive since the last haven, pearls and shells alike. Reaching a haven banks it all (§4).
 - **Dimmed** (her meter full): the dive ends. What she carried is lost, what is banked and always hers stays, and the
@@ -103,4 +105,5 @@ Each step is playable on its own:
 4. **Folk bosses** for the depths (§5) (built).
 5. **Leak caves** in place of the curse dens (§6) (built).
 6. **Requests and chains** as dive goals (§7) (built).
-7. **The open reef removed:** its map, zones, mouths, homeward current and charts.
+7. **The open reef removed** (built): its map, zones, mouths, homeward current, charts, lost light, three active slots and
+   great caves.

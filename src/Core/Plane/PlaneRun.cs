@@ -67,32 +67,12 @@ public sealed class PlaneRun
     /// <summary>A deal's price, taken.</summary>
     public void TakeCut() => ArmCuts++;
 
-    /// <summary>
-    /// The open reef (docs/RPG-PROPOSAL.md §4–5): only her levels change her stats, so her passive pearls' stat changes
-    /// are not counted (what they do still is); her active pearls are not absorbed but owned, and sit in her three slots.
-    /// </summary>
-    public bool Reef
-    {
-        get => _reef;
-        set
-        {
-            if (_reef == value) return;
-            _reef = value;
-            Rebuild();
-        }
-    }
-    bool _reef;
-
-    /// <summary>The open reef: every active pearl she owns (never lost), and which sits in each slot (null: empty).</summary>
-    public List<string> OwnedActives { get; } = new();
-    public string?[] Slots { get; } = new string?[SlotCount];
     readonly float[] _charges = { 1f, 1f, 1f };
 
     /// <summary>The active pearl in a slot: on the open reef, the slot's; on a run, the one she holds is the first slot's.</summary>
     public ItemDef? SlotActive(int slot)
     {
-        if (!Reef) return slot == 0 ? Loadout.Active : null;
-        return Slots[slot] is { } id && Catalog is not null && Catalog.TryGet(id, out var item) ? item : null;
+        return slot == 0 ? Loadout.Active : null;
     }
 
     /// <summary>How charged a slot's pearl is, 0 → 1 (ready).</summary>
@@ -109,17 +89,6 @@ public sealed class PlaneRun
         set => _charges[0] = value;
     }
 
-    /// <summary>
-    /// The open reef: the next pearl into a slot — the next she owns that sits in no other slot, then none, round again.
-    /// </summary>
-    public void CycleSlot(int slot)
-    {
-        var free = OwnedActives.Where(id => !Slots.Where((_, i) => i != slot).Contains(id)).ToList();
-        int at = Slots[slot] is { } held ? free.IndexOf(held) : -1;
-        Slots[slot] = at + 1 < free.Count ? free[at + 1] : null;
-        _charges[slot] = 1f;
-    }
-
     /// <summary>What a pearl fetches at the shell shop: an active its worth, an absorbed passive half (ReefTuning.PearlWorth).</summary>
     public int SellPrice(string itemId) =>
         Catalog is not null && Catalog.TryGet(itemId, out var item)
@@ -133,12 +102,7 @@ public sealed class PlaneRun
     public bool Sell(string itemId)
     {
         int price = SellPrice(itemId);
-        if (OwnedActives.Remove(itemId))
-        {
-            for (int i = 0; i < SlotCount; i++)
-                if (Slots[i] == itemId) Slots[i] = null;
-        }
-        else if (Items.Remove(itemId))
+        if (Items.Remove(itemId))
         {
             Rebuild();
             Hp = System.MathF.Min(Hp, MaxHp);
@@ -209,18 +173,6 @@ public sealed class PlaneRun
     public void Add(string itemId)
     {
         bool active = Catalog is not null && Catalog.TryGet(itemId, out var item) && item.Kind == ItemKind.Active;
-        // On the open reef an active pearl is owned, into the first empty slot (if any).
-        if (Reef && active)
-        {
-            if (!OwnedActives.Contains(itemId)) OwnedActives.Add(itemId);
-            int empty = System.Array.IndexOf(Slots, null);
-            if (empty >= 0 && !Slots.Contains(itemId))
-            {
-                Slots[empty] = itemId;
-                _charges[empty] = 1f;
-            }
-            return;
-        }
         // She carries one active pearl at a time: a new one takes the old one's place.
         if (active)
             Items.RemoveAll(id => Catalog!.TryGet(id, out var held) && held.Kind == ItemKind.Active);
@@ -242,7 +194,7 @@ public sealed class PlaneRun
     public void Refresh() => Rebuild();
 
     void Rebuild() => Loadout = Loadout.Build(Catalog, Items, Tuning, OctoShoots.Core.Plane.Skills.Mods(Skills, Tuning)
-        .Append(new StatMod { Stat = Stat.MaxHp, Op = StatOp.Add, Value = ExperienceTuning.HpPerPoint * Upgrades }), pearlStats: !Reef);
+        .Append(new StatMod { Stat = Stat.MaxHp, Op = StatOp.Add, Value = ExperienceTuning.HpPerPoint * Upgrades }), pearlStats: true);
 
     /// <summary>
     /// The achievements earned (the profile's, shared: one earned mid-run unlocks its pearl from then on). Locked pearls
@@ -276,7 +228,6 @@ public sealed class PlaneRun
     /// <summary>How likely a pearl is to be offered: its weight, lower for each copy of a non-unique one she holds, 0 if it may not be.</summary>
     public float OfferWeight(string itemId) =>
         !StartingPearls.Contains(itemId) && Catalog is not null && Catalog.TryGet(itemId, out var item) && ItemPools.IsUnlocked(item, Unlocked)
-        && !(Reef && (item.Kind == ItemKind.Active || OnlyStats(item)))
             ? ItemPools.WeightFor(item, Items.Count(id => id == itemId)) : 0f;
 
     /// <summary>

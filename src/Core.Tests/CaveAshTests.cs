@@ -13,18 +13,18 @@ namespace OctoShoots.Core.Tests;
 /// <summary>A cave's wall ash (docs/ADVENTURE.md §8; PlaneAsh.cs): her light and her shots clear it.</summary>
 public class CaveAshTests
 {
-    static readonly Lazy<HandLayout> Shallows = new(() =>
-        HandLayout.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "maps", "reef.json"))));
-
     static readonly SeedCode Seed = SeedCode.TryParse("KELP7Q2Z", out var s) ? s : default;
 
     static readonly Lazy<LevelMap> Cave = new(() =>
-        TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("reef", Shallows.Value.Depth, 0), 0f, 2));
+        TopDownGenerator.GenerateCave(Seed, CaveId(0), 0f, 2));
+
+    /// <summary>A leak cave of its own (a dive cave's kind of id: docs/DIVE.md §6).</summary>
+    static LevelId CaveId(int k) => new(1001, 1, k + 1);
 
     static readonly Lazy<ItemCatalog> Catalog = new(() =>
         ItemCatalog.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "items.json"))));
 
-    static PlaneWorld World(LevelMap map) => new(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), PlaneOptions.OpenReef);
+    static PlaneWorld World(LevelMap map) => new(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), new PlaneOptions { Adventure = true });
 
     [Fact]
     public void A_caves_walls_carry_ash_and_open_water_carries_none()
@@ -39,7 +39,7 @@ public class CaveAshTests
             Assert.Equal(1f, a.Cover);
         });
         // Outside caves there is none.
-        Assert.Empty(World(TopDownGenerator.FromHand(Shallows.Value)).Ash);
+        Assert.Empty(World(TopDownGenerator.Generate(new RunStreams(Seed), LevelId.FirstRun)).Ash);
     }
 
     [Fact]
@@ -96,10 +96,10 @@ public class CaveAshTests
     [Fact]
     public void Ash_lies_thick_over_a_secrets_sealed_wall_and_hides_it_until_cleared()
     {
-        // The first of the region's caves that has a secret behind a sealed wall.
+        // The first of the caves that has a secret behind a sealed wall.
         for (int k = 0; k < 24; k++)
         {
-            var map = TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("reef", Shallows.Value.Depth, k), 0f, 2);
+            var map = TopDownGenerator.GenerateCave(Seed, CaveId(k), 0f, 2);
             var w = World(map);
             int seal = w.Seals.FindIndex(x => x.Kind == SealKind.Secret && !x.Open);
             if (seal < 0) continue;

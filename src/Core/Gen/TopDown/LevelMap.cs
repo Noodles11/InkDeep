@@ -266,24 +266,6 @@ public sealed class KelpBed
 
 public readonly record struct BuriedCoins(Vector2 Position, int Amount);
 
-/// <summary>
-/// One of the reef's biome zones (docs/REEF-WORLD.md §1): its box, its name and title, the depth whose look it takes
-/// (ReefLook), its Menace and its area level (its caves' least level; on the open reef, its creatures').
-/// </summary>
-public sealed record ReefZone(string Name, string Title, int Look, Vector2 Min, Vector2 Max, float Menace, int Level)
-{
-    /// <summary>How far outside its box a point lies (0 inside).</summary>
-    public float Outside(Vector2 p)
-    {
-        float dx = MathF.Max(MathF.Max(Min.X - p.X, p.X - Max.X), 0f), dy = MathF.Max(MathF.Max(Min.Y - p.Y, p.Y - Max.Y), 0f);
-        return MathF.Sqrt(dx * dx + dy * dy);
-    }
-
-    /// <summary>How far inside its box a point lies, to the nearest edge (0 on it or outside).</summary>
-    public float Inside(Vector2 p) =>
-        MathF.Max(MathF.Min(MathF.Min(p.X - Min.X, Max.X - p.X), MathF.Min(p.Y - Min.Y, Max.Y - p.Y)), 0f);
-}
-
 public enum SpawnRole { Den, Ambush, Patrol, Guardian }
 
 /// <summary>DESIGN-2D §12.1 movement classes.</summary>
@@ -373,33 +355,12 @@ public sealed class LevelMap
     }
     /// <summary>A hand-drawn map's name (HandLayout.Title), or empty for a seeded level.</summary>
     public string Title = "";
-    /// <summary>A hand-drawn map (the reef): it holds no leaks and no main current of its own.</summary>
+    /// <summary>A hand-drawn map (a dive's haven): it holds no leaks and no main current of its own.</summary>
     public bool Station;
-    /// <summary>A hand-drawn map whose exit is a current station, where the ride to another map starts (HandLayout.Station).</summary>
-    public bool CurrentStation;
     /// <summary>The depth whose look it takes, when not its own depth's (HandLayout.Look).</summary>
     public int? LookDepth;
-    /// <summary>The reef's biome zones (docs/REEF-WORLD.md §1, HandLayout.Zones); none on a seeded level or a cave.</summary>
-    public List<ReefZone> Zones = new();
-
-    /// <summary>The zone a point lies in (its box's; the nearest box's, out past every one), or -1 where there are none.</summary>
-    public int ZoneAt(Vector2 p)
-    {
-        int best = -1;
-        float nearest = float.PositiveInfinity;
-        for (int i = 0; i < Zones.Count; i++)
-        {
-            float d = Zones[i].Outside(p);
-            if (d < nearest)
-            {
-                nearest = d;
-                best = i;
-            }
-        }
-        return best;
-    }
     /// <summary>
-    /// A leak cave (docs/RPG-PROPOSAL.md §2.3, docs/REEF-WORLD.md §3): one floor of it. Its deepest floor holds its one
+    /// A leak cave (docs/DIVE.md §6): one floor of it. Its deepest floor holds its one
     /// leak, at the dead end of its main path where a way down would be, and no shaft; a floor above it holds a hole
     /// there instead (HoleDown), down to the next. Its first floor's way in (Way) is in its start chamber's wall; she
     /// comes down into a deeper floor's start from above.

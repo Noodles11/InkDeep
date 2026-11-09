@@ -268,8 +268,6 @@ public sealed partial class PlaneWorld
     void PlaceBoss()
     {
         if (!Map.HasBoss || Map.Rift) return;
-        // The open reef's bosses are the bay's folk, each named by the game for her great cave (none once she is freed).
-        if (Options.Reef && Options.Boss is null) return;
         var spec = Options.Boss ?? BossRoster.For(Map.Seed, Map.Cycle, Math.Max(1, Map.Depth - LevelPlan.Tutorial));
         Boss = new PlaneBoss { Spec = spec, Position = ArenaCenter, Hp = spec.Hp, MaxHp = spec.Hp, TelegraphLength = spec.Telegraph };
         if (IsDrippus(Boss)) Boss.Mass = DrippusTuning.Mass;

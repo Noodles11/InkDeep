@@ -17,19 +17,12 @@ public sealed class PlaneOptions
     public bool Vases = false;
     /// <summary>The boss to meet on a boss level (null: the boss generator's for its loop and depth). Tests and debug starts name one.</summary>
     public OctoShoots.Core.Bosses.BossSpec? Boss;
-    /// <summary>The bay's shell shop stands empty: its collector, Ottilie, is not home yet (docs/NPC-BOSSES-PROPOSAL.md §7.3).</summary>
-    public bool ShopShut;
     /// <summary>
     /// The adventure (docs/ADVENTURE.md): leaks floating in the chambers fill the water with ink, the reef's fish turn
     /// in it, and the way down opens once enough leaks are sealed. The older creatures (Blightroots, Blotters,
     /// Lashjaws, Thumpsquirts, dens, Queen Clam) and the ground's starting ink are off.
     /// </summary>
     public bool Adventure;
-    /// <summary>
-    /// The open reef (docs/RPG-PROPOSAL.md §4): sealing a leak is the only experience there is, worth its cave's level
-    /// (ReefTuning.LeakXp), and no level-up is held back on a first level.
-    /// </summary>
-    public bool Reef;
     /// <summary>
     /// A dive's leak cave (docs/DIVE.md §6): the Leak's water harms her while its leak is open (DiveCaveTuning.Sting);
     /// sealing it heals her whole and leaves a pearl. Her way out is open the whole time.
@@ -38,8 +31,6 @@ public sealed class PlaneOptions
 
     public static PlaneOptions Default { get; set; } = new() { Adventure = true };
 
-    /// <summary>The open reef's regions and leak caves.</summary>
-    public static PlaneOptions OpenReef => new() { Adventure = true, Reef = true };
 }
 
 /// <summary>The corruption's numbers (docs/CORRUPTION.md). Provisional, like the rest of plane combat.</summary>

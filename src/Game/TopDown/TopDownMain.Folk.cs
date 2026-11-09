@@ -35,28 +35,13 @@ public partial class TopDownMain
         _folkMenu.Closed += CloseFolkMenu;
     }
 
-    /// <summary>The neighbour whose great cave she is in, or null (a region, or a minor cave).</summary>
-    Neighbour? GreatHere => _place == ReefPlace.Cave ? OpenReef.GreatOf(LoadMap(_region), _mouth) : null;
-
-    /// <summary>The open reef's world options: in a great cave's arena, its neighbour's boss, till she is freed.</summary>
-    PlaneOptions ReefOptions()
-    {
-        var options = PlaneOptions.OpenReef;
-        // The bay's shell shop stands empty till Ottilie, its collector, is home.
-        options.ShopShut = !BayOpen(BayService.PearlCollector);
-        if (GreatHere is { } n && _map.HasBoss && _jelly is { } jelly && !jelly.Freed.Contains(n.Id))
-            options.Boss = FolkBosses.For(n.Id, n.Level, _map.Menace);
-        return options;
-    }
-
     /// <summary>A boss freed: a neighbour goes home to the bay (her jelly keeps her freed), with its caption.</summary>
     void FolkFreed()
     {
         if (_world.Boss?.Spec.Folk is not { } id || Folk.Get(id) is not { } n || _jelly is not { } jelly) return;
         jelly.Freed.Add(n.Id);
         // Hers for good at once, dim as she may later in the dive.
-        if (Reef) SaveJelly();
-        else if (_jellySaved && !_debugRun) OctoShoots.Game.Settings.GameSave.Write();
+        KeepJelly();
         Say(Folk.HomeCaption(n));
     }
 
@@ -64,7 +49,6 @@ public partial class TopDownMain
     void StepFolk(float dt)
     {
         _folkView.Sync(_world, dt);
-        StepChains(dt);
         bool drawer = _pause.IsOpen || _mirror.IsOpen || _fanMenu.IsOpen || _folkMenu.IsOpen;
         _folkTalk.Sync(drawer ? null : _folkView.Near, _jelly is { } jelly && Folk.Late(jelly), dt);
         var home = _folkView.AtHome(_world.Player.Position, ServeReach);
@@ -149,8 +133,6 @@ public partial class TopDownMain
     /// <summary>The chains' gold, on the HUD's ribbons and the maps.</summary>
     static readonly Color ChainGold = new(1f, 0.8f, 0.36f);
 
-    float _chainCheck;
-
     /// <summary>Something she did answers a chain's step: the chains it finishes pay their pearl, with their neighbour's line.</summary>
     void NoteChain(StepKind kind, string? zone = null, string? folk = null, System.Numerics.Vector2? at = null)
     {
@@ -171,45 +153,13 @@ public partial class TopDownMain
         if (moved || finished.Count > 0) KeepJelly();
     }
 
-    /// <summary>The sim's events that answer a chain's step: a prime freed or a minor leak sealed (by its zone), home again.</summary>
+    /// <summary>The sim's events that answer a chain's step (docs/DIVE.md §7): a prime freed or a leak sealed, in the depth she is diving.</summary>
     void NoteChainEvent(in PlaneEvent e)
     {
         if (_jelly is null) return;
-        if (!Reef)
-        {
-            // A dive (docs/DIVE.md §7): what she does in the depth she is diving.
-            string depth = Chains.DepthZone(_id.ShownDepth);
-            if (e.Type == PlaneEventType.PrimeFreed) NoteChain(StepKind.Prime, zone: depth);
-            else if (e.Type == PlaneEventType.LeakSealed) NoteChain(StepKind.Seal, zone: depth);
-            return;
-        }
-        switch (e.Type)
-        {
-            case PlaneEventType.PrimeFreed:
-                NoteChain(StepKind.Prime, zone: ZoneHere(e.Position));
-                break;
-            case PlaneEventType.LeakSealed when _place == ReefPlace.Cave && GreatHere is null:
-                NoteChain(StepKind.Seal, zone: ZoneHere(e.Position));
-                break;
-            case PlaneEventType.HavenEntered:
-                NoteChain(StepKind.Home);
-                break;
-        }
-    }
-
-    /// <summary>The zone a point is in: on a region, where it lies; in a cave, its mouth's.</summary>
-    string? ZoneHere(System.Numerics.Vector2 at) =>
-        _place == ReefPlace.Cave ? OpenReef.ZoneOf(LoadMap(_region), _mouth)?.Name
-        : _map.ZoneAt(at) is var z and >= 0 ? _map.Zones[z].Name : null;
-
-    /// <summary>Now and then on a region: the places she has swum to and the zones she is in answer their steps.</summary>
-    void StepChains(float dt)
-    {
-        if (_jelly is null || _place != ReefPlace.Region || (_chainCheck -= dt) > 0f) return;
-        _chainCheck = 0.5f;
-        var her = _world.Player.Position;
-        NoteChain(StepKind.Find, at: her);
-        if (ZoneHere(her) is { } zone) NoteChain(StepKind.Enter, zone: zone);
+        string depth = Chains.DepthZone(_id.ShownDepth);
+        if (e.Type == PlaneEventType.PrimeFreed) NoteChain(StepKind.Prime, zone: depth);
+        else if (e.Type == PlaneEventType.LeakSealed) NoteChain(StepKind.Seal, zone: depth);
     }
 
     /// <summary>
@@ -218,7 +168,7 @@ public partial class TopDownMain
     /// </summary>
     void NoteDiveChains()
     {
-        if (_jelly is null || Reef) return;
+        if (_jelly is null) return;
         if (_id.Haven) NoteChain(StepKind.Home);
         else if (InDiveCave) NoteChain(StepKind.Find, zone: Chains.DepthZone(_id.ShownDepth));
         else if (!_id.IsTutorial)
@@ -233,17 +183,14 @@ public partial class TopDownMain
         _jelly is { } jelly ? Chains.Active(jelly).Select(a => new RequestRibbons.Ribbon(Chains.Short(a.Step, a.Count), ChainGold, ChainGold, false))
             : Enumerable.Empty<RequestRibbons.Ribbon>();
 
-    /// <summary>The chains' places on the maps: a place to find, or the great cave's mouth to find (on her region).</summary>
+    /// <summary>The chains' places on the maps: a find in this depth's leak caves rings the level's open mouths.</summary>
     IEnumerable<(System.Numerics.Vector2 At, Color Colour)> ChainMarks()
     {
-        if (_jelly is not { } jelly || _place != ReefPlace.Region) yield break;
-        var hand = LoadMap(_region);
-        foreach (var (_, step, _) in Chains.Active(jelly))
-        {
-            if (step.Kind == StepKind.Find) yield return (step.At, ChainGold);
-            if (step.Kind == StepKind.Mouth && hand.Mouths.FindIndex(m => m.Folk == step.Folk) is var i and >= 0 && i < _map.Mouths.Count)
-                yield return (_map.Mouths[i].At, ChainGold);
-        }
+        if (_jelly is not { } jelly || _id.Haven || InDiveCave) yield break;
+        string depth = Chains.DepthZone(_id.ShownDepth);
+        if (!Chains.Active(jelly).Any(a => a.Step.Kind == StepKind.Find && a.Step.Zone == depth)) yield break;
+        for (int i = 0; i < _map.Mouths.Count; i++)
+            if (!_world.ShutMouths.Contains(i)) yield return (_map.Mouths[i].At, ChainGold);
     }
 
     /// <summary>A service done: saved, said, and the drawer afresh.</summary>

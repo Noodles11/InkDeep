@@ -18,27 +18,21 @@ namespace OctoShoots.Core.Tests;
 /// </summary>
 public class FolkTests
 {
-    static readonly Lazy<HandLayout> Reef = new(() =>
-        HandLayout.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "maps", "reef.json"))));
+    static readonly Lazy<HandLayout> Haven = new(() =>
+        HandLayout.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "maps", "haven.json"))));
 
     static readonly Lazy<ItemCatalog> Catalog = new(() =>
         ItemCatalog.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "items.json"))));
 
-    static readonly SeedCode Seed = SeedCode.TryParse(Reef.Value.Seed, out var s) ? s : default;
+    static readonly SeedCode Seed = SeedCode.Parse("KELP7Q2Z");
 
-    static int MouthOf(string folk) => Reef.Value.Mouths.FindIndex(m => m.Folk == folk);
-
-    /// <summary>A neighbour's great cave, its deepest floor, and the world in it with her boss waiting.</summary>
+    /// <summary>A neighbour's depth's boss level (docs/DIVE.md §5), and the world on it with her waiting in its arena.</summary>
     static PlaneWorld GreatCave(string folk)
     {
-        var hand = Reef.Value;
-        int mouth = MouthOf(folk);
-        var n = OpenReef.GreatOf(hand, mouth)!;
-        int floors = OpenReef.CaveFloors(hand, mouth);
-        float menace = OpenReef.CaveMenace(hand, mouth);
-        var map = TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("reef", hand.Depth, OpenReef.GreatCave(n)), menace, n.Level, null, floors, floors, boss: true);
-        var options = PlaneOptions.OpenReef;
-        options.Boss = FolkBosses.For(folk, n.Level, map.Menace);
+        int depth = Array.FindIndex(Folk.All, n => n.Id == folk) + 1;
+        var n = Folk.Get(folk)!;
+        var map = TopDownGenerator.Generate(new RunStreams(Seed), new LevelId(1, LevelPlan.Tutorial + depth, LevelStocking.LevelsPerDepth));
+        var options = new PlaneOptions { Adventure = true, Boss = FolkBosses.For(folk, n.Level, map.Menace) };
         return new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), options);
     }
 
@@ -51,84 +45,6 @@ public class FolkTests
             w.Step(default);
             if (until?.Invoke() == true) return;
         }
-    }
-
-    [Fact]
-    public void EachNeighbourWaitsInHerOwnGreatCave_ItsLevelAndFloorsHers_TheGreatMouthsListedLast()
-    {
-        var hand = Reef.Value;
-        foreach (var n in Folk.Built)
-        {
-            int mouth = MouthOf(n.Id);
-            Assert.True(mouth >= 0, $"{n.Name} has no great cave");
-            Assert.Same(n, OpenReef.GreatOf(hand, mouth));
-            Assert.Equal(n.Level, OpenReef.CaveLevel(hand, mouth));
-            Assert.Equal(n.Floors, OpenReef.CaveFloors(hand, mouth));
-            Assert.NotNull(FolkBosses.For(n.Id, n.Level, 0f));
-            Assert.Contains(hand.Homes, h => h.Folk == n.Id);
-        }
-        // The Tide Fan names only the minor mouths: every one before the great caves', which come last.
-        int minor = OpenReef.MinorMouths(hand);
-        Assert.All(hand.Mouths.Take(minor), m => Assert.Null(m.Folk));
-        Assert.All(hand.Mouths.Skip(minor), m => Assert.NotNull(m.Folk));
-        Assert.Equal("The Sleeping Ledge", Folk.Get("tull")!.Cave);
-        Assert.Null(OpenReef.GreatOf(hand, 0));
-    }
-
-    [Fact]
-    public void AGreatCavesDeepestFloorIsAnArenaRoundItsLeak_HerBossOnIt_NoPrimeWaiting()
-    {
-        var w = GreatCave("tull");
-        Assert.True(w.Map.HasBoss);
-        Assert.True(w.Map.LeakCave);
-        // Its boss in place of a leak to be seen: the leak is hidden in it.
-        var leak = Assert.Single(w.Leaks);
-        Assert.True(leak.Hidden);
-        Assert.Equal(w.Map.Exit.Position, leak.Position);
-        Assert.NotNull(w.Boss);
-        Assert.Equal("tull", w.Boss!.Spec.Folk);
-        Assert.Equal(w.ArenaCenter, w.Boss.Position);
-        Assert.DoesNotContain(w.Murklings, m => m.Prime);
-        // Its arena's walls stand open (its only leak is inside), to rise behind her only while the boss fights.
-        var walls = w.Seals.Where(x => x.Kind == SealKind.Boss).ToList();
-        Assert.NotEmpty(walls);
-        Assert.All(walls, x => Assert.True(x.Open));
-        // Once she is freed, no boss waits there again.
-        var freed = PlaneOptions.OpenReef;
-        Assert.Null(new PlaneWorld(w.Map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), freed).Boss);
-        // The same cave for every jelly, every time.
-        var again = GreatCave("tull");
-        Assert.Equal(w.Map.ToBytes(), again.Map.ToBytes());
-    }
-
-    [Fact]
-    public void AGreatCavesBossIsItsLeak_NothingToTie_FreeingItSealsTheCave_ItsShellsAndPearlClearOfTheUpwelling()
-    {
-        var w = GreatCave("tull");
-        var leak = w.Leaks[0];
-        var near = leak.Position + new Vector2(0f, w.Boss!.Radius + w.Radius + 0.3f);
-        Hold(w, near, 20f);
-        Assert.False(leak.Sealed);
-        Assert.Equal(0f, leak.Light);
-        Assert.Equal(BossStage.Fight, w.Boss.Stage);
-        w.DebugFreeBoss();
-        var sealedAt = -1;
-        for (int i = 0; i < 2 * PlaneWorld.TickRate && sealedAt < 0; i++)
-        {
-            w.Player.Position = w.Player.PrevPosition = near;
-            w.Player.Hp = w.Run.MaxHp;
-            w.Step(default);
-            if (w.Events.Exists(e => e.Type == PlaneEventType.LeakSealed)) sealedAt = i;
-        }
-        Assert.True(w.Boss.Freed);
-        Assert.True(sealedAt >= 0, "freeing the boss seals its leak");
-        Assert.True(leak.Sealed);
-        Assert.False(w.CaveLeakOpen);
-        Assert.All(w.Seals.Where(x => x.Kind == SealKind.Boss), x => Assert.True(x.Open));
-        // Neither the shells it bursts nor the boss's pearl lie in the upwelling where the leak was.
-        Assert.NotEmpty(w.Shells);
-        Assert.All(w.Shells, sh => Assert.True(Vector2.Distance(sh.Position, leak.Position) >= AdventureTuning.ShellsClear - 0.3f));
-        Assert.All(w.Pearls.Where(p => !p.Taken), p => Assert.True(Vector2.Distance(p.Position, leak.Position) >= AdventureTuning.ShellsClear - 0.01f));
     }
 
     [Fact]
@@ -169,7 +85,6 @@ public class FolkTests
         var w = GreatCave("kip");
         var boss = w.Boss!;
         Assert.Equal(BodyForm.Wrasse, boss.Spec.Form);
-        Assert.Equal(3, w.Map.Floors);
         var her = w.ArenaCenter + new Vector2(0f, 8f);
         Hold(w, her, 3f, () => boss.Stage == BossStage.Fight);
         Assert.Equal(BossStage.Fight, boss.Stage);
@@ -202,7 +117,7 @@ public class FolkTests
     }
 
     [Fact]
-    public void AServiceOpensOnlyOnceItsNeighbourIsHome_AndHerGreatCaveClosesForGoodOnceSealed()
+    public void AServiceOpensOnlyOnceItsNeighbourIsHome()
     {
         var jelly = new Jelly();
         Assert.False(Folk.Opens(jelly, BayService.TideFan));
@@ -211,13 +126,6 @@ public class FolkTests
         // A service whose neighbour has no boss yet is open as it always was.
         foreach (var service in Enum.GetValues<BayService>().Where(s => Folk.Opener(s) is null))
             Assert.True(Folk.Opens(new Jelly(), service));
-        var hand = Reef.Value;
-        int mouth = MouthOf("tull");
-        Assert.DoesNotContain(mouth, OpenReef.ShutMouths(jelly, "reef", hand));
-        OpenReef.SealedGreat(jelly, Folk.Get("tull")!);
-        Assert.Contains(mouth, OpenReef.ShutMouths(jelly, "reef", hand));
-        jelly.PlaySeconds += ReefTuning.Recorrupt * 3;
-        Assert.Contains(mouth, OpenReef.ShutMouths(jelly, "reef", hand));
         Assert.Equal("Grandmother Tull has gone home to Lantern Bay", Folk.HomeCaption(Folk.Get("tull")!));
     }
 
@@ -307,23 +215,6 @@ public class FolkTests
     }
 
     [Fact]
-    public void TheBaysShellShopStandsEmptyTillOttilieIsHome()
-    {
-        var region = TopDownGenerator.FromHand(Reef.Value);
-        var open = new PlaneWorld(region, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), PlaneOptions.OpenReef);
-        Assert.NotEmpty(open.Stands);
-        var shut = PlaneOptions.OpenReef;
-        shut.ShopShut = true;
-        Assert.Empty(new PlaneWorld(region, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), shut).Stands);
-        Assert.False(Folk.Opens(new Jelly(), BayService.PearlCollector));
-        // Her home is the shop's cave, by its stands.
-        var shop = region.Pois.First(p => p.Kind == PoiKind.Shop);
-        var home = Reef.Value.Homes.First(h => h.Folk == "ottilie");
-        float d = Vector2.Distance(shop.Position, new Vector2(home.X, home.Y));
-        Assert.True(d < 4f && region.IsOpen(new Vector2(home.X, home.Y)), $"the shop is at {shop.Position}, her home {d} m from it");
-    }
-
-    [Fact]
     public void Bubbles_RisesAndComesDownInARing_ThenHerSacsFire_HerHeartOpenOnlyOnceTheyAreBurst()
     {
         var w = GreatCave("bubbles");
@@ -362,7 +253,7 @@ public class FolkTests
     [Fact]
     public void TheDuskDanceGivesBackEverySkillPointSpent()
     {
-        var run = new PlaneRun(Catalog.Value, new Tuning()) { Reef = true, Points = 3 };
+        var run = new PlaneRun(Catalog.Value, new Tuning()) { Points = 3 };
         var stat = Skills.All(new Tuning()).First().Stat;
         Assert.True(run.Spend(stat));
         Assert.True(run.Spend(stat));
@@ -429,26 +320,25 @@ public class FolkTests
     [Fact]
     public void InkCloudLosesHerToTheLeaksCreatures_ConchHornShakesThemOffAndAway()
     {
-        var hand = Reef.Value;
-        var map = TopDownGenerator.GenerateCave(Seed, OpenReef.CaveId("reef", hand.Depth, 3), 0.2f, 2);
-        var run = new PlaneRun(Catalog.Value, new Tuning()) { Reef = true };
+        var map = TopDownGenerator.GenerateCave(Seed, new LevelId(1001, 1, 4), 0.2f, 2);
+        var run = new PlaneRun(Catalog.Value, new Tuning());
         run.Add("ink_cloud");
-        run.Add("conch_horn");
-        var w = new PlaneWorld(map, new Tuning(), run, PlaneOptions.OpenReef);
+        var w = new PlaneWorld(map, new Tuning(), run, new PlaneOptions { Adventure = true });
         Assert.Equal("ink_cloud", run.SlotActive(0)?.Id);
-        Assert.Equal("conch_horn", run.SlotActive(1)?.Id);
         run.SetCharge(0, 1f);
-        run.SetCharge(1, 1f);
         Assert.False(w.Unseen);
         w.Step(new PlaneInput { UseActive = true });
         Assert.True(w.Unseen);
         Assert.Contains(w.Clouds, c => Vector2.Distance(c.Position, w.Player.Position) < 0.5f);
         Hold(w, w.Player.Position, 4.5f);
         Assert.False(w.Unseen);
-        // Conch Horn: the murkling beside her is shaken and knocked away.
+        // Conch Horn (she carries one active pearl: it takes Ink Cloud's place): the murkling beside her is shaken and knocked away.
+        run.Add("conch_horn");
+        run.SetCharge(0, 1f);
+        Assert.Equal("conch_horn", run.SlotActive(0)?.Id);
         var m = w.Murklings.First(x => x.Alive && !x.Prime);
         w.Player.Position = w.Player.PrevPosition = m.Position + new Vector2(2f, 0f);
-        w.Step(new PlaneInput { UseActive2 = true });
+        w.Step(new PlaneInput { UseActive = true });
         Assert.True(m.Shaken > 0f);
         Assert.True(Vector2.Dot(m.Velocity, m.Position - w.Player.Position) > 0f, "knocked away from her");
     }

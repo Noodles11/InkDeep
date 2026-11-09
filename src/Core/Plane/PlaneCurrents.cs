@@ -163,9 +163,9 @@ public sealed partial class PlaneWorld
     /// </summary>
     void PlaceCurrents()
     {
-        // A leak cave has no main current: she swims back out herself. But while its leak is open the Leak keeps her in:
-        // water pours in through its way out, from its back out into the cave.
-        if (Map.Way is { } way)
+        // A leak cave has no main current: she swims back out herself, whenever she likes (docs/DIVE.md §6). (A cave that
+        // keeps her in till its leak is sealed has water pouring in through its way out, from its back out into the cave.)
+        if (Map.Way is { } way && !Options.DiveCave)
         {
             var hold = new PlaneCurrent { Speed = CurrentTuning.HoldSpeed, HalfStart = Doorway.HalfWidth + 0.3f, HalfEnd = Doorway.HalfWidth + 1f, Strength = 1f, Holds = true };
             hold.Lay(new List<Vector2> { way.Back + way.Into * 0.5f, way.At, way.At - way.Into * CurrentTuning.HoldOut });

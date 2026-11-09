@@ -56,10 +56,8 @@ comes home to untie it. Its token and its experience are hers.
 
 ## 3. The requests
 
-Four kinds, all built from what the caves already hold. Each request is for one region (only the reef for now). Each
-has a **level**: the level of the cave behind the mouth it names, or of the reef's least caves for one that names none
-(`OpenReef.CaveLevel`: its zone's area level plus its danger, docs/REEF-WORLD.md §3), which sets what
-it pays (§4).
+Four kinds, all built from what the dive already holds (docs/DIVE.md §7 has the dive's form of each). Each has a
+**level**, from the depth she is diving, which sets what it pays (§4).
 
 ### 3.1 Close the bleeding mouth (seal a leak)
 

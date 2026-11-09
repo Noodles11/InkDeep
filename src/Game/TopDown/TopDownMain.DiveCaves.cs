@@ -57,7 +57,7 @@ public partial class TopDownMain
     /// </summary>
     (bool Into, int Mouth, Func<LevelMap, Landing?> Arrive, Doorway? By, RideWay Way)? DiveCaveWay()
     {
-        if (Reef || _id.Haven || _world.Defeated) return null;
+        if (_id.Haven || _world.Defeated) return null;
         var her = _world.Player.Position;
         bool atWay = _map.Way is { } w && w.Holds(her, ReefTuning.MouthIn);
         if (InDiveCave && _dbgCaveBack > 0f && _levelTime > _dbgCaveBack)
@@ -105,7 +105,7 @@ public partial class TopDownMain
             _diveCave = -1;
             shape = Shape(_seed, _id, _levelLuck);
         }
-        BeginRide(ReefPlace.Run, _region, _mouth, way.Arrive, way.By, _floor, way.Way, shape);
+        BeginRide(way.Arrive, way.By, way.Way, shape);
     }
 
     /// <summary>
@@ -136,7 +136,6 @@ public partial class TopDownMain
     /// <summary>She has come out of the ride: into a cave, word of it; out of one she sealed, its mouth closes behind her.</summary>
     void DiveCaveArrived()
     {
-        if (Reef) return;
         if (InDiveCave) Say("A leak cave: its water stings till its leak is sealed · seal it for a pearl and a full heal");
         else if (_caveMouth >= 0 && _caveSealed)
         {

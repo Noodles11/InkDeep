@@ -25,7 +25,8 @@ public partial class PauseMenu : Control
     /// <summary>A skill point was put on a modifier.</summary>
     public event Action<Stat>? SkillChosen;
     /// <summary>The open reef, in Lantern Bay: the next pearl into a slot, and a pearl sold at the shell shop.</summary>
-    public event Action<int>? SlotCycled;
+    /// <summary>Whether the run can be started again from here (not a jelly's dive).</summary>
+    public bool Restartable { get; set; } = true;
     public event Action<string>? PearlSold;
     /// <summary>The open reef's requests: one she carries let go (back to the Tide Fan), and the HUD's ribbons shown or hidden.</summary>
     public event Action<int>? RequestLetGo;
@@ -303,8 +304,8 @@ public partial class PauseMenu : Control
         FillStats(run);
         _summary.Text = $"Seed {seed} · {where} · {Mathf.RoundToInt(Mathf.Clamp(1f - hp / Mathf.Max(run.MaxHp, 1f), 0f, 1f) * 100f)}% corrupted · {run.Items.Count} pearl{(run.Items.Count == 1 ? "" : "s")}";
         FillPearls(run, catalog);
-        // The open reef has no run to restart.
-        _restart.Visible = !run.Reef;
+        // A jelly's dive has no restart: it goes on till she dims (docs/DIVE.md).
+        _restart.Visible = Restartable;
         _opening = true;
         Visible = true;
         ShowList(run.Points > 0 ? LevelTab : StatTab);
@@ -370,36 +371,13 @@ public partial class PauseMenu : Control
     {
         Empty(_pearls);
         if (catalog is null) return;
-        if (!run.Reef)
-        {
-            if (run.Items.Count == 0) _pearls.AddChild(Note("None yet — clam rooms hold them."));
-            // Newest first.
-            foreach (string id in Enumerable.Reverse(run.Items))
-                if (catalog.TryGet(id, out var item)) _pearls.AddChild(Row(item));
-            return;
-        }
-        _pearls.AddChild(Note(!Trade ? "Change your slots and sell pearls in Lantern Bay."
-            : Sells ? $"{run.Shells} silver shells. The shell shop buys any pearl: an active for its worth, a passive for half."
-            : "The market's cave stands dark: its collector is not home yet. Your slots are yours to change."));
-        _pearls.AddChild(Heading("Active slots"));
-        string[] keys = { InputSetup.Active, InputSetup.Active2, InputSetup.Active3 };
-        for (int i = 0; i < PlaneRun.SlotCount; i++)
-        {
-            var held = run.SlotActive(i);
-            int slot = i;
-            var row = held is not null ? Row(held) : Note("Empty");
-            var change = new Button { Text = $"[{InputSetup.Hint(keys[i])}]  Change", Disabled = !Trade || run.OwnedActives.Count == 0, SizeFlagsVertical = SizeFlags.ShrinkCenter };
-            change.Pressed += () => SlotCycled?.Invoke(slot);
-            _pearls.AddChild(WithButton(row, change));
-        }
-        var stash = run.OwnedActives.Where(id => !run.Slots.Contains(id)).ToList();
-        if (stash.Count > 0) _pearls.AddChild(Heading("Stash"));
-        foreach (string id in stash)
-            if (catalog.TryGet(id, out var item)) _pearls.AddChild(WithButton(Row(item), SellButton(run, id)));
+        // Ottilie buys pearls in a haven once she is home (docs/DIVE.md §4); elsewhere they are only listed.
+        if (Trade) _pearls.AddChild(Note(Sells ? $"{run.Shells} silver shells. The shell shop buys any pearl: an active for its worth, a passive for half."
+            : "The market's cave stands dark: its collector is not home yet."));
         _pearls.AddChild(Heading("In her bell"));
-        if (run.Items.Count == 0) _pearls.AddChild(Note("None yet. Shops, secret places and bosses hold them; if she dims, they are left where she fell."));
+        if (run.Items.Count == 0) _pearls.AddChild(Note("None yet. Shops, secret places and bosses hold them."));
         foreach (string id in Enumerable.Reverse(run.Items).Distinct())
-            if (catalog.TryGet(id, out var item)) _pearls.AddChild(WithButton(Row(item), SellButton(run, id)));
+            if (catalog.TryGet(id, out var item)) _pearls.AddChild(Trade ? WithButton(Row(item), SellButton(run, id)) : Row(item));
     }
 
     Button SellButton(PlaneRun run, string id)

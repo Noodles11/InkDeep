@@ -787,7 +787,7 @@ public sealed partial class PlaneWorld
 
         foreach (var m in Murklings)
         {
-            if (!m.Alive || Asleep(m.Position)) continue;
+            if (!m.Alive) continue;
             if (m.Budding)
             {
                 // It drinks the ink round it up into itself: the ground it takes is left empty (no gold: she did not cleanse it).
@@ -1035,7 +1035,7 @@ public sealed partial class PlaneWorld
             if (draught is null) return null;
         }
         var m = new Murkling { Position = at, Area = area, Seed = _blightRng.Range(0f, 100f), ThrowTimer = BlightTuning.ThrowEvery * _blightRng.Range(0.5f, 1f) };
-        m.Corruption.Max = m.Corruption.Value = BlightTuning.MurkCorruption * (1f + BlightTuning.MeterPerMenace * Menace) * (prime ? BlightTuning.PrimeMeter : 1f) * LevelMeter(at);
+        m.Corruption.Max = m.Corruption.Value = BlightTuning.MurkCorruption * (1f + BlightTuning.MeterPerMenace * Menace) * (prime ? BlightTuning.PrimeMeter : 1f);
         if (prime)
         {
             m.Prime = true;

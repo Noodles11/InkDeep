@@ -14,12 +14,11 @@ public partial class PortalView : Node3D
 {
     static Shader? _shader, _throat, _ink;
 
-    /// <param name="dangers">Each mouth's danger (docs/REEF-WORLD.md §3): a dangerous one weeps the Leak's ink down its
-    /// face and onto the floor before it, the more the more dangerous.</param>
+    /// <param name="dangers">Each mouth's danger: a dangerous one weeps the Leak's ink down its face and onto the floor
+    /// before it, the more the more dangerous (a dive's leak caves, all of them, docs/DIVE.md §6).</param>
     public void Show(LevelMap map, IReadOnlySet<int>? shut = null, IReadOnlyList<int>? dangers = null)
     {
         foreach (var child in GetChildren()) child.QueueFree();
-        if (map.Station) Add(map.Exit.Position, ReefTuning.StationReach * 2.6f);
         for (int i = 0; i < map.Mouths.Count; i++)
         {
             if (shut?.Contains(i) == true) continue;
@@ -27,8 +26,6 @@ public partial class PortalView : Node3D
             if (dangers is not null && i < dangers.Count && dangers[i] > 0) AddInk(map, map.Mouths[i], dangers[i] / (float)ReefTuning.MostDanger, i);
         }
         if (map.Way is { } way) AddThroat(way);
-        _gather = null;
-        if (_homewardAt is { } home) _homeward = Add(home, ReefTuning.StationReach * 1.8f);
     }
 
     /// <summary>A mouth's weeping ink: runs down its face, and a stain pooled on the floor before its threshold.</summary>
@@ -68,36 +65,11 @@ public partial class PortalView : Node3D
         return material;
     }
 
-    /// <summary>A sealed leak's upwelling (docs/REEF-WORLD.md §3): the station's bright swirl where the leak was.</summary>
-    public void Upwell(System.Numerics.Vector2 at) => Add(at, ReefTuning.StationReach * 2.2f);
+    /// <summary>A sealed leak's upwelling (docs/DIVE.md §6): a bright swirl where the leak was.</summary>
+    public void Upwell(System.Numerics.Vector2 at) => Add(at, UpwellSize);
 
-    MeshInstance3D? _gather, _homeward;
-    System.Numerics.Vector2? _homewardAt;
-
-    /// <summary>
-    /// The homeward current gathering round her (docs/REEF-WORLD.md §5): a swirl under her, growing as it gathers
-    /// (k 0..1); none at 0.
-    /// </summary>
-    public void Gather(System.Numerics.Vector2 at, float k)
-    {
-        if (k <= 0f)
-        {
-            _gather?.QueueFree();
-            _gather = null;
-            return;
-        }
-        if (_gather is null || !IsInstanceValid(_gather)) _gather = Add(at, 1f);
-        _gather.Scale = Vector3.One * Mathf.Lerp(0.6f, ReefTuning.StationReach * 1.6f, k);
-        _gather.Position = new Vector3(at.X, -0.6f + 0.8f * k, at.Y);
-    }
-
-    /// <summary>The homeward current's way back (docs/REEF-WORLD.md §5): a swirl by the lantern post, or none.</summary>
-    public void Homeward(System.Numerics.Vector2? at)
-    {
-        _homewardAt = at;
-        if (_homeward is not null && IsInstanceValid(_homeward)) _homeward.QueueFree();
-        _homeward = at is { } p ? Add(p, ReefTuning.StationReach * 1.8f) : null;
-    }
+    /// <summary>An upwelling's swirl across (metres).</summary>
+    const float UpwellSize = 7.7f;
 
     MeshInstance3D Add(System.Numerics.Vector2 at, float size)
     {

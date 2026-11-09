@@ -52,6 +52,8 @@ public class DiveCaveTests
         Assert.False(w.CaveLeakOpen);
         Assert.Equal(w.Run.MaxHp, w.Player.Hp);
         Assert.True(w.Pearls.Count > pearls, "no pearl for sealing it");
+        // No current holds its way out: she may leave whenever she likes.
+        Assert.DoesNotContain(w.Currents, c => c.Holds);
         // Sealed, its water harms her no more (its creatures gone, to tell).
         w.Murklings.Clear();
         w.Shots.Clear();

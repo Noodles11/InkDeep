@@ -25,34 +25,20 @@ public sealed class HandLayout
     public float Menace { get; set; }
     /// <summary>A haven's water (Lantern Bay, in a corner of the reef): the box it fills, where nothing harms her (LevelMap.Haven).</summary>
     public HandBox? Haven { get; set; }
-    /// <summary>Its exit chamber is a current station, where the ride to another map starts.</summary>
-    public bool Station { get; set; }
     /// <summary>Its exit chamber is a hole down, as a seeded level's (a dive's haven, docs/DIVE.md §4).</summary>
     public bool Hole { get; set; }
     public List<HandChamber> Chambers { get; set; } = new();
     public List<HandTunnel> Tunnels { get; set; } = new();
-    /// <summary>
-    /// An open-sea map's mountains (docs/REEF-WORLD.md §1): masses of reef rock at (X, Y), R metres across their middle,
-    /// rough-edged; everywhere else is open water but the rim. Its chambers and tunnels carve through them. None: the
-    /// map is rock but its chambers and tunnels.
-    /// </summary>
-    public List<HandChamber> Mountains { get; set; } = new();
     /// <summary>Places in caves (the shop): each off a chamber, its tunnel ending at the cave's mouth.</summary>
     public List<HandRoom> Rooms { get; set; } = new();
     /// <summary>Open places: clearings in the water.</summary>
     public List<HandPlace> Places { get; set; } = new();
-    /// <summary>A region's cave mouths, each leading into a leak cave: an opening is cut in the wall nearest each point (LevelMap.Mouths).</summary>
-    public List<HandPoint> Mouths { get; set; } = new();
-    /// <summary>The reef's biome zones (docs/REEF-WORLD.md §1): boxes that between them cover the map.</summary>
-    public List<HandZone> Zones { get; set; } = new();
     /// <summary>The bay's mirror (docs/RPG-PROPOSAL.md §8): a still pool of nacre where she changes her look.</summary>
     public HandPoint? Mirror { get; set; }
     /// <summary>The bay's Tide Fan (docs/QUESTS-PROPOSAL.md §2): the great sea fan where the bay ties its requests.</summary>
     public HandPoint? Fan { get; set; }
     /// <summary>The bay's folk at home (docs/NPC-BOSSES-PROPOSAL.md): where each lives once she is freed (Folk names her).</summary>
     public List<HandPoint> Homes { get; set; } = new();
-    /// <summary>A region's tier: its caves' first level.</summary>
-    public int Tier { get; set; } = 1;
     /// <summary>Its square, metres a side (a seeded level's unless it asks for more).</summary>
     public int Size { get; set; } = LevelMap.Seeded;
 
@@ -127,8 +113,6 @@ public sealed class HandPoint
     public float Y { get; set; }
     /// <summary>What the bay calls it (a region's cave mouth: "the east mouth"), if anything.</summary>
     public string Name { get; set; } = "";
-    /// <summary>A cave mouth's danger (0 to 2, docs/REEF-WORLD.md §3): its cave's level is its zone's area level plus this.</summary>
-    public int Danger { get; set; }
     /// <summary>
     /// A great cave's mouth: the neighbour waiting at its bottom (Folk, docs/NPC-BOSSES-PROPOSAL.md), whose cave's level
     /// and floors are her own. A bay home: the neighbour who lives there.
@@ -136,13 +120,3 @@ public sealed class HandPoint
     public string? Folk { get; set; }
 }
 
-/// <summary>A biome zone (docs/REEF-WORLD.md §1): its box, the depth whose look it takes, its Menace and its area level.</summary>
-public sealed class HandZone
-{
-    public string Name { get; set; } = "";
-    public string Title { get; set; } = "";
-    public int Look { get; set; } = 1;
-    public float Menace { get; set; }
-    public int Level { get; set; } = 1;
-    public HandBox Box { get; set; } = new();
-}

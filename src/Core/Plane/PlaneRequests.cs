@@ -224,7 +224,6 @@ public static class Requests
         if (jelly.Carried.Count >= RequestTuning.Carry || place < 0 || place >= places.Count || places[place] is not { } r) return false;
         places[place] = null;
         jelly.Carried.Add(r);
-        if (r.Kind == Seal && jelly.Shut.TryGetValue(region, out var shut)) shut.Remove(r.Mouth);
         return true;
     }
 

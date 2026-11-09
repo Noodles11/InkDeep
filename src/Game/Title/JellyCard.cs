@@ -198,7 +198,7 @@ public partial class JellyCard : Control
             c.Box.AddChild(Centred(DrawerStyle.Line(j.Name, DrawerStyle.Text, 22)));
             if (i == save.Chosen) c.Box.AddChild(Centred(DrawerStyle.Line("played last", DrawerStyle.Gold, 13)));
             c.Box.AddChild(Centred(DrawerStyle.Line($"Level {j.Level}", DrawerStyle.Soft, 15)));
-            c.Box.AddChild(Centred(DrawerStyle.Line($"{j.Shells} shells · {j.Passives.Count + j.Actives.Count} pearls banked", DrawerStyle.Soft, 15)));
+            c.Box.AddChild(Centred(DrawerStyle.Line($"{j.Shells} shells · {j.Passives.Count} pearls banked", DrawerStyle.Soft, 15)));
             // Where her dive stands (docs/DIVE.md §1), or that the next one is new.
             c.Box.AddChild(Centred(DrawerStyle.Line(j.Dive is { } dive ? $"Diving · {dive.Where}" : $"Dive {j.Dives + 1} to begin", DrawerStyle.Soft, 15)));
             c.Box.AddChild(Centred(DrawerStyle.Line(Played(j), DrawerStyle.Soft, 13)));

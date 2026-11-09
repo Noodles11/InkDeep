@@ -55,7 +55,7 @@ it, and the reef remembers.**
 
 ### 2.2 Regions (static)
 
-The reef's first four biomes are zones of one map (docs/REEF-WORLD.md), not regions of their own; the Trench and the
+The reef's first four biomes are zones of one map (since replaced by the dive, docs/DIVE.md), not regions of their own; the Trench and the
 Abyss come later as a second map below the shelf.
 
 - **One biome per region,** following the depth order already in the game: Shallows, Kelp, Galleon, Carnival, Trench,
@@ -294,7 +294,7 @@ Each step is playable on its own:
   arches and passes, decoration, kelp); the map's seed shapes only the details. A hand-drawn map (`LevelMap.Station`)
   holds no leaks and no main current. Its square is its own (`HandLayout.Size`; a seeded level's is 140 m,
   `LevelMap.Seeded`), and its exit is a current station only if it says so (`HandLayout.Station`, none yet).
-- **The reef** (`data/maps/reef.json`, docs/REEF-WORLD.md): one map, 840 m a side, of four biome zones, with the bay
+- **The reef** (`data/maps/reef.json`, docs/DIVE.md): one map, 840 m a side, of four biome zones, with the bay
   in the Sunlit Shallows' south-west corner. Made once a session and kept (`TopDownMain.ShapeRegion`): it takes about
   30 s to make (under way from the title screen), and coming back out of a cave is quick.
 - **Lantern Bay** (the reef map's `haven` box, `LevelMap.Haven`, 140 m a side): the lantern post where she wakes, the
@@ -357,11 +357,11 @@ Each step is playable on its own:
     pushes her back inside, and says so when she reaches the threshold ("The Leak's current holds the way out · seal
     the leak first", `PlaneWorld.AtCaveMouth`). It shows as moving water, as any current does (`CurrentView`).
   - **Sealed:** the current dies away over 1.5 s, and no other wakes in it. An upwelling rises where the leak was, and
-    swimming into it carries her up through every floor and out of the cave's mouth (docs/REEF-WORLD.md §3). On a
+    swimming into it carries her up through every floor and out of the cave's mouth (docs/DIVE.md §3). On a
     cave of one floor she can also swim back herself: swimming into the way out, once she has been 10 m from it, takes
     her out to the region at that mouth (`PlaneWorld.LeavingCave`).
   - **Floors:** a cave goes down one to three floors by its mouth's danger, each above the last ending in a hole
-    down; its leak is on the deepest (docs/REEF-WORLD.md §3).
+    down; its leak is on the deepest (docs/DIVE.md §3).
 - **Behind each mouth** (`OpenReef`): a cave, grown from her jelly's own seed.
   - **Sealed, it shuts:** sealing a cave shuts its mouth in the region (`Jelly.Shut`, `PlaneWorld.ShutMouths`): rock
     fills its arch (`LevelView.ShutDoors`) and stops her at its threshold, so she cannot go in by it. Coming out of
@@ -375,7 +375,7 @@ Each step is playable on its own:
   held back.
 - **The current ride** (`TopDownMain.BeginRide`, `StepRide`, `StepArrive`):
   - **Where it goes:** a mouth leads to its cave, and a cave's way out leads back out of that mouth. The homeward
-    current takes her home to the bay from anywhere, and back (docs/REEF-WORLD.md §5). (A current station
+    current takes her home to the bay from anywhere, and back (docs/DIVE.md §5). (A current station
     would lead to another region's map; there is none yet.)
   - **Leaving:** on a current, she is swept off and lifted. The place dissolves round where she was (the dive's iris)
     until only water and streaming snow are left, and the next place is made meanwhile; the ride lasts at least 2.4 s.

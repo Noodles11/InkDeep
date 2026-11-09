@@ -19,7 +19,6 @@ public struct PlaneInput
     /// <summary>Pressed: use the active pearl (F; on the open reef, the first slot's).</summary>
     public bool UseActive;
     /// <summary>Pressed: use the open reef's second and third slots' pearls (Q, E).</summary>
-    public bool UseActive2, UseActive3;
     /// <summary>Pressed: dive down the shaft (when she is over it and the way is open).</summary>
     public bool Dive;
 }
@@ -90,7 +89,7 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     /// way; Size: 1 where the arm was free to bend, 0 stapled); a murkling prime freed (Size: the school it let out); the
     /// way down opened; an anemone turned (Size: its scale).
     /// </summary>
-    DotCleared, DotEaten, DotGathered, LeakTied, LeakUntied, LeakSealed, LeakDrunk, LeakArmStruck, PrimeFreed, HavenEntered, HavenLeft, MainCurrentWoke, DealRefused, DealStruck, ClawCut, LastLight, ExitOpened, AnemoneTurned, LostLightTaken,
+    DotCleared, DotEaten, DotGathered, LeakTied, LeakUntied, LeakSealed, LeakDrunk, LeakArmStruck, PrimeFreed, HavenEntered, HavenLeft, MainCurrentWoke, DealRefused, DealStruck, ClawCut, LastLight, ExitOpened, AnemoneTurned,
     /// <summary>The adventure's Inkwarden: struck, it rouses (rolls its spikes out); it fires a spike (Direction: its way).</summary>
     WardenRoused, WardenSpike,
     /// <summary>Drippus Prime: a murkling born out of it (Direction: its way out); its near side dimpling to bounce her (Direction: toward her); the bounce (at its skin; Direction: the way she is flung).</summary>
@@ -143,7 +142,6 @@ public sealed partial class PlaneWorld
         Options = options ?? PlaneOptions.Default;
         Tuning = tuning;
         Run = run ?? new PlaneRun(null, tuning);
-        Run.Reef = Options.Reef;
         // In a leak cave she comes in by its way out, from the dark at its back.
         Player.Position = Player.PrevPosition = map.Way?.Inside ?? map.Start.Position;
         Player.Hp = Run.Hp;
@@ -167,7 +165,6 @@ public sealed partial class PlaneWorld
         if (Options.Corruption || adventure) PlaceCorruption();
         if (adventure) PlaceAdventure();
         // The reef's zones: its murkling packs.
-        if (Options.Reef && Map.Station && Map.Zones.Count > 0) PlaceReefPacks();
         PlaceAsh();
         PlaceExperience();
     }
@@ -313,7 +310,6 @@ public sealed partial class PlaneWorld
         StepEconomy();
         StepExperience();
         StepPushWave();
-        StepLostLight();
         StepHaven();
         StepDiveCave();
         // Murklings made during the step (a prime's pieces) join the others now, never while a loop walks them.

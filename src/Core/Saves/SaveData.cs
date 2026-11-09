@@ -35,28 +35,15 @@ public sealed class Jelly
     /// <summary>Silver shells on her, and those she has left with Fennel in the bay (BroodBed: never lost).</summary>
     public int Shells { get; set; }
     public int Banked { get; set; }
-    /// <summary>The passive pearls absorbed into her bell (lost as lost light when she dims).</summary>
+    /// <summary>Her banked pearls (docs/DIVE.md §2): every pearl she keeps between dives, her active one among them.</summary>
     public List<string> Passives { get; set; } = new();
-    /// <summary>Every active pearl she owns (never lost), and which sit in her three slots (null: an empty slot).</summary>
+    /// <summary>An older save's active pearls: merged into her pearls as she next dives.</summary>
     public List<string> Actives { get; set; } = new();
-    public List<string?> Slots { get; set; } = new() { null, null, null };
-    /// <summary>The great leaks sealed for good, and the named creatures freed (now living in the bay), by id.</summary>
-    public HashSet<string> GreatLeaks { get; set; } = new();
     public HashSet<string> Freed { get; set; } = new();
     /// <summary>Her progress through each freed neighbour's key quest chain (Chains): the step she is on, and how far along it.</summary>
     public Dictionary<string, List<int>> Chains { get; set; } = new();
     /// <summary>Her world's seed code: every leak cave is grown from it.</summary>
     public string Seed { get; set; } = "";
-    /// <summary>Per region: the cave behind each of its mouths now, and how many minor leaks she has sealed there (OpenReef).</summary>
-    public Dictionary<string, List<int>> Caves { get; set; } = new();
-    public Dictionary<string, int> Sealed { get; set; } = new();
-    /// <summary>
-    /// Per region: its mouths shut since she sealed the cave behind them, each with her play time then (PlaySeconds).
-    /// The Leak seeps back in after ReefTuning.Recorrupt of play, and the mouth opens again on a fresh cave.
-    /// </summary>
-    public Dictionary<string, Dictionary<int, double>> Shut { get; set; } = new();
-    /// <summary>Per region: what she has charted of it (its map's fog) and the places in it she has been to.</summary>
-    public Dictionary<string, RegionChart> Charts { get; set; } = new();
     /// <summary>
     /// The Tide Fan's requests (docs/QUESTS-PROPOSAL.md): per region, the ribbons tied on it (a place each, null where
     /// one was taken), the requests she carries, and how many ribbons have ever been tied for each region.
@@ -64,8 +51,6 @@ public sealed class Jelly
     public Dictionary<string, List<Request?>> Fan { get; set; } = new();
     public List<Request> Carried { get; set; } = new();
     public Dictionary<string, int> Tied { get; set; } = new();
-    /// <summary>Her lost light, where she last dimmed (null: none, or she took it back).</summary>
-    public LostLight? Lost { get; set; }
     /// <summary>Her dive under way (docs/DIVE.md §1), as it stood at the start of its level; null between dives.</summary>
     public SuspendedRun? Dive { get; set; }
     /// <summary>How many dives she has ended (a new one's seed comes from her own and this, Run.Dives.SeedOf).</summary>
@@ -101,26 +86,6 @@ public sealed class Request
 
     [System.Text.Json.Serialization.JsonIgnore]
     public bool Done => Progress >= Goal;
-}
-
-/// <summary>A region's map as she has charted it: its fog (a byte a grid point, base64) and the places she has visited.</summary>
-public sealed class RegionChart
-{
-    public string Fog { get; set; } = "";
-    public List<int> Visited { get; set; } = new();
-}
-
-/// <summary>
-/// What death took from a jelly (docs/RPG-PROPOSAL.md §5.1): her passive pearls and the shells on her, left glowing where
-/// she dimmed — the place (OpenReef.PlaceKey) and the spot in it.
-/// </summary>
-public sealed class LostLight
-{
-    public string Place { get; set; } = "";
-    public float X { get; set; }
-    public float Y { get; set; }
-    public List<string> Pearls { get; set; } = new();
-    public int Shells { get; set; }
 }
 
 /// <summary>How she looks (docs/RPG-PROPOSAL.md §8): every colour as #RRGGBB, any colour the player likes.</summary>
@@ -263,9 +228,6 @@ public sealed class SuspendedRun
     /// <summary>Where the run stands, as the HUD names it.</summary>
     public string Where => new OctoShoots.Core.Gen.TopDown.LevelId(Cycle, Depth, Level) { Haven = Haven }.ToString();
     public List<string> Items { get; set; } = new();
-    /// <summary>Her active pearls owned, and what each of her slots holds.</summary>
-    public List<string> Actives { get; set; } = new();
-    public List<string?> Slots { get; set; } = new();
     public float Hp { get; set; }
     /// <summary>The Crab Deals she has struck.</summary>
     public int ArmCuts { get; set; }

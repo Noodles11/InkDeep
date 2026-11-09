@@ -111,9 +111,6 @@ public sealed record ReefLook
         SunEnergy = 0.4f, AmbientEnergy = 0.1f, Caustics = 0.7f, Rays = 0.7f, Fog = 0.24f, Vignette = 0.42f, Contrast = 1.2f,
     };
 
-    /// <summary>A reef zone's look by the depth it takes (HandZone.Look): the Shallows as the open reef's, the rest their own.</summary>
-    public static ReefLook ForZone(int look) => look <= 1 ? OpenShallows : For(look);
-
     /// <summary>
     /// Lantern Bay (docs/RPG-PROPOSAL.md §3): the Sunlit Shallows themselves at the soft end of a summer day, safe and
     /// joyful. The same turquoise over sand, pink coral and saturated life, the same caustics and shafts, all of it

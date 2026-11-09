@@ -49,16 +49,13 @@ public class RequestTests
     }
 
     [Fact]
-    public void She_carries_two_at_most_a_seal_reopens_its_mouth_and_one_let_go_goes_back()
+    public void She_carries_two_at_most_and_one_let_go_goes_back()
     {
         var j = NewJelly();
         Fill(j);
         var places = Requests.Places(j, "reef");
         int seal = places.FindIndex(r => r!.Kind == Requests.Seal);
-        int mouth = places[seal]!.Mouth;
-        j.Shut["reef"] = new Dictionary<int, double> { [mouth] = 0 };
         Assert.True(Requests.Take(j, "reef", seal));
-        Assert.DoesNotContain(mouth, j.Shut["reef"].Keys);
         Assert.Null(places[seal]);
         int other = places.FindIndex(r => r is not null);
         Assert.True(Requests.Take(j, "reef", other));
@@ -98,8 +95,8 @@ public class RequestTests
     public void Freeing_a_caves_prime_lets_its_swallowed_school_out_streaming_for_the_mouth()
     {
         var seed = SeedCode.TryParse("KELP7Q2Z", out var s) ? s : default;
-        var map = TopDownGenerator.GenerateCave(seed, OpenReef.CaveId("reef", 1, 0), 0f, 2);
-        var w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), PlaneOptions.OpenReef);
+        var map = TopDownGenerator.GenerateCave(seed, new LevelId(1001, 1, 1), 0f, 2);
+        var w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), new PlaneOptions { Adventure = true });
         var prime = w.Murklings.First(m => m.Prime);
         Assert.Empty(w.ReefFish);
         w.DebugFreeMurkling(prime);
@@ -115,8 +112,8 @@ public class RequestTests
     public void Given_experience_is_paid_with_the_step_like_a_leaks()
     {
         var seed = SeedCode.TryParse("KELP7Q2Z", out var s) ? s : default;
-        var map = TopDownGenerator.GenerateCave(seed, OpenReef.CaveId("reef", 1, 0), 0f, 2);
-        var w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), PlaneOptions.OpenReef);
+        var map = TopDownGenerator.GenerateCave(seed, new LevelId(1001, 1, 1), 0f, 2);
+        var w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), new PlaneOptions { Adventure = true });
         w.Murklings.Clear();
         int before = w.Run.Xp;
         w.GiveXp(RequestTuning.Xp(2));
