@@ -132,15 +132,56 @@ This is freeing, not killing: the light was hers or the reef's, and it comes bac
 
 ## 5. Pearls
 
-The catalog stays (`data/items.json`, `ItemCatalog`, `Loadout`). Of the 101 pearls, 57 touch shots.
+The catalog stays (`data/items.json`, `ItemCatalog`, `Loadout`). 43 pearls change her shots (by a stat or by the
+shape of a shot), and 20 synergies are built on them.
 
-- **Stage 5 sorts every shot pearl** into one of three lists, as a table for your approval: *onto the beam* (e.g.
-  damage, range: wider, longer), *stays a shot* (a special throw, e.g. Starburst Gland), or *goes*.
-- New effects go onto existing pearls where one fits:
-  - The Anglerfish Lure drops a **decoy**, an emitter brighter than her that the murklings drink from instead.
-  - The Remora Sucker is the **magnet** for cores.
-  - The Brass Compass and the Sea Chart Nautilus between them are the **cartographer**, showing the graph (§6.3).
-- Bubble capacity and regrowth (the shots' reserve) go once no pearl needs them.
+**The shots stay**, as her second weapon: a throw of light on the right button, with its reserve. The beam is what she
+fights with; a shot is what she sends where the beam cannot stay (round a corner, a bait left hanging, a burst). So most
+shot pearls keep working on her shots, and a few carry over to the beam as well. None goes.
+
+### 5.1 Each shot pearl
+
+| Pearl | What it does now | Proposed |
+|---|---|---|
+| Coral Crown, Glass Squid, Shark Tooth, Abyssal Glow, Pufferfish Pout, Cannonball; Neon Rave, Shark Mode, Pirate | + damage | **Beam too**: the beam burns faster by the same stat (it already does). |
+| Whale Lung, Cuttlebone | + range | **Beam too**: the beam reaches farther (× √ of the range stat). |
+| Whale Lung, Cannonball | + shot size | **Beam too**: the beam's cone widens (× √ of the size stat, at most 35°). |
+| Sunbeam | her shot is a laser | **Beam**: the beam reaches half as far again and narrows to 15°: a searchlight. Its shot laser goes. |
+| Lighthouse (Sunbeam + Nautilus Spiral) | the laser sweeps a spiral | **Beam**: a second, fainter beam turns slowly round her. |
+| Electric Eel Tail | shots chain to 2 more foes | **Beam too**: what the beam burns arcs its burn to the 2 nearest corrupted within 4 m, at half the rate. |
+| Rear Fin | a shot out of her back too | **Beam too**: a second beam behind her at half its strength (a murkling sees it too). |
+| Frost Kelp, Fire Coral, Sea Nettle Sting, Stingray Barb, Siren Song, Giant Squid Eye | a chance per hit (freeze, burn, poison, slow, charm, crit) | **Beam too**: rolled once a second for each creature the beam keeps burning. |
+| Anglerfish Lure | shots home | **Shot, and the decoy**: her shots still home, and a shot of hers left hanging shines 2.5 × as bright and can be drunk: murklings go for it instead of her. (Guided Inkfish and Will-o'-Wisp keep working.) |
+| Squid Ink Espresso, Plankton Swarm, Triple Tentacle, Double Helix, Hammerhead, Kraken Form | fire rate, more shots, patterns | **Shot** |
+| Nautilus Spiral, Mirror Scale, Swordfish Bill, Ghost Jelly, Mitosis, Boomerang Shrimp, Starfish Arm, Sardine Run | the shot's path or body | **Shot** |
+| Pearl Diver, Starburst Gland | a charged pearl; a burst where it pops | **Shot** |
+| Cannonball, Captain's Hook | knockback | **Shot** |
+| Bubble Gland, Anemone Pump, Twin Siphon, Bubble Coral | the shots' reserve and hover | **Shot** |
+| Diver's Watch | enemy throws slower | unchanged (not hers) |
+| The other synergies (Pinball Storm, Cell Bloom, Guided Inkfish, Steam Vent, Tuna Rang, Pearl Necklace, Prism Pearl, Black Tide, Big Mad Puff, Will-o'-Wisp, Toxic Bloom, Feeding Frenzy, String of Pearls, Depth Charge, Broadside) | built on shot pearls | **Shot**, as their pearls |
+| Supernova, Lance of Light, Helix Lamp, Searchlight | Firefly Squid's surge | unchanged (the surge is its own) |
+
+The new effects go on existing pearls:
+
+- The Anglerfish Lure is the **decoy** (above).
+- The Remora Sucker is the **magnet** for cores (built).
+- The Brass Compass and the Sea Chart Nautilus between them are the **cartographer**, showing the graph (§6.3).
+- The Coral Polyp stays the slow mend of her light.
+
+### 5.2 One light rule per folk boss
+
+Each folk boss keeps its fight (docs/NPC-BOSSES-PROPOSAL.md) and gains one rule that asks more of the beam than
+holding it on the pearl:
+
+| Boss | Its rule |
+|---|---|
+| Sleepy Old Tull (Depth 1) | **Hold it steady.** Her pearl burns only once the beam has stayed on it 0.5 s without leaving it: in her 2 s sigh, a sweep does nothing. She feels where the beam was last shone, as she feels shots and dashes. |
+| Nine-Fin Kip (Depth 2) | **From the side.** Her pearl on her stripe burns only when the beam meets it within 45° of square-on to her flank, so the beam must come from beside her when she turns side-on. |
+| Papa Fennel (Depth 3) | **Find him.** He is invisible among the kelp, as the corrupted are, until the beam falls on him; lit, he unfurls (his fight's opening), and stays lit for the round. |
+| Many-Armed Ottilie (Depth 4) | **A brighter light.** Two lamp-shells in her hoard are light emitters. Lit by the beam, one glows brighter than Clementine for 3 s, and Ottilie turns to admire it, carrying the pearl round with her: her body no longer shields it. |
+| The Pale Dragonet (Depth 5) | **The beam's heart.** Her ink sacs burst only under the middle of the beam (its inner half-angle), not its edge: the beam must be aimed, not swept. |
+
+Drippus Prime and Queen Clam keep their rules (the whole body; the pearl while the shell is open).
 
 ## 6. The dive as a graph
 
