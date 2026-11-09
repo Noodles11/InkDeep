@@ -142,13 +142,13 @@ public static class LightQuery
     /// <paramref name="threshold"/> bright there, in sight (null: none). Ties go to the lower id, so the pick is steady.
     /// </summary>
     public static LightEmitter? Brightest(IEnumerable<LightEmitter> emitters, Vector2 at, float scan, float threshold,
-        Func<Vector2, Vector2, bool>? sight)
+        Func<Vector2, Vector2, bool>? sight, Func<LightEmitter, bool>? skip = null)
     {
         LightEmitter? best = null;
         float bestB = threshold;
         foreach (var e in emitters)
         {
-            if (!e.Drinkable || !e.Shining) continue;
+            if (!e.Drinkable || !e.Shining || skip?.Invoke(e) == true) continue;
             if (Vector2.DistanceSquared(e.Position, at) > scan * scan) continue;
             float b = Brightness(e, at);
             if (b < bestB || (b == bestB && best is not null && e.Id > best.Id)) continue;

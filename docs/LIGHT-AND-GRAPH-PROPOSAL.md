@@ -207,7 +207,7 @@ A dive is a layered graph of reefs, generated from the dive's seed when it start
 |---|---|---|
 | 1 | The emitter registry, brightness at a point; her aura and her shots registered — built | no |
 | 2 | The beam (held), the aura emitter, light as HP (her light dims with it) — built | yes |
-| 3 | The basic murkling on the registry; variants by depth | yes |
+| 3 | The basic murkling on the registry; variants by depth — built | yes |
 | 4 | Invisible in the dark; cores and healing; the magnet | yes |
 | 5 | Pearls sorted and moved (table for approval); one light rule per boss | yes |
 | 6 | The dive graph, the reef kinds, the chart; place rules | yes |

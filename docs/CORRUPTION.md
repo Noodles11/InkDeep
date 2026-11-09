@@ -240,6 +240,25 @@ it `PlaneHeart`. She takes one only when corrupted at all; otherwise it waits.
 
 ## Murklings (`Murkling`)
 
+- **Kinds** (`MurkKind`, `BlightTuning.VariantShare`; docs/LIGHT-AND-GRAPH-PROPOSAL.md §3): a murkling buds
+  **basic**, or as a variant: a **thrower** (throws at her, below) or a **hunter** (hunts the reef's fish, below), half
+  each. The variants' share grows with depth: none in Depth 1, 20 % in Depth 2, 35 % in 3, 45 % in 4, 55 % deeper. A
+  prime does both (and buds only from Depth 2). The kind comes from the murkling's own seed.
+- **A basic murkling seeks light** (`PlaneWorld.StepSeeker`; `SeekerTests`). It has four states (`MurkState`):
+  - *Searching*: it holds still (a den's drifts back into its nave) and scans the light emitters every 0.2 s: those
+    within 20 m, at least 0.04 bright where it is, in sight. Her aura alone reaches it within about 4.8 m; her beam
+    much farther.
+  - *Approaching*: it swims to the brightest it found (round the rock to her, straight to another light), rescanning
+    as it goes, so a brighter light that comes on turns it.
+  - *Attached*: on touch it takes hold, with no hit: on her it clings (at most 3 at once; not through her shield or
+    her dash), on another light (a shot, a plant, a decoy) it feeds. Either way it drinks 2.5 a second (on her, × the
+    depth's hurt scale) and does not scan. A light it drinks dry it lets go of, and scans at once.
+  - *Released*: a dash shakes it off where it held (it is not flung); dazed 0.7 s, it then scans at once and goes for
+    whatever is brightest, not back to her as such.
+
+  It throws nothing, hunts no fish and keeps to itself. In her Ink Cloud it does not see her light.
+- **The rest of this section is the variants and primes**, which sense her within 14 m, lit or not, and go for another
+  light only when that is the brightest they see.
 - **After her, round the rock, never into it** (`PlaneNav.cs`, `WayToHer`; murklings and primes, lesser murklings and
   their swarms, the adventure's tadpole, spiked and shoal murklings, rolling Thumpsquirts): with open water straight
   to her (a body's width either side of the line, 0.45 m) it swims straight at her; with rock between, it follows the
@@ -267,11 +286,11 @@ it `PlaneHeart`. She takes one only when corrupted at all; otherwise it waits.
 - **The arena** never buds: its only murklings are Drippus Prime's brood (below).
 - **Movement:** 2.6 + 0.4 × Menace m/s (she cruises at 6), toward the brightest light within 14 m, her or one of her hanging bubbles (a merged one
   shines brighter than her). This makes bait and herding possible.
-- **Its purpose is to corrupt every creature:** while she is more than 14 m off, it hunts the reef's fish instead. It
+- **A hunter (or a prime) corrupts every creature:** while she is more than 14 m off, it hunts the reef's fish instead. It
   goes after the nearest healthy fish within 14 m that it can see (looking again twice a second), keeps about 6 m from
   it and throws at it at its usual rate, led a little to where the fish is swimming. A clownfish tucked into its
   anemone is safe. Once she is within 14 m it turns to her as above.
-- **Attack:** a black orb, a piece of itself, thrown when she is within 9 m and in sight, for 7 damage (its radius
+- **A thrower's (or a prime's) attack:** a black orb, a piece of itself, thrown when she is within 9 m and in sight, for 7 damage (its radius
   0.1 m). **The telegraph is a slingshot** (0.55 s ÷ (1 + 0.3 × Menace)): it bends back away from its aim into a
   C, its middle hauled back and its tips left reaching toward her, trembling and shivering with the effort, its
   liquid body sloshing back away from its aim with the strain, its aim following her as it draws; it crawls at a quarter of its pace meanwhile. For the last 0.12 s its aim is locked and it
@@ -284,7 +303,7 @@ it `PlaneHeart`. She takes one only when corrupted at all; otherwise it waits.
   toward 0.7 density (never in safe places). Struck in the air by her light (a shot or Firefly Squid's surge), it
   bursts like a water balloon: a quick spray of ink droplets and a puff of violet mist, staining nothing and
   cleansing nothing.
-- **Contact:** 6 damage, then it clings (at most 3 at once), draining 2.5 HP/s each and dimming her bell. Feeding shows
+- **A variant's contact:** 6 damage, then it clings (at most 3 at once), draining 2.5 HP/s each and dimming her bell. Feeding shows
   as one corruption number a second, summed over it. A dash bursts her light: each clinging murkling is thrown off
   (9 m/s), losing one default shot's worth (10) of its meter, and is dazed for 0.7 s. Then it chases her again. One
   already worn down bursts. The dash shows as a small light burst, not an ink cloud.

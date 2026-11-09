@@ -70,7 +70,7 @@ public class MurkFishTests
     {
         var w = World();
         var school = w.Schools[0];
-        var m = new Murkling { Position = Beside(w, school.Position, 6f), Bud = 0f };
+        var m = new Murkling { Position = Beside(w, school.Position, 6f), Bud = 0f, Kind = MurkKind.Hunter };
         w.Murklings.Add(m);
         Assert.True(Vector2.Distance(w.Player.Position, m.Position) > BlightTuning.Sense);
         bool turned = false;
@@ -93,7 +93,7 @@ public class MurkFishTests
     {
         var w = World();
         var school = w.Schools[0];
-        var m = new Murkling { Position = Beside(w, school.Position, 6f), Bud = 0f };
+        var m = new Murkling { Position = Beside(w, school.Position, 6f), Bud = 0f, Kind = MurkKind.Hunter };
         w.Murklings.Add(m);
         var her = Beside(w, m.Position, 10f);
         for (int i = 0; i < 60 * 3; i++)

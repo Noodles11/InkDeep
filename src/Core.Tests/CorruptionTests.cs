@@ -158,7 +158,7 @@ public class CorruptionTests
     {
         var w = Level(p => TestLevels.General(p) && !p.HasBoss && p.Id.Level > 1);
         Quiet(w);
-        var m = new Murkling { Position = w.Player.Position + new Vector2(0.5f, 0f), Bud = 0f, Clinging = true, ClingOffset = new Vector2(0.5f, 0f) };
+        var m = new Murkling { Position = w.Player.Position + new Vector2(0.5f, 0f), Bud = 0f, Clinging = true, ClingOffset = new Vector2(0.5f, 0f), Kind = MurkKind.Thrower };
         w.Murklings.Add(m);
         // While it clings, it drinks: one number a second, the whole second's worth.
         float hp = w.Player.Hp;
@@ -732,7 +732,7 @@ public class CorruptionTests
         var w = Level(p => TestLevels.General(p) && !p.HasBoss && p.Id.Level > 1);
         Quiet(w);
         var her = w.Player.Position;
-        var m = new Murkling { Position = her + new Vector2(0f, -5f), Bud = 0f, ThrowTimer = 0f };
+        var m = new Murkling { Position = her + new Vector2(0f, -5f), Bud = 0f, ThrowTimer = 0f, Kind = MurkKind.Thrower };
         w.Murklings.Add(m);
         int windup = -1, thrown = -1;
         for (int i = 0; i < 120 && thrown < 0; i++)

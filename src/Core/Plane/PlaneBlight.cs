@@ -106,6 +106,13 @@ public static class BlightTuning
     public const float BubbleDim = 0.5f;
     /// <summary>A dash throws a clinging murkling off: one default shot's worth of light, flung this fast, dazed this long.</summary>
     public const float ShakeLight = 10f, ShakeSpeed = 9f, ShakeSeconds = 0.7f;
+    /// <summary>
+    /// The murklings' kinds by depth (docs/LIGHT-AND-GRAPH-PROPOSAL.md §3.2): this share of those budding are variants
+    /// (half throwers, half hunters), the rest basic; Depth 1 has basic murklings only, and no primes.
+    /// </summary>
+    public static float VariantShare(int depth) => depth switch { <= 1 => 0f, 2 => 0.2f, 3 => 0.35f, 4 => 0.45f, _ => 0.55f };
+    /// <summary>A basic murkling takes hold of a light that is not hers (a shot, a plant, a decoy) within this of it.</summary>
+    public const float Grab = 0.3f;
     /// <summary>A steady drain (a creature feeding on her) shows as one number: all it took over each second.</summary>
     public const float DrainReport = 1f;
     /// <summary>The arena buds faster while the boss fights.</summary>
@@ -254,7 +261,26 @@ public sealed class Murkling
     /// <summary>Drifting toward this light (her, or a hanging bubble of hers).</summary>
     public Vector2 Target;
     public bool Budding => Bud > 0f;
+    /// <summary>Its kind (basic, unless a variant: MurkKind).</summary>
+    public MurkKind Kind;
+    /// <summary>A basic murkling: the light it is swimming to (null: none seen), the light it is feeding on that is not hers, and when it scans next.</summary>
+    public LightEmitter? Light, Feeding;
+    public float ScanTimer;
+    /// <summary>Whether it is a basic light-seeker (not a variant, a prime or a turned fish).</summary>
+    public bool Seeker => Kind == MurkKind.Basic && !Prime && !Lesser;
+    public MurkState State => Clinging || Feeding is not null ? MurkState.Attached : Shaken > 0f ? MurkState.Released
+        : Light is not null ? MurkState.Approaching : MurkState.Searching;
 }
+
+/// <summary>
+/// What a murkling is (docs/LIGHT-AND-GRAPH-PROPOSAL.md §3): a basic one only seeks light and drinks it; a thrower also
+/// throws ink at her; a hunter hunts the reef's fish while she is away (its throws turn them). A prime (Murkling.Prime)
+/// does all of it, and a lesser murkling (a turned fish) keeps its own ways.
+/// </summary>
+public enum MurkKind { Basic, Thrower, Hunter }
+
+/// <summary>A basic murkling's state: holding still and scanning, swimming to a light, feeding on one, shaken off one.</summary>
+public enum MurkState { Searching, Approaching, Attached, Released }
 
 /// <summary>A murkling's throw: a small black orb that drains light.</summary>
 public sealed class MurkShot
@@ -572,8 +598,11 @@ public sealed partial class PlaneWorld
             m.Clinging = false;
             var away = SafeNormalize(m.ClingOffset);
             if (away == Vector2.Zero) away = -SafeNormalize(p.Velocity);
-            m.Velocity = away * BlightTuning.ShakeSpeed;
+            // (A basic murkling is left where it let go; the others are flung off.)
+            m.Velocity = m.Seeker ? Vector2.Zero : away * BlightTuning.ShakeSpeed;
             m.Shaken = BlightTuning.ShakeSeconds;
+            m.Light = null;
+            m.ScanTimer = 0f;
             float dealt = Ward(m, m.Position, BlightTuning.ShakeLight);
             bool emptied = dealt > 0f && m.Corruption.Hit(dealt);
             Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, m.Position, Vector2.Zero, dealt));
@@ -735,6 +764,83 @@ public sealed partial class PlaneWorld
 
     // ───────────────────────── murklings ─────────────────────────
 
+    /// <summary>A budding murkling's kind on this level (by depth: BlightTuning.VariantShare), from its own seed.</summary>
+    MurkKind KindAt(float seed)
+    {
+        float roll = seed * 0.618034f % 1f;
+        float share = BlightTuning.VariantShare(Map.Id.ShownDepth);
+        return roll >= share ? MurkKind.Basic : roll < share * 0.5f ? MurkKind.Thrower : MurkKind.Hunter;
+    }
+
+    /// <summary>The brightest light a murkling at <paramref name="at"/> can see within <paramref name="scan"/> (her own not while her Ink Cloud hides her).</summary>
+    LightEmitter? SeekLight(Vector2 at, float scan = LightTuning.Scan) =>
+        LightQuery.Brightest(Lights.All, at, scan, LightTuning.Threshold, LineOfSight, Unseen ? e => e.Owner == Her : null);
+
+    /// <summary>
+    /// A basic murkling (docs/LIGHT-AND-GRAPH-PROPOSAL.md §3.1): it holds still and scans the lights every ScanEvery;
+    /// seeing one, it swims to the brightest (round the rock to her; straight to another, which it sees only in the
+    /// open), rescanning as it goes, and takes hold on touch: on her it clings (no hit, only the drain), on another light it
+    /// feeds. Shaken off, it scans at once and goes for whatever is brightest then.
+    /// </summary>
+    void StepSeeker(Murkling m)
+    {
+        var p = Player;
+        m.ScanTimer -= Dt;
+        var light = m.Light;
+        if (light is not null && (!light.Shining || light.Id == 0 || Unseen && light.Owner == Her))
+        {
+            light = m.Light = null;
+            m.ScanTimer = 0f;
+        }
+        if (m.ScanTimer <= 0f)
+        {
+            m.ScanTimer = LightTuning.ScanEvery;
+            light = m.Light = SeekLight(m.Position);
+        }
+        float pace = BlightTuning.MurkSpeed + BlightTuning.MurkSpeedPerMenace * Menace;
+        Vector2 wish;
+        if (light is null)
+        {
+            // Searching: it holds where it is (a den's murkling drifts back into its nave).
+            m.Target = m.Position;
+            wish = m.Home is { } home && Vector2.Distance(m.Position, home) > m.HomeRadius ? SafeNormalize(home - m.Position) * 0.6f : Vector2.Zero;
+            m.Velocity = MoveToward(m.Velocity, wish * pace, 4f * Dt);
+            Move(ref m.Position, ref m.Velocity, m.Body, report: false);
+            return;
+        }
+        m.Target = light.Position;
+        bool hers = light.Owner == Her;
+        var to = (hers ? p.Position : light.Position) - m.Position;
+        float dist = to.Length();
+        if (dist < m.Radius + (hers ? Radius : BlightTuning.Grab))
+        {
+            if (!hers)
+            {
+                m.Feeding = light;
+                m.Light = null;
+                m.ClingOffset = -to;
+                m.Velocity = Vector2.Zero;
+                return;
+            }
+            // On her: it clings, unless her shield or her dash keeps it off, or she has as many on her as can hold.
+            if (p.ShieldTimer <= 0f && p.DashInvulnerableTimer <= 0f && !InHaven && Clingers < BlightTuning.MaxClingers)
+            {
+                m.Clinging = true;
+                m.Light = null;
+                m.ClingOffset = SafeNormalize(m.Position - p.Position) * (Radius * 0.8f);
+                Events.Add(new PlaneEvent(PlaneEventType.MurklingCling, m.Position, Vector2.Zero));
+                return;
+            }
+            m.Velocity = MoveToward(m.Velocity, Vector2.Zero, 4f * Dt);
+            return;
+        }
+        wish = hers ? WayToHer(m.Position) : SafeNormalize(to);
+        // A wobble off the line, as if the dark were reluctant.
+        wish += new Vector2(MathF.Sin(Time * 1.7f + m.Seed), MathF.Cos(Time * 1.3f + m.Seed * 2f)) * 0.35f;
+        m.Velocity = MoveToward(m.Velocity, SafeNormalize(wish) * pace, 4f * Dt);
+        Move(ref m.Position, ref m.Velocity, m.Body, report: false);
+    }
+
     void StepMurklings(CorruptionField field)
     {
         var p = Player;
@@ -777,7 +883,7 @@ public sealed partial class PlaneWorld
                 var at = CorruptionField.CellCentre(cell % CorruptionField.N, cell / CorruptionField.N);
                 if (field.Density[cell] < BlightTuning.BudDensity || Vector2.Distance(at, p.Position) < BlightTuning.BudClearance || !Clear(at, BlightTuning.MurkRadius)) continue;
                 // Now and then a prime (else a murkling), where the level still holds ink enough for it.
-                bool prime = _primesBorn < BlightTuning.PrimePerLevel && !Murklings.Any(x => x.Alive && x.Prime && x.Area == index)
+                bool prime = Map.Id.ShownDepth >= 2 && _primesBorn < BlightTuning.PrimePerLevel && !Murklings.Any(x => x.Alive && x.Prime && x.Area == index)
                     && _blightRng.NextFloat() < BlightTuning.PrimeChance + BlightTuning.PrimeChancePerMenace * Menace
                     && Vector2.Distance(at, p.Position) > BlightTuning.PrimeClearance && Clear(at, BlightTuning.PrimeBody);
                 if ((prime ? Bud(at, index, prime: true) : null) is null && Bud(at, index) is null) continue;
@@ -806,6 +912,20 @@ public sealed partial class PlaneWorld
                 Drain(m.ClingDrain * Dt, DamageSource.Murkling);
                 continue;
             }
+            // Feeding on another light (a shot, a plant, a decoy): it drinks it at the same pace, and lets go once it is
+            // spent, looking at once for the next.
+            if (m.Feeding is { } food)
+            {
+                if (food.Shining && food.Id != 0)
+                {
+                    m.Position = food.Position + m.ClingOffset;
+                    m.Velocity = Vector2.Zero;
+                    DrinkLight(food, m.ClingDrain * Dt);
+                    continue;
+                }
+                m.Feeding = null;
+                m.ScanTimer = 0f;
+            }
             if (m.Shaken > 0f)
             {
                 m.Shaken -= Dt;
@@ -827,23 +947,16 @@ public sealed partial class PlaneWorld
                 StepLesser(m);
                 continue;
             }
-            // Toward the brightest light: her, or a bubble of hers hanging at the end of its range (bait).
-            Vector2 target = p.Position;
-            float best = 1f / (1f + 0.15f * Vector2.Distance(m.Position, p.Position));
-            bool her = true;
-            foreach (var shot in Shots)
+            if (m.Seeker)
             {
-                if (!shot.FromPlayer || shot.Life <= 0f || shot.Rest <= 0f) continue;
-                float d = Vector2.Distance(m.Position, shot.Position);
-                float bright = MathF.Min(0.4f + 0.06f * shot.Bubbles, 1.3f) * shot.Dim;
-                float score = bright / (1f + 0.15f * d);
-                if (d < m.Sense && score > best)
-                {
-                    best = score;
-                    target = shot.Position;
-                    her = false;
-                }
+                StepSeeker(m);
+                continue;
             }
+            // A variant or a prime senses her within its Sense, lit or not (as the murklings always have); another light it
+            // goes for instead only when that is the brightest it sees (a bubble of hers, a lure).
+            var seen = SeekLight(m.Position, m.Sense);
+            bool her = seen is null || seen.Owner == Her;
+            Vector2 target = her ? p.Position : seen!.Position;
             m.Target = target;
             var to = target - m.Position;
             float dist = to.Length();
@@ -855,7 +968,8 @@ public sealed partial class PlaneWorld
             // keeping a throw's distance from the one it is after.
             bool away = her && dist >= m.Sense;
             if (away && m.Home is { } home && Vector2.Distance(m.Position, home) > m.HomeRadius) wish = SafeNormalize(home - m.Position) * 0.6f;
-            var prey = away && (m.Home is not { } h2 || Vector2.Distance(m.Position, h2) <= m.HomeRadius) ? Prey(m) : null;
+            bool hunts = m.Prime || m.Kind == MurkKind.Hunter, throwsAtHer = m.Prime || m.Kind == MurkKind.Thrower;
+            var prey = hunts && away && (m.Home is not { } h2 || Vector2.Distance(m.Position, h2) <= m.HomeRadius) ? Prey(m) : null;
             float preyDist = 0f;
             if (prey is not null)
             {
@@ -893,7 +1007,7 @@ public sealed partial class PlaneWorld
             else
             {
                 m.ThrowTimer -= Dt;
-                if (her && dist < m.ThrowRange && m.ThrowTimer <= 0f && LineOfSight(m.Position, p.Position)) BeginThrow(m, null);
+                if (throwsAtHer && her && dist < m.ThrowRange && m.ThrowTimer <= 0f && LineOfSight(m.Position, p.Position)) BeginThrow(m, null);
                 else if (prey is not null && preyDist < m.ThrowRange && m.ThrowTimer <= 0f && LineOfSight(m.Position, prey.Position)) BeginThrow(m, prey);
             }
         }
@@ -1035,6 +1149,7 @@ public sealed partial class PlaneWorld
             if (draught is null) return null;
         }
         var m = new Murkling { Position = at, Area = area, Seed = _blightRng.Range(0f, 100f), ThrowTimer = BlightTuning.ThrowEvery * _blightRng.Range(0.5f, 1f) };
+        if (!prime) m.Kind = KindAt(m.Seed);
         m.Corruption.Max = m.Corruption.Value = BlightTuning.MurkCorruption * (1f + BlightTuning.MeterPerMenace * Menace) * (prime ? BlightTuning.PrimeMeter : 1f);
         if (prime)
         {
