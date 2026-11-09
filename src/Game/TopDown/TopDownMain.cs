@@ -38,6 +38,7 @@ public partial class TopDownMain : Node3D
     CombatView _combat = null!;
     BeamView _beam = null!;
     CoreView _cores = null!;
+    LampView _lamps = null!;
     CurrentView _currents = null!;
     CrabView _crab = null!;
     float _holeShown;
@@ -350,6 +351,8 @@ public partial class TopDownMain : Node3D
         AddChild(_beam);
         _cores = new CoreView();
         AddChild(_cores);
+        _lamps = new LampView();
+        AddChild(_lamps);
         _combat = new CombatView { Swells = _swells };
         AddChild(_combat);
         _crab = new CrabView();
@@ -553,7 +556,7 @@ public partial class TopDownMain : Node3D
 
     LevelId RunStart() => RunLaunch.Start(_recorder.Profile, _view ?? SettingsStore.LoadView());
 
-    /// <summary>Verification: the options with the boss `--boss=` names (null: the game's own).</summary>
+    /// <summary>Verification: the options with the boss `--boss=` names: queen, drippus, a concept, a neighbour (null: the game's own).</summary>
     PlaneOptions? DebugBoss()
     {
         if (_dbgBoss is null || !_map.HasBoss) return null;
@@ -563,6 +566,8 @@ public partial class TopDownMain : Node3D
                 ? OctoShoots.Core.Bosses.BossGenerator.DrippusPrime(_map.Seed, _map.Cycle, depth)
             : Enum.TryParse<OctoShoots.Core.Bosses.BossConcept>(_dbgBoss, true, out var concept)
                 ? OctoShoots.Core.Bosses.BossGenerator.ForConcept(_map.Seed, _map.Cycle, depth, concept)
+            // A neighbour by name (tull, kip, fennel, ottilie, bubbles), as the Leak made her.
+            : Folk.Get(_dbgBoss) is { } folk ? OctoShoots.Core.Bosses.FolkBosses.For(folk.Id, folk.Level, _map.Menace)
                 : null;
         if (spec is null) return null;
         var d = PlaneOptions.Default;
@@ -2572,6 +2577,7 @@ public partial class TopDownMain : Node3D
         Guard("combat", () => _combat.Sync(_world, dt));
         Guard("beam", () => _beam.Sync(_world, _bell.LightPosition, dt));
         Guard("cores", () => _cores.Sync(_world));
+        Guard("lamps", () => _lamps.Sync(_world, dt));
         Guard("surge", () => _surgeView.Sync(_world, dt));
         Guard("geysers", () => _geysers.Sync(_world, dt, _camera.Camera));
         _camera.SetBubbleLights(_combat.Lights, _combat.LightCount);

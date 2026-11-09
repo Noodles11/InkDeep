@@ -165,9 +165,10 @@ public sealed partial class PlaneWorld
                 if (root.Alive && Touch(root, root.Position, 1.9f, BlightTuning.SacRadius, dazzles: false) is var n and > 0 && !Guarded(root.Position))
                     root.Corruption.Sear(burn * n);
         }
-        // A boss burns only where it lies open to the light (its pearl, or Drippus Prime's whole body), and is never dazzled.
-        if (Boss is { Stage: BossStage.Fight, Open: true } boss && Touch(boss, boss.LightAt, 0f, boss.LightReach, dazzles: false) is var lit and > 0)
-            DamageBoss(boss, burn * lit, Vector2.Zero, quiet: true);
+        // A boss burns only where it lies open to the light (its pearl, or Drippus Prime's whole body), by its own rule for
+        // her beam (PlaneBossLight.cs), and is never dazzled.
+        if (Boss is { Stage: BossStage.Fight } boss) StepBossLight(boss, burn);
+        else if (Boss is { } after) StepLamps(after);
         // Creatures gone (freed, or the level left) are forgotten.
         if (Tick % 60 == 0)
         {
@@ -182,7 +183,7 @@ public sealed partial class PlaneWorld
     /// How many of her shots light this creature (on her plane at <paramref name="at"/>, <paramref name="height"/> metres
     /// above it, this radius): some of its body within a shot's light, in sight of the shot. Dazzles it as it comes in.
     /// </summary>
-    int Touch(object kin, Vector2 at, float height, float radius, bool dazzles = true)
+    int Touch(object kin, Vector2 at, float height, float radius, bool dazzles = true, bool beams = true)
     {
         int n = 0;
         Vector2 from = default;
@@ -202,7 +203,7 @@ public sealed partial class PlaneWorld
                 }
             }
         bool beamed = false;
-        if (!Defeated)
+        if (!Defeated && beams)
             foreach (var (beam, worth) in HerBeams)
             {
                 if (!BeamReaches(beam, at, height, radius)) continue;

@@ -168,7 +168,7 @@ The new effects go on existing pearls:
 - The Brass Compass and the Sea Chart Nautilus between them are the **cartographer**, showing the graph (§6.3).
 - The Coral Polyp stays the slow mend of her light.
 
-### 5.2 One light rule per folk boss
+### 5.2 One light rule per folk boss (built)
 
 Each folk boss keeps its fight (docs/NPC-BOSSES-PROPOSAL.md) and gains one rule that asks more of the beam than
 holding it on the pearl:
@@ -250,7 +250,7 @@ A dive is a layered graph of reefs, generated from the dive's seed when it start
 | 2 | The beam (held), the aura emitter, light as HP (her light dims with it) — built | yes |
 | 3 | The basic murkling on the registry; variants by depth — built | yes |
 | 4 | Invisible in the dark (built for murklings; the other corrupted kinds follow); cores and healing; the magnet — built | yes |
-| 5 | Pearls sorted and moved (table for approval); one light rule per boss | yes |
+| 5 | Pearls sorted and moved; one light rule per boss — built | yes |
 | 6 | The dive graph, the reef kinds, the chart; place rules | yes |
 | 7 | Sub-levels generated with their reef; exact return; short transitions | yes |
 | 8 | The save for the graph; the death fade and the dive's summary | yes |

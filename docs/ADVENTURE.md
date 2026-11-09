@@ -223,6 +223,18 @@ what burn the corrupted. Caves are dark. The sim is in `src/Core/Plane/PlaneHerL
     slows it to half pace 2 s, Siren Song charms it 3 s (it does not see her light), Giant Squid Eye burns it × 3 for
     a second;
   - the Anglerfish Lure makes a shot of hers left hanging 2.5 × as bright: a decoy the murklings go for.
+- **Her beams on a boss** (`PlaneBossLight.cs`, `BossLightTuning`; `BossLightTests`): they burn its pearl while it
+  is open as her shots do (a shielded pearl held behind the body stops a beam coming through it, but in the window),
+  and its sacs. Each folk boss asks one thing more of the beam:
+  - Tull (Slam and Sigh): her pearl burns only once a beam has stayed on it 0.5 s; she feels where the beam shines, as
+    she feels shots and dashes;
+  - Kip (the cleaning dance): only a beam meeting her flank within 45° of square-on burns her pearl;
+  - Fennel (the hidden one): any beam falling on him in his kelp finds him;
+  - Ottilie (the treasure): two lamp-shells lie in her hoard, behind her either side (`LampView`). Her beam lights
+    one; it holds her light 3 s, brighter than Clementine to the sim (a light emitter), and Ottilie turns to admire
+    it (1.2 rad/s), her pearl carried round with her, no longer between her and Clementine;
+  - the Pale Dragonet (boil heart): her sacs burn only under the middle half of her own beam, not its edge, nor Rear
+    Fin's or Lighthouse's beams.
 - **Her shots** are on the right mouse button (RB on a controller).
 
 - **Her light** (`BellView`): a bulb's, smooth all round her from her bell's heart (DESIGN-TOPDOWN §5.3), reaching

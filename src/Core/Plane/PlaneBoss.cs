@@ -105,7 +105,7 @@ public sealed class BossRing
     public bool Hit;
 }
 
-public sealed class PlaneBoss
+public sealed partial class PlaneBoss
 {
     public BossSpec Spec = null!;
     public Vector2 Position;
@@ -279,6 +279,7 @@ public sealed partial class PlaneWorld
         if (spec.Exposure == Exposure.CoaxOut)
             foreach (var site in spec.Sites.Where(s => s.Sac)) Boss.Sacs.Add(new BossSac { Site = site, Hp = spec.SacHp });
         if (spec.Move == BossMove.Hide) PlaceStands(Boss);
+        PlaceLamps(Boss);
     }
 
     /// <summary>A hider's stands of kelp, evenly round its arena (where there is water), and it waits in the first.</summary>
@@ -496,7 +497,7 @@ public sealed partial class PlaneWorld
         var spec = boss.Spec;
         boss.ActTime += Dt;
         // A Vibration sense hears her shots and dashes (and a water sense keeps where it last had her, for when it loses her).
-        if (p.IsDashing || Events.Exists(e => e.Type == PlaneEventType.Shot) || spec.Sense == BossSense.Water && !Unseen) boss.Heard = p.Position;
+        if (p.IsDashing || BeamOn || Events.Exists(e => e.Type == PlaneEventType.Shot) || spec.Sense == BossSense.Water && !Unseen) boss.Heard = p.Position;
         if (spec.Exposure == Exposure.MovingWindow && boss.Act != BossAct.Stagger) boss.PearlTurn += spec.PearlOrbit * Dt;
         if (IsDrippus(boss))
         {
@@ -751,7 +752,10 @@ public sealed partial class PlaneWorld
         switch (spec.Move)
         {
             case BossMove.Turn:
-                if (!still) boss.Facing = Turn(boss.Facing, AimFrom(boss, boss.Position), spec.MoveRate * Dt);
+                // (Admiring a lamp-shell her light lit, she turns to it, whatever she was doing.)
+                if (boss.Admiring is { } lamp && SafeNormalize(lamp.Position - boss.Position) is var toLamp && toLamp != Vector2.Zero)
+                    boss.Facing = Turn(boss.Facing, toLamp, BossLightTuning.LampTurn * Dt);
+                else if (!still) boss.Facing = Turn(boss.Facing, AimFrom(boss, boss.Position), spec.MoveRate * Dt);
                 break;
             case BossMove.Spin:
                 if (!still) boss.Facing = Rotate(boss.Facing, spec.MoveRate * Dt);
