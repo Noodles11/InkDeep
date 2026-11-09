@@ -41,7 +41,7 @@ public partial class TopDownMain
         {
             if (_jelly is not { } jelly) return;
             Requests.LetGo(jelly, index);
-            SaveJelly();
+            KeepJelly();
             _sfx.PlayPitched("pop", 0.8f, -10f);
             FillPauseRequests();
         };
@@ -52,8 +52,24 @@ public partial class TopDownMain
         };
     }
 
-    /// <summary>A region's mouths by what the bay calls them ("west", "south", "east").</summary>
-    static IReadOnlyList<string> MouthNames(string region) => LoadMap(region).Mouths.Select(m => m.Name).ToList();
+    /// <summary>A region's mouths by what the bay calls them ("west", "south", "east"); a dive's requests name none.</summary>
+    static IReadOnlyList<string> MouthNames(string region) => region == Requests.Dive ? System.Array.Empty<string>() : LoadMap(region).Mouths.Select(m => m.Name).ToList();
+
+    /// <summary>What a region is called on a request (a dive's: the deep).</summary>
+    static string RegionTitle(string region) => region == Requests.Dive ? "the deep" : LoadMap(region).Title;
+
+    /// <summary>The fans' regions: the open reef's, or a dive's one (docs/DIVE.md §7).</summary>
+    IEnumerable<string> FanRegions => Reef ? OpenReef.Regions : new[] { Requests.Dive };
+
+    /// <summary>
+    /// Her jelly written to the save as it stands (on the open reef, with all she carries; on a dive, only what is hers
+    /// already: her requests, her chains, her folk; what she carries is banked at havens).
+    /// </summary>
+    void KeepJelly()
+    {
+        if (Reef) SaveJelly();
+        else if (_jellySaved && !_debugRun) GameSave.Write();
+    }
 
     /// <summary>Home in the bay: new ribbons tied in each region's empty places on the fan.</summary>
     void FillFan()
@@ -61,6 +77,12 @@ public partial class TopDownMain
         // Grandmother Tull ties the bay's troubles to the fan: none till she is home.
         if (_jelly is not { } jelly || _world is null || !BayOpen(BayService.TideFan)) return;
         if (!SeedCode.TryParse(jelly.Seed, out var seed)) seed = _seed;
+        // A dive's fan: its asks at the depth she is diving.
+        if (!Reef)
+        {
+            Requests.FillDive(jelly, System.Math.Max(1, 2 * _id.ShownDepth - 1), _world.Run.CanOffer, _catalog);
+            return;
+        }
         foreach (string region in OpenReef.Regions)
         {
             var hand = LoadMap(region);
@@ -75,7 +97,7 @@ public partial class TopDownMain
         var mouths = MouthNames(r.Region);
         var (who, line) = Requests.PosterOf(r, mouths);
         var pearl = r.Pearl is { } id && _catalog is not null && _catalog.TryGet(id, out var item) ? item : null;
-        return new FanMenu.Entry(who, line, Requests.Caption(r, LoadMap(r.Region).Title, mouths), pearl, r.Shells, r.Xp, RequestRibbons.KindColour(r.Kind), action, enabled);
+        return new FanMenu.Entry(who, line, Requests.Caption(r, RegionTitle(r.Region), mouths), pearl, r.Shells, r.Xp, RequestRibbons.KindColour(r.Kind), action, enabled);
     }
 
     void OpenFan()
@@ -93,7 +115,7 @@ public partial class TopDownMain
         _fanShown.Clear();
         var fan = new List<FanMenu.Entry>();
         bool room = jelly.Carried.Count < RequestTuning.Carry;
-        foreach (string region in OpenReef.Regions)
+        foreach (string region in FanRegions)
         {
             var places = Requests.Places(jelly, region);
             for (int i = 0; i < places.Count; i++)
@@ -125,7 +147,7 @@ public partial class TopDownMain
         var (region, place) = _fanShown[index];
         if (!Requests.Take(jelly, region, place)) return;
         _sfx.PlayPitched("bell_ring", 1.1f, -8f);
-        SaveJelly();
+        KeepJelly();
         RefillFan();
     }
 
@@ -145,14 +167,29 @@ public partial class TopDownMain
         _sfx.PlayPitched("bell_ring", 1.25f, -4f);
         Say("Request untied");
         NoteChain(StepKind.Untie);
-        SaveJelly();
+        KeepJelly();
         RefillFan();
     }
 
-    /// <summary>The sim's events that answer a request she carries (in a region's leak cave).</summary>
+    /// <summary>The sim's events that answer a request she carries (in a region's leak cave; on a dive, anywhere in it).</summary>
     void NoteRequest(in PlaneEvent e)
     {
-        if (_jelly is not { } jelly || _place != ReefPlace.Cave) return;
+        if (_jelly is not { } jelly) return;
+        if (!Reef)
+        {
+            // A dive (docs/DIVE.md §7): every leak sealed counts, a leak cave's for its own ask too.
+            var noted = e.Type switch
+            {
+                PlaneEventType.LeakSealed => Requests.Note(jelly, Requests.Seal, Requests.Dive).Concat(InDiveCave ? Requests.Note(jelly, Requests.Den, Requests.Dive) : new()).ToList(),
+                PlaneEventType.PrimeFreed => Requests.Note(jelly, Requests.Prime, Requests.Dive),
+                _ => null,
+            };
+            if (e.Type == PlaneEventType.PrimeFreed && e.Size > 0f) Say("The swallowed school swims home");
+            if (noted is { Count: > 0 }) RequestDone();
+            else if (noted is not null) KeepJelly();
+            return;
+        }
+        if (_place != ReefPlace.Cave) return;
         var done = e.Type switch
         {
             PlaneEventType.LeakSealed => Requests.Note(jelly, Requests.Seal, _region, _mouth),
@@ -168,7 +205,7 @@ public partial class TopDownMain
     {
         _sfx.PlayPitched("bell_ring", 1.4f, -5f);
         Say("Request done · back to the Tide Fan");
-        SaveJelly();
+        KeepJelly();
     }
 
     /// <summary>A frame of the requests: the fan's drawer at its foot, ash washed in a cave, the ribbons on the HUD and the fan, the maps' marks.</summary>
@@ -180,17 +217,19 @@ public partial class TopDownMain
             if (!_world.AtFan) _fanArmed = true;
             else if (_fanArmed && !_pause.IsOpen && !_mirror.IsOpen && !_debug.Visible && BayOpen(BayService.TideFan)) OpenFan();
         }
-        if (jelly is not null && _place == ReefPlace.Cave && _world.AshWashed > _ashSeen)
+        if (jelly is not null && (_place == ReefPlace.Cave || InDiveCave) && _world.AshWashed > _ashSeen)
         {
-            if (Requests.Note(jelly, Requests.Ash, _region, amount: _world.AshWashed - _ashSeen).Count > 0) RequestDone();
+            if (Requests.Note(jelly, Requests.Ash, Reef ? _region : Requests.Dive, amount: _world.AshWashed - _ashSeen).Count > 0) RequestDone();
             _ashSeen = _world.AshWashed;
         }
+        // A haven banks as she goes: what she buys, absorbs or is paid there is hers for good at once.
+        if (jelly is not null && _id.Haven && !Reef) KeepBanked(jelly);
         var shown = new List<RequestRibbons.Ribbon>();
-        if (jelly is not null && Reef && _view.RequestRibbons)
+        if (jelly is not null && _view.RequestRibbons)
             foreach (var r in jelly.Carried)
                 shown.Add(new RequestRibbons.Ribbon(Requests.Short(r, MouthNames(r.Region)), RequestRibbons.KindColour(r.Kind), TokenColour(r), r.Done));
         // The bay's folk's chains, in gold, after the requests.
-        if (jelly is not null && Reef && _view.RequestRibbons) shown.AddRange(ChainRibbons());
+        if (jelly is not null && _view.RequestRibbons) shown.AddRange(ChainRibbons());
         _ribbons.Show(shown);
         var marks = new List<(System.Numerics.Vector2 At, Color Colour)>();
         if (jelly is not null)
@@ -199,7 +238,7 @@ public partial class TopDownMain
             {
                 var ribbons = new List<FanView.Ribbon>();
                 // (The fan hangs bare till its neighbour is home to tie its ribbons.)
-                foreach (string region in BayOpen(BayService.TideFan) ? OpenReef.Regions : System.Array.Empty<string>())
+                foreach (string region in BayOpen(BayService.TideFan) ? FanRegions : System.Array.Empty<string>())
                     foreach (var r in Requests.Places(jelly, region))
                         if (r is not null) ribbons.Add(new FanView.Ribbon(RequestRibbons.KindColour(r.Kind), TokenColour(r), false));
                 foreach (var r in jelly.Carried.Where(r => r.Done)) ribbons.Add(new FanView.Ribbon(RequestRibbons.KindColour(r.Kind), TokenColour(r), true));
@@ -211,6 +250,21 @@ public partial class TopDownMain
             if (_place == ReefPlace.Region)
                 foreach (var r in jelly.Carried)
                     if (!r.Done && r.Region == _region && r.Mouth >= 0 && r.Mouth < _map.Mouths.Count) marks.Add((_map.Mouths[r.Mouth].At, RequestRibbons.KindColour(r.Kind)));
+            // A dive's level (docs/DIVE.md §7): what her asks want here, ringed (the open leaks for a seal ask, the leak
+            // caves' open mouths for a cave ask), and the hole once it is open.
+            if (!Reef && !_id.Haven && !InDiveCave)
+            {
+                foreach (var r in jelly.Carried.Where(r => !r.Done && r.Region == Requests.Dive))
+                {
+                    if (r.Kind == Requests.Seal)
+                        foreach (var v in _world.Leaks)
+                            if (!v.Sealed && !v.Hidden) marks.Add((v.Position, RequestRibbons.KindColour(r.Kind)));
+                    if (r.Kind is Requests.Den or Requests.Ash)
+                        for (int i = 0; i < _map.Mouths.Count; i++)
+                            if (!_world.ShutMouths.Contains(i)) marks.Add((_map.Mouths[i].At, RequestRibbons.KindColour(r.Kind)));
+                }
+                if (_world.ExitOpen) marks.Add((_map.Exit.Position, new Color(1f, 0.82f, 0.4f)));
+            }
         }
         marks.AddRange(ChainMarks());
         _minimap.SetMarks(marks);
@@ -229,6 +283,6 @@ public partial class TopDownMain
     void FillPauseRequests()
     {
         var carried = _jelly?.Carried.Select(r => EntryOf(r, "", r.Done)).ToList() ?? new List<FanMenu.Entry>();
-        _pause.FillRequests(carried, _view.RequestRibbons, Reef && _jelly is not null);
+        _pause.FillRequests(carried, _view.RequestRibbons, _jelly is not null);
     }
 }

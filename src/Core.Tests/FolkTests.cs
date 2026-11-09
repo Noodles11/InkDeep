@@ -396,29 +396,29 @@ public class FolkTests
         jelly.Freed.Add("tull");
         var (chain, step, _) = Assert.Single(Chains.Active(jelly));
         Assert.Equal("tull", chain.Folk);
-        Assert.Equal(StepKind.Find, step.Kind);
+        Assert.Equal(StepKind.Enter, step.Kind);
         // Out of order, nothing moves; in order, step by step.
-        Assert.Empty(Chains.Note(jelly, StepKind.Mouth, folk: "kip"));
-        Assert.Empty(Chains.Note(jelly, StepKind.Find, at: new Vector2(100f, 100f)));
-        Assert.Equal(StepKind.Find, Chains.Active(jelly).Single().Step.Kind);
-        Chains.Note(jelly, StepKind.Find, at: step.At + new Vector2(3f, 0f));
+        Assert.Empty(Chains.Note(jelly, StepKind.Find, zone: Chains.DepthZone(2)));
+        Assert.Empty(Chains.Note(jelly, StepKind.Enter, zone: Chains.DepthZone(3)));
+        Assert.Equal(StepKind.Enter, Chains.Active(jelly).Single().Step.Kind);
+        Chains.Note(jelly, StepKind.Enter, zone: Chains.DepthZone(2));
         Assert.Equal(StepKind.Prime, Chains.Active(jelly).Single().Step.Kind);
-        Chains.Note(jelly, StepKind.Prime, zone: "kelp");
-        Chains.Note(jelly, StepKind.Prime, zone: "shallows");
+        Chains.Note(jelly, StepKind.Prime, zone: Chains.DepthZone(1));
+        Chains.Note(jelly, StepKind.Prime, zone: Chains.DepthZone(2));
         Assert.Equal(1, Chains.Active(jelly).Single().Count);
-        Chains.Note(jelly, StepKind.Prime, zone: "shallows");
-        var done = Chains.Note(jelly, StepKind.Mouth, folk: "kip");
+        Chains.Note(jelly, StepKind.Prime, zone: Chains.DepthZone(2));
+        Assert.Empty(Chains.Note(jelly, StepKind.Find, zone: Chains.DepthZone(3)));
+        var done = Chains.Note(jelly, StepKind.Find, zone: Chains.DepthZone(2));
         Assert.Equal("tull", Assert.Single(done).Folk);
         Assert.Empty(Chains.Active(jelly));
         Assert.True(Chains.Done(jelly, Chains.Of("tull")!));
-        // Every chain pays an active pearl that works on the open reef, and its Mouth steps name a great cave.
-        var hand = Reef.Value;
+        // Every chain pays an active pearl, and names no place on a map (a dive has none: docs/DIVE.md §7).
         foreach (var c in Chains.All)
         {
             Assert.NotNull(Folk.Get(c.Folk));
             Assert.Contains(c.Pearl, PlaneRun.PortedPearls);
             Assert.True(Catalog.Value.TryGet(c.Pearl, out var pearl) && pearl.Kind == ItemKind.Active, $"{c.Pearl} is an active pearl");
-            foreach (var s in c.Steps.Where(s => s.Kind == StepKind.Mouth)) Assert.Contains(hand.Mouths, m => m.Folk == s.Folk);
+            Assert.DoesNotContain(c.Steps, s => s.Kind == StepKind.Mouth || s.Kind == StepKind.Find && s.Zone is null);
         }
         // Tull's late line is hers once the Carnival's neighbour is home.
         var tull = Folk.Get("tull")!;

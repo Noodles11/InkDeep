@@ -76,10 +76,22 @@ level, its leak at its dead end.
 
 ## 7. Requests and chains
 
-- **The Tide Fan's requests** are dive goals: seal leaks, free a prime, clear a den, wash ash, in the levels to come.
-  They are untied at the next haven. The minimap's pointers show the way to the level's leaks and its hole.
-- **The folk's chains:** a "find" step is something lying in a random level of a named depth; a "reach a cave" step is
-  reaching that depth.
+- **The Tide Fan's requests** (`Requests.Dive`, `Requests.FillDive`): one fan for the whole dive, tied afresh in each
+  haven once Tull is home, its asks at the depth she is diving and naming no cave. She carries two at most, works them
+  on any level, and unties them at the next haven:
+  - **Seal** three leaks on the way down (`RequestTuning.DiveSeals`; a leak cave's leak counts too);
+  - **Prime:** free a murkling prime;
+  - **Den:** seal the leak at the bottom of a leak cave;
+  - **Ash:** wash a number of patches of ash off leak caves' walls.
+  The posters' lines speak of the deep instead of a mouth. On a level, what a carried ask wants is ringed on the maps
+  (the open leaks for a seal ask, the open leak caves' mouths for a cave or ash ask), with the hole once it is open, and
+  the minimap's pointers show the way to each.
+- **Requests and chains are saved at once** (`KeepJelly`): writing them never banks what she carries. In a haven, what
+  she buys, absorbs or is paid is banked as it happens (`KeepBanked`).
+- **The folk's chains** (`Chains.All`) lead on down the depth below the one their neighbour was the boss of, their
+  steps naming depths, never places (`Chains.DepthZone`, `CycleZone`): reach a depth (or the next cycle), free primes
+  or seal leaks in a depth, untie a request, reach a haven ("bring it home"), or find something at the bottom of a leak
+  cave in a depth (going into one there finds it). The last step pays the neighbour's active pearl.
 
 ## 8. Building it
 
@@ -87,8 +99,8 @@ Each step is playable on its own:
 
 1. **Jellies dive** (built): the slots start and continue dives, and dimming ends one (§1, §2).
 2. **The camera** stands back (§3) (built).
-3. **Havens** and their services (§4) (built; the Tide Fan's requests wait for step 6).
+3. **Havens** and their services (§4) (built).
 4. **Folk bosses** for the depths (§5) (built).
 5. **Leak caves** in place of the curse dens (§6) (built).
-6. **Requests and chains** as dive goals (§7).
+6. **Requests and chains** as dive goals (§7) (built).
 7. **The open reef removed:** its map, zones, mouths, homeward current and charts.

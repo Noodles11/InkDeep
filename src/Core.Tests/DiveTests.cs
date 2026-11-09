@@ -40,4 +40,24 @@ public class DiveTests
         Assert.Null(Dives.FolkBossOf(new LevelId(1, LevelPlan.Tutorial + 1, 5), jelly));
         Assert.Equal("kip", Dives.FolkBossOf(new LevelId(2, LevelPlan.Tutorial + 2, 5), jelly));
     }
+
+    [Fact]
+    public void ADivesFanAsksNamingNoCave_ProgressedAnywhereInTheDive()
+    {
+        var jelly = new Jelly { Seed = "KELP7Q2Z" };
+        OctoShoots.Core.Plane.Requests.FillDive(jelly, 3, _ => true, null);
+        var places = OctoShoots.Core.Plane.Requests.Places(jelly, OctoShoots.Core.Plane.Requests.Dive);
+        Assert.Equal(OctoShoots.Core.Plane.RequestTuning.Places, places.Count);
+        Assert.All(places, r => Assert.True(r is { Mouth: -1, Region: OctoShoots.Core.Plane.Requests.Dive }));
+        int seal = places.FindIndex(r => r!.Kind == OctoShoots.Core.Plane.Requests.Seal);
+        Assert.True(seal >= 0, "no seal ask on the fan");
+        Assert.Equal(OctoShoots.Core.Plane.RequestTuning.DiveSeals, places[seal]!.Goal);
+        Assert.True(OctoShoots.Core.Plane.Requests.Take(jelly, OctoShoots.Core.Plane.Requests.Dive, seal));
+        for (int i = 0; i < OctoShoots.Core.Plane.RequestTuning.DiveSeals - 1; i++)
+            Assert.Empty(OctoShoots.Core.Plane.Requests.Note(jelly, OctoShoots.Core.Plane.Requests.Seal, OctoShoots.Core.Plane.Requests.Dive));
+        Assert.Single(OctoShoots.Core.Plane.Requests.Note(jelly, OctoShoots.Core.Plane.Requests.Seal, OctoShoots.Core.Plane.Requests.Dive));
+        var (_, line) = OctoShoots.Core.Plane.Requests.PosterOf(jelly.Carried[0], System.Array.Empty<string>());
+        Assert.DoesNotContain("{mouth}", line);
+        Assert.DoesNotContain(" mouth", line);
+    }
 }

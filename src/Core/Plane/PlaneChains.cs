@@ -9,19 +9,19 @@ namespace OctoShoots.Core.Plane;
 /// <summary>What a step of a neighbour's chain asks (docs/NPC-BOSSES-PROPOSAL.md §1).</summary>
 public enum StepKind
 {
-    /// <summary>Swim to a place on the reef (within ChainTuning.FindReach of it).</summary>
+    /// <summary>Find a thing: on a dive, at the bottom of a leak cave in its depth (going into one there); else a place on the reef (within ChainTuning.FindReach of it).</summary>
     Find,
-    /// <summary>Swim into a zone.</summary>
+    /// <summary>Reach a zone: on a dive, a depth or a cycle.</summary>
     Enter,
-    /// <summary>Free murkling primes in a zone (on its reef or in its caves).</summary>
+    /// <summary>Free murkling primes in a zone (a dive's depth).</summary>
     Prime,
-    /// <summary>Seal minor leaks in a zone's caves.</summary>
+    /// <summary>Seal leaks in a zone (a dive's depth).</summary>
     Seal,
     /// <summary>Untie requests at the Tide Fan.</summary>
     Untie,
     /// <summary>Find a neighbour's great cave: swim up to its mouth.</summary>
     Mouth,
-    /// <summary>Come home to the bay.</summary>
+    /// <summary>Come home: on a dive, reach a haven.</summary>
     Home,
 }
 
@@ -46,36 +46,42 @@ public static class ChainTuning
 /// <summary>The five chains, and her progress through them (Jelly.Chains: per neighbour, the step she is on and how far along it).</summary>
 public static class Chains
 {
+    /// <summary>A dive's zone for a chain step (docs/DIVE.md §7): a depth as the player sees it, and a cycle.</summary>
+    public static string DepthZone(int shownDepth) => $"depth{shownDepth}";
+    public static string CycleZone(int cycle) => $"cycle{cycle}";
+
+    /// <summary>
+    /// The five chains of the dive (docs/DIVE.md §7): each neighbour's leads on down the depth below the one she was the
+    /// boss of. A Find step's thing lies at the bottom of a leak cave in its depth: going into one there finds it.
+    /// </summary>
     public static readonly Chain[] All =
     {
         new("tull", "Find Kip", new ChainStep[]
         {
-            new(StepKind.Find, "Chart the Shallows' east", X: 370f, Y: 695f),
-            new(StepKind.Prime, "Free two murkling primes in the Shallows", Zone: "shallows", Count: 2),
-            new(StepKind.Mouth, "Find the Cleaning Station", Folk: "kip"),
+            new(StepKind.Enter, "Dive down to Depth 2", Zone: "depth2"),
+            new(StepKind.Prime, "Free two murkling primes in Depth 2", Zone: "depth2", Count: 2),
+            new(StepKind.Find, "Find Kip's lost comb in a Depth 2 leak cave", Zone: "depth2"),
         }, "bubble_shield", "Every turtle knows: carry your house with you."),
         new("kip", "My kelp clients stopped coming", new ChainStep[]
         {
-            new(StepKind.Enter, "Swim into the Kelp Jungle", Zone: "kelp"),
             new(StepKind.Untie, "Untie a request at the Tide Fan"),
-            new(StepKind.Prime, "Free a murkling prime in the Kelp Jungle", Zone: "kelp"),
-            new(StepKind.Mouth, "Find the Still Bed", Folk: "fennel"),
+            new(StepKind.Enter, "Dive down to Depth 3", Zone: "depth3"),
+            new(StepKind.Prime, "Free a murkling prime in Depth 3", Zone: "depth3"),
         }, "whale_song", "Hold still. This is the good part."),
         new("fennel", "The wreck has gone quiet", new ChainStep[]
         {
-            new(StepKind.Enter, "Swim into the Sunken Galleon", Zone: "galleon"),
-            new(StepKind.Seal, "Seal a leak in the Sunken Galleon", Zone: "galleon"),
-            new(StepKind.Prime, "Free a murkling prime in the Sunken Galleon", Zone: "galleon"),
-            new(StepKind.Mouth, "Find the Captain's Hold", Folk: "ottilie"),
+            new(StepKind.Enter, "Dive down to Depth 4", Zone: "depth4"),
+            new(StepKind.Seal, "Seal a leak in Depth 4", Zone: "depth4"),
+            new(StepKind.Prime, "Free a murkling prime in Depth 4", Zone: "depth4"),
         }, "ink_cloud", "Be the weed. Nobody looks at weed."),
         new("ottilie", "My best glint", new ChainStep[]
         {
-            new(StepKind.Find, "Find Ottilie's old hoard in the wreck's debris", X: 700f, Y: 700f),
-            new(StepKind.Home, "Bring her glint home to Lantern Bay"),
+            new(StepKind.Find, "Find Ottilie's old hoard in a Depth 5 leak cave", Zone: "depth5"),
+            new(StepKind.Home, "Bring her glint to a haven"),
         }, "prism_pearl", "One light, three colours. Your family's, I think."),
         new("bubbles", "Where the reef goes down", new ChainStep[]
         {
-            new(StepKind.Find, "Find where the reef goes down, past the Carnival's mirrors", X: 770f, Y: 300f),
+            new(StepKind.Enter, "Dive on past Depth 5, where the reef goes down again", Zone: "cycle2"),
         }, "conch_horn", "The sea answers. It always did, down here."),
     };
 
@@ -110,7 +116,8 @@ public static class Chains
             if (step.Kind != kind) continue;
             bool fits = kind switch
             {
-                StepKind.Find => at is { } here && Vector2.Distance(here, step.At) < ChainTuning.FindReach,
+                // (A dive's find is in a depth's leak cave, by zone; else a place on the reef, by where she is.)
+                StepKind.Find => step.Zone is not null ? step.Zone == zone : at is { } here && Vector2.Distance(here, step.At) < ChainTuning.FindReach,
                 StepKind.Enter or StepKind.Prime or StepKind.Seal => step.Zone is null || step.Zone == zone,
                 StepKind.Mouth => step.Folk == folk,
                 _ => true,

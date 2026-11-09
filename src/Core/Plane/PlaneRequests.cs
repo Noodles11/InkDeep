@@ -21,6 +21,8 @@ public static class RequestTuning
     public const float FanReach = 2.4f;
     /// <summary>A request names no cave more than this many levels past her own.</summary>
     public const int Reach = 2;
+    /// <summary>A dive's seal request asks for this many leaks sealed on the way down (docs/DIVE.md §7).</summary>
+    public const int DiveSeals = 3;
 
     /// <summary>A request's experience on untying: as much again as a leak of its level (on top of the leaks it sends her to).</summary>
     public static int Xp(int level) => ReefTuning.LeakXp(level);
@@ -37,6 +39,11 @@ public static class RequestTuning
 public static class Requests
 {
     public const string Seal = "seal", Prime = "prime", Den = "den", Ash = "ash";
+    /// <summary>
+    /// A dive's requests (docs/DIVE.md §7): one fan for the whole dive, its asks naming no cave: leaks sealed on the way
+    /// down (Seal), a prime freed, a leak cave sealed (Den), ash washed in leak caves. Untied at the next haven.
+    /// </summary>
+    public const string Dive = "dive";
 
     /// <summary>Who ties a request of each kind, and what they say (docs/QUESTS-PROPOSAL.md §3.5).</summary>
     public static readonly Dictionary<string, (string Who, string Line)[]> Posters = new()
@@ -72,6 +79,9 @@ public static class Requests
     {
         var all = Posters.TryGetValue(r.Kind, out var p) ? p : Posters[Seal];
         var (who, line) = all[Math.Clamp(r.Poster, 0, all.Length - 1)];
+        // A dive's asks name no mouth: the trouble is down in the deep.
+        if (r.Region == Dive)
+            return (who, line.Replace("behind the {mouth} mouth", "down in the deep").Replace("past the {mouth} mouth", "in the deep").Replace("the {mouth} mouth", "the deep"));
         return (who, line.Replace("{mouth}", MouthName(r.Mouth, mouths)));
     }
 
@@ -79,7 +89,13 @@ public static class Requests
         mouth >= 0 && mouth < mouths.Count && mouths[mouth].Length > 0 ? mouths[mouth] : mouth >= 0 ? $"{mouth + 1}." : "";
 
     /// <summary>What it asks, plainly, with numbers (the caption under the poster's line).</summary>
-    public static string Caption(Request r, string regionTitle, IReadOnlyList<string> mouths) => r.Kind switch
+    public static string Caption(Request r, string regionTitle, IReadOnlyList<string> mouths) => r.Region == Dive ? r.Kind switch
+    {
+        Seal => $"Seal {r.Goal} leaks on the way down ({r.Progress} / {r.Goal})",
+        Prime => "Free a murkling prime on the way down",
+        Den => "Seal the leak at the bottom of a leak cave",
+        _ => $"Clear {r.Goal} patches of ash in leak caves ({r.Progress} / {r.Goal})",
+    } : r.Kind switch
     {
         Seal => $"Seal the leak behind the {MouthName(r.Mouth, mouths)} mouth (level {r.Level})",
         Prime => $"Free a murkling prime in a {regionTitle} cave (level {r.Level})",
@@ -88,7 +104,13 @@ public static class Requests
     };
 
     /// <summary>The request in a few words, for the HUD's ribbons.</summary>
-    public static string Short(Request r, IReadOnlyList<string> mouths) => r.Done ? "Done · back to the Tide Fan" : r.Kind switch
+    public static string Short(Request r, IReadOnlyList<string> mouths) => r.Done ? "Done · back to the Tide Fan" : r.Region == Dive ? r.Kind switch
+    {
+        Seal => $"Seal leaks · {r.Progress} / {r.Goal}",
+        Prime => "Free a murkling prime",
+        Den => "Seal a leak cave",
+        _ => $"Wash the walls · {r.Progress} / {r.Goal}",
+    } : r.Kind switch
     {
         Seal => $"Seal the {MouthName(r.Mouth, mouths)} mouth's leak",
         Prime => "Free a murkling prime",
@@ -125,6 +147,10 @@ public static class Requests
         }
     }
 
+    /// <summary>A dive's fan: new ribbons in its empty places, each at this level (docs/DIVE.md §7).</summary>
+    public static void FillDive(Jelly jelly, int level, Func<string, bool> canOffer, ItemCatalog? catalog) =>
+        Fill(jelly, Dive, _ => level, 0, _ => false, canOffer, catalog);
+
     static Request Tie(Jelly jelly, string region, int number, Func<int, int> levelOf, int mouths, Func<int, bool> denBehind, Func<string, bool> canOffer, ItemCatalog? catalog)
     {
         var rng = new Rng(Hash(jelly.Seed) ^ Hash(region) * 0x9E3779B97F4A7C15UL ^ (ulong)(number + 1) * 0xBF58476D1CE4E5B9UL);
@@ -158,7 +184,7 @@ public static class Requests
             Kind = kind, Region = region, Mouth = kind is Seal or Den ? mouth : -1, Level = Math.Max(levelOf(kind is Seal or Den ? mouth : -1), 1), Number = number,
             Poster = rng.Int(Posters[kind].Length),
         };
-        r.Goal = kind == Ash ? RequestTuning.AshBase + RequestTuning.AshPerLevel * r.Level : 1;
+        r.Goal = kind == Ash ? RequestTuning.AshBase + RequestTuning.AshPerLevel * r.Level : region == Dive && kind == Seal ? RequestTuning.DiveSeals : 1;
         r.Xp = RequestTuning.Xp(r.Level);
         r.Shells = RequestTuning.ShellsBase + RequestTuning.ShellsPerLevel * r.Level;
         if (rng.NextFloat() < RequestTuning.PearlShare) r.Pearl = PickPearl(jelly, region, r.Level, canOffer, catalog, rng);

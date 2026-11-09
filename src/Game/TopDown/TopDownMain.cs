@@ -686,7 +686,7 @@ public partial class TopDownMain : Node3D
     /// <summary>
     /// A haven reached (docs/DIVE.md §4): all she carries is banked, hers for good, dim as she may later.
     /// </summary>
-    void BankDive(Jelly jelly)
+    void BankDive(Jelly jelly, bool quiet = false)
     {
         if (_run is null) return;
         int found = _run.Items.Concat(_run.OwnedActives).Count(id => !jelly.Passives.Contains(id) && !jelly.Actives.Contains(id));
@@ -694,7 +694,18 @@ public partial class TopDownMain : Node3D
         jelly.Actives = _run.OwnedActives.ToList();
         jelly.Slots = _run.Slots.ToList();
         jelly.Shells = _run.Shells;
-        if (found > 0) Say($"Safe in the haven: {found} pearl{(found == 1 ? "" : "s")} and {_run.Shells} shells banked");
+        if (found > 0 && !quiet) Say($"Safe in the haven: {found} pearl{(found == 1 ? "" : "s")} and {_run.Shells} shells banked");
+    }
+
+    /// <summary>In a haven: whatever has changed of what she carries (bought, absorbed, paid) is banked and saved.</summary>
+    void KeepBanked(Jelly jelly)
+    {
+        if (_run is null) return;
+        bool same = _run.Shells == jelly.Shells && _run.Items.Count == jelly.Passives.Count && _run.OwnedActives.Count == jelly.Actives.Count
+            && _run.Slots.SequenceEqual(jelly.Slots);
+        if (same) return;
+        BankDive(jelly, quiet: true);
+        if (_jellySaved && !_debugRun) GameSave.Write();
     }
 
     /// <summary>The loading page as a jelly dives: her level, where the dive stands, what she has banked.</summary>
@@ -1319,7 +1330,7 @@ public partial class TopDownMain : Node3D
         _pause.SlotCycled += slot =>
         {
             _world.Run.CycleSlot(slot);
-            SaveJelly();
+            KeepJelly();
             _pause.FillPearls(_world.Run, _catalog);
         };
         _pause.PearlSold += id =>
@@ -1327,7 +1338,7 @@ public partial class TopDownMain : Node3D
             if (!_world.Run.Sell(id)) return;
             _world.Player.Hp = Mathf.Min(_world.Player.Hp, _world.Run.MaxHp);
             _sfx.PlayPitched("pop", 1.4f, -10f);
-            SaveJelly();
+            KeepJelly();
             _pause.FillPearls(_world.Run, _catalog);
         };
         // The bay's mirror: her look changed as she watches, kept on her jelly, or put back.
@@ -1339,7 +1350,7 @@ public partial class TopDownMain : Node3D
             if (_jelly is { } jelly)
             {
                 jelly.Look = look;
-                SaveJelly();
+                KeepJelly();
             }
             OctoShoots.Game.Fx.HerColor.SetLook(look);
             _sfx.PlayPitched("bell_ring", 1.15f, -6f);
@@ -1706,8 +1717,8 @@ public partial class TopDownMain : Node3D
         _fanView.Show(map);
         _folkView.Show(map, Reef ? LoadMap(_region) : _id.Haven ? LoadMap(HavenMap) : null, _jelly);
         _ashSeen = 0;
-        // Back on the reef with the bay on it: new troubles tied on the Tide Fan (and each time she comes home to it).
-        if (Reef && map.Fan is not null) FillFan();
+        // Back on the reef with the bay on it, or in a dive's haven: new troubles tied on the Tide Fan.
+        if ((Reef || _id.Haven) && map.Fan is not null) FillFan();
         if (_dbgRequests && _jelly is { } asked)
         {
             _dbgRequests = false;
@@ -1756,6 +1767,7 @@ public partial class TopDownMain : Node3D
         // start is saved.
         if (moment is not null && !(returning ? RestoreLevel(moment, arriveAt) : RestoreMoment(moment))) moment = null;
         if (_id.Haven && _jelly is { } banker) BankDive(banker);
+        if (!returning) NoteDiveChains();
         if (moment is null && !InDiveCave) SaveRun();
         if (_dbgMoment > 0f && _dbgMomentStart is null) _dbgMomentStart = RunRecord();
         _combat.Show(_world, _catalog, fresh);

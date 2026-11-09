@@ -168,13 +168,21 @@ public partial class TopDownMain
             _sfx.PlayPitched("bell_ring", 1.05f, -3f);
         }
         if (finished.Count == 0 && moved) _sfx.PlayPitched("bell_ring", 1.3f, -9f);
-        if (moved || finished.Count > 0) SaveJelly();
+        if (moved || finished.Count > 0) KeepJelly();
     }
 
     /// <summary>The sim's events that answer a chain's step: a prime freed or a minor leak sealed (by its zone), home again.</summary>
     void NoteChainEvent(in PlaneEvent e)
     {
-        if (_jelly is null || !Reef) return;
+        if (_jelly is null) return;
+        if (!Reef)
+        {
+            // A dive (docs/DIVE.md §7): what she does in the depth she is diving.
+            string depth = Chains.DepthZone(_id.ShownDepth);
+            if (e.Type == PlaneEventType.PrimeFreed) NoteChain(StepKind.Prime, zone: depth);
+            else if (e.Type == PlaneEventType.LeakSealed) NoteChain(StepKind.Seal, zone: depth);
+            return;
+        }
         switch (e.Type)
         {
             case PlaneEventType.PrimeFreed:
@@ -204,6 +212,22 @@ public partial class TopDownMain
         if (ZoneHere(her) is { } zone) NoteChain(StepKind.Enter, zone: zone);
     }
 
+    /// <summary>
+    /// A dive's level entered (docs/DIVE.md §7): its depth and cycle reached, a leak cave gone into (a find there), a haven
+    /// reached (home).
+    /// </summary>
+    void NoteDiveChains()
+    {
+        if (_jelly is null || Reef) return;
+        if (_id.Haven) NoteChain(StepKind.Home);
+        else if (InDiveCave) NoteChain(StepKind.Find, zone: Chains.DepthZone(_id.ShownDepth));
+        else if (!_id.IsTutorial)
+        {
+            NoteChain(StepKind.Enter, zone: Chains.DepthZone(_id.ShownDepth));
+            NoteChain(StepKind.Enter, zone: Chains.CycleZone(_id.Cycle));
+        }
+    }
+
     /// <summary>The chains' steps as the HUD's kelp ribbons show them (gold).</summary>
     IEnumerable<RequestRibbons.Ribbon> ChainRibbons() =>
         _jelly is { } jelly ? Chains.Active(jelly).Select(a => new RequestRibbons.Ribbon(Chains.Short(a.Step, a.Count), ChainGold, ChainGold, false))
@@ -225,7 +249,7 @@ public partial class TopDownMain
     /// <summary>A service done: saved, said, and the drawer afresh.</summary>
     void Kept(string said)
     {
-        SaveJelly();
+        KeepJelly();
         _sfx.PlayPitched("bell_ring", 1.15f, -8f);
         Say(said);
         RefillFolkMenu();
