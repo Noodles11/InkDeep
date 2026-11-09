@@ -21,7 +21,7 @@ public partial class BeamView : Node3D
     SpotLight3D _spot = null!;
     float _on;
 
-    static readonly StringName BeamAt = "her_beam_at", BeamDir = "her_beam_dir";
+    static readonly StringName BeamAt = "her_beam_at", BeamDir = "her_beam_dir", BeamLit = "her_beam_lit";
 
     public override void _Ready()
     {
@@ -61,6 +61,7 @@ public partial class BeamView : Node3D
         if (!shown)
         {
             RenderingServer.GlobalShaderParameterSet(BeamAt, new Vector4(0f, -1000f, 0f, 0f));
+            RenderingServer.GlobalShaderParameterSet(BeamLit, new Vector4(0f, -1000f, 0f, 0f));
             return;
         }
         var dir = new Vector3(beam.Direction.X, 0f, beam.Direction.Y);
@@ -88,5 +89,7 @@ public partial class BeamView : Node3D
         RenderingServer.GlobalShaderParameterSet(BeamAt, world.BeamBurns
             ? new Vector4(origin.X, origin.Y + 0.05f, origin.Z, range * stop) : new Vector4(0f, -1000f, 0f, 0f));
         RenderingServer.GlobalShaderParameterSet(BeamDir, new Vector4(dir.X, 0f, dir.Z, beam.HalfAngle));
+        // What it shows (her_reveal): the sim's beam while it shines, out to the rock.
+        RenderingServer.GlobalShaderParameterSet(BeamLit, world.BeamOn ? new Vector4(origin.X, origin.Y, origin.Z, range * stop) : new Vector4(0f, -1000f, 0f, 0f));
     }
 }

@@ -143,6 +143,8 @@ public partial class BlightView : Node3D
             // Its own liquid body (BlightView.Murklings): its material carries its shape and its holes.
             var body = BodyOf(m);
             view.MaterialOverride = body.Material;
+            // Seen only where her light falls on it (her_reveal; each murkling's body has its own material).
+            body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("hidden"), 1f);
             StepBody(m, body, dt);
             float y = LevelMap.SwimBand + 0.08f * Mathf.Sin(_time * 2.3f + m.Seed);
             float scale = m.Radius;

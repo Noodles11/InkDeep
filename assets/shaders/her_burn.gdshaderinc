@@ -11,6 +11,8 @@
 //   her_beam_at  her beam's origin (world xyz) and how far it reaches to the rock (w; 0: off or burning nothing)
 //   her_beam_dir its direction (xyz) and half-angle (w, radians): it burns what lies in its cone
 //   her_light    her light's colour (HerColor)
+//   her_aura     her aura (world xyz) and its reach (w): what is seen only in her light shows within it (her_reveal)
+//   her_beam_lit her beam's origin and its reach to the rock while it shines (w; 0 off), its cone as her_beam_dir's
 
 #include "res://assets/shaders/light_field.gdshaderinc"
 
@@ -21,6 +23,8 @@ global uniform vec4 her_burn3;
 global uniform vec4 her_beam_at;
 global uniform vec4 her_beam_dir;
 global uniform vec3 her_light;
+global uniform vec4 her_aura;
+global uniform vec4 her_beam_lit;
 
 float hb_hash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
 
@@ -94,6 +98,25 @@ void hb_beam(vec3 world, vec3 n, float spot, inout float lit, inout float seam, 
 	seam = max(seam, max((1.0 - smoothstep(0.0, 0.03, abs(past))) * front, (1.0 - smoothstep(0.0, 0.05, abs(facing - 0.008))) * inside));
 	scorch = max(scorch, max(smoothstep(0.0, 0.03, past) * (1.0 - smoothstep(0.03, 0.12, past)) * front,
 		(1.0 - smoothstep(-0.12, -0.02, facing)) * smoothstep(-0.3, -0.12, facing) * inside));
+}
+
+// How much of her light falls on a point (0 none, 1 well within it), for the corrupted, seen only in her light
+// (docs/LIGHT-AND-GRAPH-PROPOSAL.md §4.1): her aura round her, her beam along its cone to the rock, a burning shot's.
+float hb_within(vec4 light, vec3 world) {
+	return light.w > 0.0 ? 1.0 - smoothstep(light.w * 0.8, light.w, length(world - light.xyz)) : 0.0;
+}
+
+float her_reveal(vec3 world) {
+	float s = her_aura.w > 0.0 ? 1.0 - smoothstep(her_aura.w * 0.8, her_aura.w, length(world.xz - her_aura.xz)) : 0.0;
+	if (her_beam_lit.w > 0.0) {
+		vec2 to = world.xz - her_beam_lit.xz;
+		float d = length(to);
+		float angle = acos(clamp(dot(to / max(d, 1e-3), normalize(her_beam_dir.xz)), -1.0, 1.0));
+		float cone = (1.0 - smoothstep(her_beam_lit.w - 0.6, her_beam_lit.w, d)) * (1.0 - smoothstep(her_beam_dir.w * 0.8, her_beam_dir.w, angle));
+		s = max(s, d < 0.6 ? 1.0 : cone);
+	}
+	s = max(s, max(max(hb_within(her_burn0, world), hb_within(her_burn1, world)), max(hb_within(her_burn2, world), hb_within(her_burn3, world))));
+	return s;
 }
 
 // The burn on a point of a corrupted body (world position and normal), as much of it as amount allows (0..1).

@@ -257,6 +257,14 @@ it `PlaneHeart`. She takes one only when corrupted at all; otherwise it waits.
     whatever is brightest, not back to her as such.
 
   It throws nothing, hunts no fish and keeps to itself. In her Ink Cloud it does not see her light.
+- **Seen only in her light** (`murkling.gdshaderinc` `hidden`, `her_reveal` in `her_burn.gdshaderinc`): a murkling
+  of any kind gives off no light of its own and is drawn only where her light falls on it: within her aura (5.5 m),
+  along her beam's cone to the rock, within a burning shot's light. A murkling half in it shows its lit part, the
+  edge ragged. This holds at every depth, the sunlit shallows too.
+- **Freed, it leaves its core** (`PlaneCores.cs`, `CoreTuning`; `CoreView`, `light_core.gdshader`; `CoreTests`):
+  the light it had drunk hangs where it was, a soft ball of her light swelling and thinning out over 1 s. Touching it
+  (within 0.9 m) gives her 4 HP (a prime's 20, a turned fish's 2), never past her max. Her Remora Sucker draws cores
+  to her as it draws shells. Drippus Prime's brood leaves none.
 - **The rest of this section is the variants and primes**, which sense her within 14 m, lit or not, and go for another
   light only when that is the brightest they see.
 - **After her, round the rock, never into it** (`PlaneNav.cs`, `WayToHer`; murklings and primes, lesser murklings and

@@ -109,7 +109,9 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     /// <summary>A corrupted creature comes into her light and is dazzled (Direction: from her to it; Size: its radius).</summary>
     Dazzled,
     /// <summary>A patch of a cave's wall ash cleared (at the wall; Direction: the way the wall faces; Size: its height over her plane).</summary>
-    AshCleared }
+    AshCleared,
+    /// <summary>She takes a freed murkling's core (Size: the HP it gave her).</summary>
+    CoreTaken }
 
 /// <summary>What hurt Clementine (the killing blow names what ended a run; saved by number, so Gloomvine stays though nothing deals it now).</summary>
 public enum DamageSource { None, PufferNeedle, PufferSpines, BossPearl, RoyalPearl, BossSnap, BossContact, Murkling, MurkShot, Gloomvine, Blightroot, Blotter, Thumpsquirt, Lashjaw, Curse, Hearthguard, Leak, LeakWater }

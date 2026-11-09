@@ -5,7 +5,8 @@
 // lit inside showing through; they close as its corruption grows back. Painted like her light is (light_stroke): its ink
 // brushed in flowing bands, a ragged violet rim laid as a dry-brushed stroke, a torn silhouette, one soft dab of sheen.
 // The throw (pull, bud) and its own throws (drip) are shaped as corruption_orb shapes them. worn, hit: her outline.
-// Her light burns it where it falls on it (her_burn.gdshaderinc).
+// Her light burns it where it falls on it (her_burn.gdshaderinc). hidden: a murkling is seen only in her light (her_reveal),
+// the part of it her light reaches, its edge ragged; the rest of it is not drawn.
 // Also the Blightroot's painted parts (BlightView.Octopus): skin (rgb, a how much) is a kind's own colour under the ink
 // and in its rim (the Blightroot's blue; freed, the octopus's own healthy red), swell its head swelling on the pulse.
 
@@ -27,6 +28,8 @@ instance uniform vec4 skin = vec4(0.0);
 instance uniform float swell = 0.0;
 /// 1: a body with an inside (seen through its holes); 0: a solid part (an arm, a rootlet) shaded the same on both sides.
 instance uniform float hollow = 1.0;
+/// 1: seen only where her light falls on it (a murkling); 0: always (a Blightroot's parts).
+uniform float hidden = 0.0;
 /// The adventure's murklings: short blowfish spikes all over (a spiked one, from a blue tang); a short wiggling tadpole
 /// tail out behind it along swim (a tadpole one, from a clownfish).
 instance uniform float spikes = 0.0;
@@ -150,6 +153,10 @@ void vertex() {
 void fragment() {
 	vec3 p = normalize(v_dir);
 	if (fade < 1.0 && hash3(floor(v_dir * 9.0) + seed) > fade) discard;
+	if (hidden > 0.5) {
+		vec3 hw = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+		if (her_reveal(hw) < 0.15 + 0.7 * noise2(hw.xz * 4.0 + vec2(TIME * 0.4, seed))) discard;
+	}
 #ifdef OVER
 	float over = over_her(v_world, VERTEX.z, VIEW_MATRIX);
 	if (over < 0.01) discard;

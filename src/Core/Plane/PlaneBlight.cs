@@ -1200,6 +1200,8 @@ public sealed partial class PlaneWorld
     {
         m.Alive = false;
         Stats.MobsDefeated++;
+        m.Feeding = m.Light = null;
+        LeaveCore(m);
         // The ink it was made of is cleansed with it (a prime's pieces keep theirs).
         float matter = m.Matter;
         m.Draw = null;

@@ -155,7 +155,7 @@ public static class ItemCaption
 
     static string FlagLine(string flag) => flag switch
     {
-        "magnet" => $"Pulls pickups toward you from {N(PlaneEconomyTuning.RemoraMagnet)} m (not {N(PlaneEconomyTuning.ShellMagnet)} m)",
+        "magnet" => $"Pulls pickups and freed murklings' light toward you from {N(PlaneEconomyTuning.RemoraMagnet)} m (not {N(PlaneEconomyTuning.ShellMagnet)} m)",
         "minigun" => $"Hold fire to spin up: up to ×{N(PlaneCombatTuning.MinigunMax)} fire rate over {N(PlaneCombatTuning.SpinUp)} s (shots stray up to {N(PlaneCombatTuning.MinigunJitterDeg)}°)",
         "cavitation" => $"Shots collapse with a bang where they hit or go out: {Pct(PlaneCombatTuning.CavitationDamage)} of their damage to everything within {N(PlaneCombatTuning.CavitationRadius)} m",
         "mergeBubbles" => $"Her light lingers at the end of its range; shots that touch merge into one, adding their damage (+{Pct(PlaneCombatTuning.BubbleGrowth)} size for each)",

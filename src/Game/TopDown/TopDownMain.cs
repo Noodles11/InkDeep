@@ -37,6 +37,7 @@ public partial class TopDownMain : Node3D
     LevelId _id = LevelId.First;
     CombatView _combat = null!;
     BeamView _beam = null!;
+    CoreView _cores = null!;
     CurrentView _currents = null!;
     CrabView _crab = null!;
     float _holeShown;
@@ -347,6 +348,8 @@ public partial class TopDownMain : Node3D
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_horizon"), _lantern.Texture);
         _beam = new BeamView();
         AddChild(_beam);
+        _cores = new CoreView();
+        AddChild(_cores);
         _combat = new CombatView { Swells = _swells };
         AddChild(_combat);
         _crab = new CrabView();
@@ -2051,6 +2054,10 @@ public partial class TopDownMain : Node3D
         float range = _bell.LightRange;
         _lantern.Update(_map, at, range);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_light_at"), new Vector4(at.X, at.Y, at.Z, range));
+        // Her aura (the sim's): what is seen only in her light shows within it (her_reveal).
+        if (_world is { } seen)
+            RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_aura"), seen.Aura.Shining
+                ? new Vector4(seen.Aura.Position.X, LevelMap.SwimBand, seen.Aura.Position.Y, seen.Aura.Range) : new Vector4(0f, -1000f, 0f, 0f));
         // Where her shots' light burns the corrupted (her_burn.gdshaderinc): the first few shots burning something, each
         // where it hangs and how far its light reaches.
         var burners = _world?.Burners;
@@ -2564,6 +2571,7 @@ public partial class TopDownMain : Node3D
         _combat.HerAt = _bell.GlobalPosition;
         Guard("combat", () => _combat.Sync(_world, dt));
         Guard("beam", () => _beam.Sync(_world, _bell.LightPosition, dt));
+        Guard("cores", () => _cores.Sync(_world));
         Guard("surge", () => _surgeView.Sync(_world, dt));
         Guard("geysers", () => _geysers.Sync(_world, dt, _camera.Camera));
         _camera.SetBubbleLights(_combat.Lights, _combat.LightCount);

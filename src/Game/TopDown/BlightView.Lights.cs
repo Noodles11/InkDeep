@@ -45,13 +45,7 @@ public partial class BlightView
         _kinWants.Clear();
         var her = world.Player.Position;
         float y = LevelMap.SwimBand + 0.4f;
-        foreach (var m in world.Murklings)
-        {
-            if (!m.Alive || m.Budding) continue;
-            var core = m.Fish is { } fish ? FishEmber(fish.Kind) : m.Prime ? Kin.PrimeCore : Kin.MurklingCore;
-            float energy = m.Prime ? 1.3f : m.Lesser ? 0.3f : 0.55f, range = m.Prime ? 7f : m.Lesser ? 1.8f : 3.2f;
-            Want(new Vector3(m.Position.X, y, m.Position.Y), core, energy, range, her);
-        }
+        // (Murklings give off no light of their own: they are seen only in hers. docs/LIGHT-AND-GRAPH-PROPOSAL.md §4.1)
         foreach (var f in world.Flounders)
             if (f.Corrupted) Want(new Vector3(f.Position.X, y - 0.8f, f.Position.Y), Kin.Tint(HearthSkin), 0.35f, 2.4f, her);
         foreach (var s in world.MurkShots)

@@ -215,6 +215,8 @@ public sealed partial class PlaneWorld
             Events.Add(new PlaneEvent(PlaneEventType.HeartCollected, heart.Position, Vector2.Zero));
         }
         Hearts.RemoveAll(h => h.Taken);
+        // Freed murklings' cores: only the magnet draws them; else she takes one by touching it.
+        StepCores(Run.Loadout.Flags.Contains("magnet") ? magnet : 0f);
 
         int near = -1;
         for (int i = 0; i < Stands.Count; i++)
