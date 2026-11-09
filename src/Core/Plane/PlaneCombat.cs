@@ -706,7 +706,7 @@ public sealed partial class PlaneWorld
     }
 
     /// <summary>How much harder what hurts her is at this level's Menace.</summary>
-    float HurtScale => 1f + PlaneCombatTuning.HurtPerMenace * Menace;
+    public float HurtScale => 1f + PlaneCombatTuning.HurtPerMenace * Menace;
 
     /// <summary>How much of a plain shot's light this shot carries (at most all of it): what a leak or a seal counts.</summary>
     float ShotLight(PlaneShot shot) => MathF.Min(shot.Damage / (PlaneCombatTuning.ShotDamage * DamageScale), 1f);

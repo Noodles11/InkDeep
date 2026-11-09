@@ -1,0 +1,215 @@
+# Light as life, and the dive as a graph (proposal)
+
+The plan for Ink Deep's next shape, fitted to the game as it is (docs/DIVE.md: a dive of seeded levels, havens, leak
+caves, folk bosses). Light comes first: it is what the murklings hunt, what she lives on and what frees the corrupted.
+The dive turns from a line into a graph after that. Values marked *(tune)* are starting points.
+
+Decided:
+
+- The dive becomes a graph of reefs (§6).
+- The murklings' extra behaviour (throws, fish hunting, primes) is kept, but only on variants; the basic murkling does
+  none of it (§3). Requests and chains that count primes keep working.
+- The corrupted are invisible outside her light, at every depth, the sunlit shallows included (§4).
+- The beam seals leaks, strikes seals, clears ink and ash, and opens bosses, as her shots do now (§2.3).
+
+## 1. Light emitters
+
+Everything that shines in the sim is a **light emitter**: her aura and her beam, her shots while they last, a lure
+pearl's decoy, and later glowing plants and objects. One registry holds them all (`PlaneWorld.Lights`), and every
+rule that asks "what is lit here, and how brightly" asks it, not the owners one by one.
+
+An emitter has:
+
+| Field | Meaning |
+|---|---|
+| Id, Owner | a stable number, and what it belongs to (her, a shot, a plant) |
+| Shape | a point (shines all round) or a cone (Direction, HalfAngle) |
+| Position, Direction | where it is and, for a cone, where it points |
+| Intensity, Range | how bright at the source, and how far it reaches |
+| Colour | warm gold for hers; others by owner |
+| Active | an inactive emitter is in the registry but lights nothing |
+| Drinkable | whether a murkling can feed on it |
+
+What a murkling drinks from an emitter is taken from its **owner** (`ILightOwner.Absorb`): her aura and her beam
+belong to her, so both drain her one pool of HP; a plant withers; a decoy goes out. When the owner is spent it says
+so, and the drinker lets go.
+
+**Brightness at a point.** For a point emitter: `Intensity × (1 − d / Range)^1.6` (0 past Range). A cone multiplies
+that by its angle falloff: 1 within 70 % of HalfAngle, easing to 0 at its edge, 0 outside it. Rock between the
+emitter and the point blocks it (the sim's `LineOfSight`).
+
+Starting values *(tune)*: aura reach 5.5 m, intensity 1; beam reach 16 m, half-angle 22°, intensity 1.2; a plain
+shot of hers 3.4 m (as now), intensity 0.4 to 1.3 by its bubbles (as now).
+
+## 2. Clementine: aura, beam, HP
+
+### 2.1 Light is her HP
+
+Her HP (`Player.Hp`, `Run.MaxHp`) stays the number the game runs on; it is now *how much light she has*. Her bell
+dims as it falls and goes out at 0, which is the end of the dive. Nothing refills it on its own: only cores (§4.2),
+the Coral Polyp pearl (slow), havens and a sealed leak cave (full, as now).
+
+Her aura and beam cost nothing to shine. They are what the murklings drink: a murkling feeding on either takes from
+her one pool.
+
+### 2.2 Aura and beam
+
+- **Aura**: a point emitter on her, always on.
+- **Beam**: a cone from her bell along Aim, on while Fire is held. It points where she aims, not where she swims.
+  Turning it off is a choice: the beam is the brightest thing she has, and a murkling goes for the brightest light.
+- While pearls move from shots to the beam (§5), shots go to the second mouse button (and a pad's second trigger).
+
+### 2.3 What the beam does
+
+The beam does what her shots' light does now, continuously:
+
+- **Burns** the corrupted it reaches, at `Burn` per second × her damage stat, freeing them when their meter is empty.
+- **Dazzles** a creature once as it comes into the light, as shots do: it holds still for `Dazzle`, then is not
+  dazzled again until it has been out of all her light for `Rearm`. A creature kept in the beam is not frozen for
+  ever.
+- **Seals leaks, strikes seals, clears ink dots and ash**: these count light. The beam counts as `BeamShots` *(tune:
+  2)* plain shots' light per second, so a leak takes about as long to seal as it does now.
+- **Opens a boss** where a shot would (its pearl, while open). Each boss gains one light rule of its own in stage 5,
+  for example a hold time, the beam's angle, or a lit object in its arena.
+
+The aura burns nothing (as her lamp does now). It reveals what is near her (§4).
+
+## 3. Murklings
+
+### 3.1 The basic murkling
+
+A ball of ink that hunts light. It has four states:
+
+| State | What it does | Leaves for |
+|---|---|---|
+| Searching | holds still; scans the emitters every 0.2 s | Approaching, when it finds one above the threshold |
+| Approaching | swims toward the brightest emitter it found, rescanning every 0.2 s | Attached on contact; Searching when nothing is left |
+| Attached | clings to the emitter's owner and drinks at its steady rate; does not scan | Released when shaken off (dash) or when the owner is spent |
+| Released | tumbles where it was shaken off for `ShakeSeconds` | Searching (it scans at once) |
+
+- The scan looks at emitters within 20 m *(tune)*. It measures each one's brightness at the murkling, drops those
+  below 0.04 and those behind rock, and picks the brightest.
+- It reaches its target by swimming (the sim's navigation), never through rock.
+- It drinks 2.5 HP/s *(tune)* from any owner; there is no contact hit on top.
+- It does not go back to her when released: it goes for whatever is brightest then.
+- It acts on its own: no packs, no merging (merging is for a later variant).
+
+### 3.2 Variants
+
+The current murkling's extras move to variants, rolled by depth:
+
+- **Thrower**: winds up and throws ink, as now.
+- **Hunter**: hunts fish, as now (the corrupted-fish loop).
+- **Prime**: as now: big, rams, breaks into murklings when freed.
+
+Depth 1 has basic murklings only *(tune)*. Deeper, the share of variants grows. Requests and chains that count primes
+keep their meaning.
+
+## 4. Seeing them, and freeing them
+
+### 4.1 Invisible in the dark
+
+The corrupted give off no light of their own (their view lights go). Their bodies are drawn only where her light
+reaches: the aura round her, the beam along it, a shot's glow. A murkling half in the beam shows its lit half. This
+holds at every depth, the sunlit shallows included: there the ink reads as a shimmer where her light falls on it.
+
+The view does this with the existing sear (`her_burn`): the body's visibility at each pixel is her light's brightness
+there.
+
+### 4.2 Freed light: the core
+
+When its meter runs out, a murkling's ink shell splashes apart and its **core**, the light it had drunk, hangs where
+it was:
+
+- It fades over 1 s *(tune)*.
+- Touching it gives her `CoreLight` HP *(tune: 4 for a murkling, 20 for a prime)*, never past her max.
+- The Remora Sucker (magnet) widens how far she gathers cores from, and shells too.
+
+This is freeing, not killing: the light was hers or the reef's, and it comes back.
+
+## 5. Pearls
+
+The catalog stays (`data/items.json`, `ItemCatalog`, `Loadout`). Of the 101 pearls, 57 touch shots.
+
+- **Stage 5 sorts every shot pearl** into one of three lists, as a table for your approval: *onto the beam* (e.g.
+  damage, range: wider, longer), *stays a shot* (a special throw, e.g. Starburst Gland), or *goes*.
+- New effects go onto existing pearls where one fits:
+  - The Anglerfish Lure drops a **decoy**, an emitter brighter than her that the murklings drink from instead.
+  - The Remora Sucker is the **magnet** for cores.
+  - The Brass Compass and the Sea Chart Nautilus between them are the **cartographer**, showing the graph (§6.3).
+- Bubble capacity and regrowth (the shots' reserve) go once no pearl needs them.
+
+## 6. The dive as a graph
+
+### 6.1 Shape
+
+A dive is a layered graph of reefs, generated from the dive's seed when it starts:
+
+- **Depths**: the five depths, as now. Each depth has 4 rows of reefs *(tune)* and ends in its folk boss's reef.
+- **Lanes**: each row has 2 to 4 reefs. Each reef has 2 to 4 exits down to reefs in the next row. Now and then an exit
+  is a **shortcut** that skips a row.
+- **Menace** comes from a reef's depth and row, never from how many reefs she has crossed: a shortcut lands her
+  somewhere harder.
+- **Rules the generator keeps** (the generator retries with the next sub-seed if any is broken):
+  - every reef can be reached from the top;
+  - every reef leads on to its depth's boss;
+  - no two exits of a reef lead to the same reef;
+  - every route meets a haven within 4 rows (§6.2).
+- Past the fifth depth the loop starts again below the tutorial, as now.
+
+### 6.2 Kinds of reef
+
+| Kind | What it is |
+|---|---|
+| Reef | an ordinary seeded level, as now |
+| Haven | as now: calm, heals and banks, all the freed folk, the Tide Fan, the shop. Its map stays hand-drawn. |
+| Folk boss | the bottom of each depth, one reef wide, as now |
+| Treasure, Den | the special reefs from stage 6's place rules (§7) |
+
+### 6.3 Holes and choosing
+
+- **Opening the holes**: a reef has a hole for each of its exits. Sealing the reef's leak opens them all at once (as
+  the one hole opens now).
+- **Showing where each leads**: each hole's rim shows the kind of reef it leads to: haven, boss, treasure or plain reef.
+- **The chart**: the pause menu gains a **chart** of the graph, showing where she has been, the reefs she can see from
+  here, and the rest unknown. The cartographer pearls show two rows further.
+
+### 6.4 What changes in the code
+
+- **LevelId**: gains a **Lane**; its Level becomes the row. The seed of each reef comes from (cycle, depth, row, lane).
+- **The graph**: a new `DiveGraph` (in `src/Core/Run`) is built from the dive's seed. `LevelPlan.NextOf` and
+  `Dives.NextOf` give way to the graph's exits. `Dives.HavenBefore` goes, since havens are reefs in the graph.
+- **The save**: the dive's save keeps the reef she is on and the reefs she has visited. The graph itself is rebuilt
+  from the seed. An older dive save is resumed by mapping its level onto lane 0 of its row.
+- **Unchanged**: the Tide Fan's requests ("seal 3 leaks on the way down") and the chains ("dive to Depth N") count
+  depths and kinds, so they keep working.
+
+## 7. Places and sub-levels
+
+- **Rules for each kind of place.** Each kind of place gets one definition of where it may go, how often and how far
+  from others. These rules replace the conditions now spread through `LevelPlan` and `TopDownGenerator`. Places come
+  in two sorts:
+  - a spot on the reef (an ambush, a hidden tunnel, a secret);
+  - a way into a sub-level (a leak cave, a secret cave, a treasure grotto).
+- **Sub-levels are generated with their reef**, while the reef is being prepared, each from its own sub-seed. A
+  sub-level has no sub-levels of its own.
+- **Coming back**:
+  - She returns to the exact point where she went in, facing the way she was swimming.
+  - A sub-level keeps its state if she leaves it and comes back.
+- **The ride in and out** is a short transition rather than the full blackout and loader, since the map is ready.
+
+## 8. Order of work
+
+| Stage | What | Plays differently? |
+|---|---|---|
+| 1 | The emitter registry, brightness at a point; her aura and her shots registered | no |
+| 2 | The beam (Fire held), the aura emitter, light as HP (dimming, no reserve as HP) | yes |
+| 3 | The basic murkling on the registry; variants by depth | yes |
+| 4 | Invisible in the dark; cores and healing; the magnet | yes |
+| 5 | Pearls sorted and moved (table for approval); one light rule per boss | yes |
+| 6 | The dive graph, the reef kinds, the chart; place rules | yes |
+| 7 | Sub-levels generated with their reef; exact return; short transitions | yes |
+| 8 | The save for the graph; the death fade and the dive's summary | yes |
+| 9 | What nothing uses any more goes (shot reserve, the line of levels) | no |
+
+Each stage ends with the build, the tests and a play check in the game, and is committed on its own.

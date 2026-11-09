@@ -298,6 +298,7 @@ public sealed partial class PlaneWorld
 
         StepBoss();
         StepCombat(input);
+        SyncLights();
         StepHerLight();
         StepAsh();
         StepCorruption();
