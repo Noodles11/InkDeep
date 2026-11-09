@@ -112,9 +112,9 @@ public static class ItemCaption
         if (s.Grow) lines.Add($"Shots grow with distance: up to ×{N(PlaneCombatTuning.GrowMax)} size and damage at full range");
         if (s.Explosive) lines.Add($"Shots burst into light where they pop: {Pct(PlaneCombatTuning.BurstDamage)} of their damage to every corrupted thing within {N(PlaneCombatTuning.BurstRadius)} m, cleansing the ground");
         if (s.Charge) lines.Add($"Hold to charge a pearl: in {N(PlaneCombatTuning.ChargeSeconds)} s, up to ×{N(PlaneCombatTuning.ChargeDamage)} damage and ×{N(PlaneCombatTuning.ChargeSize)} size");
-        if (s.Laser) lines.Add("Hold to charge a laser beam");
-        if (s.Rear) lines.Add("Also fires backwards");
-        if (s.ChainTargets > 0) lines.Add($"Hits chain lightning to {s.ChainTargets} foes ({Pct(s.ChainDamage)} damage)");
+        if (s.Laser) lines.Add("Her beam reaches half as far again, narrowed to a searchlight");
+        if (s.Rear) lines.Add("A fainter beam shines out of her back too");
+        if (s.ChainTargets > 0) lines.Add($"What her beam burns arcs its burn to {s.ChainTargets} more within {N(s.ChainRange)} m, at half the rate");
         if (s.FreezeChance > 0) lines.Add($"{Pct(s.FreezeChance)} chance to freeze foes for {N(StatusRules.FreezeTime)}s");
         if (s.BurnChance > 0) lines.Add($"{Pct(s.BurnChance)} chance to burn foes for {N(StatusRules.BurnTime)}s");
         if (s.PoisonChance > 0) lines.Add($"{Pct(s.PoisonChance)} chance to poison foes for {N(StatusRules.PoisonTime)}s");

@@ -120,10 +120,10 @@ public class LightEmitterTests
             w.Shots.Add(new PlaneShot { FromPlayer = true, Damage = PlaneCombatTuning.ShotDamage, Life = 100f, Range = 100f, Hover = 100f, Position = w.Player.Position });
         w.Lights.Add(new LightEmitter { Owner = new LightPool(5f), Position = w.Player.Position, Range = 4f });
         w.Step(new PlaneInput());
-        // (Touching bubbles join, so count the shots that are left: one light each, besides her aura, her beam (registered, dark) and the plant.)
+        // (Touching bubbles join, so count the shots that are left: one light each, besides her aura, her three beams (registered, dark) and the plant.)
         int shots = w.Shots.Count(s => s.FromPlayer && s.Life > 0f);
         Assert.True(shots > 0);
-        Assert.Equal(shots + 3, w.Lights.All.Count);
+        Assert.Equal(shots + 5, w.Lights.All.Count);
         Assert.All(w.Shots, s => Assert.NotNull(w.LightOf(s)));
         Assert.Equal(w.Lights.All.Count, w.Lights.All.Select(e => e.Id).Distinct().Count());
     }

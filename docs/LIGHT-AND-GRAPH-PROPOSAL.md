@@ -139,7 +139,7 @@ shape of a shot), and 20 synergies are built on them.
 fights with; a shot is what she sends where the beam cannot stay (round a corner, a bait left hanging, a burst). So most
 shot pearls keep working on her shots, and a few carry over to the beam as well. None goes.
 
-### 5.1 Each shot pearl
+### 5.1 Each shot pearl (built)
 
 | Pearl | What it does now | Proposed |
 |---|---|---|

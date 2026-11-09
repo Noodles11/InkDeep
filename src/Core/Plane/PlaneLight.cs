@@ -18,6 +18,16 @@ public static class LightTuning
     public const float AuraReach = 5.5f, AuraIntensity = 1f;
     /// <summary>Her beam: a cone along her aim.</summary>
     public const float BeamReach = 16f, BeamHalfAngleDeg = 22f, BeamIntensity = 1.2f;
+    /// <summary>
+    /// Her pearls on the beam (docs/LIGHT-AND-GRAPH-PROPOSAL.md §5.1): her range stat lengthens it and her shot size
+    /// widens it (each × its square root; at most MaxHalfAngleDeg); Sunbeam makes it a searchlight (SunbeamReach × as
+    /// long, SunbeamHalfAngleDeg wide). Rear Fin adds a beam behind her (RearIntensity, RearReach × as long), Lighthouse
+    /// one turning round her at SweepTurn rad/s (SweepIntensity, SweepReach × as long); each burns as one shot. The
+    /// Anglerfish Lure makes a shot of hers left hanging LureBright × as bright.
+    /// </summary>
+    public const float MaxHalfAngleDeg = 35f, SunbeamReach = 1.5f, SunbeamHalfAngleDeg = 15f;
+    public const float RearIntensity = 0.6f, RearReach = 0.75f, SweepIntensity = 0.5f, SweepReach = 0.7f, SweepTurn = 0.6f;
+    public const float LureBright = 2.5f;
     /// <summary>A light-seeker's scan: emitters within Scan metres, every ScanEvery seconds, none dimmer than Threshold where it is.</summary>
     public const float Scan = 20f, ScanEvery = 0.2f, Threshold = 0.04f;
 }
@@ -203,7 +213,8 @@ public sealed partial class PlaneWorld
 
     readonly Dictionary<PlaneShot, LightEmitter> _shotLights = new();
     ILightOwner? _her;
-    LightEmitter? _aura, _beam;
+    LightEmitter? _aura, _beam, _rear, _sweep;
+    float _sweepAngle;
 
     /// <summary>Every light emitter in the world (docs/LIGHT-AND-GRAPH-PROPOSAL.md §1).</summary>
     public LightRegistry Lights { get; } = new();
@@ -234,6 +245,27 @@ public sealed partial class PlaneWorld
     /// <summary>Her beam is shining now.</summary>
     public bool BeamOn => Beam.Shining;
 
+    /// <summary>Rear Fin's beam behind her, and Lighthouse's turning round her (registered, dark until their pearls shine them).</summary>
+    public LightEmitter RearBeam => _rear ??= Lights.Add(new LightEmitter
+    {
+        Owner = Her, Shape = LightShape.Cone, Intensity = LightTuning.BeamIntensity * LightTuning.RearIntensity, Active = false,
+    });
+    public LightEmitter SweepBeam => _sweep ??= Lights.Add(new LightEmitter
+    {
+        Owner = Her, Shape = LightShape.Cone, Intensity = LightTuning.BeamIntensity * LightTuning.SweepIntensity, Active = false,
+    });
+
+    /// <summary>Her beams and how many plain shots' burn each is worth (the main one BeamShots; Rear Fin's and Lighthouse's one).</summary>
+    public IEnumerable<(LightEmitter Beam, int Shots)> HerBeams
+    {
+        get
+        {
+            yield return (Beam, HerLightTuning.BeamShots);
+            yield return (RearBeam, 1);
+            yield return (SweepBeam, 1);
+        }
+    }
+
     /// <summary>Where her beam's axis first meets rock (or its full reach): what it strikes, and where the view ends it.</summary>
     public Vector2 BeamEnd { get; private set; }
 
@@ -241,9 +273,11 @@ public sealed partial class PlaneWorld
     /// Whether her beam reaches a body (on her plane at <paramref name="at"/>, <paramref name="height"/> metres off it, this
     /// radius): some of it within the beam's reach and cone, in sight of her.
     /// </summary>
-    public bool BeamReaches(Vector2 at, float height, float radius)
+    public bool BeamReaches(Vector2 at, float height, float radius) => BeamReaches(Beam, at, height, radius);
+
+    /// <summary>As BeamReaches, for any of her beams.</summary>
+    public bool BeamReaches(LightEmitter b, Vector2 at, float height, float radius)
     {
-        var b = Beam;
         if (!b.Shining) return false;
         var to = at - b.Position;
         float flat = to.Length();
@@ -257,6 +291,9 @@ public sealed partial class PlaneWorld
         }
         return LineOfSight(b.Position, at);
     }
+
+    /// <summary>Where a beam of hers first meets rock along its axis (its full reach if nothing).</summary>
+    public Vector2 StopOf(LightEmitter beam) => FirstBlocked(beam.Position, beam.Position + beam.Direction * beam.Range, 0.1f);
 
     /// <summary>The emitter for this shot of hers, if it is shining.</summary>
     public LightEmitter? LightOf(PlaneShot shot) => _shotLights.TryGetValue(shot, out var e) ? e : null;
@@ -291,12 +328,35 @@ public sealed partial class PlaneWorld
         _ = Aura;
         PlaceAura();
         var beam = Beam;
+        var shape = Run.Loadout.Shot;
         beam.Position = Player.Position;
         var aim = input.Aim.LengthSquared() > 1e-6f ? input.Aim : Player.Aim;
         if (aim.LengthSquared() > 1e-6f) beam.Direction = Vector2.Normalize(aim);
-        beam.Range = LightTuning.BeamReach * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.Glow], 0.1f));
+        beam.Range = LightTuning.BeamReach * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.Glow], 0.1f)) * MathF.Sqrt(MathF.Max(RangeScale, 0.1f))
+            * (shape.Laser ? LightTuning.SunbeamReach : 1f);
+        float halfDeg = shape.Laser ? LightTuning.SunbeamHalfAngleDeg
+            : MathF.Min(LightTuning.BeamHalfAngleDeg * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.ShotSize], 0.1f)), LightTuning.MaxHalfAngleDeg);
+        beam.HalfAngle = halfDeg * MathF.PI / 180f;
         beam.Active = input.Beam && !Defeated;
+        // Rear Fin: a fainter beam out of her back while her beam shines.
+        var rear = RearBeam;
+        rear.Position = beam.Position;
+        rear.Direction = -beam.Direction;
+        rear.Range = beam.Range * LightTuning.RearReach;
+        rear.HalfAngle = beam.HalfAngle;
+        rear.Active = beam.Active && shape.Rear;
+        // Lighthouse: a fainter beam turning slowly round her, always.
+        var sweep = SweepBeam;
+        bool lighthouse = Run.Loadout.Has("lighthouse");
+        if (lighthouse) _sweepAngle = (_sweepAngle + LightTuning.SweepTurn * Dt) % MathF.Tau;
+        sweep.Position = beam.Position;
+        sweep.Direction = new Vector2(MathF.Cos(_sweepAngle), MathF.Sin(_sweepAngle));
+        sweep.Range = beam.Range * LightTuning.SweepReach;
+        sweep.HalfAngle = beam.HalfAngle;
+        sweep.Active = lighthouse && !Defeated;
         BeamEnd = beam.Active ? FirstBlocked(beam.Position, beam.Position + beam.Direction * beam.Range, 0.1f) : beam.Position;
+        // The Anglerfish Lure: a shot of hers left hanging is a decoy, brighter than her.
+        bool lure = Run.Loadout.Count("anglerfish_lure") > 0;
         foreach (var s in Shots)
         {
             if (!s.FromPlayer || s.BossPearl || s.Life <= 0f) continue;
@@ -304,7 +364,7 @@ public sealed partial class PlaneWorld
                 _shotLights[s] = e = Lights.Add(new LightEmitter { Owner = new ShotLightOwner(s) });
             e.Position = s.Position;
             e.Range = ShotLightReach(s);
-            e.Intensity = MathF.Min(0.4f + 0.06f * s.Bubbles, 1.3f) * s.Dim;
+            e.Intensity = MathF.Min(0.4f + 0.06f * s.Bubbles, 1.3f) * s.Dim * (lure && s.Rest > 0f ? LightTuning.LureBright : 1f);
         }
         if (_shotLights.Count == 0) return;
         List<PlaneShot>? gone = null;

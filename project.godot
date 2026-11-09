@@ -219,6 +219,22 @@ her_beam_lit={
 "type": "vec4",
 "value": Vector4(0, -1000, 0, 0)
 }
+her_beam2_lit={
+"type": "vec4",
+"value": Vector4(0, -1000, 0, 0)
+}
+her_beam2_dir={
+"type": "vec4",
+"value": Vector4(1, 0, 0, 0.38)
+}
+her_beam3_lit={
+"type": "vec4",
+"value": Vector4(0, -1000, 0, 0)
+}
+her_beam3_dir={
+"type": "vec4",
+"value": Vector4(1, 0, 0, 0.38)
+}
 her_light_at={
 "type": "vec4",
 "value": Vector4(0, -1000, 0, 11)

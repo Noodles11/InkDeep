@@ -211,6 +211,18 @@ what burn the corrupted. Caves are dark. The sim is in `src/Core/Plane/PlaneHerL
 
   The view draws it as a fan of her light over her plane and a spotlight from her bell along it (`BeamView`); the
   bodies it burns sear as under a shot's light (`her_beam_at`, `her_beam_dir`).
+- **Her pearls on the beam** (`LightTuning`, `PlaneWorld.RollBeamPearls`, `StepArcs`; `BeamPearlTests`):
+  - her range stat lengthens it and her shot size widens it (each × its square root; at most 35° either side);
+  - Sunbeam makes it a searchlight: half as long again, 15° either side;
+  - Rear Fin shines a fainter beam out of her back while hers shines, and Lighthouse turns a fainter beam slowly round
+    her (0.6 rad/s) all the time; each burns as one shot, and the corrupted show in them too;
+  - Electric Eel Tail arcs what her beam burns on to the 2 nearest corrupted within 4 m (in sight), burning them at
+    half the beam's rate; the view draws the arcs;
+  - her chance pearls roll once for each whole second her beam keeps burning a creature: Frost Kelp holds it still
+    1.6 s, Fire Coral (3 s) and Sea Nettle (4 s) leave it burning on as one shot once out of her light, Stingray Barb
+    slows it to half pace 2 s, Siren Song charms it 3 s (it does not see her light), Giant Squid Eye burns it × 3 for
+    a second;
+  - the Anglerfish Lure makes a shot of hers left hanging 2.5 × as bright: a decoy the murklings go for.
 - **Her shots** are on the right mouse button (RB on a controller).
 
 - **Her light** (`BellView`): a bulb's, smooth all round her from her bell's heart (DESIGN-TOPDOWN §5.3), reaching

@@ -773,8 +773,8 @@ public sealed partial class PlaneWorld
     }
 
     /// <summary>The brightest light a murkling at <paramref name="at"/> can see within <paramref name="scan"/> (her own not while her Ink Cloud hides her).</summary>
-    LightEmitter? SeekLight(Vector2 at, float scan = LightTuning.Scan) =>
-        LightQuery.Brightest(Lights.All, at, scan, LightTuning.Threshold, LineOfSight, Unseen ? e => e.Owner == Her : null);
+    LightEmitter? SeekLight(Vector2 at, float scan = LightTuning.Scan, bool blind = false) =>
+        LightQuery.Brightest(Lights.All, at, scan, LightTuning.Threshold, LineOfSight, Unseen || blind ? e => e.Owner == Her : null);
 
     /// <summary>
     /// A basic murkling (docs/LIGHT-AND-GRAPH-PROPOSAL.md §3.1): it holds still and scans the lights every ScanEvery;
@@ -787,7 +787,8 @@ public sealed partial class PlaneWorld
         var p = Player;
         m.ScanTimer -= Dt;
         var light = m.Light;
-        if (light is not null && (!light.Shining || light.Id == 0 || Unseen && light.Owner == Her))
+        bool blind = Unseen || Charmed(m);
+        if (light is not null && (!light.Shining || light.Id == 0 || blind && light.Owner == Her))
         {
             light = m.Light = null;
             m.ScanTimer = 0f;
@@ -795,9 +796,9 @@ public sealed partial class PlaneWorld
         if (m.ScanTimer <= 0f)
         {
             m.ScanTimer = LightTuning.ScanEvery;
-            light = m.Light = SeekLight(m.Position);
+            light = m.Light = SeekLight(m.Position, blind: blind);
         }
-        float pace = BlightTuning.MurkSpeed + BlightTuning.MurkSpeedPerMenace * Menace;
+        float pace = (BlightTuning.MurkSpeed + BlightTuning.MurkSpeedPerMenace * Menace) * (Slowed(m) ? StatusRules.SlowFactor : 1f);
         Vector2 wish;
         if (light is null)
         {
@@ -954,14 +955,14 @@ public sealed partial class PlaneWorld
             }
             // A variant or a prime senses her within its Sense, lit or not (as the murklings always have); another light it
             // goes for instead only when that is the brightest it sees (a bubble of hers, a lure).
-            var seen = SeekLight(m.Position, m.Sense);
+            var seen = SeekLight(m.Position, m.Sense, blind: Charmed(m));
             bool her = seen is null || seen.Owner == Her;
             Vector2 target = her ? p.Position : seen!.Position;
             m.Target = target;
             var to = target - m.Position;
             float dist = to.Length();
-            // In her Ink Cloud it has lost her: it goes about its own business.
-            if (her && Unseen) dist = float.MaxValue;
+            // In her Ink Cloud (or charmed by Siren Song) it has lost her: it goes about its own business.
+            if (her && (Unseen || Charmed(m))) dist = float.MaxValue;
             // After her, round the rock rather than into it (a bait bubble it goes straight at).
             Vector2 wish = dist < m.Sense ? her ? WayToHer(m.Position) : SafeNormalize(to) : Vector2.Zero;
             // She is away: a den's murkling drifts home into its nave (DenTuning.Leash); else it hunts the reef's fish,
@@ -979,7 +980,8 @@ public sealed partial class PlaneWorld
             }
             // A wobble off the line, as if the dark were reluctant.
             wish += new Vector2(MathF.Sin(Time * 1.7f + m.Seed), MathF.Cos(Time * 1.3f + m.Seed * 2f)) * 0.35f;
-            float pace = (BlightTuning.MurkSpeed + BlightTuning.MurkSpeedPerMenace * Menace) * (m.Windup > 0f ? BlightTuning.WindupSlow : 1f) * (m.Prime ? BlightTuning.PrimeSpeed : 1f);
+            float pace = (BlightTuning.MurkSpeed + BlightTuning.MurkSpeedPerMenace * Menace) * (m.Windup > 0f ? BlightTuning.WindupSlow : 1f) * (m.Prime ? BlightTuning.PrimeSpeed : 1f)
+                * (Slowed(m) ? StatusRules.SlowFactor : 1f);
             m.Velocity = MoveToward(m.Velocity, SafeNormalize(wish) * pace, 4f * Dt);
             Move(ref m.Position, ref m.Velocity, m.Body, report: false);
 

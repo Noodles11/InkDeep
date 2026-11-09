@@ -39,7 +39,26 @@ public sealed partial class PlaneWorld
         public Vector2 From;
         public float Frozen, Dark = HerLightTuning.Rearm;
         public long Seen;
+        /// <summary>
+        /// Her beam's pearls on it (§5.1): how long a beam has burned it without a break (each whole second rolls her
+        /// chance effects), and what they left: an afterglow burning on (Fire Coral, Sea Nettle), slowed, charmed (it
+        /// does not see her), a crit (her burn × CritMult).
+        /// </summary>
+        public float BeamTime, Afterglow, Slow, Charm, Crit;
     }
+
+    /// <summary>What her beam burned last step (for Electric Eel Tail's arcs), the arcs this step, and her beam's dice.</summary>
+    readonly List<(object Kin, Vector2 At)> _beamLit = new(), _beamLitBefore = new();
+    readonly HashSet<object> _arced = new();
+    readonly List<(Vector2 From, Vector2 To)> _arcs = new();
+    Rng? _beamRng;
+
+    /// <summary>Electric Eel Tail's arcs this step: from what her beam burns to what it arcs on to.</summary>
+    public IReadOnlyList<(Vector2 From, Vector2 To)> Arcs => _arcs;
+
+    /// <summary>Whether a creature is slowed (Stingray Barb) or charmed (Siren Song: it does not see her) by her beam.</summary>
+    public bool Slowed(object creature) => _glare.TryGetValue(creature, out var g) && g.Slow > 0f;
+    public bool Charmed(object creature) => _glare.TryGetValue(creature, out var g) && g.Charm > 0f;
 
     readonly Dictionary<object, Glare> _glare = new();
     readonly List<PlaneShot> _burners = new();
@@ -77,6 +96,7 @@ public sealed partial class PlaneWorld
         _lights.Clear();
         BeamBurns = false;
         StepBeam();
+        StepArcs();
         if (!LightBurns)
         {
             _glare.Clear();
@@ -181,19 +201,42 @@ public sealed partial class PlaneWorld
                     from = s.Position;
                 }
             }
-        if (!Defeated && BeamReaches(at, height, radius))
-        {
-            n += HerLightTuning.BeamShots;
-            BeamBurns = true;
-            float d = Vector2.Distance(Beam.Position, at);
-            if (d < nearest)
+        bool beamed = false;
+        if (!Defeated)
+            foreach (var (beam, worth) in HerBeams)
             {
-                nearest = d;
-                from = Beam.Position;
+                if (!BeamReaches(beam, at, height, radius)) continue;
+                n += worth;
+                beamed = true;
+                BeamBurns = true;
+                float d = Vector2.Distance(beam.Position, at);
+                if (d < nearest)
+                {
+                    nearest = d;
+                    from = beam.Position;
+                }
             }
-        }
         if (!_glare.TryGetValue(kin, out var g)) _glare[kin] = g = new Glare();
         g.Seen = Tick;
+        if (beamed)
+        {
+            _beamLit.Add((kin, at));
+            // Each whole second her beam keeps burning it, her chance pearls roll on it.
+            int was = (int)g.BeamTime;
+            g.BeamTime += Dt;
+            if ((int)g.BeamTime > was) RollBeamPearls(g);
+        }
+        else g.BeamTime = 0f;
+        // Electric Eel Tail: burned by an arc off what her beam burns, at half the beam's rate.
+        if (!beamed && _arced.Contains(kin)) n += HerLightTuning.BeamShots / 2;
+        // Fire Coral, Sea Nettle: it burns on a while out of her light.
+        if (n == 0 && g.Afterglow > 0f && !Defeated) n = 1;
+        if (n > 0 && g.Crit > 0f) n = (int)MathF.Round(n * MathF.Max(Run.Loadout.Shot.CritMult, 1f));
+        g.Afterglow = MathF.Max(0f, g.Afterglow - Dt);
+        g.Slow = MathF.Max(0f, g.Slow - Dt);
+        g.Charm = MathF.Max(0f, g.Charm - Dt);
+        g.Crit = MathF.Max(0f, g.Crit - Dt);
+        if (from == default && n > 0) from = at;
         g.Lit = n > 0;
         g.From = from;
         g.Frozen = MathF.Max(0f, g.Frozen - Dt);
@@ -222,6 +265,71 @@ public sealed partial class PlaneWorld
         var end = BeamEnd;
         if (_rocks.Exists(r => r.Contains(end))) StrikeSeal(end, HerLightTuning.BeamShots * Dt, quiet: true);
         if (Dots is not null) ClearAlong(from, end, HerLightTuning.BeamDots);
+    }
+
+    /// <summary>
+    /// Her chance pearls on a creature her beam has burned another whole second (§5.1): Frost Kelp holds it still,
+    /// Fire Coral and Sea Nettle leave it burning on, Stingray Barb slows it, Siren Song charms it (it does not see her),
+    /// Giant Squid Eye doubles down (her burn × CritMult for a second). Rolled from the level's own dice.
+    /// </summary>
+    void RollBeamPearls(Glare g)
+    {
+        var s = Run.Loadout.Shot;
+        if (s.FreezeChance + s.BurnChance + s.PoisonChance + s.SlowChance + s.CharmChance + s.CritChance <= 0f) return;
+        var rng = _beamRng ??= new Rng(Map.Seed ^ 0xBEA3C0DEUL ^ ((ulong)Map.Level << 24) ^ ((ulong)Map.Depth << 32) ^ ((ulong)Map.Attempt << 48));
+        if (s.FreezeChance > 0f && rng.NextFloat() < s.FreezeChance) g.Frozen = MathF.Max(g.Frozen, StatusRules.FreezeTime);
+        if (s.BurnChance > 0f && rng.NextFloat() < s.BurnChance) g.Afterglow = MathF.Max(g.Afterglow, StatusRules.BurnTime);
+        if (s.PoisonChance > 0f && rng.NextFloat() < s.PoisonChance) g.Afterglow = MathF.Max(g.Afterglow, StatusRules.PoisonTime);
+        if (s.SlowChance > 0f && rng.NextFloat() < s.SlowChance) g.Slow = MathF.Max(g.Slow, StatusRules.SlowTime);
+        if (s.CharmChance > 0f && rng.NextFloat() < s.CharmChance) g.Charm = MathF.Max(g.Charm, StatusRules.CharmTime);
+        if (s.CritChance > 0f && rng.NextFloat() < s.CritChance) g.Crit = 1f;
+    }
+
+    /// <summary>
+    /// Electric Eel Tail (§5.1): from each creature her beam burned last step, an arc to the ChainTargets nearest other
+    /// corrupted creatures within ChainRange (in sight of it), which burn at half the beam's rate this step.
+    /// </summary>
+    void StepArcs()
+    {
+        _arced.Clear();
+        _arcs.Clear();
+        _beamLitBefore.Clear();
+        _beamLitBefore.AddRange(_beamLit);
+        _beamLit.Clear();
+        var s = Run.Loadout.Shot;
+        if (s.ChainTargets <= 0 || _beamLitBefore.Count == 0) return;
+        var near = new List<(object Kin, Vector2 At, float D)>();
+        foreach (var (src, at) in _beamLitBefore)
+        {
+            near.Clear();
+            foreach (var (kin, pos) in CorruptedNow())
+            {
+                if (ReferenceEquals(kin, src) || _beamLitBefore.Exists(x => ReferenceEquals(x.Kin, kin))) continue;
+                float d = Vector2.Distance(pos, at);
+                if (d <= s.ChainRange && LineOfSight(at, pos)) near.Add((kin, pos, d));
+            }
+            near.Sort((a, b) => a.D.CompareTo(b.D));
+            for (int i = 0; i < near.Count && i < s.ChainTargets; i++)
+            {
+                _arced.Add(near[i].Kin);
+                _arcs.Add((at, near[i].At));
+            }
+        }
+    }
+
+    /// <summary>The corrupted creatures her light can burn now, and where.</summary>
+    IEnumerable<(object Kin, Vector2 At)> CorruptedNow()
+    {
+        foreach (var m in Murklings)
+            if (m.Alive && !m.Budding && !m.Clinging) yield return (m, m.Position);
+        foreach (var w in Inkwardens)
+            if (w.Alive) yield return (w, w.Position);
+        foreach (var b in Blotters)
+            if (b.Alive && b.Rise <= 0f) yield return (b, b.Position);
+        foreach (var t in Thumpsquirts)
+            if (t.Alive && !t.Airborne) yield return (t, t.Position);
+        foreach (var l in Lashjaws)
+            if (l.Alive) yield return (l, l.Position);
     }
 
     /// <summary>An Inkwarden guards this spot: her light's burn is turned aside there (silently, as it is steady).</summary>
