@@ -187,11 +187,31 @@ Rare rooms where an old crab trades its best pearls for a share of her. The sim 
 
 ## 8. Her light
 
-Her light is a lamp in her bell, one sphere of it all round her, and it burns nothing. Her shots are lanterns, and
-their light is what burns the corrupted. Caves are dark. The sim is in `src/Core/Plane/PlaneHerLight.cs`
-(`HerLightTuning`), `PlaneAsh.cs` (`AshTuning`) and the shot rules in `PlaneCombat.cs`; the presentation in `BellView`
-(her light), `her_burn.gdshaderinc`, `BlightView.Burn`, `CombatView` (the shots' lamps), `ReefLook.Cave`,
-`GlowPlankton` and `AshView`. Tests: `HerLightTests`, `CaveAshTests`.
+Her light is a lamp in her bell, one sphere of it all round her, and it burns nothing. Her beam and her shots are
+what burn the corrupted. Caves are dark. The sim is in `src/Core/Plane/PlaneHerLight.cs` (`HerLightTuning`),
+`PlaneLight.cs` (the light emitters, `LightTuning`), `PlaneAsh.cs` (`AshTuning`) and the shot rules in
+`PlaneCombat.cs`; the presentation in `BellView` (her light), `BeamView` and `her_beam.gdshader`,
+`her_burn.gdshaderinc`, `BlightView.Burn`, `CombatView` (the shots' lamps), `ReefLook.Cave`, `GlowPlankton` and
+`AshView`. Tests: `HerLightTests`, `BeamTests`, `LightEmitterTests`, `LightQueryTests`, `CaveAshTests`.
+
+- **Light emitters** (`PlaneWorld.Lights`; docs/LIGHT-AND-GRAPH-PROPOSAL.md §1): her aura, her beam and each of her
+  shots in flight are emitters in one registry. Brightness at a point is Intensity × (1 − d / Range)^1.6, × a cone's
+  angle falloff, nothing through rock. Each emitter has an owner that pays when something drinks its light; her aura
+  and her beam are both hers, so both drain her one pool of HP.
+- **Her light is her HP** (`BellView`): her bell and her lamp dim as her HP falls (barely while she is well, fast near
+  the end) and go out at 0. Nothing mends her on its own (only the Coral Polyp pearl, a haven, a sealed leak cave).
+- **Her beam** (`PlaneWorld.Beam`, held on the left mouse button, the arrow keys or RT): a cone from her along her aim
+  (16 m × √ her glow stat, half-angle 22°), whichever way she swims. Shining costs her nothing. Rock stops it
+  (`BeamEnd`). It does what her shots' light does, continuously:
+  - burns every corrupted creature some of whose body lies in its cone, in sight of her, as `BeamShots` (2) plain
+    shots would, and opens a boss where a shot would;
+  - dazzles a creature once as it comes into it, as a shot does (held in it, it is not dazzled again);
+  - fills a sealed wall's carving its axis falls on with `BeamShots` shots' light a second;
+  - clears the ink dots along its axis (`BeamDots`, 0.5 m) and the ash it falls on.
+
+  The view draws it as a fan of her light over her plane and a spotlight from her bell along it (`BeamView`); the
+  bodies it burns sear as under a shot's light (`her_beam_at`, `her_beam_dir`).
+- **Her shots** are on the right mouse button (RB on a controller).
 
 - **Her light** (`BellView`): a bulb's, smooth all round her from her bell's heart (DESIGN-TOPDOWN §5.3), reaching
   11 m (× √ her glow stat and the depth's lantern: Lantern Pearl reaches farther) and casting soft shadows. It lights

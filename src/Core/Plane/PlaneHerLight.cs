@@ -19,6 +19,12 @@ namespace OctoShoots.Core.Plane;
 public static class HerLightTuning
 {
     public const float ShotReach = 3.4f, Burn = 3f;
+    /// <summary>
+    /// Her beam (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.3) burns as BeamShots plain shots would, and strikes a seal it falls on
+    /// with that many shots' light a second. Along its axis it clears the ink dots within BeamDots metres.
+    /// </summary>
+    public const int BeamShots = 2;
+    public const float BeamDots = 0.5f;
     public const float Dazzle = 0.8f, Rearm = 2f;
     /// <summary>Her light's reach on a cave's walls (× √ her glow stat): the ash within it, in sight of her, clears (AshTuning).</summary>
     public const float Reach = 6f;
@@ -52,6 +58,9 @@ public sealed partial class PlaneWorld
     /// <summary>Her shots burning something this step (the view sears the bodies they light).</summary>
     public IReadOnlyList<PlaneShot> Burners => _burners;
 
+    /// <summary>Her beam is burning something this step (the view sears the bodies it lights).</summary>
+    public bool BeamBurns { get; private set; }
+
     /// <summary>Whether this creature is in a shot's light now (burning, unless warded).</summary>
     public bool InHerLight(object creature) => _glare.TryGetValue(creature, out var g) && g.Lit;
 
@@ -66,6 +75,8 @@ public sealed partial class PlaneWorld
     {
         _burners.Clear();
         _lights.Clear();
+        BeamBurns = false;
+        StepBeam();
         if (!LightBurns)
         {
             _glare.Clear();
@@ -170,6 +181,17 @@ public sealed partial class PlaneWorld
                     from = s.Position;
                 }
             }
+        if (!Defeated && BeamReaches(at, height, radius))
+        {
+            n += HerLightTuning.BeamShots;
+            BeamBurns = true;
+            float d = Vector2.Distance(Beam.Position, at);
+            if (d < nearest)
+            {
+                nearest = d;
+                from = Beam.Position;
+            }
+        }
         if (!_glare.TryGetValue(kin, out var g)) _glare[kin] = g = new Glare();
         g.Seen = Tick;
         g.Lit = n > 0;
@@ -187,6 +209,19 @@ public sealed partial class PlaneWorld
         }
         g.Dark = 0f;
         return n;
+    }
+
+    /// <summary>
+    /// Her beam on what is not a creature: the seal its axis falls on gains BeamShots shots' light a second, and the ink
+    /// dots along its axis clear (the ash it lights clears in StepAsh).
+    /// </summary>
+    void StepBeam()
+    {
+        if (!BeamOn) return;
+        var from = Beam.Position;
+        var end = BeamEnd;
+        if (_rocks.Exists(r => r.Contains(end))) StrikeSeal(end, HerLightTuning.BeamShots * Dt, quiet: true);
+        if (Dots is not null) ClearAlong(from, end, HerLightTuning.BeamDots);
     }
 
     /// <summary>An Inkwarden guards this spot: her light's burn is turned aside there (silently, as it is steady).</summary>

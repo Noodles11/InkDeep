@@ -16,6 +16,8 @@ public struct PlaneInput
     public Vector2 Aim;
     /// <summary>Held: shoot along Aim (with Pearl Diver, held charges a pearl and letting go throws it).</summary>
     public bool Fire;
+    /// <summary>Held: her beam shines along Aim (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.2).</summary>
+    public bool Beam;
     /// <summary>Pressed: use the active pearl (F; on the open reef, the first slot's).</summary>
     public bool UseActive;
     /// <summary>Pressed: use the open reef's second and third slots' pearls (Q, E).</summary>
@@ -298,7 +300,7 @@ public sealed partial class PlaneWorld
 
         StepBoss();
         StepCombat(input);
-        SyncLights();
+        SyncLights(input);
         StepHerLight();
         StepAsh();
         StepCorruption();

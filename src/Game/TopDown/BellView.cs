@@ -61,6 +61,11 @@ public partial class BellView : Node3D
     public float Dim = 1f;
     /// <summary>The depth's lantern (ReefLook.Lantern): her light's strength and reach against the dark.</summary>
     public float Lantern = 1f;
+    /// <summary>Her light as her HP leaves it (1 full; 0 out), eased.</summary>
+    float _life = 1f;
+
+    /// <summary>How brightly she shines at this share of her HP: barely dimmer while she is well, fading fast near the end.</summary>
+    static float LifeGlow(float life) => life <= 0f ? 0f : 0.3f + 0.7f * Mathf.Sqrt(life);
     float _dbgEnergy = 1f;
     bool _dbgFalloff;
     /// <summary>Her light: where it is (world), how far it reaches and how strong it is now.</summary>
@@ -498,7 +503,7 @@ public partial class BellView : Node3D
         // Clinging murklings drink her glow (each a little); never dark.
         float drunk = 1f - 0.1f * world.Clingers - 0.03f * world.LesserClingers;
         _breath = Mathf.Lerp(_breath, (0.85f + 0.15f * _reserve) * Mathf.Max(drunk, 0.65f), 1f - Mathf.Exp(-8f * h));
-        _bellMaterial.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("breath"), _breath);
+        _bellMaterial.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("breath"), _breath * (0.35f + 0.65f * _life));
         SyncVitals(world, h);
         _strandMaterial.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("hurt"), _hurt);
         _strandMaterial.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ink"), _inkGhost);
@@ -511,7 +516,11 @@ public partial class BellView : Node3D
         float deep = Mathf.Clamp((Lantern - 1f) / 0.85f, 0f, 1f);
         _light.OmniRange = BulbRange * Mathf.Sqrt(glow * Lantern);
         if (!_dbgFalloff) _light.OmniAttenuation = Mathf.Lerp(Falloff, FalloffDeep, deep);
-        _light.LightEnergy = BulbEnergy * _dbgEnergy * Mathf.Pow(Lantern, 1.8f) * (0.94f + 0.12f * _pulse) * (0.7f + 0.3f * _breath);
+        // Her light is her life (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.1): it dims as her HP falls, and goes out with it.
+        float life = world.Defeated ? 0f : Mathf.Clamp(world.Player.Hp / Mathf.Max(world.Run.MaxHp, 1f), 0f, 1f);
+        _life = Mathf.Lerp(_life, LifeGlow(life), 1f - Mathf.Exp(-(world.Defeated ? 1.5f : 6f) * h));
+        _light.OmniRange *= 0.7f + 0.3f * _life;
+        _light.LightEnergy = BulbEnergy * _dbgEnergy * Mathf.Pow(Lantern, 1.8f) * (0.94f + 0.12f * _pulse) * (0.7f + 0.3f * _breath) * _life;
         _light.LightColor = GlowNow.Lerp(PrismColour, _prism).Lerp(new Color(1f, 0.3f, 0.55f), _hurt * 0.5f);
         // The red and the blue, and the title's save slots: lighter lanterns, unshadowed (her own casts the reef's shadows).
         if (Part >= 0 || Puppet)

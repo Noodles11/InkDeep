@@ -84,14 +84,15 @@ public sealed partial class PlaneWorld
     }
 
     /// <summary>One of her shots struck rock here: on a seal's emblem it adds its light; full, the seal crumbles.</summary>
-    void StrikeSeal(Vector2 at, float light = 1f)
+    void StrikeSeal(Vector2 at, float light = 1f, bool quiet = false)
     {
         foreach (var seal in Seals)
         {
             if (seal.Open || seal.Barred || seal.Rock.Fake || !seal.Rock.Contains(at, 0.3f) || Vector2.Distance(at, seal.Emblem) > SealTuning.Reach) continue;
             if (seal.Kind == SealKind.Boss && LeaksLeft > 0)
             {
-                Events.Add(new PlaneEvent(PlaneEventType.SealRefused, seal.Emblem, seal.Facing, LeaksLeft));
+                // (The beam held on it says so once a second, not every step.)
+                if (!quiet || Tick % 60 == 0) Events.Add(new PlaneEvent(PlaneEventType.SealRefused, seal.Emblem, seal.Facing, LeaksLeft));
                 return;
             }
             seal.Since = seal.DrainClock = 0f;

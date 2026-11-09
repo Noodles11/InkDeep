@@ -10,7 +10,8 @@ Decided:
 - The murklings' extra behaviour (throws, fish hunting, primes) is kept, but only on variants; the basic murkling does
   none of it (§3). Requests and chains that count primes keep working.
 - The corrupted are invisible outside her light, at every depth, the sunlit shallows included (§4).
-- The beam seals leaks, strikes seals, clears ink and ash, and opens bosses, as her shots do now (§2.3).
+- The beam strikes seals, clears ink and ash, and opens bosses, as her shots do. Leaks are sealed as they are now: by
+  her own light, staying close to them (§2.3).
 
 ## 1. Light emitters
 
@@ -55,9 +56,10 @@ her one pool.
 ### 2.2 Aura and beam
 
 - **Aura**: a point emitter on her, always on.
-- **Beam**: a cone from her bell along Aim, on while Fire is held. It points where she aims, not where she swims.
-  Turning it off is a choice: the beam is the brightest thing she has, and a murkling goes for the brightest light.
-- While pearls move from shots to the beam (§5), shots go to the second mouse button (and a pad's second trigger).
+- **Beam**: a cone from her bell along her aim, on while the beam button is held (the left mouse button, the arrow
+  keys, RT). It points where she aims, not where she swims. Turning it off is a choice: the beam is the brightest
+  thing she has, and a murkling goes for the brightest light.
+- While pearls move from shots to the beam (§5), shots are on the right mouse button (RB).
 
 ### 2.3 What the beam does
 
@@ -67,8 +69,9 @@ The beam does what her shots' light does now, continuously:
 - **Dazzles** a creature once as it comes into the light, as shots do: it holds still for `Dazzle`, then is not
   dazzled again until it has been out of all her light for `Rearm`. A creature kept in the beam is not frozen for
   ever.
-- **Seals leaks, strikes seals, clears ink dots and ash**: these count light. The beam counts as `BeamShots` *(tune:
-  2)* plain shots' light per second, so a leak takes about as long to seal as it does now.
+- **Strikes seals, clears ink dots and ash**: a sealed wall's carving its axis falls on gains `BeamShots` *(tune: 2)*
+  plain shots' light a second; the ink dots along its axis and the ash it falls on clear.
+- **Leaks** are not sealed by the beam: she seals one by staying close to it, her own light working on it, as now.
 - **Opens a boss** where a shot would (its pearl, while open). Each boss gains one light rule of its own in stage 5,
   for example a hold time, the beam's angle, or a lit object in its arena.
 
@@ -202,8 +205,8 @@ A dive is a layered graph of reefs, generated from the dive's seed when it start
 
 | Stage | What | Plays differently? |
 |---|---|---|
-| 1 | The emitter registry, brightness at a point; her aura and her shots registered | no |
-| 2 | The beam (Fire held), the aura emitter, light as HP (dimming, no reserve as HP) | yes |
+| 1 | The emitter registry, brightness at a point; her aura and her shots registered — built | no |
+| 2 | The beam (held), the aura emitter, light as HP (her light dims with it) — built | yes |
 | 3 | The basic murkling on the registry; variants by depth | yes |
 | 4 | Invisible in the dark; cores and healing; the magnet | yes |
 | 5 | Pearls sorted and moved (table for approval); one light rule per boss | yes |

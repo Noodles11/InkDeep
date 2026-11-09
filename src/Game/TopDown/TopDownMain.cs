@@ -36,6 +36,7 @@ public partial class TopDownMain : Node3D
     /// <summary>The level she is on: one hole leads down to the next (LevelPlan.NextOf).</summary>
     LevelId _id = LevelId.First;
     CombatView _combat = null!;
+    BeamView _beam = null!;
     CurrentView _currents = null!;
     CrabView _crab = null!;
     float _holeShown;
@@ -344,6 +345,8 @@ public partial class TopDownMain : Node3D
         // Prism Pearl: the red and the blue beside her while her light is split.
         foreach (var part in _prismBells) AddChild(part);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_horizon"), _lantern.Texture);
+        _beam = new BeamView();
+        AddChild(_beam);
         _combat = new CombatView { Swells = _swells };
         AddChild(_combat);
         _crab = new CrabView();
@@ -2560,6 +2563,7 @@ public partial class TopDownMain : Node3D
         OctoShoots.Game.Fx.SunMap.Poll(_map);
         _combat.HerAt = _bell.GlobalPosition;
         Guard("combat", () => _combat.Sync(_world, dt));
+        Guard("beam", () => _beam.Sync(_world, _bell.LightPosition, dt));
         Guard("surge", () => _surgeView.Sync(_world, dt));
         Guard("geysers", () => _geysers.Sync(_world, dt, _camera.Camera));
         _camera.SetBubbleLights(_combat.Lights, _combat.LightCount);
@@ -2692,7 +2696,7 @@ public partial class TopDownMain : Node3D
         int left = _world.Mobs.Count(m => m.Alive);
         _info.Text = $"{_id} · mobs {left}/{_world.Mobs.Count} · pearls {_run!.Items.Count}   attempt {_map.Attempt + 1}   pos {p.Position.X:0.0}, {p.Position.Y:0.0}   " +
                      $"{Engine.GetFramesPerSecond():0} FPS" +
-                     "\nWASD swim · Space dash · hold the mouse or arrows to shoot · Shift over the shaft dives · Tab map · Esc pause · F1 debug menu · F3 debug map · R regenerate";
+                     "\nWASD swim · Space dash · hold the left mouse or arrows to shine · right mouse to shoot · Shift over the shaft dives · Tab map · Esc pause · F1 debug menu · F3 debug map · R regenerate";
         Capture();
     }
 
@@ -3680,30 +3684,35 @@ public partial class TopDownMain : Node3D
         _activeLatched = use;
         if (AutoFire(ref input)) return input;
         bool held = Input.IsActionPressed(InputSetup.Fire);
-        if (!held) _fireBlocked = false;
+        bool shine = Input.IsActionPressed(InputSetup.Beam);
+        if (!held && !shine) _fireBlocked = false;
         Vector2 aim = Input.GetVector(InputSetup.AimLeft, InputSetup.AimRight, InputSetup.AimUp, InputSetup.AimDown);
         if (_pad)
         {
-            // Controller: the right stick aims, the trigger shoots (her light always flies her full range). Left alone, she
-            // aims the way she swims (standing still, the way she last aimed).
+            // Controller: the right stick aims, the trigger shines her beam, the bumper shoots (her light always flies her
+            // full range). Left alone, she aims the way she swims (standing still, the way she last aimed).
             if (aim.LengthSquared() > 0.04f) _padAim = new System.Numerics.Vector2(aim.X, aim.Y);
             else if (stick.LengthSquared() > 0.04f) _padAim = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(stick.X, stick.Y));
             else if (_padAim.LengthSquared() > 1e-6f) _padAim = System.Numerics.Vector2.Normalize(_padAim);
             input.Aim = _padAim.LengthSquared() > 1e-6f ? System.Numerics.Vector2.Normalize(_padAim) : _world.Player.Aim;
             input.Fire = held && !_fireBlocked;
+            input.Beam = shine && !_fireBlocked;
         }
         else if (aim.LengthSquared() > 0f)
         {
-            // The aim keys (the arrows) aim and shoot at once.
+            // The aim keys (the arrows) aim and shine her beam at once (the shoot button still shoots).
             input.Aim = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(aim.X, aim.Y));
-            input.Fire = true;
+            input.Beam = true;
+            input.Fire = held && !_fireBlocked;
         }
         else
         {
-            // The mouse: shoot toward the pointer while the button is held (only its way counts: her light flies her full range).
+            // The mouse: her beam (left) and her shots (right) toward the pointer while a button is held (only its way
+            // counts: her light flies her full range).
             var to = MouseOnBand() - _world.Player.Position;
             input.Aim = to.LengthSquared() > 1e-4f ? System.Numerics.Vector2.Normalize(to) : default;
             input.Fire = held && !_fireBlocked;
+            input.Beam = shine && !_fireBlocked;
         }
         return input;
     }
@@ -3893,6 +3902,7 @@ public partial class TopDownMain : Node3D
         input.Aim = target is { } at && System.Numerics.Vector2.DistanceSquared(at, from) > 1e-4f ? System.Numerics.Vector2.Normalize(at - from) : _world.Player.Aim;
         // With Pearl Diver, let go once the pearl is fully charged.
         input.Fire = !(_world.Run.Loadout.Shot.Charge && _world.Player.Charge >= PlaneCombatTuning.ChargeSeconds);
+        input.Beam = true;
         return true;
     }
 

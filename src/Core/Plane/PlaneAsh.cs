@@ -130,7 +130,10 @@ public sealed partial class PlaneWorld
                 if (a.Wave < 0f) ClearPatch(a);
                 continue;
             }
-            if (Defeated || Vector2.DistanceSquared(a.Wall, her) + a.Height * a.Height > reach * reach || !LineOfSight(her, a.At)) continue;
+            // Her own light round her, or her beam falling on it.
+            bool lit = !Defeated && (Vector2.DistanceSquared(a.Wall, her) + a.Height * a.Height <= reach * reach && LineOfSight(her, a.At)
+                || BeamReaches(a.At, a.Height, 0.3f));
+            if (!lit) continue;
             a.Cover -= Dt / AshTuning.LightClear;
             if (a.Cover > 0f) continue;
             ClearPatch(a);

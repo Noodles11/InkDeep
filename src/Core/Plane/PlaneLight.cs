@@ -203,7 +203,7 @@ public sealed partial class PlaneWorld
 
     readonly Dictionary<PlaneShot, LightEmitter> _shotLights = new();
     ILightOwner? _her;
-    LightEmitter? _aura;
+    LightEmitter? _aura, _beam;
 
     /// <summary>Every light emitter in the world (docs/LIGHT-AND-GRAPH-PROPOSAL.md §1).</summary>
     public LightRegistry Lights { get; } = new();
@@ -223,6 +223,39 @@ public sealed partial class PlaneWorld
             }
             return _aura;
         }
+    }
+
+    /// <summary>Her beam: a cone from her along her aim, shining while Beam is held.</summary>
+    public LightEmitter Beam => _beam ??= Lights.Add(new LightEmitter
+    {
+        Owner = Her, Shape = LightShape.Cone, Intensity = LightTuning.BeamIntensity, Range = LightTuning.BeamReach, Active = false,
+    });
+
+    /// <summary>Her beam is shining now.</summary>
+    public bool BeamOn => Beam.Shining;
+
+    /// <summary>Where her beam's axis first meets rock (or its full reach): what it strikes, and where the view ends it.</summary>
+    public Vector2 BeamEnd { get; private set; }
+
+    /// <summary>
+    /// Whether her beam reaches a body (on her plane at <paramref name="at"/>, <paramref name="height"/> metres off it, this
+    /// radius): some of it within the beam's reach and cone, in sight of her.
+    /// </summary>
+    public bool BeamReaches(Vector2 at, float height, float radius)
+    {
+        var b = Beam;
+        if (!b.Shining) return false;
+        var to = at - b.Position;
+        float flat = to.Length();
+        float d = MathF.Sqrt(flat * flat + height * height);
+        if (d - radius > b.Range) return false;
+        if (flat > radius)
+        {
+            float angle = MathF.Acos(Math.Clamp(Vector2.Dot(to / flat, b.Direction), -1f, 1f));
+            float widen = MathF.Asin(MathF.Min(radius / flat, 1f));
+            if (angle - widen > b.HalfAngle) return false;
+        }
+        return LineOfSight(b.Position, at);
     }
 
     /// <summary>The emitter for this shot of hers, if it is shining.</summary>
@@ -249,11 +282,21 @@ public sealed partial class PlaneWorld
         a.Active = !Defeated;
     }
 
-    /// <summary>The registry kept in step with the world: her aura on her, an emitter for each shot of hers that shines.</summary>
-    void SyncLights()
+    /// <summary>
+    /// The registry kept in step with the world: her aura on her, her beam along her aim while it is held, an emitter for
+    /// each shot of hers that shines.
+    /// </summary>
+    void SyncLights(in PlaneInput input)
     {
         _ = Aura;
         PlaceAura();
+        var beam = Beam;
+        beam.Position = Player.Position;
+        var aim = input.Aim.LengthSquared() > 1e-6f ? input.Aim : Player.Aim;
+        if (aim.LengthSquared() > 1e-6f) beam.Direction = Vector2.Normalize(aim);
+        beam.Range = LightTuning.BeamReach * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.Glow], 0.1f));
+        beam.Active = input.Beam && !Defeated;
+        BeamEnd = beam.Active ? FirstBlocked(beam.Position, beam.Position + beam.Direction * beam.Range, 0.1f) : beam.Position;
         foreach (var s in Shots)
         {
             if (!s.FromPlayer || s.BossPearl || s.Life <= 0f) continue;

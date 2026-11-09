@@ -203,6 +203,14 @@ her_burn3={
 "type": "vec4",
 "value": Vector4(0, -1000, 0, 0)
 }
+her_beam_at={
+"type": "vec4",
+"value": Vector4(0, -1000, 0, 0)
+}
+her_beam_dir={
+"type": "vec4",
+"value": Vector4(1, 0, 0, 0.38)
+}
 her_light_at={
 "type": "vec4",
 "value": Vector4(0, -1000, 0, 11)
