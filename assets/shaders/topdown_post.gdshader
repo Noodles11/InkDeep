@@ -16,6 +16,7 @@ render_mode unshaded, depth_test_disabled, depth_draw_never, cull_disabled, fog_
 
 #include "res://assets/shaders/sunlight.gdshaderinc"
 #include "res://assets/shaders/light_field.gdshaderinc"
+#include "res://assets/shaders/reef_show.gdshaderinc"
 
 global uniform vec3 reef_water_deep;
 global uniform vec3 reef_murk;
@@ -55,8 +56,15 @@ uniform float aberration = 0.0;
 // An art direction under study (reef_art.gdshaderinc, docs/ART-LOOKS.md): painted, depth is told by flat layers of
 // water, not by a lens's blur (look 4: by felt-tip stippling, the water a light veil; 0 and 5: the game's own water).
 global uniform int reef_art;
-// The showcase reef (reef_show.gdshaderinc, docs/VISUAL-SHOWCASE.md): its colours kept through the water, her light whiter.
-global uniform float reef_showcase;
+// The showcase reef (reef_show.gdshaderinc, docs/VISUAL-SHOWCASE.md): its colours kept through the water, her light
+// whiter (its reef_showcase global comes with the include).
+// The game's look (CameraRig.SetShowcase): a thick fog under her plane (below_fog: how much of it, thickening over
+// below_fog_depth metres down), and the reef drained of its colour and dimmed outside her light (unlit_saturation,
+// unlit_dim: what is left of them there), so she is the one who brings the colour, and her light reads.
+uniform float below_fog = 0.0;
+uniform float below_fog_depth = 5.0;
+uniform float unlit_saturation = 1.0;
+uniform float unlit_dim = 1.0;
 // The mountains' tall tops (DESIGN-TOPDOWN §4.1): above peak_from metres over her plane, rock softens further out of
 // focus, rising to full over peak_span — so the range reads as distant and calm, and the floor she plays on stays the
 // sharpest thing on screen.
@@ -395,6 +403,11 @@ void fragment() {
 	// The water she lights is a thinner veil over what she shows, never none: what lies deeper still sinks into the water
 	// in her light, so the reef keeps its depth round her.
 	col = mix(col, water, fog * (1.0 - 0.45 * lit));
+	// Under her plane, the water thickens into a fog that hides the depths (thinner where her light reaches down).
+	if (below_fog > 0.0 && !open_deep && below > 0.0) {
+		float under = below_fog * smoothstep(0.15, below_fog_depth, below) * (1.0 - 0.5 * lit);
+		col = mix(col, mix(reef_water_deep, reef_murk, 0.2), under);
+	}
 	// Fish far under her plane: their vague shadows on all that lies below it, where this pixel's ray crosses their depth (over the
 	// water's veil, which would wash them away).
 	if (deep_fish_count > 0 && below > 0.0) {
@@ -501,9 +514,12 @@ void fragment() {
 	// (Gently: lifted hard, the room and its pearl wash out and the pearl's pattern is lost.)
 	col = col * (1.0 + clam * 0.45) + clam * 0.1;
 
-	// Grade: the depth's saturation; shadows cooled toward the water, highlights a touch of sun.
+	// Grade: the depth's saturation; shadows cooled toward the water, highlights a touch of sun. Outside her light (her
+	// glow and her beam, and what the sealed leaks have woken) the reef keeps little of its colour and some of its light.
+	float shown = open_deep ? 0.0 : max(lit, reef_show(world));
+	col *= mix(unlit_dim, 1.0, shown);
 	float luma = dot(col, vec3(0.299, 0.587, 0.114));
-	col = mix(vec3(luma), col, reef_saturation);
+	col = mix(vec3(luma), col, reef_saturation * mix(unlit_saturation, 1.0, shown));
 	// Shadows take the water's hue at their own brightness (cool, not lifted).
 	float wl = max(dot(reef_water_deep, vec3(0.299, 0.587, 0.114)), 0.01);
 	// (Not what her own light falls on: her warmth reaches the eye.)

@@ -176,35 +176,35 @@ public sealed record ReefLook
     };
 
     /// <summary>
-    /// The showcase reef (docs/VISUAL-SHOWCASE.md): painted as the reef was (look 0), in a deep clear blue: blue-slate
-    /// rock crusted with vivid coral (pink, violet, orange, a butter yellow), pale sand that her light and the shafts
-    /// from above pool on, teal turf; a few god rays reaching down. After the references of a lit night reef and a
-    /// coral canyon seen from above.
+    /// The showcase reef (docs/VISUAL-SHOWCASE.md): painted as the reef was (look 0), in a cool grey water with only a
+    /// breath of blue: slate-grey rock crusted with vivid coral (pink, violet, orange, a butter yellow) that shows its
+    /// colour where her light falls, pale grey sand that her light and the shafts from above pool on, teal turf; a few
+    /// god rays reaching down. Outside her light the reef keeps little colour (topdown_post's unlit_saturation).
     /// </summary>
     public static readonly ReefLook Showcase = Shallows with
     {
         Name = "The Blue Hollow",
-        WaterShallow = C("#2F66A8"), WaterDeep = C("#143C7A"), Murk = C("#050F2A"),
-        Sand = C("#8EA6C4"), Rock = C("#43577F"),
+        WaterShallow = C("#4F5B68"), WaterDeep = C("#333E4A"), Murk = C("#101419"),
+        Sand = C("#8E9399"), Rock = C("#555C66"),
         Coral = C("#F0559F"), Coral2 = C("#9A5CF0"), Algae = C("#3BAE90"), Sponge = C("#F59A32"), Butter = C("#F6D24E"),
-        Sun = C("#C8E8FF"), SunEnergy = 0.5f, Ambient = C("#2E4E92"), AmbientEnergy = 0.22f,
-        Caustics = 0.7f, Rays = 0.6f, Menace = 0.3f, Saturation = 1.35f, Vignette = 0.7f, Fog = 0.22f, Contrast = 1.2f, Lantern = 1.4f,
+        Sun = C("#E4ECF4"), SunEnergy = 0.5f, Ambient = C("#4A525E"), AmbientEnergy = 0.22f,
+        Caustics = 0.7f, Rays = 0.6f, Menace = 0.3f, Saturation = 1.15f, Vignette = 0.7f, Fog = 0.22f, Contrast = 1.2f, Lantern = 1.4f,
         FanA = C("#A472F2"), FanB = C("#F26AB4"), SoftCoral = C("#FF86C6"), HardCoral = C("#FFB23E"), Grass = C("#3FCBA4"),
     };
 
     /// <summary>The Blue Hollow near the top: the water clearer and lighter, the sun stronger, caustics and rays full.</summary>
     public static readonly ReefLook ShowcaseUp = Showcase with
     {
-        WaterShallow = C("#4F9FD6"), WaterDeep = C("#2A6FB2"), Murk = C("#0E2C5C"),
-        Sand = C("#B9CCE0"), Rock = C("#6A80AA"),
+        WaterShallow = C("#6C7884"), WaterDeep = C("#4C5865"), Murk = C("#1C232B"),
+        Sand = C("#A8ADB2"), Rock = C("#6F7781"),
         SunEnergy = 0.8f, AmbientEnergy = 0.3f, Caustics = 1f, Rays = 1f, Menace = 0f, Fog = 0.2f, Vignette = 0.45f, Lantern = 1f,
     };
 
     /// <summary>The Blue Hollow near the bottom: the water darker, the sun faint, her light carrying the reef.</summary>
     public static readonly ReefLook ShowcaseDown = Showcase with
     {
-        WaterShallow = C("#1F4A8C"), WaterDeep = C("#0C2A60"), Murk = C("#030818"),
-        Sand = C("#6F86A8"), Rock = C("#34456C"),
+        WaterShallow = C("#3B444F"), WaterDeep = C("#232A33"), Murk = C("#07090C"),
+        Sand = C("#71767C"), Rock = C("#434951"),
         SunEnergy = 0.3f, AmbientEnergy = 0.16f, Caustics = 0.35f, Rays = 0.3f, Menace = 0.5f, Fog = 0.3f, Vignette = 0.82f, Lantern = 1.75f,
     };
 

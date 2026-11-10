@@ -15,9 +15,14 @@ between).
 
 ## What is built
 
-- **Its palette** (`ReefLook.Showcase`, "The Blue Hollow"): navy water, blue-slate rock, pale blue sand; coral in four
-  colours; a cool pale sun, some god rays, caustics; saturation up, a heavy vignette. Painted in look 0
-  (`ArtLook.Painted`, set by `TopDownMain.ApplyLook` and the title).
+- **Its palette** (`ReefLook.Showcase`, "The Blue Hollow"): a cool grey water with only a breath of blue, slate-grey
+  rock, pale grey sand; coral in four colours; a cool pale sun, some god rays, caustics; a heavy vignette. Painted in
+  look 0 (`ArtLook.Painted`, set by `TopDownMain.ApplyLook` and the title).
+- **Her light brings the colour** (`topdown_post.gdshader`'s `unlit_saturation`, `unlit_dim`; `CameraRig.SetShowcase`):
+  outside her glow and her beam (and what sealed leaks have woken) the reef keeps 30% of its colour and 88% of its
+  light, so it reads grey until she lights it, and her light is plain to see.
+- **Fog under her plane** (`below_fog`): the water thickens below the swim height, 80% of the way to the water's grey
+  over the first 5 m down, thinner where her light reaches.
 - **Crisp water** (`CameraRig.SetShowcase`): the deeps barely blurred and a thin veil over them, so the reef reads as
   in the references, not through a haze. The water's blue tint and the cool shadow grade are eased so the coral keeps
   its colour (`topdown_post.gdshader`, `reef_showcase`).
@@ -27,6 +32,7 @@ between).
   spot, her glow in the water and on the reef.
 - **Her light shows the reef** (`reef_show.gdshaderinc`): what her aura and her beam fall on, cut off by the rock
   between, lifts in its own colours. (Under a drawn look it also swaps the drawn skin for the painted one there.)
+- **Verification:** `--dbg-sealat=seconds` seals the leak nearest her then, its wave with it.
 - **The reef wakes**: each sealed leak sends a wave of her light out across the reef (30 m/s), and behind it the reef
   keeps a glow of its own, the more the more of its leaks are sealed (`reef_wake`, `reef_wave`).
 
@@ -39,5 +45,4 @@ between).
 ## Still to do
 
 - Fish scattering from her beam.
-- Verification: `--dbg-sealat=seconds` seals the leak nearest her then, its wave with it.
 - The god rays and the light pools on the sand tuned against the night-reef reference.

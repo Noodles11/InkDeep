@@ -23,8 +23,8 @@ A top-down action roguelite in a darkening ocean.
   through the hole she is nearest and the dive into it, each hole's rim in the colour of the reef it leads to, HUD and
   run clock, minimap with fog of war, pause menu (with the dive's chart), splashes, and the F3 debug map.
 
-The game boots into the **title screen**: continue, a new run, a seeded run, the Sea-pedia, statistics, save & load and
-settings. **WASD** swims (north is up), **Space** dashes, **Shift** over a hole dives, the mouse aims, the **left
+The game boots into the **title screen**: play (her jellies' save slots: wake one or make a new one), a seeded run, the
+Sea-pedia, statistics, save & load and settings. **WASD** swims (north is up), **Space** dashes, **Shift** over a hole dives, the mouse aims, the **left
 button** (or the arrow keys, which aim too) shines her beam (her one attack), **Ctrl** puts her glow out or lights it (dark, her beam dark too, she is unseen), **Esc** pauses, **Tab**
 shows the whole level, **F1** the debug menu (jump to any level, switch any pearl on or off; a debug run is not saved), **F3** the debug map, **R** regenerates from the seed field (Enter applies a typed seed).
 

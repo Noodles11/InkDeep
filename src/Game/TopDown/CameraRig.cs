@@ -72,12 +72,22 @@ public partial class CameraRig : Node3D
     /// The showcase reef (docs/VISUAL-SHOWCASE.md): crisp, as the references are — the deeps barely blurred, a thin
     /// veil of water over them; else the painted look's own soft depths.
     /// </summary>
+    /// <summary>
+    /// The game's look: how much fog lies under her plane (thickening over 5 m down), and what is left outside her light
+    /// of the reef's colour and of its brightness.
+    /// </summary>
+    public const float BelowFog = 0.8f, UnlitSaturation = 0.3f, UnlitDim = 0.88f;
+
     public void SetShowcase(bool on)
     {
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("below_blur"), on ? 1.4f : 5.2f);
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("above_blur"), on ? 1.6f : 3.4f);
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("deep_fog"), on ? 0.025f : 0.06f);
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("reef_water"), on ? 1.2f : 3.0f);
+        // The game's look: thick fog under her plane, and the colour hers to bring (topdown_post's below_fog, unlit_*).
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("below_fog"), on ? BelowFog : 0f);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("unlit_saturation"), on ? UnlitSaturation : 1f);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("unlit_dim"), on ? UnlitDim : 1f);
     }
 
     public void SetReducedMotion(bool reduced) => _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("wobble"), reduced ? 0f : 1f);

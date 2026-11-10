@@ -21,7 +21,7 @@ namespace OctoShoots.Game.Title;
 /// The title screen (docs/TITLE-MENU-PROPOSAL.md): a menu over the live sea. Clementine swims slowly up and down the longest
 /// straight channel of a fixed seed's reef in the middle of the screen, the camera following her, and the menu's items stand
 /// in a ring round her:
-/// Continue, New run, Seeded run, Sea-pedia, Statistics, Save &amp; load, Settings and Quit. She turns to face the
+/// Play, Seeded run, Sea-pedia, Statistics, Save &amp; load, Settings and Quit. She turns to face the
 /// pointer (her crosshair, GonadCursor), or with the controller the item in focus, her first gonad toward it, as in the
 /// game. With the controller the left stick points from her: her crosshair stands round her the way it is pushed and the
 /// item that way takes the focus (the D-pad still steps round the ring); choosing an item, she shoots her light at it, and what it does happens as the shot strikes it.
@@ -447,13 +447,8 @@ public partial class TitleMain : Node3D
         _shots = new MenuShots();
         _shots.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 
-        // Continue wakes the jelly played last; Play opens her save slots (pick one, or make a new jelly).
-        AddItem("continue", "Continue", () =>
-        {
-            if (GameSave.Current.Chosen is var last and >= 0 && last < GameSave.Current.Jellies.Count) PlayJelly(last);
-        });
+        // Play opens her save slots (pick a jelly to wake, or make a new one).
         AddItem("reef", "Play", () => OpenCard("jellies"));
-        AddItem("new", "New run", NewRun);
         AddItem("seeded", "Seeded run", ToggleSeedBox);
         AddItem("pedia", "Sea-pedia", () => OpenCard("pedia"));
         AddItem("stats", "Statistics", () => OpenCard("stats"));
@@ -495,7 +490,7 @@ public partial class TitleMain : Node3D
         GetTree().CreateTimer(0.05).Timeout += Intro;
     }
 
-    /// <summary>The logo surfaces, then the items bob up one by one; Continue (or New run) takes the focus.</summary>
+    /// <summary>The logo surfaces, then the items bob up one by one; Play takes the focus.</summary>
     void Intro()
     {
         TitleStyle.Bloom(_logo, 0.35f, Reduced);
@@ -662,9 +657,6 @@ public partial class TitleMain : Node3D
         var save = GameSave.Current;
         var p = save.Profile;
         Item("reef").Detail.Text = save.Jellies.Count > 0 ? $"{save.Jellies.Count} of {JellyNames.MaxJellies} jellies" : "make your jelly";
-        var (cont, contDetail, _) = Item("continue");
-        cont.GetParent<Control>().Visible = save.Current is not null;
-        if (save.Current is { } jelly) contDetail.Text = $"{jelly.Name} · level {jelly.Level}";
         Item("seeded").Detail.Text = p.RecentSeeds.Count > 0 ? $"last: {p.RecentSeeds[0]}" : "type a seed to share a reef";
         Item("pedia").Detail.Text = $"{SeaPediaCard.PearlsFound(p)} / {PlaneRun.PortedPearls.Length} pearls · {SeaPediaCard.CreaturesMet(p)} / {SeaPediaCard.Creatures.Count} creatures";
         Item("stats").Detail.Text = p.Stats.Runs > 0 ? $"best: {StatsCard.Reach(p.Stats)} · {p.Stats.Runs} runs" : "no runs yet";
@@ -672,16 +664,6 @@ public partial class TitleMain : Node3D
     }
 
     // ───────────────────────── runs ─────────────────────────
-
-    void NewRun()
-    {
-        if (GameSave.Current.Run is { } run)
-        {
-            ConfirmReplace(Item("new").Button, run, () => Launch(LaunchMode.New, SeedCode.NewRandom()));
-            return;
-        }
-        Launch(LaunchMode.New, SeedCode.NewRandom());
-    }
 
     /// <summary>Asks before a new run replaces the saved one, right under the item.</summary>
     void ConfirmReplace(Button item, SuspendedRun run, Action start)
