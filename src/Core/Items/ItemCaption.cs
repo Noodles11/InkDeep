@@ -92,14 +92,14 @@ public static class ItemCaption
         {
             lines.Add(s.Pattern switch
             {
-                ShotPattern.Cone => $"Fires a {s.Multishot}-pellet cone, each {Pct(PlaneCombatTuning.VolleyShot(s.Multishot))} of a shot",
-                ShotPattern.Kraken8 => "Fires in 8 directions",
-                _ => $"Fires {s.Multishot} shots, each {Pct(PlaneCombatTuning.VolleyShot(s.Multishot))} of a shot",
+                ShotPattern.Cone => $"Opens the beam into a {s.Multishot}-ray floodlight, each {Pct(PlaneCombatTuning.VolleyShot(s.Multishot))} of the beam",
+                ShotPattern.Kraken8 => "Short beams shine all round you, 8 ways",
+                _ => $"Splits the beam into {s.Multishot} rays, each {Pct(PlaneCombatTuning.VolleyShot(s.Multishot))} of the beam",
             });
         }
         else if (s.Pattern == ShotPattern.Kraken8)
         {
-            lines.Add("Fires in 8 directions");
+            lines.Add("Short beams shine all round you, 8 ways");
         }
         if (s.Homing) lines.Add($"Shots home onto foes within {N(PlaneCombatTuning.HomingReach)} m (turning {N(PlaneCombatTuning.HomingDegPerSec)}° a second)");
         if (s.Pierce) lines.Add("Shots pierce foes (each foe hit once)");
@@ -107,7 +107,7 @@ public static class ItemCaption
         if (s.Bounces > 0) lines.Add($"Shots bounce off rock {s.Bounces}×");
         if (s.Split) lines.Add($"Bubbles split in two when they pop on a foe or rock ({N(PlaneCombatTuning.SplitAngleDeg)}° apart, each 50% of its damage, flying {N(PlaneCombatTuning.SplitRange)} m)");
         if (s.Boomerang) lines.Add("Shots turn back at 75% of their range and return to you, hitting again on the way");
-        if (s.Wave) lines.Add("Shots twist in a double helix");
+        if (s.Wave) lines.Add("The beam's rays weave across your aim in a double helix");
         if (s.Spiral) lines.Add("Shots spiral outward");
         if (s.Grow) lines.Add($"Shots grow with distance: up to ×{N(PlaneCombatTuning.GrowMax)} size and damage at full range");
         if (s.Explosive) lines.Add($"Shots burst into light where they pop: {Pct(PlaneCombatTuning.BurstDamage)} of their damage to every corrupted thing within {N(PlaneCombatTuning.BurstRadius)} m, cleansing the ground");

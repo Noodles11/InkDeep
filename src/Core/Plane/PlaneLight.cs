@@ -34,6 +34,17 @@ public static class LightTuning
     public const float MaxHalfAngleDeg = 35f, SunbeamReach = 1.5f, SunbeamHalfAngleDeg = 15f;
     public const float RearIntensity = 0.6f, RearReach = 0.75f, SweepIntensity = 0.5f, SweepReach = 0.7f, SweepTurn = 0.6f;
     public const float LureBright = 2.5f;
+    /// <summary>
+    /// Her beam split into rays (docs/BEAM-PEARLS-PLAN.md, step 1), by her merged shot shape: Multishot rays fanned
+    /// across her aim, FanStep × the shape's spread apart (a cone, Hammerhead's, ConeStep° apart and ConeReach × as
+    /// long), each as narrow as 1/√ of their count (no narrower than RayNarrowest) and worth a volley's share of her burn
+    /// (PlaneCombatTuning.VolleyShot × the shape's damage); a wave (Double Helix) weaves them across her aim, ±WaveDeg
+    /// at WaveTurn rad/s, out of step. Kraken Form adds KrakenRays − 1 short rays all round her (KrakenReach × as long,
+    /// KrakenNarrow × as wide), each worth KrakenWorth of her beam.
+    /// </summary>
+    public const float FanStep = 1.5f, ConeStep = 15f, ConeReach = 0.85f, RayNarrowest = 0.4f, WaveDeg = 8f, WaveTurn = 3f;
+    public const int KrakenRays = 8;
+    public const float KrakenReach = 0.45f, KrakenNarrow = 0.5f, KrakenWorth = 0.15f;
     /// <summary>A light-seeker's scan: emitters within Scan metres, every ScanEvery seconds, none dimmer than Threshold where it is.</summary>
     public const float Scan = 20f, ScanEvery = 0.2f, Threshold = 0.04f;
 }
@@ -221,6 +232,11 @@ public sealed partial class PlaneWorld
     ILightOwner? _her;
     LightEmitter? _aura, _beam, _rear, _sweep;
     float _sweepAngle;
+    /// <summary>Her beam's other rays (a split beam's, Kraken Form's), made as they are first needed, and what each is worth.</summary>
+    readonly List<LightEmitter> _rays = new();
+    readonly List<float> _rayWorth = new();
+    float _beamWorth = HerLightTuning.BeamShots;
+    float _wavePhase;
 
     /// <summary>Every light emitter in the world (docs/LIGHT-AND-GRAPH-PROPOSAL.md §1).</summary>
     public LightRegistry Lights { get; } = new();
@@ -261,15 +277,69 @@ public sealed partial class PlaneWorld
         Owner = Her, Shape = LightShape.Cone, Intensity = LightTuning.BeamIntensity * LightTuning.SweepIntensity, Active = false,
     });
 
-    /// <summary>Her beams and how many plain shots' burn each is worth (the main one BeamShots; Rear Fin's and Lighthouse's one).</summary>
-    public IEnumerable<(LightEmitter Beam, int Shots)> HerBeams
+    /// <summary>
+    /// Her beams and how many plain shots' burn each is worth: her own (BeamShots, or its share of them when it is split),
+    /// its other rays, Rear Fin's and Lighthouse's (one each).
+    /// </summary>
+    public IEnumerable<(LightEmitter Beam, float Shots)> HerBeams
     {
         get
         {
-            yield return (Beam, HerLightTuning.BeamShots);
-            yield return (RearBeam, 1);
-            yield return (SweepBeam, 1);
+            yield return (Beam, _beamWorth);
+            for (int i = 0; i < _rays.Count; i++) yield return (_rays[i], _rayWorth[i]);
+            yield return (RearBeam, 1f);
+            yield return (SweepBeam, 1f);
         }
+    }
+
+    /// <summary>Her beam and its other rays (the ones along her aim and round her, not Rear Fin's nor Lighthouse's).</summary>
+    public IEnumerable<LightEmitter> BeamRays
+    {
+        get
+        {
+            yield return Beam;
+            foreach (var r in _rays) yield return r;
+        }
+    }
+
+    /// <summary>The way she aims her beam (its rays fan round it), and how far either side of it the fan reaches (radians).</summary>
+    public Vector2 BeamAim { get; private set; } = Vector2.UnitX;
+    public float BeamSpread { get; private set; }
+
+    /// <summary>
+    /// The rays her beam splits into by her shot shape (BeamSplit's numbers): each one's angle off her aim, its width and
+    /// reach against the beam's, and its worth against BeamShots. One ray at 0 unsplit; its first is her own beam (the
+    /// middle one, or the first of an even fan).
+    /// </summary>
+    public static List<(float Offset, float Width, float Reach, float Worth)> RayLayout(ShotSpec shape, float time)
+    {
+        var rays = new List<(float, float, float, float)>();
+        int n = Math.Max(1, shape.Multishot);
+        bool cone = shape.Pattern == ShotPattern.Cone;
+        float step = (cone ? LightTuning.ConeStep : shape.SpreadDeg * LightTuning.FanStep) * MathF.PI / 180f;
+        float width = n == 1 ? 1f : MathF.Max(LightTuning.RayNarrowest, 1f / MathF.Sqrt(n));
+        float reach = cone && n > 1 ? LightTuning.ConeReach : 1f;
+        float worth = n == 1 ? shape.DamageMult : PlaneCombatTuning.VolleyShot(n) * shape.DamageMult;
+        float wave = shape.Wave ? LightTuning.WaveDeg * MathF.PI / 180f * MathF.Sin(time * LightTuning.WaveTurn) : 0f;
+        // Her own first: the middle (or the first of an even fan), then the rest out from it.
+        var order = Enumerable.Range(0, n).OrderBy(i => MathF.Abs(i - (n - 1) / 2f)).ThenBy(i => i).ToList();
+        foreach (int i in order)
+        {
+            float offset = (i - (n - 1) / 2f) * step;
+            // A wave weaves them across her aim, each the other way from the last.
+            if (shape.Wave) offset += i % 2 == 0 ? wave : -wave;
+            rays.Add((offset, width, reach, worth));
+        }
+        if (n == 2 && shape.Wave)
+        {
+            // Two strands crossing: one at +wave, one at −wave (not side by side).
+            rays[0] = (wave, width, reach, worth);
+            rays[1] = (-wave, width, reach, worth);
+        }
+        if (shape.Pattern == ShotPattern.Kraken8)
+            for (int k = 1; k < LightTuning.KrakenRays; k++)
+                rays.Add((k * MathF.Tau / LightTuning.KrakenRays, LightTuning.KrakenNarrow, LightTuning.KrakenReach, LightTuning.KrakenWorth));
+        return rays;
     }
 
     /// <summary>Where her beam's axis first meets rock (or its full reach): what it strikes, and where the view ends it.</summary>
@@ -394,6 +464,17 @@ public sealed partial class PlaneWorld
         return from + b.Direction * len;
     }
 
+    /// <summary>Her beam's other ray at this index, made (registered with her as its owner, dark) when first needed.</summary>
+    LightEmitter Ray(int index)
+    {
+        while (_rays.Count <= index)
+        {
+            _rays.Add(Lights.Add(new LightEmitter { Owner = Her, Shape = LightShape.Cone, Intensity = LightTuning.BeamIntensity, Active = false }));
+            _rayWorth.Add(0f);
+        }
+        return _rays[index];
+    }
+
     /// <summary>Where a beam of hers first meets rock along its axis (its full reach if nothing).</summary>
     public Vector2 StopOf(LightEmitter beam) => FirstBlocked(beam.Position, beam.Position + beam.Direction * beam.Range, 0.1f);
 
@@ -448,8 +529,32 @@ public sealed partial class PlaneWorld
             * (shape.Laser ? LightTuning.SunbeamReach : 1f);
         float halfDeg = shape.Laser ? LightTuning.SunbeamHalfAngleDeg
             : MathF.Min(LightTuning.BeamHalfAngleDeg * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.ShotSize], 0.1f)), LightTuning.MaxHalfAngleDeg);
-        beam.HalfAngle = halfDeg * MathF.PI / 180f;
+        float half = halfDeg * MathF.PI / 180f * MathF.Sqrt(MathF.Max(shape.SizeMult, 0.1f));
+        float range = beam.Range;
         beam.Active = input.Beam && !Defeated;
+        // Split into its rays (her shot shape: Triple Tentacle, Hammerhead, Double Helix, Plankton Swarm, Kraken Form).
+        BeamAim = beam.Direction;
+        if (shape.Wave) _wavePhase += Dt;
+        var layout = RayLayout(shape, _wavePhase);
+        float spread = 0f;
+        for (int i = 0; i < layout.Count; i++)
+        {
+            var (offset, width, reach, worth) = layout[i];
+            var ray = i == 0 ? beam : Ray(i - 1);
+            ray.Position = beam.Position;
+            ray.Direction = Rotate(BeamAim, offset);
+            ray.HalfAngle = half * width;
+            ray.Range = range * reach;
+            if (i == 0) _beamWorth = HerLightTuning.BeamShots * worth;
+            else
+            {
+                ray.Active = beam.Active;
+                _rayWorth[i - 1] = HerLightTuning.BeamShots * worth;
+            }
+            if (reach >= 1f) spread = MathF.Max(spread, MathF.Abs(offset) + half * width);
+        }
+        for (int k = layout.Count - 1; k < _rays.Count; k++) _rays[k].Active = false;
+        BeamSpread = spread;
         // Rear Fin: a fainter beam out of her back while her beam shines.
         var rear = RearBeam;
         rear.Position = beam.Position;

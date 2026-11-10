@@ -123,7 +123,8 @@ public class ItemTests
     [InlineData("conch_horn", "Recharges in 30s")]
     [InlineData("lamprey_mouth", "Kills heal 3 HP")]
     [InlineData("whale_lung", "+30% shot size")]
-    [InlineData("hammerhead", "Fires a 5-pellet cone, each 32% of a shot")]
+    [InlineData("hammerhead", "Opens the beam into a 5-ray floodlight, each 32% of the beam")]
+    [InlineData("triple_tentacle", "Splits the beam into 3 rays, each 46% of the beam")]
     [InlineData("barnacle_armor", "+30 foam HP")]
     public void CaptionsListRealNumbers(string item, string line)
     {

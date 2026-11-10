@@ -67,7 +67,8 @@ public partial class TopDownMain
         _beamShown = Mathf.MoveToward(_beamShown, beam.Shining ? 1f : 0f, dt * (beam.Shining ? 8f : 4f));
         RenderingServer.GlobalShaderParameterSet(SN.Of("her_beam_show"), _beamShown > 0f
             ? new Vector4(beam.Position.X, LevelMap.SwimBand, beam.Position.Y, System.Numerics.Vector2.Distance(beam.Position, _world.BeamEnd) + 1.5f) : new Vector4(0f, -1000f, 0f, 0f));
-        RenderingServer.GlobalShaderParameterSet(SN.Of("her_show_dir"), new Vector4(beam.Direction.X, _beamShown, beam.Direction.Y, beam.HalfAngle));
+        // (The whole of her beam's fan, a split beam's rays within it.)
+        RenderingServer.GlobalShaderParameterSet(SN.Of("her_show_dir"), new Vector4(_world.BeamAim.X, _beamShown, _world.BeamAim.Y, Mathf.Max(_world.BeamSpread, beam.HalfAngle)));
         if (_waveRadius > 0f)
         {
             _waveRadius += WaveSpeed * dt;

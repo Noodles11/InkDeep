@@ -2,7 +2,7 @@
 
 Her beam is her one attack (docs/LIGHT-AND-GRAPH-PROPOSAL.md §5), so every pearl that only changed her shots does
 nothing now. This plan carries each one over to the beam where light gives it a natural meaning, and drops the ones
-where it does not. Not built yet: it is for review.
+where it does not. Step 1 (the split beams) is built; the rest is to come.
 
 ## What the beam already takes
 
@@ -24,7 +24,7 @@ These need nothing:
 
 | Stat | On shots | On the beam |
 |---|---|---|
-| Fire rate (Squid Ink Espresso, Plankton Swarm) | throws faster | **Work rate**: the beam seals leaks, fills sealed walls' carvings, charges crystals and lights lamp-shells faster (× the stat). Creatures are not affected, so it does not double the damage pearls. |
+| Fire rate (Squid Ink Espresso, Plankton Swarm) | throws faster | **Tick rate**: the beam's burn ticks faster (× the stat against her base fire rate), so it burns, seals and charges faster: its damage rises with it. |
 | Shot speed (Cuttlebone; drawbacks: Pufferfish Pout, Cannonball) | bubbles fly faster | **Carry**: the beam keeps more of its strength far from her: the far end of its falloff (`LightTuning.FarLight`) rises with the stat, or drops with it. |
 | Knockback (Captain's Hook, Cannonball) | hits push foes | **Light pressure**: creatures in the beam are pushed slowly away from her (× the stat), more near her. |
 
@@ -32,10 +32,10 @@ These need nothing:
 
 | Pearl | On shots | On the beam | Keep? |
 |---|---|---|---|
-| **Triple Tentacle** | 3 shots, each 46% | The beam splits into **3 narrower beams** fanned across her aim (±12°), each worth 46%. | Keep |
-| **Hammerhead** | a 5-pellet cone, each 32% | **5 beams** in a wide fan (±30°), each worth 32%: a floodlight. | Keep |
-| **Double Helix** | 2 shots twisting round each other | **2 beams** weaving across her aim (±8°, out of step), each worth 62%. | Keep |
-| **Plankton Swarm** | 3 small shots, + fire rate | **3 thin beams**, close together (±5°), each worth 46%; its fire rate becomes work rate. | Keep |
+| **Triple Tentacle** | 3 shots, each 46% | The beam splits into **3 narrower beams** fanned across her aim (±12°), each worth 46%. | Built |
+| **Hammerhead** | a 5-pellet cone, each 32% | **5 beams** in a wide fan (±30°), each worth 32% and 85% as long: a floodlight. | Built |
+| **Double Helix** | 2 shots twisting round each other | **2 beams** weaving across her aim (±8°, mirrored, crossing), each worth 62%. | Built |
+| **Plankton Swarm** | 3 small shots, + fire rate | **3 thin beams**, close together (±9°), each worth 46% × 85%, 60% as wide; its fire rate becomes tick rate. | Built |
 | **Anglerfish Lure** | shots home | **Homing light**: the beam leans toward the nearest corrupted creature within 20° of her aim (up to 10° off it). The shot decoy goes. | Keep |
 | **Mirror Scale** | bounces off rock 2× | **Reflects**: where the beam meets rock it reflects off the rock face once (+1 per copy), each reflection at 60% strength and range. | Keep |
 | **Ghost Jelly** | through walls | **Through rock**: the beam passes through one wall up to 3 m thick, at half strength beyond it (not yet built). | Keep |
@@ -75,16 +75,16 @@ These need nothing:
 | **Broadside** (Cannonball + Rear Fin) | Exploding rear shots: no beam meaning. | **Drop** |
 | **Prism Pearl** synergy (Sunbeam + Pearl Diver) | Its name is the active Prism Pearl's, and Pearl Necklace already does it. | **Drop** |
 | **Supernova**, **Lance of Light**, **Helix Lamp**, **Searchlight** | Built on Firefly Squid's surge; Starburst, Swordfish, Double Helix and Hammerhead now do each on the beam. | **Drop** |
-| **Kraken Form** (tentacle) | 8 faint short rays all round her while the beam shines, each worth 15%. | Keep |
+| **Kraken Form** (tentacle) | 7 short rays round her besides her beam (8 ways, 45% as long, half as wide) while it shines, each worth 15%. | Built |
 | **Neon Rave** (glow) | The beam cycles through colours, + damage (the damage already counts). | Keep |
 
 ## How it would be built
 
-1. **Many beams** (`PlaneLight`): the beam becomes a list of rays with their own direction, range, cone and worth,
-   which `HerBeams` and `BeamLight` already take. This covers the split pearls, Kraken Form, the forks and reflections.
-   `BeamView` draws each ray as it draws the rear beam now.
-2. **The stats' new meanings**: work rate (sealing, carvings, crystals, lamp-shells), carry (far light) and light
-   pressure.
+1. **Many beams** (built): `PlaneWorld.RayLayout` lays her beam out as rays by her merged shot shape (each its offset
+   off her aim, width, reach and worth), `HerBeams` carries them with their worth, and each burns, strikes seals and
+   clears ink along its own line. `BeamView` draws a fan for each, and her_reveal and the reef's showing take the whole
+   fan (`BeamAim`, `BeamSpread`). The forks and reflections will be rays of the same kind. Tests: `SplitBeamTests`.
+2. **The stats' new meanings**: tick rate (fire rate), carry (far light) and light pressure.
 3. **Held beam**: focus (Pearl Diver), spin-up (Sardine Run), snap (Pistol Shrimp Claw), the synergies on them.
 4. **Bending light**: homing (Anglerfish Lure), reflections (Mirror Scale, Pinball Storm), through rock (Ghost Jelly,
    Will-o'-Wisp).

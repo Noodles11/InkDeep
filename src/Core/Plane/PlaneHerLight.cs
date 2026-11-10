@@ -274,10 +274,15 @@ public sealed partial class PlaneWorld
     void StepBeam()
     {
         if (!BeamOn) return;
-        var from = Beam.Position;
-        var end = BeamEnd;
-        if (_rocks.Exists(r => r.Contains(end))) StrikeSeal(end, HerLightTuning.BeamShots * Dt * BeamFalloff(Beam, Vector2.Distance(from, end)), quiet: true);
-        if (Dots is not null) ClearAlong(from, end, HerLightTuning.BeamDots);
+        // Along each ray of it (a split beam's each strikes and clears where it falls), at its worth.
+        foreach (var (ray, worth) in HerBeams)
+        {
+            if (!ray.Shining || ray == RearBeam || ray == SweepBeam) continue;
+            var from = ray.Position;
+            var end = ray == Beam ? BeamEnd : StopOf(ray);
+            if (_rocks.Exists(r => r.Contains(end))) StrikeSeal(end, worth * Dt * BeamFalloff(ray, Vector2.Distance(from, end)), quiet: true);
+            if (Dots is not null) ClearAlong(from, end, HerLightTuning.BeamDots);
+        }
     }
 
     /// <summary>

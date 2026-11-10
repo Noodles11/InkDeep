@@ -110,7 +110,7 @@ comes to it (the level below is laid out while she plays the one above); a run w
 | No | ✅ | **Whale Lung** | *Deep breath!* | +1 range; ×1.3 shot size | ★★ | treasure |  |
 | No | ✅ | **Pufferfish Pout** | *Angry and proud of it* | ×1.35 damage; −0.2 shot speed | ★★★ | treasure, boss |  |
 | No | ✅ | **Lucky Sea Glass** | *Found only on moonlit tides* | +2 luck | ★ | treasure, shop | untouchable |
-| No | ✅ | **Plankton Swarm** | *Tiny friends* | +0.5 fire rate; Fires 3 shots, each 46% of a shot; ×0.6 shot size; ×0.85 shot damage | ★★ | treasure |  |
+| No | ✅ | **Plankton Swarm** | *Tiny friends* | +0.5 fire rate; Splits the beam into 3 rays, each 46% of the beam; ×0.6 shot size; ×0.85 shot damage | ★★ | treasure |  |
 | No | ✅ | **Glass Squid** | *See-through, and sharp for it* | +1 damage; −20 max HP | ★★ | treasure, curse |  |
 | No | ✅ | **Sea Cucumber** | *Slow, soft, and very hard to stop* | +30 max HP; −0.15 speed; Heals 30 HP | ★ | treasure, shop |  |
 | No |  | **Barnacle Armor** | *Clingy but protective* | −0.1 speed; +30 foam HP | ★ | treasure, shop |  |
@@ -132,8 +132,8 @@ comes to it (the level below is laid out while she plays the one above); a run w
 | Yes | ✅ | **Pearl Diver** | *Patience makes pearls* | Hold to charge a pearl (up to ×3 damage) | ★★★ | treasure, boss |  |
 | Yes |  | **Sunbeam** | *A shaft of the surface, bottled* | Hold to charge a laser beam | ★★★★ | treasure, boss, whale |  |
 | Yes | ✅ | **Firefly Squid** | *Never blinks* | Fire pours out a continuous surge of light instead of shots: 90% of your shots' damage per second to all it touches, clearing a little corruption where it ends. Your other pearls shape it | ★★★★ | treasure, boss |  |
-| Yes | ✅ | **Double Helix** | *Twice the twist* | Fires 2 shots, each 62% of a shot; Shots twist in a double helix | ★★★ | treasure |  |
-| Yes | ✅ | **Triple Tentacle** | *Why squirt once?* | Fires 3 shots, each 46% of a shot | ★★★ | treasure, boss |  |
+| Yes | ✅ | **Double Helix** | *Twice the twist* | Splits the beam into 2 rays, each 62% of the beam; The beam's rays weave across your aim in a double helix | ★★★ | treasure |  |
+| Yes | ✅ | **Triple Tentacle** | *Why squirt once?* | Splits the beam into 3 rays, each 46% of the beam | ★★★ | treasure, boss |  |
 | Yes | ✅ | **Starfish Arm** | *Grows back bigger* | Shots grow with distance | ★★ | treasure | big_bubble_energy |
 | Yes | ✅ | **Starburst Gland** | *Bursts with borrowed sun* | Shots burst into light (cleanses ground, strikes the corrupted near) | ★★★ | treasure, curse |  |
 | Yes | ✅ | **Sardine Run** | *A million small reasons* | Hold fire: she spins up to a stream of small shots, four times as fast; ×0.7 shot size; ×0.3 shot damage | ★★★ | treasure, boss |  |
@@ -157,7 +157,7 @@ comes to it (the level below is laid out while she plays the one above); a run w
 | No | ✅ | **Captain's Hook** | *Get over here* | ×2.5 knockback | ★ | treasure, shop |  |
 | No (+1s) |  | **Stingray Barb** | *Numbs on contact* | 30% chance to slow foes for 2s | ★ | treasure |  |
 | No (+1HP) |  | **Lamprey Mouth** | *Every bite counts* | Each creature freed heals 3 HP | ★★★ | treasure, curse | hollow_maw |
-| Yes | ✅ | **Hammerhead** | *Wide-angle view* | Fires a 5-pellet cone, each 32% of a shot | ★★★ | treasure, boss |  |
+| Yes | ✅ | **Hammerhead** | *Wide-angle view* | Opens the beam into a 5-ray floodlight, each 32% of the beam | ★★★ | treasure, boss |  |
 | Yes |  | **Rear Fin** | *Eyes in the back of your mantle* | Also fires backwards | ★ | treasure, shop |  |
 | No | ✅ | **Abyssal Glow** | *Light from below the light* | +0.4 damage; ×1.3 glow radius | ★★ | treasure, curse |  |
 | No (+x1.5 glow, +0.1HP regen) |  | **Glowing Moss** | *Soft and luminous* | ×1.5 glow radius; +0.1 HP regeneration per second | ★ | treasure, shop |  |
@@ -223,7 +223,7 @@ caption reads "Synergy!" with its name, a chime plays and a ring of her light go
 
 | Transformation | Pearls with the tag | What happens |
 |---|---|---|
-| **Kraken Form** | tentacle | 8-way shooting, ink trail |
+| **Kraken Form** | tentacle | Short beams shine all round her, 8 ways; ink trail |
 | **Neon Rave** | glow | Shots cycle colours, +damage |
 | **Shark Mode** | predator | Speed and damage up, freeing heals |
 | **Coral Reef** | coral | The reef mends you: slowly regain health |

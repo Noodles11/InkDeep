@@ -9,9 +9,10 @@ namespace OctoShoots.Game.TopDown;
 /// Her beams (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.2, §5.1; PlaneWorld.HerBeams): each a fan of her light over her plane
 /// (her_beam.gdshader), stopped where rock stops it, easing in and out rather than snapping. Her own beam also has a
 /// spotlight from her bell tilted down along it, lighting the reef it falls on (its shadows keep it off what lies behind
-/// the walls). Rear Fin's and Lighthouse's are fainter fans. The corrupted show where any of them falls (her_beam_lit,
-/// her_beam2_lit, her_beam3_lit with their _dir) and sear where her own burns (her_beam_at). Electric Eel Tail's arcs
-/// flicker between what her beam burns and what it arcs on to.
+/// the walls). A split beam's other rays (docs/BEAM-PEARLS-PLAN.md) are fans of their own; Rear Fin's and Lighthouse's
+/// are fainter fans. The corrupted show where any of them falls (her_beam_lit: the whole of her beam's fan, every ray of
+/// it within it; her_beam2_lit, her_beam3_lit Rear Fin's and Lighthouse's, with their _dir) and sear where her own burns
+/// (her_beam_at). Electric Eel Tail's arcs flicker between what her beam burns and what it arcs on to.
 /// </summary>
 public partial class BeamView : Node3D
 {
@@ -28,6 +29,8 @@ public partial class BeamView : Node3D
     }
 
     readonly List<Fan> _fans = new();
+    Shader _shader = null!;
+    ArrayMesh _fanMesh = null!;
     SpotLight3D _spot = null!;
     MeshInstance3D _arcs = null!;
     ImmediateMesh _arcMesh = null!;
@@ -37,16 +40,8 @@ public partial class BeamView : Node3D
 
     public override void _Ready()
     {
-        var shader = GD.Load<Shader>("res://assets/shaders/her_beam.gdshader");
-        var mesh = FanMesh(LightTuning.MaxHalfAngleDeg * Mathf.Pi / 180f);
-        string[] lit = { "her_beam_lit", "her_beam2_lit", "her_beam3_lit" }, dir = { "her_beam_dir", "her_beam2_dir", "her_beam3_dir" };
-        for (int i = 0; i < 3; i++)
-        {
-            var material = new ShaderMaterial { Shader = shader };
-            var node = new MeshInstance3D { Mesh = mesh, MaterialOverride = material, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = false };
-            AddChild(node);
-            _fans.Add(new Fan { Node = node, Material = material, Lit = lit[i], Dir = dir[i] });
-        }
+        _shader = GD.Load<Shader>("res://assets/shaders/her_beam.gdshader");
+        _fanMesh = FanMesh(LightTuning.MaxHalfAngleDeg * Mathf.Pi / 180f);
         _spot = new SpotLight3D
         {
             SpotAngle = LightTuning.BeamHalfAngleDeg, SpotAngleAttenuation = 0.6f, SpotAttenuation = 1.1f, LightSpecular = 0.5f,
@@ -81,6 +76,21 @@ public partial class BeamView : Node3D
         return st.Commit();
     }
 
+    /// <summary>A fan for the next of her beams' rays, made as it is first needed.</summary>
+    Fan FanAt(int i)
+    {
+        while (_fans.Count <= i)
+        {
+            var material = new ShaderMaterial { Shader = _shader };
+            var node = new MeshInstance3D { Mesh = _fanMesh, MaterialOverride = material, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = false };
+            AddChild(node);
+            _fans.Add(new Fan { Node = node, Material = material });
+        }
+        return _fans[i];
+    }
+
+    static readonly StringName[] SlotLit = { "her_beam_lit", "her_beam2_lit", "her_beam3_lit" }, SlotDir = { "her_beam_dir", "her_beam2_dir", "her_beam3_dir" };
+
     /// <summary>Follows the sim's beams: from <paramref name="heart"/> (her light's heart, world) for her own's spotlight.</summary>
     public void Sync(PlaneWorld world, Vector3 heart, float dt)
     {
@@ -89,10 +99,17 @@ public partial class BeamView : Node3D
         float life = Mathf.Clamp(world.Player.Hp / Mathf.Max(world.Run.MaxHp, 1f), 0f, 1f);
         float dim = 0.45f + 0.55f * Mathf.Sqrt(life);
         int i = 0;
+        // Her beam's fan as a whole, for what it shows: out to its farthest ray's stop, as wide as its rays reach.
+        float reach = 0f;
+        bool anyOn = false;
         foreach (var (beam, _) in world.HerBeams)
         {
-            var fan = _fans[i];
-            bool main = i == 0;
+            var fan = FanAt(i);
+            bool main = beam == world.Beam;
+            int slot = main ? 0 : beam == world.RearBeam ? 1 : beam == world.SweepBeam ? 2 : -1;
+            bool ofHers = slot == 0 || slot < 0;
+            fan.Lit = slot >= 0 ? SlotLit[slot] : null!;
+            fan.Dir = slot >= 0 ? SlotDir[slot] : null!;
             i++;
             bool on = beam.Shining;
             fan.On = Mathf.MoveToward(fan.On, on ? 1f : 0f, dt * (on ? 10f : 5f));
@@ -100,7 +117,7 @@ public partial class BeamView : Node3D
             if (main) _spot.Visible = fan.Node.Visible;
             if (!fan.Node.Visible)
             {
-                RenderingServer.GlobalShaderParameterSet(fan.Lit, new Vector4(0f, -1000f, 0f, 0f));
+                if (slot > 0) RenderingServer.GlobalShaderParameterSet(fan.Lit, new Vector4(0f, -1000f, 0f, 0f));
                 if (main) RenderingServer.GlobalShaderParameterSet(BeamAt, new Vector4(0f, -1000f, 0f, 0f));
                 continue;
             }
@@ -115,9 +132,17 @@ public partial class BeamView : Node3D
             fan.Material.SetShaderParameter("strength", FanStrength * fan.On * dim * beam.Intensity / LightTuning.BeamIntensity);
             fan.Material.SetShaderParameter("half_angle", beam.HalfAngle);
             fan.Material.SetShaderParameter("stop", stop);
-            RenderingServer.GlobalShaderParameterSet(fan.Dir, new Vector4(dir.X, 0f, dir.Z, beam.HalfAngle));
-            // What it shows (her_reveal): the sim's beam while it shines, out to the rock.
-            RenderingServer.GlobalShaderParameterSet(fan.Lit, on ? new Vector4(origin.X, origin.Y, origin.Z, range * stop) : new Vector4(0f, -1000f, 0f, 0f));
+            if (ofHers && on)
+            {
+                anyOn = true;
+                reach = Mathf.Max(reach, range * stop);
+            }
+            if (slot > 0)
+            {
+                RenderingServer.GlobalShaderParameterSet(fan.Dir, new Vector4(dir.X, 0f, dir.Z, beam.HalfAngle));
+                // What it shows (her_reveal): the sim's beam while it shines, out to the rock.
+                RenderingServer.GlobalShaderParameterSet(fan.Lit, on ? new Vector4(origin.X, origin.Y, origin.Z, range * stop) : new Vector4(0f, -1000f, 0f, 0f));
+            }
             if (!main) continue;
             // Her own beam's spotlight: from her heart, along the beam and a little down onto the reef.
             var look = (dir + Vector3.Down * SpotTilt).Normalized();
@@ -129,8 +154,13 @@ public partial class BeamView : Node3D
             // The sear on the corrupted (her_burn.gdshaderinc): only while it burns something, as her shots'.
             RenderingServer.GlobalShaderParameterSet(BeamAt, world.BeamBurns
                 ? new Vector4(origin.X, origin.Y + 0.05f, origin.Z, range * stop) : new Vector4(0f, -1000f, 0f, 0f));
-            RenderingServer.GlobalShaderParameterSet(fan.Dir, new Vector4(dir.X, 0f, dir.Z, beam.HalfAngle));
         }
+        for (int k = i; k < _fans.Count; k++) _fans[k].Node.Visible = false;
+        // What her beam shows (her_reveal), the whole of its fan: along her aim, as wide as its rays spread.
+        var her = new Vector3(world.Beam.Position.X, LevelMap.SwimBand + 0.3f, world.Beam.Position.Y);
+        var aim = new Vector3(world.BeamAim.X, 0f, world.BeamAim.Y);
+        RenderingServer.GlobalShaderParameterSet(SlotDir[0], new Vector4(aim.X, 0f, aim.Z, Mathf.Max(world.BeamSpread, world.Beam.HalfAngle)));
+        RenderingServer.GlobalShaderParameterSet(SlotLit[0], anyOn ? new Vector4(her.X, her.Y, her.Z, reach) : new Vector4(0f, -1000f, 0f, 0f));
         DrawArcs(world, color);
     }
 
