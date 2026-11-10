@@ -39,6 +39,9 @@ public partial class TopDownMain : Node3D
     BeamView _beam = null!;
     CoreView _cores = null!;
     LampView _lamps = null!;
+    /// <summary>How lit her bell stays with her glow out (a faint shape for the player, no light for the reef).</summary>
+    const float GlowOffLit = 0.12f;
+    bool _dbgGlowOff;
     /// <summary>The rims of the reef's holes, each in the colour of where it leads.</summary>
     HoleView _holes = null!;
     CurrentView _currents = null!;
@@ -238,7 +241,7 @@ public partial class TopDownMain : Node3D
     Vector3 _belowOffset;
     /// <summary>The absolute position (xz) of the world's origin: each dive moves the world back by the hole's offset.</summary>
     Vector2 _origin;
-    bool _diving, _diveLatched, _activeLatched;
+    bool _diving, _diveLatched, _activeLatched, _glowLatched;
     float _diveTime;
     System.Numerics.Vector2 _diveFrom;
     ReefLook _lookFrom = ReefLook.Shallows, _lookTo = ReefLook.Shallows;
@@ -520,7 +523,12 @@ public partial class TopDownMain : Node3D
             else if (arg == "--dbg-pad") InputSetup.UsingPad = _pad = true;
             else if (arg.StartsWith("--xp=") && int.TryParse(Value("--xp="), out int xp)) _startXp = xp;
             else if (arg == "--showcase") _dbgShowcase = true;
-            else if (arg == "--showcase=0") _dbgShowcase = false;
+            else if (arg == "--dbg-glowoff") _dbgGlowOff = true;
+            else if (arg == "--showcase=0")
+            {
+                _dbgShowcase = false;
+                ReefLook.Painted = false;
+            }
             else if (arg.StartsWith("--dbg-die=") && float.TryParse(Value("--dbg-die="), NumberStyles.Float, CultureInfo.InvariantCulture, out float die)) _dbgDie = die;
             else if (arg.StartsWith("--hp=") && float.TryParse(Value("--hp="), NumberStyles.Float, CultureInfo.InvariantCulture, out float hp)) _startHp = hp;
             else if (arg.StartsWith("--luck=") && float.TryParse(Value("--luck="), NumberStyles.Float, CultureInfo.InvariantCulture, out float luck)) _dbgLuck = luck;
@@ -924,7 +932,7 @@ public partial class TopDownMain : Node3D
     /// <summary>
     /// This level's look: its depth's, a leak cave's dark, or in a haven the bay's summer evening.
     /// </summary>
-    ReefLook Look => IsShowcase ? ReefLook.Showcase : _map is { } map ? LookAt(map, _world?.Player.Position ?? map.Start.Position) : ReefLook.For(_id.Depth);
+    ReefLook Look => _map is { } map ? LookAt(map, _world?.Player.Position ?? map.Start.Position) : ReefLook.For(_id.Depth);
 
     /// <summary>A level's own look: a leak cave's dark, a haven's bay evening, else its depth's.</summary>
     static ReefLook LookOf(LevelMap map) =>
@@ -934,8 +942,8 @@ public partial class TopDownMain : Node3D
 
     void ApplyLook(ReefLook look)
     {
-        // The showcase reef is painted as the reef was (look 0), the rest drawn.
-        OctoShoots.Game.Fx.ArtLook.Set(ReferenceEquals(look, ReefLook.Showcase) ? 0 : _artLook);
+        // The game is painted (look 0, docs/VISUAL-SHOWCASE.md); `--showcase=0` draws it in the look it had (or --look=N's).
+        OctoShoots.Game.Fx.ArtLook.Set(ReefLook.Painted ? OctoShoots.Game.Fx.ArtLook.Painted : _artLook);
         look.Apply();
         look.ApplyTo(_environment.Environment);
         SetFloorFog(_floorFog);
@@ -2652,6 +2660,8 @@ public partial class TopDownMain : Node3D
         Guard("lamps", () => _lamps.Sync(_world, dt));
         Guard("holes", () => _holes.Sync(_world, dt));
         Guard("showcase", () => StepShowcase(dt));
+        // Her glow out: her bell all but dark (her light going out at the end has its own).
+        if (!_dying) _bell.Lit = Mathf.MoveToward(_bell.Lit, _world.GlowOff ? GlowOffLit : 1f, dt * 5f);
         Guard("surge", () => _surgeView.Sync(_world, dt));
         Guard("geysers", () => _geysers.Sync(_world, dt, _camera.Camera));
         _camera.SetBubbleLights(_combat.Lights, _combat.LightCount);
@@ -3243,6 +3253,11 @@ public partial class TopDownMain : Node3D
                 // Her light slaps an arm aside (a stapled one only stops it).
                 _sfx.PlayPitched("pop", e.Size > 0f ? 0.8f : 1.2f, -9f);
                 break;
+            case PlaneEventType.GlowToggled:
+                // A lamp's pull-chain, under water: a touch lower as it goes out.
+                _sfx.PlayPitched("lamp_switch", e.Size > 0f ? 1.05f : 0.92f, -4f);
+                Say(e.Size > 0f ? "Glow on" : "Glow off · unseen while your beam is dark");
+                break;
             case PlaneEventType.LeakSealed:
                 ShowcaseLeakSealed(e.Position);
                 // It pulls shut: a shudder, felt; the count of those left.
@@ -3791,6 +3806,11 @@ public partial class TopDownMain : Node3D
         bool dive = Input.IsActionPressed(InputSetup.Dive);
         input.Dive = dive && !_diveLatched || _autoDive && _world.CanDive;
         _diveLatched = dive;
+        bool glow = Input.IsActionPressed(InputSetup.Glow);
+        input.ToggleGlow = glow && !_glowLatched
+            // Verification (--dbg-glowoff): her glow put out a moment after she arrives.
+            || _dbgGlowOff && _levelTime > 0.5f && !_world.GlowOff && (_dbgGlowOff = false) is false;
+        _glowLatched = glow;
         bool use = Input.IsActionPressed(InputSetup.Active);
         input.UseActive = use && !_activeLatched || _autoActive && _world.Run.ActiveCharge >= 1f;
         _activeLatched = use;

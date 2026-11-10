@@ -75,8 +75,29 @@ public sealed record ReefLook
         };
     }
 
-    /// <summary>The seven depths (THEME-BIBLE §6.3). Depth 1 is tuned; the rest follow the palette table, to be tuned as they are built.</summary>
-    public static ReefLook For(int depth) => depth switch
+    /// <summary>
+    /// The game's look (docs/VISUAL-SHOWCASE.md): every depth painted in the Blue Hollow's deep clear blue, lighter and
+    /// sunnier toward the top, darker and more hers toward the bottom (each depth keeps its name). False (`--showcase=0`):
+    /// the drawn palettes of the depths below.
+    /// </summary>
+    public static bool Painted = true;
+
+    static readonly ReefLook?[] PaintedLooks = new ReefLook?[16];
+
+    /// <summary>A depth's look (1-based, as the code counts; the tutorial is 1).</summary>
+    public static ReefLook For(int depth)
+    {
+        if (!Painted) return Drawn(depth);
+        int at = System.Math.Clamp(depth, 0, PaintedLooks.Length - 1);
+        if (PaintedLooks[at] is { } made) return made;
+        // Depth 3 to the player (code 4) is the Blue Hollow itself; up to three depths either side reach the ends.
+        float k = Mathf.Clamp((depth - 4) / 3f, -1f, 1f);
+        var look = k < 0f ? Blend(Showcase, ShowcaseUp, -k) : Blend(Showcase, ShowcaseDown, k);
+        return PaintedLooks[at] = look with { Name = Drawn(depth).Name };
+    }
+
+    /// <summary>The seven depths' drawn palettes (THEME-BIBLE §6.3), for the drawn look.</summary>
+    public static ReefLook Drawn(int depth) => depth switch
     {
         <= 1 => OpenShallows,
         2 => Kelp,
@@ -169,6 +190,22 @@ public sealed record ReefLook
         Sun = C("#C8E8FF"), SunEnergy = 0.5f, Ambient = C("#2E4E92"), AmbientEnergy = 0.22f,
         Caustics = 0.7f, Rays = 0.6f, Menace = 0.3f, Saturation = 1.35f, Vignette = 0.7f, Fog = 0.22f, Contrast = 1.2f, Lantern = 1.4f,
         FanA = C("#A472F2"), FanB = C("#F26AB4"), SoftCoral = C("#FF86C6"), HardCoral = C("#FFB23E"), Grass = C("#3FCBA4"),
+    };
+
+    /// <summary>The Blue Hollow near the top: the water clearer and lighter, the sun stronger, caustics and rays full.</summary>
+    public static readonly ReefLook ShowcaseUp = Showcase with
+    {
+        WaterShallow = C("#4F9FD6"), WaterDeep = C("#2A6FB2"), Murk = C("#0E2C5C"),
+        Sand = C("#B9CCE0"), Rock = C("#6A80AA"),
+        SunEnergy = 0.8f, AmbientEnergy = 0.3f, Caustics = 1f, Rays = 1f, Menace = 0f, Fog = 0.2f, Vignette = 0.45f, Lantern = 1f,
+    };
+
+    /// <summary>The Blue Hollow near the bottom: the water darker, the sun faint, her light carrying the reef.</summary>
+    public static readonly ReefLook ShowcaseDown = Showcase with
+    {
+        WaterShallow = C("#1F4A8C"), WaterDeep = C("#0C2A60"), Murk = C("#030818"),
+        Sand = C("#6F86A8"), Rock = C("#34456C"),
+        SunEnergy = 0.3f, AmbientEnergy = 0.16f, Caustics = 0.35f, Rays = 0.3f, Menace = 0.5f, Fog = 0.3f, Vignette = 0.82f, Lantern = 1.75f,
     };
 
     /// <summary>

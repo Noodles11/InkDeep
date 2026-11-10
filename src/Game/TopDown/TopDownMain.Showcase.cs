@@ -6,14 +6,12 @@ using OctoShoots.Game.Fx;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// The showcase reef (docs/VISUAL-SHOWCASE.md): on the reefs of Depth 3 her light shows the reef as it is (reef_show.gdshaderinc),
-/// her beam is light in the water, and the reef wakes as its leaks are sealed, a wave of her light running out across
-/// it from each. `--showcase` puts it on any reef, `--showcase=0` takes it off.
+/// The game's look (docs/VISUAL-SHOWCASE.md), first built on the showcase reef: her light shows the reef as it is
+/// (reef_show.gdshaderinc), and the reef wakes as its leaks are sealed, a wave of her light running out across it from
+/// each. `--showcase=0` takes it off (the drawn look).
 /// </summary>
 public partial class TopDownMain
 {
-    /// <summary>The depth (as the player counts) whose reefs are the showcase.</summary>
-    const int ShowcaseDepth = 3;
     /// <summary>A wave's front runs out at WaveSpeed m/s, and is done past WaveEnd m; the reef settles awake over WakeEase seconds.</summary>
     const float WaveSpeed = 30f, WaveEnd = 200f;
 
@@ -25,8 +23,8 @@ public partial class TopDownMain
     /// <summary>How far her beam has eased on (0..1), for the reef it shows.</summary>
     float _beamShown;
 
-    /// <summary>Whether the place she is in is a showcase reef.</summary>
-    bool IsShowcase => _dbgShowcase ?? (_id.ShownDepth == ShowcaseDepth && !_id.Haven && !InDiveCave);
+    /// <summary>Whether the place she is in is painted so (every place, unless `--showcase=0`).</summary>
+    bool IsShowcase => _dbgShowcase ?? true;
     /// <summary>How awake the reef is (the share of its leaks sealed, as of the last wave to pass), and the wave running now.</summary>
     float _wake, _waveRadius, _waveTo;
     System.Numerics.Vector2 _waveAt;

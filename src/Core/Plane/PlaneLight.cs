@@ -316,8 +316,18 @@ public sealed partial class PlaneWorld
         var a = _aura!;
         a.Position = Player.Position;
         a.Range = LightTuning.AuraReach * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.Glow], 0.1f));
-        a.Active = !Defeated;
+        a.Active = !Defeated && !GlowOff;
     }
+
+    /// <summary>
+    /// Her glow put out (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.4): no aura round her. Dark, and her beam not shining, she
+    /// is hidden (Hidden): the Leak's creatures lose her, as in her Ink Cloud. But she sees little more than they do, and
+    /// her inner light seals no leak.
+    /// </summary>
+    public bool GlowOff;
+
+    /// <summary>Her glow out and her beam dark: no light of hers for anything to find her by.</summary>
+    public bool Hidden => GlowOff && !BeamOn && !Defeated;
 
     /// <summary>
     /// The registry kept in step with the world: her aura on her, her beam along her aim while it is held, an emitter for

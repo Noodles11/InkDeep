@@ -77,6 +77,15 @@ The beam does what her shots' light does now, continuously:
 
 The aura burns nothing (as her lamp does now). It reveals what is near her (§4).
 
+### 2.4 Her glow put out
+
+She can put her glow out and light it again (Ctrl; RB on a controller; `PlaneInput.ToggleGlow`, `PlaneWorld.GlowOff`),
+each time with a lamp's pull-chain click heard under water. Out, she has no aura: her bell is all but dark and the reef
+round her with it. With her beam dark too she is **hidden** (`PlaneWorld.Hidden`): the Leak's creatures lose her, as in
+her Ink Cloud (`Unseen`), and a murkling beside her never finds her. But she sees little more than they do (the
+murklings show only in her light), and her inner light seals no leak while it is out. Her beam gives her away the
+moment it shines.
+
 ## 3. Murklings
 
 ### 3.1 The basic murkling

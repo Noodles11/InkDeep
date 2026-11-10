@@ -23,6 +23,8 @@ public struct PlaneInput
     /// <summary>Pressed: use the open reef's second and third slots' pearls (Q, E).</summary>
     /// <summary>Pressed: dive down the shaft (when she is over it and the way is open).</summary>
     public bool Dive;
+    /// <summary>Pressed: her glow out, or back on (PlaneWorld.GlowOff).</summary>
+    public bool ToggleGlow;
 }
 
 /// <summary>Clementine on the locked depth band: a 2D body (DESIGN-TOPDOWN §2.2).</summary>
@@ -113,7 +115,9 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     /// <summary>She takes a freed murkling's core (Size: the HP it gave her).</summary>
     CoreTaken,
     /// <summary>Her beam lights one of Ottilie's lamp-shells (at it).</summary>
-    LampLit }
+    LampLit,
+    /// <summary>She puts her glow out (Size 0) or lights it again (Size 1).</summary>
+    GlowToggled }
 
 /// <summary>What hurt Clementine (the killing blow names what ended a run; saved by number, so Gloomvine stays though nothing deals it now).</summary>
 public enum DamageSource { None, PufferNeedle, PufferSpines, BossPearl, RoyalPearl, BossSnap, BossContact, Murkling, MurkShot, Gloomvine, Blightroot, Blotter, Thumpsquirt, Lashjaw, Curse, Hearthguard, Leak, LeakWater }
@@ -304,6 +308,11 @@ public sealed partial class PlaneWorld
 
         StepBoss();
         StepCombat(input);
+        if (input.ToggleGlow && !Defeated)
+        {
+            GlowOff = !GlowOff;
+            Events.Add(new PlaneEvent(PlaneEventType.GlowToggled, Player.Position, Vector2.Zero, GlowOff ? 0f : 1f));
+        }
         SyncLights(input);
         StepHerLight();
         StepAsh();

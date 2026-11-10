@@ -24,6 +24,7 @@ public static class InputSetup
 	public const string AimLeft = "aim_left";
 	public const string AimRight = "aim_right";
 	public const string Beam = "beam";
+	public const string Glow = "toggle_glow";
 	public const string Dash = "dash";
 	public const string Dive = "dive";
 	public const string Active = "use_active";
@@ -58,6 +59,7 @@ public static class InputSetup
 		new(AimRight, "Aim right", "key:Right", "axis:RightX:+"),
 		new(Beam, "Shine the beam (hold)", "mouse:Left", "axis:TriggerRight:+"),
 		new(Dash, "Dash", "key:Space", "axis:TriggerLeft:+"),
+		new(Glow, "Glow on / off (dark, beam off: unseen)", "key:Ctrl", "button:RightShoulder"),
 		new(Dive, "Dive down the shaft", "key:Shift", "button:X"),
 		new(Active, "Use the active pearl (first slot)", "key:F", "button:Y"),
 		new(Review, "Level map (hold)", "key:Tab", "button:Back"),

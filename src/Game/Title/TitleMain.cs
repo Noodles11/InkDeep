@@ -126,6 +126,8 @@ public partial class TitleMain : Node3D
 
     public override void _Ready()
     {
+        // The game's look: painted (docs/VISUAL-SHOWCASE.md).
+        OctoShoots.Game.Fx.ArtLook.Set(OctoShoots.Game.Fx.ArtLook.Painted);
         // The bundled fonts: Nunito is every screen's default (THEME-BIBLE §6.8).
         TitleStyle.InstallDefaultFont();
         OctoShoots.Game.Fx.HerColor.Load();

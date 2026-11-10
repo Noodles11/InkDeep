@@ -8,10 +8,12 @@ namespace OctoShoots.Game.Fx;
 /// </summary>
 public static class ArtLook
 {
-    /// <summary>The game's look: felt tip and highlighter.</summary>
+    /// <summary>The drawn look: felt tip and highlighter (the game's until the Blue Hollow, `--showcase=0`).</summary>
     public const int Drawn = 6;
+    /// <summary>The game's look: painted (docs/VISUAL-SHOWCASE.md), set at start by the reef and the title.</summary>
+    public const int Painted = 0;
 
-    /// <summary>The look in use (project.godot's global holds the game's own).</summary>
+    /// <summary>The look in use.</summary>
     public static int Current { get; private set; } = Drawn;
 
     public static bool IsDrawn => Current == Drawn;

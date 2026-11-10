@@ -90,6 +90,7 @@ public partial class Sfx : Node
         // Light bubbles: a soft glassy tone as two merge (played higher the more it holds), and a struck bell when a big
         // one frees a creature.
         _sounds["merge"] = Make(0.42f, (t, n) => (MathF.Sin(MathF.Tau * 660f * t) + 0.45f * MathF.Sin(MathF.Tau * 1320f * t) + 0.2f * MathF.Sin(MathF.Tau * 1980f * t)) * Env(t, 0.012f, 0.42f) * 0.16f);
+        _sounds["lamp_switch"] = LampSwitch();
         _sounds["bell_ring"] = Make(1.6f, (t, n) => (MathF.Sin(MathF.Tau * 523f * t) * 0.5f + MathF.Sin(MathF.Tau * 1046f * t) * 0.3f * MathF.Exp(-t * 2f)
             + MathF.Sin(MathF.Tau * 1255f * t) * 0.22f * MathF.Exp(-t * 3f) + MathF.Sin(MathF.Tau * 1568f * t) * 0.14f * MathF.Exp(-t * 4.5f)) * MathF.Min(1f, t / 0.003f) * MathF.Exp(-t * 2.2f) * 0.42f);
         // The achievement banner: a rising four-note chime (C, E, G, C) and a soft whoosh as it leaves in smoke.
@@ -278,6 +279,77 @@ public partial class Sfx : Node
             v += (voice * 0.5f + noise * 0.35f) * env;
         }
         return v;
+    }
+
+    /// <summary>
+    /// A lamp's pull-chain switch, heard under water: the chain's few beads rattling as it is drawn, the switch's crisp
+    /// click with the knock of its body, the chain falling back; then all of it through water: the highs gone (two
+    /// low-pass poles near 950 Hz), the lowest rumble cut (a high-pass at 140 Hz), and two soft echoes off the reef.
+    /// </summary>
+    AudioStreamWav LampSwitch()
+    {
+        const float Seconds = 0.5f;
+        int count = (int)(Seconds * Rate);
+        var raw = new float[count];
+        var rng = new Random(11);
+        float Noise() => (float)rng.NextDouble() * 2f - 1f;
+        void Tick(float at, float hz, float amp, float decay)
+        {
+            int start = (int)(at * Rate);
+            for (int i = start; i < count && i < start + (int)(0.05f * Rate); i++)
+            {
+                float t = (i - start) / (float)Rate;
+                raw[i] += amp * (Noise() * MathF.Exp(-t / 0.0035f) * 0.7f + MathF.Sin(MathF.Tau * hz * t) * MathF.Exp(-t / decay));
+            }
+        }
+        // The chain drawn: beads ticking.
+        Tick(0.000f, 4300f, 0.22f, 0.010f);
+        Tick(0.032f, 5100f, 0.18f, 0.009f);
+        Tick(0.058f, 3900f, 0.20f, 0.011f);
+        Tick(0.081f, 4700f, 0.16f, 0.008f);
+        // The switch: a crisp click and its body's knock.
+        int click = (int)(0.115f * Rate);
+        for (int i = click; i < count; i++)
+        {
+            float t = (i - click) / (float)Rate;
+            raw[i] += Noise() * MathF.Exp(-t / 0.0025f) * 0.95f
+                + MathF.Sin(MathF.Tau * 2300f * t) * MathF.Exp(-t / 0.018f) * 0.5f
+                + MathF.Sin(MathF.Tau * 690f * t) * MathF.Exp(-t / 0.035f) * 0.45f;
+        }
+        // The chain falls back.
+        Tick(0.190f, 4500f, 0.12f, 0.008f);
+        Tick(0.218f, 5300f, 0.09f, 0.007f);
+        Tick(0.247f, 4100f, 0.07f, 0.007f);
+        // Under water: low-pass twice, high-pass once, two echoes.
+        float lp = 1f - MathF.Exp(-MathF.Tau * 950f / Rate);
+        float hp = MathF.Exp(-MathF.Tau * 140f / Rate);
+        float a = 0f, b = 0f, prevIn = 0f, prevOut = 0f;
+        var wet = new float[count];
+        for (int i = 0; i < count; i++)
+        {
+            a += (raw[i] - a) * lp;
+            b += (a - b) * lp;
+            float o = hp * (prevOut + b - prevIn);
+            prevIn = b;
+            prevOut = o;
+            wet[i] = o;
+        }
+        int e1 = (int)(0.047f * Rate), e2 = (int)(0.093f * Rate);
+        float peak = 1e-4f;
+        var mixed = new float[count];
+        for (int i = 0; i < count; i++)
+        {
+            mixed[i] = wet[i] + (i >= e1 ? wet[i - e1] * 0.32f : 0f) + (i >= e2 ? wet[i - e2] * 0.16f : 0f);
+            peak = MathF.Max(peak, MathF.Abs(mixed[i]));
+        }
+        var data = new byte[count * 2];
+        for (int i = 0; i < count; i++)
+        {
+            short v = (short)(Math.Clamp(mixed[i] / peak * 0.85f, -1f, 1f) * 32000f);
+            data[i * 2] = (byte)(v & 0xff);
+            data[i * 2 + 1] = (byte)((v >> 8) & 0xff);
+        }
+        return new AudioStreamWav { Format = AudioStreamWav.FormatEnum.Format16Bits, MixRate = Rate, Stereo = false, Data = data };
     }
 
     static float Sweep(float t, float duration, float from, float to)

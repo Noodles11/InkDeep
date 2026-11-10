@@ -524,7 +524,8 @@ public sealed partial class PlaneWorld
             if (Tick % 15 == 0) v.Warded = Ward(v, v.Position, 1f) <= 0f;
             if (Boss is { Freed: false }) v.Warded = true;
             int staples = v.Staples, shut = v.ArmsShut;
-            if (!Defeated && !v.Warded && Vector2.Distance(Player.Position, v.Position) <= AdventureTuning.LeakSealReach)
+            // (Her glow out, her inner light works on nothing.)
+            if (!Defeated && !GlowOff && !v.Warded && Vector2.Distance(Player.Position, v.Position) <= AdventureTuning.LeakSealReach)
             {
                 if (!v.Roused) Rouse(v);
                 v.Since = 0f;

@@ -112,7 +112,7 @@ public sealed partial class PlaneWorld
     public bool CaveLeakOpen => Map.LeakCave && (LeaksOpen > 0 || Map.HoleDown);
 
     /// <summary>In her Ink Cloud (the active): the Leak's creatures have lost her.</summary>
-    public bool Unseen => Player.CloakTimer > 0f;
+    public bool Unseen => Player.CloakTimer > 0f || Hidden;
 
     float _caveBud;
 

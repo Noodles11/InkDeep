@@ -1,6 +1,7 @@
 # Art looks
 
-The game is drawn in **look 6, felt tip and highlighter**: a minimal illustration, after a reference of ink lines and
+The game is **painted** (look 0) in the Blue Hollow's palettes (docs/VISUAL-SHOWCASE.md). Before that it was drawn in
+**look 6, felt tip and highlighter** (`--showcase=0` brings it back): a minimal illustration, after a reference of ink lines and
 flat washes of blue. Looks 1–5 are earlier studies, and 0 the old painted-photographic look; each repaints the reef in
 its own surface shading (`reef_art.gdshaderinc`, used by the ground and the free rock) and changes how the depth pass
 states distance (`topdown_post.gdshader`). Looks 4 and 5 draw only round dots: the picture plane is the view along the

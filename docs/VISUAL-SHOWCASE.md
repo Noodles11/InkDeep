@@ -1,7 +1,10 @@
-# The showcase reef
+# The game's look: the Blue Hollow
 
-One reef taken to the look the whole game should reach, before the rest follows. It is every reef of **Depth 3**
-(`TopDownMain.ShowcaseDepth`); `--showcase` puts it on any reef, `--showcase=0` takes it off.
+First built as one showcase reef (Depth 3, "The Blue Hollow"), it is now the game's look. Every depth is painted in it
+(`ReefLook.For`: the Blue Hollow itself at Depth 3, lighter, clearer and sunnier toward the top (`ShowcaseUp`), darker
+and more her own light's toward the bottom (`ShowcaseDown`), each depth keeping its name); havens keep the bay's
+palette and leak caves their dark, painted the same way. The title is painted too. `--showcase=0` draws the game in
+the felt-tip look it had before (docs/ART-LOOKS.md, look 6).
 
 ## The look it is after
 
@@ -12,9 +15,9 @@ between).
 
 ## What is built
 
-- **Its own look** (`ReefLook.Showcase`, "The Blue Hollow"): navy water, blue-slate rock, pale blue sand; coral in four
-  colours; a cool pale sun, some god rays, caustics; saturation up, a heavy vignette. It is painted in look 0 whatever
-  the rest of the game is drawn in (`TopDownMain.ApplyLook`).
+- **Its palette** (`ReefLook.Showcase`, "The Blue Hollow"): navy water, blue-slate rock, pale blue sand; coral in four
+  colours; a cool pale sun, some god rays, caustics; saturation up, a heavy vignette. Painted in look 0
+  (`ArtLook.Painted`, set by `TopDownMain.ApplyLook` and the title).
 - **Crisp water** (`CameraRig.SetShowcase`): the deeps barely blurred and a thin veil over them, so the reef reads as
   in the references, not through a haze. The water's blue tint and the cool shadow grade are eased so the coral keeps
   its colour (`topdown_post.gdshader`, `reef_showcase`).
