@@ -104,6 +104,9 @@ violet, ice blue). Dark, a faint glint shows where one is.
   out. Its light is round it, as hers is, fainter even at full (half her aura's), and reaches about 4.5 m over the reef.
 - **It harms nothing**, but it is a light like any: a murkling may go to it instead of her (her glow out, or the
   crystal brighter where it is) and drink it down. A lure, and a lamp for the reef.
+- **It shows what is in its light**, as her glow does (`PlaneWorld.CrystalSees`): a murkling within most of its drawn
+  light is seen fully, thinning at its edge, and less as the crystal dims; not round rock. So she can watch what a lure
+  has drawn in.
 
 ## 3. Murklings
 

@@ -147,6 +147,8 @@ public partial class BlightView : Node3D
             body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("hidden"), 1f);
             // Her beam shows it only if one reaches it (a body in the way shades it).
             body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("beam_seen"), world.BeamSees(m, m.Position, m.Radius) ? 1f : 0f);
+            // A lit crystal's light shows it too, as much as it glows.
+            body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("crystal_seen"), world.CrystalSees(m.Position, m.Radius));
             StepBody(m, body, dt);
             float y = LevelMap.SwimBand + 0.08f * Mathf.Sin(_time * 2.3f + m.Seed);
             float scale = m.Radius;

@@ -9,8 +9,9 @@ namespace OctoShoots.Core.Plane;
 /// The reef's light crystals (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.5): small shards of coloured crystal set in the walls,
 /// each its own colour. Her beam charges one (the more of its light reaches it, the faster: PlaneWorld.BeamLight); charged,
 /// it glows on its own, full while it holds more than FadeSeconds of glow, then dimming as the last of it runs out, and
-/// out. Its light is round it, as her glow is, fainter even at full charge, and harms nothing; but it is a light in the
-/// registry like any, so a murkling may go to it instead of her and drink it down. A lure, and a lamp for the reef.
+/// out. Its light is round it, as her glow is, fainter even at full charge, and harms nothing; it shows the murklings in
+/// it as her glow does (CrystalSees). It is a light in the registry like any, so a murkling may go to it instead of her
+/// and drink it down. A lure, and a lamp for the reef.
 /// </summary>
 public static class CrystalTuning
 {
@@ -88,6 +89,26 @@ public sealed partial class PlaneWorld
             });
             Crystals.Add(crystal);
         }
+    }
+
+    /// <summary>
+    /// How much a lit crystal shows of a creature at this spot (0 none, 1 fully), as her glow shows what is near her: full
+    /// within most of its drawn light (ShownReach), thinning at its edge, as bright as the crystal glows; not round rock.
+    /// </summary>
+    public float CrystalSees(Vector2 at, float radius)
+    {
+        float seen = 0f;
+        foreach (var c in Crystals)
+        {
+            if (c.Glow <= seen) continue;
+            float d = Vector2.Distance(at, c.Position) - radius;
+            float inner = CrystalTuning.ShownReach * 0.75f, outer = CrystalTuning.ShownReach;
+            if (d >= outer) continue;
+            float t = Math.Clamp((d - inner) / (outer - inner), 0f, 1f);
+            float s = c.Glow * (1f - t * t * (3f - 2f * t));
+            if (s > seen && LineOfSight(c.Position, at)) seen = s;
+        }
+        return seen;
     }
 
     /// <summary>Her beams charge the crystals they reach (the more light, the faster); a charged one glows on, then fades out.</summary>

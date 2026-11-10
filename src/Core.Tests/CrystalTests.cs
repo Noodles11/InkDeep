@@ -105,4 +105,20 @@ public class CrystalTests
         for (int i = 0; i < 3 * PlaneWorld.TickRate; i++) Hold(w, from, default);
         Assert.True(c.Charge < CrystalTuning.MaxGlow - 3f);
     }
+
+    [Fact]
+    public void A_lit_crystal_shows_the_murklings_in_its_light_as_her_glow_does()
+    {
+        var w = World();
+        var (c, _) = Target(w);
+        var near = c.Position + c.Out * 1.5f;
+        var far = c.Position + c.Out * (CrystalTuning.ShownReach + 2f);
+        Assert.Equal(0f, w.CrystalSees(near, 0.4f));
+        c.Charge = CrystalTuning.MaxGlow;
+        Assert.Equal(1f, w.CrystalSees(near, 0.4f));
+        Assert.Equal(0f, w.CrystalSees(far, 0.4f));
+        // Dimming, it shows less.
+        c.Charge = CrystalTuning.FadeSeconds * 0.5f;
+        Assert.InRange(w.CrystalSees(near, 0.4f), 0.4f, 0.6f);
+    }
 }
