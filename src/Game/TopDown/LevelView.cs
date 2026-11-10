@@ -220,6 +220,15 @@ public partial class LevelView : Node3D
         _below = below;
 
         foreach (var surface in shape.Ground) AddChild(new MeshInstance3D { Mesh = ToMesh(surface), MaterialOverride = _ground });
+        // The see floor: a patch of seabed under her, in the ground's own skin, drawn only inside the cutout's opening
+        // (topdown_ground's see_floor), so the floor is seen running on under a wall cut open in front of her.
+        _seeFloor = new MeshInstance3D
+        {
+            Mesh = new PlaneMesh { Size = new Vector2(SeeFloorSize, SeeFloorSize), SubdivideWidth = 6, SubdivideDepth = 6 },
+            MaterialOverride = _ground, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = false,
+        };
+        _seeFloor.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("see_floor"), 1f);
+        AddChild(_seeFloor);
         // A woven reef's coral (WovenReef, the look prototype), in its own paint.
         if (map.Pieces.Count > 0)
         {
@@ -360,6 +369,16 @@ public partial class LevelView : Node3D
         var v = new Vector4(her.X, her.Z, radius, amount);
         if (v == _seeThrough) return;
         _seeThrough = v;
+        if (_seeFloor is { } floor && IsInstanceValid(floor))
+        {
+            floor.Visible = amount > 0f && !NoSeeFloor;
+            // At the floor under her (eased), so the floor round her is seen running on under the cut rock (on an abyss
+            // reef, its deep floor).
+            float under = Mathf.Min(SmoothHeight(_map, her.X - Position.X, her.Z - Position.Z), SeeFloorHeight) - 0.25f;
+            _seeFloorY = floor.Visible && _seeFloorShown ? Mathf.Lerp(_seeFloorY, under, 0.15f) : under;
+            _seeFloorShown = floor.Visible;
+            floor.Position = new Vector3(her.X - Position.X, _seeFloorY, her.Z - Position.Z);
+        }
         foreach (var m in _materials)
         {
             m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_through"), KeptWhole(m) ? v with { W = 0f } : v);
@@ -367,6 +386,12 @@ public partial class LevelView : Node3D
         }
     }
     Vector4 _seeThrough;
+    MeshInstance3D? _seeFloor;
+    static readonly bool NoSeeFloor = OS.GetCmdlineUserArgs().Contains("--dbg-nofloor");
+    /// <summary>The see floor's square (metres a side: the opening and some), and the highest it lies (the seabed); it lies a little under the floor under her, so the real floor wins wherever it is.</summary>
+    const float SeeFloorSize = 16f, SeeFloorHeight = -1.2f;
+    float _seeFloorY;
+    bool _seeFloorShown;
 
     /// <summary>How far round her middle (metres) rock counts as hiding her: her bell and the strands under it.</summary>
     const float HerReach = 0.8f;
@@ -1219,7 +1244,7 @@ public partial class LevelView : Node3D
             var (c, material, alpha) = _canopies[i];
             bool gone = hide[i] || (c.Kind == CanopyKind.CaveRoof && hiddenCaves.Contains(CaveOf(c)))
                 || (c.Kind == CanopyKind.TunnelRoof && hiddenTunnels.Contains(c.Corridor));
-            // Quick to clear the way, gentle to come back; cleared, all but gone (a faint ghost of the rock).
+            // Quick to clear the way, gentle to come back; cleared, gone whole (no dithered ghost of it left over her).
             alpha = Mathf.MoveToward(alpha, gone ? Cleared : 1f, dt * (gone ? 7f : 3f));
             // Verification: --dbg-nocanopy keeps every canopy gone.
             if (_noCanopy) alpha = 0f;
@@ -1232,8 +1257,8 @@ public partial class LevelView : Node3D
         }
     }
 
-    /// <summary>How near (metres) her line of sight may pass a canopy's footprint before it fades, and how much of it stays then.</summary>
-    const float OcclusionMargin = 1f, Cleared = 0.08f;
+    /// <summary>How near (metres) her line of sight may pass a canopy's footprint before it fades, and how much of it stays then (none).</summary>
+    const float OcclusionMargin = 1f, Cleared = 0f;
     static readonly bool _noCanopy = OS.GetCmdlineUserArgs().Contains("--dbg-nocanopy");
 
     /// <summary>Whether a canopy stands in (or within OcclusionMargin of) her line of sight to the camera, over its height (bottom–top).</summary>

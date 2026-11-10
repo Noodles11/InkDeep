@@ -124,7 +124,7 @@ Clementine never speaks. Her character is communicated entirely through motion a
 
 - Tilted top-down, 55–65°, perspective, narrow FOV (~35°) so arches and reef walls parallax softly. North is always up; the world and minimap agree.
 - View on screen ~30×22 m: a corridor reads at a glance.
-- Canopy fade: arch bodies, cave roofs and overhangs live on a canopy layer that blurs and dissolves while Clementine is underneath — the reef reads as layered and physical, not painted flat. Ridge walls between camera and player dissolve in a dithered cutout.
+- Canopy fade: arch bodies, cave roofs and overhangs live on a canopy layer that blurs and dissolves while Clementine is underneath — the reef reads as layered and physical, not painted flat. Ridge walls between camera and player are cut open round her in a clean round opening, the floor seen running on under them (DESIGN-TOPDOWN §12.2's cutout).
 - Depth focus (the look, after Below): the swim plane is the focal plane. Within ~0.6 m below / 1.6 m above stays sharp; below blurs, fogs and darkens toward dim blue-green; above blurs and darkens into foreground silhouettes. Heavy oval vignette, cool grade on top. Clementine, the gateway, pearls, shells and ink are drawn after the pass — always sharp.
 - Only two camera breaks, ever: the boss-awakening dip (2 s low swell) and the Tank transition (the Crack sucks her down a vertical shaft — the game’s single sanctioned moment of verticality).
 

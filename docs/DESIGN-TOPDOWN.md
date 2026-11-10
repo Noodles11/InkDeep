@@ -313,7 +313,7 @@ of the corrupted (`PlaneExperience.cs`, `PlaneRun`).
   tunnel roofs and overhang ledges render on a **canopy layer** above the
   gameplay plane. Any canopy over Clementine, or between her and the camera (it looks
   down at a slant, so rock a few metres to the camera's side of her hides her too),
-  **dissolves** (a dithered fade, down to a faint 8% ghost of the rock) and stays
+  **dissolves** (a quick noise-dithered fade, gone whole: no ghost of it is left over her) and stays
   gone while it does, restoring after: her line of sight to the camera is followed
   up through each canopy's height, and a canopy within 1 m of it (her bell and the
   strands under it) fades. One she only swims beside stays whole. Overlapping
@@ -615,10 +615,8 @@ Running after the checks, it never changes what she can reach.
   into the ridge behind its spur, 16–32 m long (about 2.8 m wide, in bending legs of 5–10 m), ending in a small end
   chamber. Black fog seeps out of its mouth into the canyon: the sign of what is inside.
   - **Going in is safe:** no dark, no curse, all the way to the end.
-  - **The walls in front thin away** (`LevelView.SeeThrough`, level_frame's `lf_see_cut`): wherever the rock in
-    front hides her in the tunnel, the rock standing between the camera and the tunnel round her (4.5 m) is dithered
-    away, soft at the edge, only rock above her plane and on the camera's side of her, so a leg running across the
-    screen never hides the way her light shows.
+  - **The walls in front are cut away** (the cutout, §12.2's rule for walls): wherever the rock in front hides her in
+    the tunnel, it is cut open round her, so a leg running across the screen never hides the way her light shows.
   - **The end always rewards her** (rolled per level): **20%** a **pearl** (from any pool), else the **shell fountain**,
     a small leak of rock with a pale glow in its throat, spouting a shell a second whenever the last one has been
     taken, for as long as she stays in the den's dark.
@@ -1369,11 +1367,22 @@ at mist distance (inherited fade rule).
 - A layout that fails validation retries with the next seeded attempt, up to **100** attempts.
 - **Passes** are chosen through the highest rock first (the thickest roof).
 - Boulders and bommies are decoration only, never collision.
-- Ridge walls between the camera and Clementine dissolve in a dithered cutout (a presentation rule for walls;
-  the canopy layer has its own fade): while rock (the reef, a tunnel's roof, a cave's lid) stands between the camera
-  and any part of her (her middle and 0.8 m round it; `LevelView.Hides`), the rock between the camera and her plane
-  within 4.5 m of her is carved away round her, gone in the middle, its edge dissolving in the ordered dither
-  (`lf_see_cut`); it opens in about 0.17 s and closes over 0.5 s. A wall she only swims beside stays whole. A canopy fading over Clementine is drawn unblurred while it fades.
+- **The cutout** (a presentation rule for walls, as Baldur's Gate 3's; the canopy layer has its own fade): while rock
+  (the reef, a tunnel's roof, a cave's lid) stands between the camera and any part of her (her middle and 0.8 m round
+  it; `LevelView.Hides`), whatever stands between the camera and her plane round her is cut away in a clean round
+  opening (`LevelView.SeeThrough`, level_frame's `lf_see_cut`):
+  - **Its shape:** 3.6 m round her where the camera's ray crosses her plane, its rim wavering a little as rock breaks
+    (fixed to the world, never crawling), its edge a thin 0.3 m band dissolving in fine noise (no screen-door grid).
+  - **What it cuts:** the rock (the ground's heightfield and the free rock) and the coral and flora on it, down to just
+    over the seabed, only on the camera's side of her; the floor she swims over and what stands beyond her stay whole.
+    The shadows stay as they are (the cut is not made from the sun's eye).
+  - **What it shows:** the floor running on under the rock (the see floor: a patch of the ground's own skin at the
+    floor under her, out of the rock's shadow, drawn only where the rock over it along the ray is cut), so the cut
+    reads as the wall gone, never as a hole onto nothing. A faint cool glow rims what is left round the opening.
+  - **Its timing:** it irises open (eased) in about a quarter of a second and closes over about half a second. A wall
+    she only swims beside stays whole. A canopy fading over Clementine is drawn unblurred while it fades.
+  - **Verification:** `--at=hidden` starts her where rock hides her (`--dbg-hidden2`: another such spot);
+    `--dbg-nocarve` keeps every wall whole; `--dbg-nofloor` leaves out the see floor.
 - **Combat** (`PlaneCombat.cs`; the Depth-1 bestiary is being ported onto the plane, the Pufferling first): Clementine has
   100 HP (shown by the gonad rings on her bell, §2.5; the run's play time, stopped while paused, §9) and shoots toward the mouse (held) or the
   arrow keys — 10 damage, 4–5 volleys a second. Her shots are light (docs/LIGHT-BUBBLES.md), and a shot never stops
@@ -1665,7 +1674,7 @@ at mist distance (inherited fade rule).
     fall only where the sun reaches; walls throw real shade across them.
 - **Canopy rock.** Arches are stone bridges springing from the ground, overhangs are lumpy shelves, and a tunnel's
   roof is the rock either side carried over it, in the reef's own skin. Canopy pieces
-  (arches, overhangs, cave roofs, tunnel roofs) dissolve with an ordered dither while she is underneath, staying opaque, so the
+  (arches, overhangs, cave roofs, tunnel roofs) dissolve with a fine noise dither while she is underneath, staying opaque, so the
   depth focus still blurs them.
 - **Life.** Kept sparse, so the stage never pulls focus from the creatures, pickups and places: the generator's
   grass meadows and bommies, and cosmetic ground cover of seagrass meadows, a few sponge-like coral heads at the

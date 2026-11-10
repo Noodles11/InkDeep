@@ -1,12 +1,14 @@
-// The level's ground: the reef's skin (reef_surface.gdshaderinc) on the heightfield. Walls between the camera and
-// Clementine are not cut away: she is drawn on top of them, and the depth focus pass blurs high rock into soft
-// silhouettes.
+// The level's ground: the reef's skin (reef_surface.gdshaderinc) on the heightfield. What stands between the camera and
+// Clementine is cut open round her (level_frame's lf_see_cut), a faint glow round the opening; the seabed is seen on
+// under the rock through it (see_floor: this skin on a patch under her, drawn only inside the opening).
 shader_type spatial;
 render_mode cull_back;
 
 #include "res://assets/shaders/reef_surface.gdshaderinc"
 
 uniform bool debug_normals = false;
+/// The see floor (LevelView.SeeThrough): a patch of seabed under her, drawn only inside the opening.
+instance uniform float see_floor = 0.0;
 
 // The level's cave openings (LevelView.AddDoors, docs/RPG-PROPOSAL.md §2.3): each one's threshold (xy, map metres) and
 // the way into it (zw), and the passages' depth, open half-width and arch top. The deeper into one, the darker, until
@@ -54,7 +56,9 @@ float door_dark(vec3 p) {
 }
 
 void fragment() {
-	if (lf_portal_cut(world, FRAGCOORD.xy) || lf_see_cut(world, CAMERA_POSITION_WORLD, FRAGCOORD.xy)) discard;
+	// (Not from the sun's eye: the rock's shadows stay as they are.)
+	if (lf_portal_cut(world, FRAGCOORD.xy) || !IN_SHADOW_PASS && lf_see_cut(world, CAMERA_POSITION_WORLD, FRAGCOORD.xy)) discard;
+	if (see_floor > 0.5 && lf_see_dist(world, CAMERA_POSITION_WORLD) > 0.0) discard;
 	vec3 local = lf_local(world);
 	float px = length(fwidth(world.xz));
 	ReefSkin s = reef_surface(local, normalize(world_normal), TIME, px);
@@ -67,9 +71,10 @@ void fragment() {
 	s.caustic *= 1.0 - dark;
 	// The caustics ride to light() in BACKLIGHT (this shader does its own lighting, so nothing else reads it).
 	// (And how much the showcase shows it as it is, in .y: lit plainly there, not in the drawn look's steps.)
-	BACKLIGHT = vec3(s.caustic * 1.5, show, 0.0);
+	// (.z: the see floor, lit as the open floor is, out of the rock's shadow over it.)
+	BACKLIGHT = vec3(s.caustic * 1.5, show, see_floor);
 	ALBEDO = s.albedo;
-	EMISSION = s.emission;
+	EMISSION = s.emission + LF_SEE_RIM * lf_see_rim(world, CAMERA_POSITION_WORLD) * 0.35;
 	NORMAL = normalize((VIEW_MATRIX * vec4(s.normal, 0.0)).xyz);
 	ROUGHNESS = s.rough;
 	// Matte: next to no reflection of the water's light.
@@ -82,7 +87,8 @@ void light() {
 	float ndl = mix(art_light(plain), plain, BACKLIGHT.y);
 	// The sun also brings the caustics; other lights (her glow) light the reef plainly.
 	float extra = LIGHT_IS_DIRECTIONAL ? BACKLIGHT.x : 0.0;
-	DIFFUSE_LIGHT += (ndl + extra) * ATTENUATION * LIGHT_COLOR / PI;
+	float att = LIGHT_IS_DIRECTIONAL && BACKLIGHT.z > 0.5 ? 1.0 : ATTENUATION;
+	DIFFUSE_LIGHT += (ndl + extra) * att * LIGHT_COLOR / PI;
 	// Her light (and other near lights) leaves only a faint dull sheen on the matte rock and sand.
 	if (!LIGHT_IS_DIRECTIONAL) {
 		vec3 hv = normalize(LIGHT + VIEW);

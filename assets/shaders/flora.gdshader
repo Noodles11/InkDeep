@@ -73,7 +73,8 @@ void vertex() {
 }
 
 void fragment() {
-	if (lf_portal_cut(world_pos, FRAGCOORD.xy)) discard;
+	// (Cut away with the rock it grows on, where it stands between the camera and her.)
+	if (lf_portal_cut(world_pos, FRAGCOORD.xy) || !IN_SHADOW_PASS && lf_see_cut(world_pos, CAMERA_POSITION_WORLD, FRAGCOORD.xy)) discard;
 	vec3 col = COLOR.rgb;
 	if (recolor > 0.0) {
 		float l = clamp(dot(col, vec3(0.299, 0.587, 0.114)) * 1.5, 0.0, 1.0);

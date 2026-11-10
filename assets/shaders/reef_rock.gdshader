@@ -40,7 +40,7 @@ void art(inout ReefSkin s, vec3 local, float hw, float px) {
 
 void fragment() {
 	if (fade < 0.999 && lf_dither(FRAGCOORD.xy) >= fade) discard;
-	if (lf_portal_cut(world, FRAGCOORD.xy) || lf_see_cut(world, CAMERA_POSITION_WORLD, FRAGCOORD.xy)) discard;
+	if (lf_portal_cut(world, FRAGCOORD.xy) || !IN_SHADOW_PASS && lf_see_cut(world, CAMERA_POSITION_WORLD, FRAGCOORD.xy)) discard;
 	vec3 local = lf_local(world);
 	float px = length(fwidth(world.xz));
 	ReefSkin s = reef_surface(local, normalize(world_normal), TIME, px);
@@ -52,7 +52,7 @@ void fragment() {
 	BACKLIGHT = vec3(s.caustic * 1.5, show, 0.0);
 	vec3 c = s.albedo * tint;
 	ALBEDO = c;
-	EMISSION = s.emission;
+	EMISSION = s.emission + LF_SEE_RIM * lf_see_rim(world, CAMERA_POSITION_WORLD) * 0.35;
 	NORMAL = normalize((VIEW_MATRIX * vec4(s.normal, 0.0)).xyz);
 	ROUGHNESS = s.rough;
 	// Matte: next to no reflection of the water's light.

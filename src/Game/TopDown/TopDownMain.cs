@@ -68,7 +68,7 @@ public partial class TopDownMain : Node3D
     bool _dbgSteerFight;
     bool _dbgGate;
     /// <summary>How far round her the rock between the camera and her is carved away.</summary>
-    const float SeeThroughRadius = 4.5f;
+    const float SeeThroughRadius = 3.6f;
     /// <summary>How far the walls round her are carved away (0 whole → 1 open while they hide her).</summary>
     float _seeThrough;
     /// <summary>Verification (--dbg-nocarve): the walls are not carved away round her.</summary>
@@ -2000,6 +2000,11 @@ public partial class TopDownMain : Node3D
             "wall" => Enumerable.Range(0, 70 * 70).Select(i => new System.Numerics.Vector2(i % 70 * 2f, i / 70 * 2f))
                 .Where(v => _world.Clear(v, 1f) && _map.HeightAt(v - new System.Numerics.Vector2(0f, 5f)) > 4f && _map.HeightAt(v - new System.Numerics.Vector2(0f, 3f)) < 0f)
                 .Select(v => (System.Numerics.Vector2?)v).FirstOrDefault(),
+            // Where the rock stands between her and the camera (captures of the cutout): the first such open spot (with
+            // --dbg-hidden2, the 41st).
+            "hidden" => Enumerable.Range(0, 70 * 70).Select(i => new System.Numerics.Vector2(i % 70 * 2f, i / 70 * 2f))
+                .Where(v => _world.Clear(v, 0.5f) && _level.Hides(new Vector3(v.X, LevelMap.SwimBand, v.Y), new Vector3(v.X, LevelMap.SwimBand, v.Y) + new Vector3(0f, Mathf.Sin(Mathf.DegToRad(CameraRig.Tilt)), Mathf.Cos(Mathf.DegToRad(CameraRig.Tilt))) * CameraRig.Distance))
+                .Select(v => (System.Numerics.Vector2?)v).Skip(OS.GetCmdlineUserArgs().Contains("--dbg-hidden2") ? 40 : 0).FirstOrDefault(),
             // Beside the level's first bubble geyser.
             "geyser" => _world.Director.Geysers.Count > 0 ? _world.Director.Geysers[0] + new System.Numerics.Vector2(0f, 3f) : null,
             // Out in front of a secret room's sealed way in.
@@ -2759,10 +2764,10 @@ public partial class TopDownMain : Node3D
         _camera.Zoom = Mathf.Lerp(1f, MenuZoom, framing);
         _camera.Track(Focus(alpha), dt, look: new Vector3(MenuShift() * framing, 0f, 0f));
         _dark.Sync(_world, _camera.Camera, _bell.GlobalPosition, dt);
-        // A wall between the camera and her (a tunnel's roof, a wall in front) is carved away round her while it hides
-        // her, quick to open and gentle to close; one she only swims beside stays whole.
+        // A wall between the camera and her (a tunnel's roof, a wall in front) is cut open round her while it hides her,
+        // the opening irising out quickly and closing gently (eased in the shader); one she only swims beside stays whole.
         bool hidden = _level.Hides(_bell.GlobalPosition, _camera.Camera.GlobalPosition);
-        _seeThrough = Mathf.MoveToward(_seeThrough, hidden ? 1f : 0f, dt * (hidden ? 6f : 2f));
+        _seeThrough = Mathf.MoveToward(_seeThrough, hidden ? 1f : 0f, dt * (hidden ? 4.5f : 2.2f));
         _level.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, _dbgNoCarve ? 0f : _seeThrough);
         // In the curse den's dark her own light is dimmed too, to about half.
         _bell.Dim = 1f - 0.475f * _dark.Amount;
