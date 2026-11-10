@@ -109,6 +109,8 @@ public sealed partial class PlaneWorld
         for (int pi = 0; pi < Map.Pois.Count; pi++)
         {
             var poi = Map.Pois[pi];
+            // A secret room's reward lies at its labyrinth's heart (a level of its own), not on the reef.
+            if (poi.Kind == PoiKind.Secret && !Map.Labyrinth) continue;
             if (poi.Kind == PoiKind.Secret && SecretHoldsPearl(Map.Seed, Map.Depth, Map.Level, Map.Attempt, pi))
             {
                 var offer = PlaneRun.PortedPearls.Where(id => Run.CanOffer(id) && Pearls.All(q => q.ItemId != id)).ToList();

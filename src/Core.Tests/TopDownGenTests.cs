@@ -285,8 +285,8 @@ public class TopDownGenTests
     {
         var map = Map(seed);
         var dist = LevelValidator.Distances(map, map.Start.Position);
-        // (A leak cave's place is in the rock behind its mouth: the water out of the mouth is what she reaches.)
-        foreach (var poi in map.Pois.Where(p => p.Kind != PoiKind.LeakCave))
+        // (A leak cave's place, and a secret room's, is in the rock behind its mouth: the water out of the mouth is what she reaches.)
+        foreach (var poi in map.Pois.Where(p => p.Kind is not (PoiKind.LeakCave or PoiKind.Secret)))
             Assert.False(float.IsPositiveInfinity(LevelValidator.DistanceAt(dist, poi.Position)), $"{poi.Kind} unreachable");
         foreach (var mouth in map.Mouths)
             Assert.Contains(Enumerable.Range(6, 19).Select(k => mouth.At - mouth.Into * (k * 0.5f)), q => map.IsOpen(q) && float.IsFinite(LevelValidator.DistanceAt(dist, q)));
@@ -318,13 +318,15 @@ public class TopDownGenTests
 
     [Theory]
     [MemberData(nameof(Seeds))]
-    public void ASecretCaveIsPluggedByWeakRock(string seed)
+    public void ASecretRoomsMouthIsSealedByAWall(string seed)
     {
         var map = Map(seed);
-        foreach (var poi in map.Pois.Where(p => p.Kind == PoiKind.Secret))
+        for (int k = 0; k < map.Mouths.Count; k++)
         {
-            var rock = Assert.Single(map.WeakRocks, r => r.Cave == poi.Cave);
-            Assert.True(Vector2.Distance(rock.Center, map.Caves[poi.Cave].Mouth) < 3f);
+            if (map.MouthKinds[k] != PoiKind.Secret) continue;
+            var door = map.Mouths[k];
+            var rock = Assert.Single(map.WeakRocks, r => r.Kind == SealKind.Secret && !r.Fake && r.Contains(door.At - door.Into * 0.5f));
+            Assert.True(Vector2.Dot(rock.Facing, -door.Into) > 0.99f, "carved on the face she meets");
         }
     }
 
@@ -400,7 +402,7 @@ public class TopDownGenTests
         // The first reef of the first depth with a room in a cave.
         var code = SeedCode.Parse(seed);
         var id = Enumerable.Range(1, 4).SelectMany(r => DiveGraph.Of(code).Row(1, LevelPlan.Tutorial + 1, r)).Select(n => n.Id)
-            .First(i => !i.Haven && LevelPlan.For(code, i) is var p && p.Treasures + p.Shops + p.Secrets + p.Crabs > 0);
+            .First(i => !i.Haven && LevelPlan.For(code, i) is var p && p.Treasures + p.Shops + p.Crabs > 0);
         var map = Map(seed, id);
         Assert.NotEmpty(map.Caves);
         foreach (var cave in map.Caves)
@@ -430,7 +432,9 @@ public class TopDownGenTests
             Assert.Equal(plan.Secrets, Count(PoiKind.Secret));
             // The curse dens are leak caves, each with its mouth (docs/DIVE.md §6).
             Assert.Equal(plan.Curses, Count(PoiKind.LeakCave));
-            Assert.Equal(plan.Curses, map.Mouths.Count);
+            // (And each secret room is a labyrinth behind a sealed mouth, docs/DIVE.md §6.1.)
+            Assert.Equal(plan.Curses + plan.Secrets, map.Mouths.Count);
+            Assert.Equal(plan.Secrets, map.MouthKinds.Count(k => k == PoiKind.Secret));
             Assert.Equal(0, Count(PoiKind.CurseDen));
             Assert.Equal(plan.Shops, Count(PoiKind.Shop));
             Assert.Equal(plan.Caches, Count(PoiKind.ShellCache));

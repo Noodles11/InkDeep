@@ -93,6 +93,34 @@ level, its leak at its dead end. Each is made with its reef, from its own sub-se
   `--dbg-caveback=seconds` takes her back out that long after; `--dbg-cavein=seconds` takes her into a reef's first
   cave that long after she is on it, `--dbg-caverounds=n` so many times.
 
+### 6.1 Secret labyrinths
+
+A secret room is a sub-level too: where a level's secret would be, at the end of its spur, a mouth is cut as a leak
+cave's is (`TopDownGenerator.CutSecretMouths`; `LevelMap.MouthKinds` says which mouth leads where), and across the water
+before it stands a sealed wall with an X carved in it (`SealKind.Secret`), till her light fills the X and it slides
+down. No ink weeps from it. Behind it is a labyrinth (`TopDownGenerator.GenerateLabyrinth`), made with its reef from its
+own sub-seed.
+
+- **The maze** (`Maze`): a grid of cells (9 a side at the first depths, one more each depth down to 13), grown as a tree
+  from its entrance (mostly from the newest cell, now and then any: long winding runs with side branches), so every cell
+  is reached; then about one dead end in eight is opened into a neighbour, for a few loops. Its heart is the dead end
+  farthest from the entrance by its own ways.
+- **Its walls are the reef's rock**: passages 4 m wide (wavering a little) between cells 8 m apart, the rock between and
+  round them raised, terraced and eased as any level's, with the same decoration. It takes the look of the reef above it
+  (`LookDepth`). Its way in and out is cut in its entrance cell's outer wall, going the way she swam into the mouth.
+- **Reliable:** the maze is whole by construction; each attempt is checked whole (the heart swum to from the way in)
+  and another attempt made if the walls' wavering pinched a passage shut.
+- **Its reward lies at its heart:** the secret's shells, or now and then a pearl instead (`PlaneWorld.PlaceShells`,
+  `SecretPearl`). Nothing lives in it: no murklings, fish, leaks, springs or currents, and its water does not harm her.
+- **No map in it:** neither the minimap nor the whole level's map shows inside.
+- **She can give up at any time** with the key that uses her active pearl (F, or Y on the controller): it carries her
+  straight back out of the mouth (`TopDownMain.DiveCaveWay`). She may also swim out by its way out.
+- **The reef waits as she left it**, as for a leak cave. Leaving with the reward still there, the labyrinth waits as she
+  left it too; its reward taken, the mouth closes behind her.
+- **Verification:** `--dbg-mazein=seconds` opens a reef's first secret wall and takes her into its labyrinth that long
+  after she is on it; `--dbg-mazeout=seconds` gives it up that long after she is in; `--at=secret-in` starts before an
+  opened secret mouth.
+
 ## 7. Requests and chains
 
 - **The Tide Fan's requests** (`Requests.Dive`, `Requests.FillDive`): one fan for the whole dive, tied afresh in each

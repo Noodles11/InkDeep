@@ -466,6 +466,8 @@ public partial class TopDownMain : Node3D
             else if (arg == "--dbg-haven") _id = _id with { Haven = true };
             // Verification: that many seconds into a dive's leak cave, she is taken back out of it (docs/DIVE.md §6).
             else if (arg.StartsWith("--dbg-cavein=") && float.TryParse(Value("--dbg-cavein="), NumberStyles.Float, CultureInfo.InvariantCulture, out float cin)) _dbgCaveIn = cin;
+            else if (arg.StartsWith("--dbg-mazein=") && float.TryParse(Value("--dbg-mazein="), NumberStyles.Float, CultureInfo.InvariantCulture, out float mzin)) _dbgMazeIn = mzin;
+            else if (arg.StartsWith("--dbg-mazeout=") && float.TryParse(Value("--dbg-mazeout="), NumberStyles.Float, CultureInfo.InvariantCulture, out float mzout)) _dbgMazeOut = mzout;
             else if (arg.StartsWith("--dbg-caverounds=") && int.TryParse(Value("--dbg-caverounds="), out int rounds)) _dbgCaveRounds = rounds;
             else if (arg.StartsWith("--dbg-caveback=") && float.TryParse(Value("--dbg-caveback="), NumberStyles.Float, CultureInfo.InvariantCulture, out float back)) _dbgCaveBack = back;
             else if (arg == "--dive") _autoDive = true;
@@ -764,7 +766,7 @@ public partial class TopDownMain : Node3D
     /// made in the <paramref name="background"/>, on one thread, so the game keeps its frame rate.
     /// </summary>
     /// <summary>The maps (the minimap and the whole level's on Tab / Select) show: always, but in the adventure only once she has absorbed Sea Chart Nautilus.</summary>
-    bool HasMap => !_world.Options.Adventure || _world.Run.Loadout.Flags.Contains("minimap");
+    bool HasMap => !InLabyrinth && (!_world.Options.Adventure || _world.Run.Loadout.Flags.Contains("minimap"));
 
     /// <summary>The adventure's levels are abyss reefs (AbyssReef): no seabed outside the caves and tunnels.</summary>
     static LevelMap Abyss(LevelMap map)
@@ -1465,7 +1467,7 @@ public partial class TopDownMain : Node3D
         if (!InDiveCave) _reefs.Add(_id with { Haven = false });
         // Waking in a haven (Lantern Bay): she is healed whole.
         if (map.InHaven(arriveAt ?? map.Start.Position)) _run.Hp = _run.MaxHp;
-        _world = new PlaneWorld(_map, _tuning, _run, InDiveCave ? DiveCaveOptions() : DebugBoss() ?? DiveBoss());
+        _world = new PlaneWorld(_map, _tuning, _run, InDiveCave ? DiveCaveOptions(_map) : DebugBoss() ?? DiveBoss());
         ShowMouths();
         if (_captureDir is not null)
             foreach (var door in map.Way is { } way ? map.Mouths.Append(way) : map.Mouths) GD.Print($"Ride door at {door.At} into {door.Into}");
@@ -1610,6 +1612,7 @@ public partial class TopDownMain : Node3D
     (string Title, string Where) PlaceTitle()
     {
         if (_id.Haven) return ("Lantern Bay", _id.ToString());
+        if (InLabyrinth) return ("A secret labyrinth", "Its reward lies at its heart");
         if (InDiveCave) return ("A leak cave", "Its water stings till its leak is sealed");
         string title = _map.Template is { Name.Length: > 0 } template ? template.Name : _id.Level == 1 ? ReefLook.For(_id.Depth).Name : $"Level {_id.Level}";
         return (title, _id.Level == 1 ? $"{ReefLook.For(_id.Depth).Name} · {_id}" : _id.ToString());
@@ -1802,7 +1805,8 @@ public partial class TopDownMain : Node3D
     void ShowMouths()
     {
         // (A dive's leak caves weep the Leak's ink, every one: docs/DIVE.md §6.)
-        _portals.Show(_map, _world.ShutMouths, Enumerable.Repeat(ReefTuning.MostDanger, _map.Mouths.Count).ToList());
+        // (A labyrinth's mouth has no ink about it: nothing of the Leak's lies behind it.)
+        _portals.Show(_map, _world.ShutMouths, Enumerable.Range(0, _map.Mouths.Count).Select(i => _map.LeakMouth(i) ? ReefTuning.MostDanger : 0).ToList());
         _level.ShutDoors(_world.ShutMouths);
     }
 
@@ -2010,14 +2014,16 @@ public partial class TopDownMain : Node3D
                 foreach (var e in _world.Events) _seals.OnEvent(_world, e);
                 return (System.Numerics.Vector2?)(x.Rock.Center + x.Facing * (x.Rock.Thick + 4f));
             }).FirstOrDefault(),
-            // Inside the level's secret room, its wall already down.
+            // Before the level's secret room's mouth (or inside its pocket), its wall already down.
             "secret-in" => _world.Seals.Where(x => x.Kind == SealKind.Secret).Select(x =>
             {
                 while (!x.Open) _world.DebugStrikeSeal(x);
                 _level.Slide(x.Rock.Center);
                 foreach (var e in _world.Events) _seals.OnEvent(_world, e);
-                return (System.Numerics.Vector2?)_map.Caves[x.Rock.Cave].Chambers[0].Center;
+                return (System.Numerics.Vector2?)(x.Rock.Cave >= 0 ? _map.Caves[x.Rock.Cave].Chambers[0].Center : x.Rock.Center + x.Facing * (x.Rock.Thick + 4f));
             }).FirstOrDefault(),
+            // In a labyrinth: at its heart.
+            "heart" => _map.Labyrinth ? _map.Pois.Where(p => p.Kind == PoiKind.Secret).Select(p => (System.Numerics.Vector2?)p.Position).FirstOrDefault() : null,
             // In front of the first sealed wall of any kind (the boss's, on a boss level).
             "seal" => _map.WeakRocks.OrderByDescending(r => r.Kind).Select(r => (System.Numerics.Vector2?)(r.Center + LevelView.SealFacing(_map, r) * (r.Thick + 5f))).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
             // Beside the level's first flounder (south of it, in sight); "hearth": it is a Hearthguard, and she in its reach;
@@ -3834,6 +3840,12 @@ public partial class TopDownMain : Node3D
         _glowLatched = glow;
         bool use = Input.IsActionPressed(InputSetup.Active);
         input.UseActive = use && !_activeLatched || _autoActive && _world.Run.ActiveCharge >= 1f;
+        // In a labyrinth its key gives the labyrinth up instead (DiveCaveWay).
+        if (InLabyrinth)
+        {
+            _giveUp |= use && !_activeLatched;
+            input.UseActive = false;
+        }
         _activeLatched = use;
         if (AutoFire(ref input)) return input;
         bool shine = Input.IsActionPressed(InputSetup.Beam);

@@ -289,7 +289,7 @@ inside a reef (a secret, a shop, a shell cache, a Crab Deal on one reef of a dep
 
   | Kind | Sort | From row | How often | Apart |
   |---|---|---|---|---|
-  | Secret | spot | 1 | 40% | 17 m (20 m from another cave) |
+  | Secret | sub-level | 1 | 40% | 17 m (20 m from another cave) |
   | Shop | spot | 2 | 45% | 17 m (20 m) |
   | Shell cache | spot | 2 | 60% | 17 m |
   | Crab Deal | spot | 2 | one reef a depth, 60% of depths past the first | 17 m (20 m) |
@@ -298,7 +298,8 @@ inside a reef (a secret, a shop, a shell cache, a Crab Deal on one reef of a dep
   | Hole | spot | 1 | one for each exit past the first | 17 m (28 m from another hole) |
 
   Every place keeps 30 m from the start and from the exit; the early place lies within 38 m of the start. A clam room,
-  a secret and a shop are rooms in the reef's rock; the leak cave is the one way into a sub-level.
+  and a shop are rooms in the reef's rock; a leak cave and a secret are ways into sub-levels (a leak cave; a labyrinth,
+  docs/DIVE.md §6.1).
 - **Sub-levels are made with their reef**, on the same thread right after it, each from its own sub-seed (its reef's
   cycle, depth, row and lane in it): `LevelShape.Caves`. A sub-level has no sub-levels of its own. A reef under a hole is
   made with its caves before she dives.

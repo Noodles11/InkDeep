@@ -390,8 +390,8 @@ public sealed partial class PlaneWorld
     /// </summary>
     void PlaceLeaks()
     {
-        // A hand-drawn map holds none of its own; a leak cave holds one, at the dead end where a way down would be.
-        if (Map.Station) return;
+        // A hand-drawn map holds none of its own, nor a labyrinth; a leak cave holds one, at the dead end where a way down would be.
+        if (Map.Station || Map.Labyrinth) return;
         if (Map.LeakCave)
         {
             // (A floor above its deepest holds a hole down there instead; a great cave's deepest, its boss in place of a

@@ -43,11 +43,12 @@ public class PlaneEconomyTests
             if (PlaneWorld.SecretHoldsPearl((ulong)i * 7919UL + 13UL, 1 + i % 6, 1 + i % 5, 0, i % 9)) pearls++;
         Assert.InRange(pearls / 4000f, PlaneEconomyTuning.SecretPearl - 0.02f, PlaneEconomyTuning.SecretPearl + 0.02f);
 
-        // Where it does, the secret room holds one pearl in its middle and no shells; else its shells.
+        // Where it does, the secret room (its labyrinth's heart) holds one pearl in its middle and no shells; else its shells.
         int checkedRooms = 0;
-        foreach (var id in TestLevels.All(p => p.Secrets > 0).Take(8))
+        for (int level = 1; level <= 30; level++)
         {
-            var w = new PlaneWorld(TestLevels.Get(id), new Tuning(), new PlaneRun(Catalog.Value, new Tuning()));
+            var map = TopDownGenerator.GenerateLabyrinth(TestLevels.Seed, new LevelId(601, 2, level), 2);
+            var w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()));
             for (int pi = 0; pi < w.Map.Pois.Count; pi++)
             {
                 var poi = w.Map.Pois[pi];

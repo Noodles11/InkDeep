@@ -95,6 +95,7 @@ public sealed partial class PlaneWorld
 
     void PlaceSprings()
     {
+        if (Map.Labyrinth) return;
         float pool = SpringTuning.Pool * (1f + OctoShoots.Core.Items.LuckTuning.SpringPool(Map.Luck));
         foreach (var at in LightSprings.Of(Map)) Springs.Add(new LightSpring { Position = at, Pool = pool, PoolMax = pool });
     }

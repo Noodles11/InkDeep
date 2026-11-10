@@ -9,12 +9,11 @@ namespace OctoShoots.Core.Tests;
 public class PlaceRulesTests
 {
     [Fact]
-    public void EveryKindOfPlaceHasOneRule_TheLeakCaveTheOneWayIntoASubLevel()
+    public void EveryKindOfPlaceHasOneRule_TheLeakCaveAndTheSecretTheWaysIntoSubLevels()
     {
         Assert.Equal(PlaceRules.All.Count, PlaceRules.All.Select(r => r.Kind).Distinct().Count());
         Assert.All(PlaceRules.All, r => Assert.Equal(r, PlaceRules.Of(r.Kind)));
-        Assert.Equal(PlaceSort.SubLevel, Assert.Single(PlaceRules.All, r => r.Sort == PlaceSort.SubLevel).Sort);
-        Assert.Equal(PoiKind.LeakCave, PlaceRules.All.Single(r => r.Sort == PlaceSort.SubLevel).Kind);
+        Assert.Equal(new[] { PoiKind.Secret, PoiKind.LeakCave }, PlaceRules.All.Where(r => r.Sort == PlaceSort.SubLevel).Select(r => r.Kind).OrderBy(k => k));
         // What is not rolled says how it comes.
         Assert.All(PlaceRules.All.Where(r => r.Chance == 0f), r => Assert.NotEmpty(r.Comes));
     }

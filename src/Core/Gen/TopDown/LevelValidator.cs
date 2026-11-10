@@ -91,12 +91,12 @@ public static class LevelValidator
 
         // Reachability and the exit's distance.
         var dist = Distances(map, start.Position);
-        // (A leak cave's place is in the rock behind its mouth: the water out of its mouth must be reached.)
+        // (A leak cave's place, and a secret room's, is in the rock behind its mouth: the water out of its mouth must be reached.)
         foreach (var poi in map.Pois)
-            if (poi.Kind != PoiKind.LeakCave && float.IsPositiveInfinity(DistanceAt(dist, poi.Position))) return $"the {poi.Kind} cannot be reached from the start";
+            if (poi.Kind is not (PoiKind.LeakCave or PoiKind.Secret) && float.IsPositiveInfinity(DistanceAt(dist, poi.Position))) return $"the {poi.Kind} cannot be reached from the start";
         foreach (var mouth in map.Mouths)
             if (!Enumerable.Range(6, 19).Select(k => mouth.At - mouth.Into * (k * 0.5f)).Any(q => map.IsOpen(q) && !float.IsPositiveInfinity(DistanceAt(dist, q))))
-                return "a leak cave's mouth cannot be reached from the start";
+                return "a cave's mouth cannot be reached from the start";
         // The playable area: the water she can reach.
         int area = WaterArea(map);
         float lo = AreaMin * map.AreaScale, hi = AreaMax * map.AreaScale, least = MinExitGeodesic * MathF.Sqrt(map.AreaScale);

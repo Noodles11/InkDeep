@@ -14,7 +14,7 @@ namespace OctoShoots.Core.Gen.TopDown;
 /// POIs → path network → topography → arches/caves/passes → decoration → spawn table. A level that fails
 /// <see cref="LevelValidator"/> is rebuilt from the next attempt's sub-streams (the inherited retry rule).
 /// </summary>
-public static class TopDownGenerator
+public static partial class TopDownGenerator
 {
     public const int MaxAttempts = 100;
     /// <summary>Arches a level tries for (as many as fit), and the most it may have.</summary>
@@ -441,6 +441,8 @@ public static class TopDownGenerator
         }
         ClampHeights(map);
         RoofShortcuts(map);
+        // A secret room's mouth, and the wall that seals it, before the seals are raised.
+        if (CutSecretMouths(map, spurDirs) is { } secret) return secret;
         PlaceSeals(map, plan, Stage("seals"));
         SealWalls(map, tops, strata);
         DropIdleSeals(map);
@@ -449,6 +451,8 @@ public static class TopDownGenerator
         PlacePickups(map, Stage("pickups"));
         PlaceSpawns(map, Stage("spawns"), plan.Menace);
         ClearSeals(map);
+        // (Nothing grown in a secret room's mouth.)
+        foreach (var door in map.Mouths) ClearAround(map, door.At + door.Into * 1.5f, 4f);
         return CutLeakMouths(map, spurDirs);
     }
 
@@ -462,20 +466,43 @@ public static class TopDownGenerator
         {
             var poi = map.Pois[pi];
             if (poi.Kind != PoiKind.LeakCave) continue;
-            var facing = spurDirs.TryGetValue(pi, out var f) ? f : CameraWard;
-            // Cut from the open water at its spur's end (its place, or round it).
-            var froms = new List<Vector2> { poi.Position };
-            for (int k = 0; k < 8; k++) froms.Add(poi.Position + new Vector2(MathF.Cos(k * MathF.Tau / 8f), MathF.Sin(k * MathF.Tau / 8f)) * (poi.Radius + 2f));
-            Doorway? door = null;
-            foreach (float least in DoorFacings)
-            {
-                foreach (var from in froms.Where(map.IsOpen))
-                    if ((door = CutDoorway(map, from, poi.Radius + DoorReach, facing, least)) is not null) break;
-                if (door is not null) break;
-            }
-            if (door is not { } mouth) return "no wall at the leak cave's spur has room for its mouth";
+            if (CutMouth(map, poi, spurDirs.TryGetValue(pi, out var f) ? f : CameraWard) is not { } mouth) return "no wall at the leak cave's spur has room for its mouth";
             map.Mouths.Add(mouth);
+            map.MouthKinds.Add(PoiKind.LeakCave);
         }
+        return null;
+    }
+
+    /// <summary>A secret room's sealed wall stands this thick either side of its middle, in front of its mouth's threshold.</summary>
+    const float MouthSealThick = 1.6f;
+
+    /// <summary>
+    /// Each secret room's mouth (docs/DIVE.md §6.1): cut as a leak cave's is, at the end of its spur, into its labyrinth; and
+    /// across the water before it a sealed wall with an X carved in it (SealKind.Secret), its inner face on the mouth's
+    /// threshold, wide enough that nothing passes round it, till her light opens it.
+    /// </summary>
+    static string? CutSecretMouths(LevelMap map, Dictionary<int, Vector2> spurDirs)
+    {
+        for (int pi = 0; pi < map.Pois.Count; pi++)
+        {
+            var poi = map.Pois[pi];
+            if (poi.Kind != PoiKind.Secret) continue;
+            if (CutMouth(map, poi, spurDirs.TryGetValue(pi, out var f) ? f : CameraWard) is not { } mouth) return "no wall at the secret room's spur has room for its mouth";
+            map.Mouths.Add(mouth);
+            map.MouthKinds.Add(PoiKind.Secret);
+            map.WeakRocks.Add(new WeakRock(mouth.At - mouth.Into * MouthSealThick, Doorway.HalfWidth + DoorBand + 0.6f, -1, -mouth.Into, MouthSealThick, SealKind.Secret));
+        }
+        return null;
+    }
+
+    /// <summary>A mouth cut from the open water at a place's spur's end (its place, or round it), the way the spur runs first.</summary>
+    static Doorway? CutMouth(LevelMap map, Poi poi, Vector2 facing)
+    {
+        var froms = new List<Vector2> { poi.Position };
+        for (int k = 0; k < 8; k++) froms.Add(poi.Position + new Vector2(MathF.Cos(k * MathF.Tau / 8f), MathF.Sin(k * MathF.Tau / 8f)) * (poi.Radius + 2f));
+        foreach (float least in DoorFacings)
+            foreach (var from in froms.Where(map.IsOpen))
+                if (CutDoorway(map, from, poi.Radius + DoorReach, facing, least) is { } door) return door;
         return null;
     }
 
@@ -1625,8 +1652,9 @@ public static class TopDownGenerator
         for (int pi = 0; pi < map.Pois.Count; pi++)
         {
             var poi = map.Pois[pi];
-            // (A leak cave's mouth is cut once the rock is done, CutLeakMouths.)
-            if (!Poi.IsCaveHosted(poi.Kind) || poi.Kind == PoiKind.LeakCave) continue;
+            // (A leak cave's mouth is cut once the rock is done, CutLeakMouths; a secret room's before its seal is raised,
+            // CutSecretMouths: what lies behind each is a level of its own.)
+            if (!Poi.IsCaveHosted(poi.Kind) || poi.Kind is PoiKind.LeakCave or PoiKind.Secret) continue;
             Vector2 facing = spurDirs[pi];
             if (poi.Kind == PoiKind.CurseDen)
             {
@@ -1668,7 +1696,7 @@ public static class TopDownGenerator
                 CarveLine(map, cave.Chambers[i - 1].Center, cave.Chambers[i].Center, 4f);
             poi.Cave = map.Caves.Count;
             map.Caves.Add(cave);
-            if (poi.Kind is PoiKind.Secret or PoiKind.CrabDeal) map.WeakRocks.Add(new WeakRock(cave.Mouth + facing * 1.5f, 2.5f + SealPast, poi.Cave, facing, SealThick, SealKind.Secret, poi.Kind == PoiKind.CrabDeal));
+            if (poi.Kind == PoiKind.CrabDeal) map.WeakRocks.Add(new WeakRock(cave.Mouth + facing * 1.5f, 2.5f + SealPast, poi.Cave, facing, SealThick, SealKind.Secret, poi.Kind == PoiKind.CrabDeal));
         }
 
         // Passes, the level's shortcuts: tunnels worn through the rock between two parts of the cave that are close as the
@@ -2300,10 +2328,7 @@ public static class TopDownGenerator
                     Add(SpawnRole.Guardian, Swimmers[rng.Int(Swimmers.Length)], Scaled(3 + rng.Int(2)), poi.Position, pi);
                     Add(SpawnRole.Guardian, rng.NextFloat() < 0.5f ? EnemyKind.Crabby : EnemyKind.SeaUrchin, Scaled(1 + rng.Int(2)), poi.Position, pi);
                     break;
-                case PoiKind.Secret:
-                    Add(SpawnRole.Guardian, EnemyKind.SeaUrchin, Scaled(1 + rng.Int(2)), poi.Position, pi, trap: true);
-                    Add(SpawnRole.Guardian, EnemyKind.Moray, 1, poi.Position, pi, trap: true);
-                    break;
+                // (A secret room is a labyrinth of its own, with nothing in it: GenerateLabyrinth.)
             }
         }
     }

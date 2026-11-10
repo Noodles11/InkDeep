@@ -384,8 +384,20 @@ public sealed class LevelMap
     public int Floor = 1, Floors = 1;
     /// <summary>A leak cave's floor with a hole down to the next where its leak would be.</summary>
     public bool HoleDown => LeakCave && Floor < Floors;
-    /// <summary>A region's cave mouths, openings in its walls: swimming into one takes her into its leak cave.</summary>
+    /// <summary>
+    /// A region's cave mouths, openings in its walls: swimming into one takes her into what lies behind it, its kind in
+    /// MouthKinds (the same index): a leak cave (LeakCave), or a secret room's labyrinth (Secret), its mouth sealed by a
+    /// wall with an X carved in it till her light opens it.
+    /// </summary>
     public List<Doorway> Mouths = new();
+    public List<PoiKind> MouthKinds = new();
+    /// <summary>Whether a mouth (by index) leads into a leak cave (not a labyrinth).</summary>
+    public bool LeakMouth(int mouth) => mouth < MouthKinds.Count ? MouthKinds[mouth] == PoiKind.LeakCave : true;
+    /// <summary>
+    /// A secret room's labyrinth (docs/DIVE.md §6.1; TopDownGenerator.GenerateLabyrinth): a maze of the reef's walls, its
+    /// reward at its heart (its Secret place), no creatures, no leak, its way out (Way) where she came in.
+    /// </summary>
+    public bool Labyrinth;
     /// <summary>A leak cave's way out, the opening she came in by (in its start chamber's wall); null elsewhere.</summary>
     public Doorway? Way;
     /// <summary>The bay's mirror (HandLayout.Mirror): swimming onto it, she changes her look. Null elsewhere.</summary>

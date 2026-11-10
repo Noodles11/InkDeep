@@ -24,7 +24,7 @@ public static class PlaceRules
     /// <summary>Past the first depth, this often a depth hides one Crab Deal, on one reef of a row short of its boss.</summary>
     public const float CrabDepth = 0.6f;
 
-    public static readonly Rule Secret = new(PoiKind.Secret, PlaceSort.Spot, 1, 0.4f, Apart);
+    public static readonly Rule Secret = new(PoiKind.Secret, PlaceSort.SubLevel, 1, 0.4f, Apart);
     public static readonly Rule Shop = new(PoiKind.Shop, PlaceSort.Spot, 2, 0.45f, Apart);
     public static readonly Rule ShellCache = new(PoiKind.ShellCache, PlaceSort.Spot, 2, 0.6f, Apart);
     public static readonly Rule CrabDeal = new(PoiKind.CrabDeal, PlaceSort.Spot, 2, 0f, Apart, "one reef a depth, CrabDepth of depths past the first");

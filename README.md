@@ -29,7 +29,7 @@ button** (or the arrow keys, which aim too) shines her beam (her one attack), **
 shows the whole level, **F1** the debug menu (jump to any level, switch any pearl on or off; a debug run is not saved), **F3** the debug map, **R** regenerates from the seed field (Enter applies a typed seed).
 
 **Controller** (rebindable with the keyboard and mouse in Settings → Controls, saved to `user://bindings.json`): left
-stick swims, right stick aims (left alone, she aims the way she swims, at full range), **RT** shines her beam, **RB** puts her glow out or lights it, **LT** dashes, **X** dives, **Y** uses the active pearl, **View (Back)**
+stick swims, right stick aims (left alone, she aims the way she swims, at full range), **RT** shines her beam, **RB** puts her glow out or lights it, **LT** dashes, **X** dives, **Y** uses the active pearl (in a secret labyrinth, gives it up), **View (Back)**
 holds the level map, **Start** pauses (Start or **B** resumes). In menus the **D-pad** moves, **A** confirms and **B**
 goes back. Typing a seed and the debug keys (F1, F3, R) are keyboard only.
 

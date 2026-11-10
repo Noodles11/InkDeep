@@ -163,6 +163,8 @@ public sealed partial class PlaneWorld
     /// </summary>
     void PlaceCurrents()
     {
+        // A labyrinth's water is still.
+        if (Map.Labyrinth) return;
         // A leak cave has no main current: she swims back out herself, whenever she likes (docs/DIVE.md §6). (A cave that
         // keeps her in till its leak is sealed has water pouring in through its way out, from its back out into the cave.)
         if (Map.Way is { } way && !Options.DiveCave)

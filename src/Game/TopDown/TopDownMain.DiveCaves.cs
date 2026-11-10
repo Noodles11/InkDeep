@@ -16,6 +16,11 @@ namespace OctoShoots.Game.TopDown;
 /// way out at any time, or, once it is sealed, up its upwelling. The level waits as she left it: its state is kept as
 /// she goes in and put back as she comes out, out of the mouth she went in by, while all she gained in the cave (and
 /// its harm) stays hers. A cave she leaves unsealed waits as she left it too, should she go back in.
+///
+/// A secret room's mouth leads the same way into its labyrinth (docs/DIVE.md §6.1; TopDownGenerator.GenerateLabyrinth),
+/// made with the reef too: the reef's own look, no map, no creatures, its reward at its heart. She leaves by its way out,
+/// or gives up at any time with the key that uses her active pearl (it carries her straight back out of the mouth). Its
+/// reward taken, the mouth closes behind her; left with it still there, it waits as she left it.
 /// </summary>
 public partial class TopDownMain
 {
@@ -37,6 +42,16 @@ public partial class TopDownMain
     OctoShoots.Core.Saves.Snapshot.Anchors? _levelAnchors;
 
     bool InDiveCave => _diveCave >= 0;
+    /// <summary>In a secret room's labyrinth (a dive cave behind a secret mouth).</summary>
+    bool InLabyrinth => InDiveCave && _map.Labyrinth;
+    /// <summary>She asked to give the labyrinth up (the active pearl's key): carried back out of its mouth.</summary>
+    bool _giveUp;
+    /// <summary>Verification (--dbg-mazein=seconds): that long onto a reef with a secret mouth, its wall opens and she is taken into its labyrinth.</summary>
+    float _dbgMazeIn;
+    /// <summary>Verification (--dbg-mazeout=seconds): that long into a labyrinth, she gives it up.</summary>
+    float _dbgMazeOut;
+    /// <summary>A labyrinth's reward is all taken (its shells and its pearl).</summary>
+    bool LabyrinthEmptied => _world.Shells.Count == 0 && _world.Pearls.Count == 0;
 
     /// <summary>Verification (--dbg-caveback=seconds): that long into a cave, she is taken back out of it.</summary>
     float _dbgCaveBack;
@@ -47,11 +62,11 @@ public partial class TopDownMain
     float _dbgCaveIn;
     int _dbgCaveRounds = 1;
 
-    /// <summary>A dive cave's world: the Leak's water harming her till its leak is sealed.</summary>
-    static PlaneOptions DiveCaveOptions()
+    /// <summary>A dive cave's world: the Leak's water harming her till its leak is sealed (a labyrinth's harms nothing).</summary>
+    static PlaneOptions DiveCaveOptions(LevelMap map)
     {
         var d = PlaneOptions.Default;
-        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Shots = d.Shots, DiveCave = true };
+        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings && !map.Labyrinth, Vases = d.Vases && !map.Labyrinth, Adventure = d.Adventure, Shots = d.Shots, DiveCave = !map.Labyrinth };
     }
 
     /// <summary>
@@ -64,12 +79,25 @@ public partial class TopDownMain
         return LevelShape.Prepare(TopDownGenerator.GenerateCave(seed, id, reef.Menace + DiveCaveTuning.Menace, 1, reef.Mouths[mouth].Into, areaScale: DiveCaveTuning.Area));
     }
 
+    /// <summary>
+    /// The labyrinth behind a reef's secret mouth: its own id (beyond any level's and any leak cave's), the reef's look,
+    /// its way out going the way she swam in.
+    /// </summary>
+    static LevelShape PrepareLabyrinth(SeedCode seed, LevelMap reef, int mouth)
+    {
+        var id = new LevelId(reef.Id.Cycle + 600, reef.Id.Depth, reef.Id.Level * 10 + mouth + 1) { Lane = reef.Id.Lane };
+        return LevelShape.Prepare(TopDownGenerator.GenerateLabyrinth(seed, id, reef.LookDepth ?? reef.Id.Depth, reef.Mouths[mouth].Into));
+    }
+
+    static LevelShape PrepareBehind(SeedCode seed, LevelMap reef, int mouth) =>
+        reef.LeakMouth(mouth) ? PrepareCave(seed, reef, mouth) : PrepareLabyrinth(seed, reef, mouth);
+
     /// <summary>A reef's caves, made with it (on the same thread, after it).</summary>
     static void PrepareCaves(SeedCode seed, LevelShape reef)
     {
-        if (reef.Map.LeakCave || reef.Map.Mouths.Count == 0) return;
+        if (reef.Map.LeakCave || reef.Map.Labyrinth || reef.Map.Mouths.Count == 0) return;
         var caves = new List<LevelShape>();
-        for (int i = 0; i < reef.Map.Mouths.Count; i++) caves.Add(PrepareCave(seed, reef.Map, i));
+        for (int i = 0; i < reef.Map.Mouths.Count; i++) caves.Add(PrepareBehind(seed, reef.Map, i));
         reef.Caves = caves;
     }
 
@@ -79,7 +107,7 @@ public partial class TopDownMain
         if (_levelShape is { } reef && mouth < reef.Caves.Count) return Task.FromResult(reef.Caves[mouth]);
         var seed = _seed;
         var map = _map;
-        return Task.Run(() => PrepareCave(seed, map, mouth));
+        return Task.Run(() => PrepareBehind(seed, map, mouth));
     }
 
     /// <summary>
@@ -97,6 +125,24 @@ public partial class TopDownMain
             _dbgCaveRounds--;
             return (true, 0, map => map.Way is { } way ? Through(way) : null, _map.Mouths[0], RideWay.Door);
         }
+        // Verification: into the first secret mouth's labyrinth, its wall opened.
+        if (!InDiveCave && _dbgMazeIn > 0f && _levelTime > _dbgMazeIn && _map.MouthKinds.IndexOf(PoiKind.Secret) is var maze and >= 0)
+        {
+            _dbgMazeIn = 0f;
+            var door = _map.Mouths[maze];
+            foreach (var seal in _world.Seals)
+                if (!seal.Open && seal.Rock.Contains(door.At - door.Into * 0.5f)) _world.DebugOpenSeal(seal);
+            return (true, maze, map => map.Way is { } way ? Through(way) : null, door, RideWay.Door);
+        }
+        // Giving a labyrinth up: straight back out of the mouth she came in by.
+        if (InLabyrinth && (_giveUp || _dbgMazeOut > 0f && _levelTime > _dbgMazeOut))
+        {
+            _giveUp = false;
+            _dbgMazeOut = 0f;
+            int mouth = _diveCave;
+            return (false, mouth, map => mouth < map.Mouths.Count ? Through(map.Mouths[mouth]) : null, null, RideWay.Up);
+        }
+        _giveUp = false;
         if (InDiveCave && _dbgCaveBack > 0f && _levelTime > _dbgCaveBack)
         {
             if (_dbgCaveRounds <= 0) _dbgCaveBack = 0f;
@@ -140,7 +186,8 @@ public partial class TopDownMain
         {
             AddToRun();
             _caveHp = _world.Player.Hp;
-            _caveSealed = !_world.CaveLeakOpen;
+            // (A labyrinth: done with once its reward is taken.)
+            _caveSealed = InLabyrinth ? LabyrinthEmptied : !_world.CaveLeakOpen;
             // Unsealed, it waits as she leaves it (sealed, its mouth closes behind her).
             if (!_caveSealed && Moment(levelOnly: true) is { } cave) _caveStates[_diveCave] = cave;
             else _caveStates.Remove(_diveCave);
@@ -182,7 +229,8 @@ public partial class TopDownMain
     /// <summary>She has come out of the ride: into a cave, word of it; out of one she sealed, its mouth closes behind her.</summary>
     void DiveCaveArrived()
     {
-        if (InDiveCave) Say("A leak cave: its water stings till its leak is sealed · seal it for a pearl and a full heal");
+        if (InLabyrinth) Say($"A secret labyrinth: find its heart · {OctoShoots.Game.Controls.InputSetup.Hint(OctoShoots.Game.Controls.InputSetup.Active)} to give up");
+        else if (InDiveCave) Say("A leak cave: its water stings till its leak is sealed · seal it for a pearl and a full heal");
         else if (_caveMouth >= 0 && _caveSealed)
         {
             _closeBehind = _caveMouth;

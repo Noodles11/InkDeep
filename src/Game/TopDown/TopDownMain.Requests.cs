@@ -231,7 +231,7 @@ public partial class TopDownMain
                             if (!v.Sealed && !v.Hidden) marks.Add((v.Position, RequestRibbons.KindColour(r.Kind)));
                     if (r.Kind is Requests.Den or Requests.Ash)
                         for (int i = 0; i < _map.Mouths.Count; i++)
-                            if (!_world.ShutMouths.Contains(i)) marks.Add((_map.Mouths[i].At, RequestRibbons.KindColour(r.Kind)));
+                            if (!_world.ShutMouths.Contains(i) && _map.LeakMouth(i)) marks.Add((_map.Mouths[i].At, RequestRibbons.KindColour(r.Kind)));
                 }
                 if (_world.ExitOpen) marks.Add((_map.Exit.Position, new Color(1f, 0.82f, 0.4f)));
             }

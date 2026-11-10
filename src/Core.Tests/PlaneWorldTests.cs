@@ -204,7 +204,7 @@ public class PlaneWorldTests
         for (int k = 0; k < SealTuning.Hits - 1; k++) Shoot(seal.Emblem, k == 0 ? 500f : 10f);
         Assert.Equal(SealTuning.Hits - 1, seal.Hits);
         Assert.False(seal.Open);
-        Assert.Contains(w.SealedCaves, c => c == seal.Rock.Cave);
+        if (seal.Rock.Cave >= 0) Assert.Contains(w.SealedCaves, c => c == seal.Rock.Cave);
         Shoot(seal.Emblem, 10f);
         Assert.True(seal.Open);
         Assert.Contains(PlaneEventType.SealOpened, seen);

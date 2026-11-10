@@ -136,7 +136,9 @@ public sealed partial class PlaneWorld
     int _secret = -1;
 
     /// <summary>A secret she has not found yet: the schools can guide her to it.</summary>
-    bool SecretHidden => _secret >= 0 && !(Visited.Length > _secret && Visited[_secret]);
+    bool SecretHidden => _secret >= 0 && !Map.Labyrinth && !(Visited.Length > _secret && Visited[_secret])
+        // (A labyrinth's mouth no longer hidden once its wall is down.)
+        && !Seals.Exists(x => x.Open && x.Kind == SealKind.Secret && !x.Rock.Fake && Vector2.Distance(x.Rock.Center, SecretWay) < 0.1f);
 
     /// <summary>A point's own number in 0..1, the same every time (for which places a zone keeps for its life).</summary>
     static float Hash01(Vector2 p)
@@ -154,11 +156,13 @@ public sealed partial class PlaneWorld
         if (_secret >= 0)
         {
             var poi = Map.Pois[_secret];
-            var plug = Map.WeakRocks.FirstOrDefault(w => w.Cave == poi.Cave && poi.Cave >= 0);
+            // (Its sealed wall: in front of its labyrinth's mouth, else across its pocket's.)
+            var plug = Map.WeakRocks.Where(w => w.Kind == SealKind.Secret && !w.Fake).OrderBy(w => Vector2.Distance(w.Center, poi.Position)).FirstOrDefault();
             SecretWay = plug.Radius > 0f ? plug.Center : poi.Position;
         }
-        // A leak cave is the Leak's own: no fish live in it (its only creatures are murklings, PlaceCaveMurklings).
-        if (Map.LeakCave) return;
+        // A leak cave is the Leak's own: no fish live in it (its only creatures are murklings, PlaceCaveMurklings); a
+        // labyrinth holds nothing.
+        if (Map.LeakCave || Map.Labyrinth) return;
         var rng = new Rng(Map.Seed ^ 0x2EEF15UL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 28) ^ ((ulong)Map.Attempt << 44));
         var n = ReefFishTuning.ForDepth(Map.Depth);
         // The level's template may bring more fish (its fish rule).

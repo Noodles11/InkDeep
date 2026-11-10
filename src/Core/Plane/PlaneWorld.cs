@@ -466,7 +466,8 @@ public sealed partial class PlaneWorld
             Vector2 tangent = new(-n.Y, n.X);
             Vector2 best = Vector2.Zero;
             float bestGain = 1e-5f;
-            foreach (var t in new[] { new Vector2(wish.X, 0f), new Vector2(0f, wish.Y), tangent * Vector2.Dot(wish, tangent) })
+            // (And, on a bump of rock that juts into the way along a wall, that slide eased off the wall, round it.)
+            foreach (var t in new[] { new Vector2(wish.X, 0f), new Vector2(0f, wish.Y), tangent * Vector2.Dot(wish, tangent), tangent * Vector2.Dot(wish, tangent) - n * wish.Length() })
             {
                 float gain = Vector2.Dot(t, wish);
                 if (gain <= bestGain || !Clear(position + t, radius)) continue;

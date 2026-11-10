@@ -260,8 +260,8 @@ public sealed partial class PlaneWorld
     /// <summary>Healthy pufferlings in ones, twos and threes near the reef: by the plazas and the dens, away from the start.</summary>
     void PlaceFish()
     {
-        // None in a leak cave (no fish live there).
-        if (Map.LeakCave) return;
+        // None in a leak cave (no fish live there), nor in a labyrinth.
+        if (Map.LeakCave || Map.Labyrinth) return;
         var rng = new Rng(Map.Seed ^ 0xF15A11UL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 28) ^ ((ulong)Map.Attempt << 44));
         int want = PufferlingTuning.HealthyMin + rng.Int(PufferlingTuning.HealthyMax - PufferlingTuning.HealthyMin + 1);
         // The adventure: about as many as there would be anemones (its Inkwardens are turned pufferfish).

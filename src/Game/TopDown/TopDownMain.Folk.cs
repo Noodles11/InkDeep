@@ -170,7 +170,11 @@ public partial class TopDownMain
     {
         if (_jelly is null) return;
         if (_id.Haven) NoteChain(StepKind.Home);
-        else if (InDiveCave) NoteChain(StepKind.Find, zone: Chains.DepthZone(_id.ShownDepth));
+        // (A labyrinth is no find.)
+        else if (InDiveCave)
+        {
+            if (!InLabyrinth) NoteChain(StepKind.Find, zone: Chains.DepthZone(_id.ShownDepth));
+        }
         else if (!_id.IsTutorial)
         {
             NoteChain(StepKind.Enter, zone: Chains.DepthZone(_id.ShownDepth));
@@ -190,7 +194,7 @@ public partial class TopDownMain
         string depth = Chains.DepthZone(_id.ShownDepth);
         if (!Chains.Active(jelly).Any(a => a.Step.Kind == StepKind.Find && a.Step.Zone == depth)) yield break;
         for (int i = 0; i < _map.Mouths.Count; i++)
-            if (!_world.ShutMouths.Contains(i)) yield return (_map.Mouths[i].At, ChainGold);
+            if (!_world.ShutMouths.Contains(i) && _map.LeakMouth(i)) yield return (_map.Mouths[i].At, ChainGold);
     }
 
     /// <summary>A service done: saved, said, and the drawer afresh.</summary>
