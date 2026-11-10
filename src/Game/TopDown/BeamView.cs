@@ -7,10 +7,12 @@ namespace OctoShoots.Game.TopDown;
 
 /// <summary>
 /// Her beams (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.2, §5.1; PlaneWorld.HerBeams): each a fan of her light over her plane
-/// (her_beam.gdshader), easing in and out rather than snapping. A fan is a rave laser's: lines of light out from her bell,
-/// about one a degree, each cast on its own (PlaneWorld.LineReach) and stopped by what it meets, rock or a creature's
-/// body; so the beam's end follows the edge of what it falls on, glowing there, and what is not in a line's way lets it
-/// on past. (The mesh is laid out afresh each frame from the lines' ends.) Her own beam also has a
+/// easing in and out rather than snapping. Lines of her light out from her bell, about one a degree, are each cast on their
+/// own (PlaneWorld.LineReach) and stopped by what they meet, rock or a creature's body; they are not drawn, but shape it.
+/// It is a flashlight's beam (her_beam_volume.gdshader): a round cone, up and down from her plane as well as either side,
+/// each way out to where its line is stopped; a faint haze with plankton motes drifting in it, its far end a disc of
+/// light as bright where it lands on something as anywhere. At her plane a thin glow traces the edge of what stops it
+/// (her_beam.gdshader). (Both meshes are laid out afresh each frame from the lines' ends.) Her own beam also has a
 /// spotlight from her bell tilted down along it, lighting the reef it falls on (its shadows keep it off what lies behind
 /// the walls). A split beam's other rays (docs/BEAM-PEARLS-PLAN.md) are fans of their own; Rear Fin's and Lighthouse's
 /// are fainter fans. The corrupted show where any of them falls (her_beam_lit: the whole of her beam's fan, every ray of
@@ -27,6 +29,14 @@ public partial class BeamView : Node3D
         public MeshInstance3D Node = null!;
         public ShaderMaterial Material = null!;
         public ImmediateMesh Mesh = null!;
+        /// <summary>The flashlight's cone (round, up and down from her plane), its material and mesh.</summary>
+        public MeshInstance3D Volume = null!;
+        public ShaderMaterial VolumeMaterial = null!;
+        public ImmediateMesh VolumeMesh = null!;
+        /// <summary>Its lines this frame: each one's reach (a share of the fan's), and whether something stopped it.</summary>
+        public float[] Reach = new float[MostLines + 1];
+        public bool[] Stopped = new bool[MostLines + 1];
+        public int Lines;
         public float On;
         public StringName Lit = null!, Dir = null!;
     }
@@ -36,7 +46,11 @@ public partial class BeamView : Node3D
     const int LeastLines = 6, MostLines = 72;
 
     readonly List<Fan> _fans = new();
-    Shader _shader = null!;
+    Shader _shader = null!, _volumeShader = null!;
+    /// <summary>The cone's rings round its axis and along it.</summary>
+    const int Around = 28, Along = 14;
+    /// <summary>How far up and down from her plane the cone reaches, as a share of how far it reaches either side.</summary>
+    const float VerticalShare = 0.5f;
     SpotLight3D _spot = null!;
     MeshInstance3D _arcs = null!;
     ImmediateMesh _arcMesh = null!;
@@ -47,6 +61,7 @@ public partial class BeamView : Node3D
     public override void _Ready()
     {
         _shader = GD.Load<Shader>("res://assets/shaders/her_beam.gdshader");
+        _volumeShader = GD.Load<Shader>("res://assets/shaders/her_beam_volume.gdshader");
         _spot = new SpotLight3D
         {
             SpotAngle = LightTuning.BeamHalfAngleDeg, SpotAngleAttenuation = 0.6f, SpotAttenuation = 1.1f, LightSpecular = 0.5f,
@@ -90,6 +105,8 @@ public partial class BeamView : Node3D
             float len = world.LineReach(beam.Position, way, range, out bool hit);
             longest = Mathf.Max(longest, len);
             float f = len / range;
+            fan.Reach[k] = f;
+            fan.Stopped[k] = hit;
             var end = new Vector3(Mathf.Cos(a) * f, 0f, Mathf.Sin(a) * f);
             float h = hit ? 1f : 0f;
             if (k > 0)
@@ -105,7 +122,68 @@ public partial class BeamView : Node3D
             prevHit = h;
         }
         mesh.SurfaceEnd();
+        fan.Lines = n;
+        LayVolume(fan, half);
         return longest;
+    }
+
+    /// <summary>A line's reach (a share of the fan's) at an angle off its axis, between the two cast either side of it.</summary>
+    static float ReachAt(Fan fan, float half, float a, out bool stopped)
+    {
+        float x = Mathf.Clamp((a + half) / Mathf.Max(2f * half, 1e-4f), 0f, 1f) * fan.Lines;
+        int k = Mathf.Min((int)x, fan.Lines - 1);
+        float t = x - k;
+        stopped = t < 0.5f ? fan.Stopped[k] : fan.Stopped[k + 1];
+        // (The shorter of the two at an edge, so the light never runs on past the edge of what stopped it.)
+        return fan.Stopped[k] != fan.Stopped[k + 1] ? Mathf.Min(fan.Reach[k], fan.Reach[k + 1]) : Mathf.Lerp(fan.Reach[k], fan.Reach[k + 1], t);
+    }
+
+    /// <summary>
+    /// The flashlight's cone, in the fan's own frame (along +X, one unit its full reach, Y up): a round cone of its
+    /// half-angle, each way round its axis out to as far as the line of light at that side gets (a light going up or
+    /// down meets what the line at its side meets), open at its far end, which glows where it was stopped.
+    /// </summary>
+    void LayVolume(Fan fan, float half)
+    {
+        var mesh = fan.VolumeMesh;
+        mesh.ClearSurfaces();
+        mesh.SurfaceBegin(Mesh.PrimitiveType.Triangles);
+        float tan = Mathf.Tan(half);
+        var endHit = new float[Around + 1];
+        var reach = new float[Around + 1];
+        for (int m = 0; m <= Around; m++)
+        {
+            float phi = m * Mathf.Tau / Around;
+            // The side its way leans to, as an angle off the axis across her plane.
+            float a = Mathf.Atan(tan * Mathf.Cos(phi));
+            float r = ReachAt(fan, half, a, out bool stopped);
+            reach[m] = r * Mathf.Cos(a);
+            endHit[m] = stopped ? 1f : 0f;
+        }
+        // (Rounder across her plane than up and down: VerticalShare of its width each way up and down.)
+        Vector3 Point(float s, float phi, float t) => new(s, s * t * Mathf.Sin(phi) * VerticalShare, s * t * Mathf.Cos(phi));
+        Vector3 Normal(float phi) => new Vector3(-tan, Mathf.Sin(phi) / VerticalShare, Mathf.Cos(phi)).Normalized();
+        // Its sides: each way round out to its own end, in rings. UV.y: how far along its own way (1 at its end);
+        // COLOR.g: 1 where that way was stopped (its end glows there, however far it is).
+        for (int m = 0; m < Around; m++)
+        {
+            float p0 = m * Mathf.Tau / Around, p1 = (m + 1) * Mathf.Tau / Around;
+            for (int j = 0; j < Along; j++)
+            {
+                float u0 = j / (float)Along, u1 = (j + 1) / (float)Along;
+                void V(float u, int at, float phi)
+                {
+                    var v = Point(reach[at] * u, phi, tan);
+                    mesh.SurfaceSetColor(new Color(0f, endHit[at], 0f, 1f));
+                    mesh.SurfaceSetUV(new Vector2(v.X, u));
+                    mesh.SurfaceSetNormal(Normal(phi));
+                    mesh.SurfaceAddVertex(v);
+                }
+                V(u0, m, p0); V(u1, m, p0); V(u1, m + 1, p1);
+                V(u0, m, p0); V(u1, m + 1, p1); V(u0, m + 1, p1);
+            }
+        }
+        mesh.SurfaceEnd();
     }
 
     /// <summary>A fan for the next of her beams' rays, made as it is first needed.</summary>
@@ -118,7 +196,11 @@ public partial class BeamView : Node3D
             // (Its lines reach out round her: never culled while she is on screen.)
             var node = new MeshInstance3D { Mesh = mesh, MaterialOverride = material, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = false, ExtraCullMargin = 40f };
             AddChild(node);
-            _fans.Add(new Fan { Node = node, Material = material, Mesh = mesh });
+            var volumeMaterial = new ShaderMaterial { Shader = _volumeShader };
+            var volumeMesh = new ImmediateMesh();
+            var volume = new MeshInstance3D { Mesh = volumeMesh, MaterialOverride = volumeMaterial, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = false, ExtraCullMargin = 40f };
+            AddChild(volume);
+            _fans.Add(new Fan { Node = node, Material = material, Mesh = mesh, Volume = volume, VolumeMaterial = volumeMaterial, VolumeMesh = volumeMesh });
         }
         return _fans[i];
     }
@@ -147,7 +229,7 @@ public partial class BeamView : Node3D
             i++;
             bool on = beam.Shining;
             fan.On = Mathf.MoveToward(fan.On, on ? 1f : 0f, dt * (on ? 10f : 5f));
-            fan.Node.Visible = fan.On > 0.001f;
+            fan.Node.Visible = fan.Volume.Visible = fan.On > 0.001f;
             if (main) _spot.Visible = fan.Node.Visible;
             if (!fan.Node.Visible)
             {
@@ -161,7 +243,9 @@ public partial class BeamView : Node3D
             float longest = LayFan(world, fan, beam);
             float stop = Mathf.Clamp(longest / Mathf.Max(range, 0.1f), 0.02f, 1f);
             var origin = new Vector3(beam.Position.X, LevelMap.SwimBand + 0.3f, beam.Position.Y);
-            fan.Node.GlobalTransform = new Transform3D(new Basis(Vector3.Up, Mathf.Atan2(-dir.Z, dir.X)).Scaled(new Vector3(range, 1f, range)), origin);
+            fan.Node.GlobalTransform = fan.Volume.GlobalTransform = new Transform3D(new Basis(Vector3.Up, Mathf.Atan2(-dir.Z, dir.X)).Scaled(new Vector3(range, range, range)), origin);
+            fan.VolumeMaterial.SetShaderParameter("tint", TopDownMain.ShowcaseOn ? color.Lerp(new Color(0.9f, 0.96f, 1f), 0.65f) : color);
+            fan.VolumeMaterial.SetShaderParameter("strength", fan.On * dim * beam.Intensity / LightTuning.BeamIntensity);
             fan.Material.SetShaderParameter("tint", TopDownMain.ShowcaseOn ? color.Lerp(new Color(0.9f, 0.96f, 1f), 0.65f) : color);
             fan.Material.SetShaderParameter("strength", FanStrength * fan.On * dim * beam.Intensity / LightTuning.BeamIntensity);
             fan.Material.SetShaderParameter("half_angle", beam.HalfAngle);
@@ -189,7 +273,7 @@ public partial class BeamView : Node3D
             RenderingServer.GlobalShaderParameterSet(BeamAt, world.BeamBurns
                 ? new Vector4(origin.X, origin.Y + 0.05f, origin.Z, range * stop) : new Vector4(0f, -1000f, 0f, 0f));
         }
-        for (int k = i; k < _fans.Count; k++) _fans[k].Node.Visible = false;
+        for (int k = i; k < _fans.Count; k++) _fans[k].Node.Visible = _fans[k].Volume.Visible = false;
         // What her beam shows (her_reveal), the whole of its fan: along her aim, as wide as its rays spread.
         var her = new Vector3(world.Beam.Position.X, LevelMap.SwimBand + 0.3f, world.Beam.Position.Y);
         var aim = new Vector3(world.BeamAim.X, 0f, world.BeamAim.Y);

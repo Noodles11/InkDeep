@@ -39,11 +39,14 @@ between).
 - **Coral gardens** (`LevelView.Gardens`): sea rods, tube sponges, staghorn, sea fans, elkhorn and brain corals packed
   in drifting patches on the walls' tops and ledges, and in a band along their feet at the edge of the open floor.
 
-- **Her beam as light in the water** (`her_beam.gdshader`, `BeamView`): a rave laser's fan. Lines of her light, about
-  one a degree, are each cast from her bell on their own (`PlaneWorld.LineReach`) and stopped by what they meet, rock
-  or a creature's body. So the beam's end follows the edge of whatever it falls on, a thin glow 0.3 m deep tracing it,
-  and the lines nothing stops go on past. Thin bright lines, each flickering on its own beat, run through a soft
-  haze, and the water's plankton glints where it crosses them.
+- **Her beam as a flashlight's** (`BeamView`, `her_beam_volume.gdshader`, `her_beam.gdshader`): lines of her light,
+  about one a degree, are each cast from her bell on their own (`PlaneWorld.LineReach`) and stopped by what they meet,
+  rock or a creature's body. They are not drawn; they shape the beam. It is a round cone, reaching up and down from her
+  plane (half as far as either side) as well as across it, each way out to where its line is stopped, so what is not in
+  a line's way lets the light on past. Its haze is faint, brightest down its middle and soft at its sides, fading along
+  it, with tiny motes of plankton drifting and twinkling in it. Where it lands on what stopped it the light stays as
+  bright however far it came: its far end glows there, and at her plane a thin glow 0.2 m deep traces the edge of what
+  it touches. (Her beam's spotlight lights the reef it falls on.)
 
 ## Still to do
 
