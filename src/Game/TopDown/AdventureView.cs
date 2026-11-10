@@ -29,6 +29,8 @@ public partial class AdventureView : Node3D
     {
         /// <summary>How much of it is seen in light now (eased): its glow and the water it bends go with it.</summary>
         public float Seen;
+        /// <summary>How much light on its disc shows the whole of it (eased).</summary>
+        public float Core;
         public MeshInstance3D Arms = null!, Disc = null!;
         public ImmediateMesh Mesh = null!;
         public OmniLight3D Light = null!;
@@ -292,8 +294,17 @@ public partial class AdventureView : Node3D
             node.Arms.SetInstanceShaderParameter(SN.Of("crystal_seen"), crystal);
             node.Disc.SetInstanceShaderParameter(SN.Of("crystal_seen"), crystal);
             float seen = Mathf.Max(crystal, world.Aura.Shining ? 1f - Mathf.SmoothStep(world.Aura.Range * 0.8f, world.Aura.Range + 1.5f, d) : 0f);
+            bool beamed = false;
             foreach (var (beam, _) in world.HerBeams)
-                if (world.BeamLight(beam, v.Position, 0f, AdventureTuning.LeakDisc * 2f, v) > 0f) seen = 1f;
+                if (world.BeamLight(beam, v.Position, 0f, AdventureTuning.LeakArmLength(world.Menace), v) > 0f) beamed = true;
+            // Light on its disc shows all of it.
+            bool core = world.CoreLit(v, v.Position);
+            node.Core = Mathf.MoveToward(node.Core, core ? 1f : 0f, dt * (core ? 6f : 3f));
+            if (core) seen = 1f;
+            node.Arms.SetInstanceShaderParameter(SN.Of("beam_seen"), beamed ? 1f : 0f);
+            node.Disc.SetInstanceShaderParameter(SN.Of("beam_seen"), beamed ? 1f : 0f);
+            node.Arms.SetInstanceShaderParameter(SN.Of("core_seen"), node.Core);
+            node.Disc.SetInstanceShaderParameter(SN.Of("core_seen"), node.Core);
             node.Seen = Mathf.MoveToward(node.Seen, seen, dt * 3f);
             DrawArms(node, v, time);
             node.Arms.SetInstanceShaderParameter(SN.Of("state"), new Vector4(shimmer, node.Sealing, shut, v.Drunk ? 1f : 0f));

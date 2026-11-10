@@ -464,6 +464,57 @@ public sealed partial class PlaneWorld
         return from + b.Direction * len;
     }
 
+    /// <summary>
+    /// How far one line of her light gets from a point along a way before something stops it (its full reach if nothing):
+    /// rock, a sealed wall or a pot (found to a few centimetres), or a creature's body across it (unless her light
+    /// pierces). Her beam is drawn as a fan of such lines, so its end follows the edge of whatever it falls on, and what
+    /// is not in the way of a line lets it on past (BeamView). <paramref name="hit"/>: something stopped it.
+    /// </summary>
+    public float LineReach(Vector2 from, Vector2 dir, float range, out bool hit)
+    {
+        hit = false;
+        float len = range;
+        // Rock, coarse then narrowed down.
+        const float step = 0.35f;
+        float open = 0f;
+        for (float t = step; t < range; t += step)
+        {
+            if (Stops(from + dir * t))
+            {
+                float lo = open, hi = t;
+                for (int k = 0; k < 5; k++)
+                {
+                    float mid = (lo + hi) * 0.5f;
+                    if (Stops(from + dir * mid)) hi = mid;
+                    else lo = mid;
+                }
+                len = lo;
+                hit = true;
+                break;
+            }
+            open = t;
+        }
+        // The nearest body across it, where the line meets its rim.
+        foreach (var (_, p, r) in _bodies)
+        {
+            float rr = r * 0.85f;
+            var to = p - from;
+            float along = Vector2.Dot(to, dir);
+            if (along <= 0f) continue;
+            float across2 = to.LengthSquared() - along * along;
+            if (across2 >= rr * rr) continue;
+            float meet = along - MathF.Sqrt(rr * rr - across2);
+            if (meet > 0.3f && meet < len)
+            {
+                len = meet;
+                hit = true;
+            }
+        }
+        return len;
+    }
+
+    bool Stops(Vector2 q) => !Map.IsOpen(q) || _rocks.Exists(r => r.Contains(q)) || VaseAt(q, 0.05f) is not null;
+
     /// <summary>Her beam's other ray at this index, made (registered with her as its owner, dark) when first needed.</summary>
     LightEmitter Ray(int index)
     {

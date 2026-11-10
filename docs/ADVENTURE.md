@@ -21,7 +21,8 @@ All numbers are first guesses (`AdventureTuning`).
   a leak cave holds its one leak at its dead end.
 - **Seen only in light,** as a murkling is: within her glow, where her beam falls on it, or in a lit crystal's light;
   elsewhere nothing of it is drawn (its edge breaking up in the water), and its own glow and the water it bends show
-  only as much as it is seen (`leak_unseen` in its shaders). In the dark it must be found.
+  only as much as it is seen (`leak_unseen` in its shaders). Light on its disc shows all of it (`core_seen`), and
+  her beam shows it only where the beam gets to it (none past rock). In the dark it must be found.
 - **Its body:** a dark disc about 1.1 m across where the ink comes through, five soft lobes toward its arms, hot air over
   it in the post pass. Five arms reach out from it, a fifth of a turn apart, each 3 m + 4.2 m × Menace long (no
   longer than at Menace 1), tapering from 0.34 m wide at the disc to 0.1 m at the tip. They are black ink in little

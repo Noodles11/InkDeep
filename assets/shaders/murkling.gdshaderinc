@@ -34,6 +34,8 @@ uniform float hidden = 0.0;
 uniform float beam_seen = 1.0;
 // How much a lit crystal's light shows it (PlaneWorld.CrystalSees): 0 none, 1 fully.
 uniform float crystal_seen = 0.0;
+// Light on its core (PlaneWorld.CoreLit, eased): lit there, the whole of it shows, not only what the light touches.
+uniform float core_seen = 0.0;
 /// The adventure's murklings: short blowfish spikes all over (a spiked one, from a blue tang); a short wiggling tadpole
 /// tail out behind it along swim (a tadpole one, from a clownfish).
 instance uniform float spikes = 0.0;
@@ -160,7 +162,7 @@ void fragment() {
 	if (hidden > 0.5) {
 		vec3 hw = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
 		// (Her beams show it only where one reaches it, beam_seen: a body in the way shades it.)
-		float seen = max(max(her_reveal_aura(hw), beam_seen * her_reveal_beams(hw)), crystal_seen);
+		float seen = max(max(max(her_reveal_aura(hw), beam_seen * her_reveal_beams(hw)), crystal_seen), core_seen);
 		if (seen < 0.15 + 0.7 * noise2(hw.xz * 4.0 + vec2(TIME * 0.4, seed))) discard;
 	}
 #ifdef OVER

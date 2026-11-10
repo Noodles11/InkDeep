@@ -29,6 +29,8 @@ public partial class BlightView
         public System.Numerics.Vector2 LastVelocity;
         public bool Seen, WasWinding;
         public float LastThrowAge = 10f;
+        /// <summary>How much light on its core shows the whole of it (eased).</summary>
+        public float Core;
         /// <summary>A second material drawing it over her (a Blightroot's head: murkling_over), kept in step with Material.</summary>
         public ShaderMaterial? Over;
         public MurkBody(ShaderMaterial material) { Material = material; }

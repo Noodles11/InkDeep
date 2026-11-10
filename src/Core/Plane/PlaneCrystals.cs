@@ -111,6 +111,18 @@ public sealed partial class PlaneWorld
         return seen;
     }
 
+    /// <summary>
+    /// Whether light falls on a hidden creature's core (its middle), so the whole of it shows: within her glow's reach of
+    /// her, under a beam of hers that gets to it (no body in the way), or in a lit crystal's light.
+    /// </summary>
+    public bool CoreLit(object kin, Vector2 at)
+    {
+        if (Aura.Shining && Vector2.Distance(at, Aura.Position) < Aura.Range && LineOfSight(Aura.Position, at)) return true;
+        foreach (var (beam, _) in HerBeams)
+            if (BeamLight(beam, at, 0f, 0.2f, kin) > 0f) return true;
+        return CrystalSees(at, 0f) > 0.5f;
+    }
+
     /// <summary>Her beams charge the crystals they reach (the more light, the faster); a charged one glows on, then fades out.</summary>
     void StepCrystals()
     {

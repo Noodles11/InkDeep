@@ -149,6 +149,10 @@ public partial class BlightView : Node3D
             body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("beam_seen"), world.BeamSees(m, m.Position, m.Radius) ? 1f : 0f);
             // A lit crystal's light shows it too, as much as it glows.
             body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("crystal_seen"), world.CrystalSees(m.Position, m.Radius));
+            // Light on its core shows all of it (eased in quickly, out a little slower).
+            bool core = world.CoreLit(m, m.Position);
+            body.Core = Mathf.MoveToward(body.Core, core ? 1f : 0f, dt * (core ? 6f : 3f));
+            body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("core_seen"), body.Core);
             StepBody(m, body, dt);
             float y = LevelMap.SwimBand + 0.08f * Mathf.Sin(_time * 2.3f + m.Seed);
             float scale = m.Radius;
