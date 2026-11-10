@@ -117,7 +117,9 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     /// <summary>Her beam lights one of Ottilie's lamp-shells (at it).</summary>
     LampLit,
     /// <summary>She puts her glow out (Size 0) or lights it again (Size 1).</summary>
-    GlowToggled }
+    GlowToggled,
+    /// <summary>Her beam lights a dark crystal (at its face, Direction the way out of the wall).</summary>
+    CrystalLit }
 
 /// <summary>What hurt Clementine (the killing blow names what ended a run; saved by number, so Gloomvine stays though nothing deals it now).</summary>
 public enum DamageSource { None, PufferNeedle, PufferSpines, BossPearl, RoyalPearl, BossSnap, BossContact, Murkling, MurkShot, Gloomvine, Blightroot, Blotter, Thumpsquirt, Lashjaw, Curse, Hearthguard, Leak, LeakWater }
@@ -171,6 +173,7 @@ public sealed partial class PlaneWorld
         PlaceBoss();
         if (Options.Vases) PlaceVases();
         PlaceSprings();
+        PlaceCrystals();
         PlaceSeals();
         if (Options.Corruption || adventure) PlaceCorruption();
         if (adventure) PlaceAdventure();
@@ -315,6 +318,7 @@ public sealed partial class PlaneWorld
         }
         SyncLights(input);
         StepHerLight();
+        StepCrystals();
         StepAsh();
         StepCorruption();
         if (Options.Adventure) StepAdventure();

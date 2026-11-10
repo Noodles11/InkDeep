@@ -45,6 +45,10 @@ public partial class TopDownMain : Node3D
     float _dbgSealAt;
     /// <summary>The rims of the reef's holes, each in the colour of where it leads.</summary>
     HoleView _holes = null!;
+    /// <summary>The light crystals in the walls.</summary>
+    CrystalView _crystals = null!;
+    /// <summary>Verification (--dbg-crystals): every crystal charged full as she arrives.</summary>
+    bool _dbgCrystals;
     CurrentView _currents = null!;
     CrabView _crab = null!;
     float _holeShown;
@@ -358,6 +362,8 @@ public partial class TopDownMain : Node3D
         AddChild(_beam);
         _cores = new CoreView();
         AddChild(_cores);
+        _crystals = new CrystalView();
+        AddChild(_crystals);
         _motes = new LightMotes();
         AddChild(_motes);
         _holes = new HoleView();
@@ -525,6 +531,7 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--xp=") && int.TryParse(Value("--xp="), out int xp)) _startXp = xp;
             else if (arg == "--showcase") _dbgShowcase = true;
             else if (arg == "--dbg-glowoff") _dbgGlowOff = true;
+            else if (arg == "--dbg-crystals") _dbgCrystals = true;
             else if (arg.StartsWith("--dbg-sealat=") && float.TryParse(Value("--dbg-sealat="), NumberStyles.Float, CultureInfo.InvariantCulture, out float sealAt)) _dbgSealAt = sealAt;
             else if (arg == "--showcase=0")
             {
@@ -1507,6 +1514,8 @@ public partial class TopDownMain : Node3D
             if (forced == CurseReward.Pearl) _world.Pearls.Add(new PlanePearl { ItemId = PlaneRun.PortedPearls[0], Position = den.End, Placed = true });
         }
         EnterShowcase();
+        if (_dbgCrystals)
+            foreach (var crystal in _world.Crystals) crystal.Charge = CrystalTuning.MaxGlow;
         _achievements.EnterLevel();
         // A pearl unlocked by an achievement, offered here for the first time, wears a NEW chip.
         var fresh = new HashSet<string>();
@@ -1942,6 +1951,8 @@ public partial class TopDownMain : Node3D
             "cave" => _map.Caves.Select(c => (System.Numerics.Vector2?)(c.Mouth + c.Facing * 5f)).FirstOrDefault(),
             "exit" => _map.Exit.Position + new System.Numerics.Vector2(0f, _map.Exit.Radius + 3f),
             "hole" => _map.Exit.Position,
+            // Before the light crystal nearest her start, a few metres out from its wall.
+            "crystal" => _world.Crystals.OrderBy(c => System.Numerics.Vector2.Distance(c.Position, _map.Start.Position)).Select(c => (System.Numerics.Vector2?)(c.Position + c.Out * 3f)).FirstOrDefault(),
             // Over a reef's holes left to right (hole0 the leftmost), or a few metres south of one (rim0…).
             _ when where is { } w0 && w0.StartsWith("hole") && int.TryParse(w0[4..], out int k) && k >= 0 && k < _map.Holes.Count => _map.Holes[k].Shaft.Center,
             _ when where is { } w1 && w1.StartsWith("rim") && int.TryParse(w1[3..], out int r) && r >= 0 && r < _map.Holes.Count => _map.Holes[r].Shaft.Center + new System.Numerics.Vector2(0f, 7f),
@@ -2668,6 +2679,7 @@ public partial class TopDownMain : Node3D
         Guard("cores", () => _cores.Sync(_world));
         Guard("lamps", () => _lamps.Sync(_world, dt));
         Guard("holes", () => _holes.Sync(_world, dt));
+        Guard("crystals", () => _crystals.Sync(_world, dt));
         Guard("showcase", () => StepShowcase(dt));
         // Her glow out: her bell all but dark (her light going out at the end has its own).
         if (!_dying) _bell.Lit = Mathf.MoveToward(_bell.Lit, _world.GlowOff ? GlowOffLit : 1f, dt * 5f);

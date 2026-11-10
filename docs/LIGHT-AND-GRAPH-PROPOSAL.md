@@ -92,6 +92,19 @@ her Ink Cloud (`Unseen`), and a murkling beside her never finds her. But she see
 murklings show only in her light), and her inner light seals no leak while it is out. Her beam gives her away the
 moment it shines.
 
+### 2.5 Light crystals
+
+Small shards of coloured crystal are set in the reef's walls at her plane (`PlaneCrystals.cs`, `CrystalTuning`; drawn
+by `CrystalView`): about sixteen a reef, 9 m apart at least, each in its own colour (cyan, magenta, amber, lime,
+violet, ice blue). Dark, a faint glint shows where one is.
+
+- **Her beam charges one**, the faster the more of its light reaches it (`PlaneWorld.BeamLight`): a second of beam at
+  one shot's light gives 5 s of glow, up to 14 s.
+- **Charged, it glows on its own**: full while it holds more than 5 s of glow, then dimming over those last 5 s, and
+  out. Its light is round it, as hers is, fainter even at full (half her aura's), and reaches about 4.5 m over the reef.
+- **It harms nothing**, but it is a light like any: a murkling may go to it instead of her (her glow out, or the
+  crystal brighter where it is) and drink it down. A lure, and a lamp for the reef.
+
 ## 3. Murklings
 
 ### 3.1 The basic murkling
