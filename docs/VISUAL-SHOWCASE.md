@@ -1,4 +1,4 @@
-﻿# The game's look: the Blue Hollow
+# The game's look: the Blue Hollow
 
 First built as one showcase reef (Depth 3, "The Blue Hollow"), it is now the game's look. Every depth is painted in it
 (`ReefLook.For`: the Blue Hollow itself at Depth 3, lighter, clearer and sunnier toward the top (`ShowcaseUp`), darker
@@ -33,8 +33,11 @@ between).
 - **Coral gardens** (`LevelView.Gardens`): sea rods, tube sponges, staghorn, sea fans, elkhorn and brain corals packed
   in drifting patches on the walls' tops and ledges, and in a band along their feet at the edge of the open floor.
 
+- **Her beam as light in the water** (`her_beam.gdshader`): shafts fanning out along it, slowly drifting, and the
+  water's plankton glinting where it crosses them.
+
 ## Still to do
 
-- Her beam as light in the water: shafts with motes lit in them, its edge cut by the rock.
-- The wave seen in play and tuned; fish scattering from her beam; the murklings forming out of the dark.
+- Fish scattering from her beam.
+- Verification: `--dbg-sealat=seconds` seals the leak nearest her then, its wave with it.
 - The god rays and the light pools on the sand tuned against the night-reef reference.
