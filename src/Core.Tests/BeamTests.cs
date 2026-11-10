@@ -107,7 +107,8 @@ public class BeamTests
         var dark = Murkling(w, darkAt);
         float full = lit.Corruption.Value;
         for (int i = 0; i < PlaneWorld.TickRate; i++) Step(w, way, true, (lit, litAt), (dark, darkAt));
-        Assert.Equal(full - HerLightTuning.BeamShots * HerLightTuning.Burn, lit.Corruption.Value, 1);
+        // (As much as its light reaches it: PlaneWorld.BeamLight.)
+        Assert.Equal(full - HerLightTuning.BeamShots * HerLightTuning.Burn * w.BeamLight(w.Beam, litAt, 0f, lit.Radius, lit), lit.Corruption.Value, 1);
         Assert.True(w.InHerLight(lit));
         Assert.True(w.BeamBurns);
         Assert.Equal(full, dark.Corruption.Value);
@@ -117,6 +118,83 @@ public class BeamTests
         for (int i = 0; i < 10; i++) Step(w, way, false, (lit, litAt), (dark, darkAt));
         Assert.Equal(now, lit.Corruption.Value, 3);
         Assert.False(w.BeamBurns);
+    }
+
+    [Fact]
+    public void The_beam_burns_harder_the_nearer_her_it_reaches()
+    {
+        float Burned(float distance)
+        {
+            var w = Bare();
+            if (Line(w, 13f) is not { } way) return float.NaN;
+            var at = w.Map.Start.Position + way * distance;
+            var m = new Murkling { Position = at, Bud = 0f, ThrowTimer = 100f, Kind = MurkKind.Thrower };
+            m.Corruption.Max = m.Corruption.Value = 10000f;
+            w.Murklings.Add(m);
+            for (int i = 0; i < PlaneWorld.TickRate; i++) Step(w, way, true, (m, at));
+            return 10000f - m.Corruption.Value;
+        }
+        float near = Burned(2.5f), far = Burned(12f);
+        if (float.IsNaN(near)) return;
+        
+        Assert.True(far > 0f);
+        Assert.True(near > far * 2.5f, $"near {near}, far {far}");
+    }
+
+    [Fact]
+    public void A_body_in_the_way_stops_the_beam_as_rock_does_unless_her_light_pierces()
+    {
+        foreach (bool pierce in new[] { false, true })
+        {
+            var map = TestLevels.Get(TestLevels.Find(p => p.Id.Depth == 2 && !p.HasBoss));
+            var run = new PlaneRun(Catalog.Value, new Tuning());
+            if (pierce) run.Add("swordfish_bill");
+            var w = new PlaneWorld(map, new Tuning(), run, new PlaneOptions { Adventure = true });
+            w.ReefFish.Clear();
+            w.Flounders.Clear();
+            foreach (var v in w.Leaks) v.Sealed = true;
+            if (Line(w, 9f) is not { } way) return;
+            var her = w.Map.Start.Position;
+            Vector2 frontAt = her + way * 4f, backAt = her + way * 8f;
+            Murkling Pinned(Vector2 at)
+            {
+                var m = new Murkling { Position = at, Bud = 0f, ThrowTimer = 100f, Kind = MurkKind.Thrower };
+                m.Corruption.Max = m.Corruption.Value = 10000f;
+                w.Murklings.Add(m);
+                return m;
+            }
+            var front = Pinned(frontAt);
+            var back = Pinned(backAt);
+            for (int i = 0; i < PlaneWorld.TickRate / 2; i++) Step(w, way, true, (front, frontAt), (back, backAt));
+            Assert.True(front.Corruption.Value < 10000f);
+            if (pierce) Assert.True(back.Corruption.Value < 10000f, "her light pierces");
+            else Assert.Equal(10000f, back.Corruption.Value);
+        }
+    }
+
+    [Fact]
+    public void The_beam_seals_a_leak_from_beyond_her_inner_lights_reach()
+    {
+        var w = Bare();
+        w.Inkwardens.Clear();
+        // A leak, and a spot 9 m off it in open water with a clear line to it: past her inner light's reach.
+        Vector2 her = default;
+        var v = w.Leaks.FirstOrDefault(l => Enumerable.Range(0, 24).Select(i => l.Position + new Vector2(MathF.Cos(i * 0.26f), MathF.Sin(i * 0.26f)) * 9f)
+            .FirstOrDefault(q => w.Clear(q, 0.8f) && w.LineOfSight(q, l.Position)) is var q && q != default && (her = q) == q);
+        Assert.NotNull(v);
+        v!.Sealed = false;
+        var way = Vector2.Normalize(v.Position - her);
+        void Shine()
+        {
+            w.Player.Position = w.Player.PrevPosition = her;
+            w.Player.Velocity = Vector2.Zero;
+            w.Player.Hp = 100f;
+            w.Step(new PlaneInput { Aim = way, Beam = true });
+        }
+        for (int i = 0; i < PlaneWorld.TickRate; i++) Shine();
+        Assert.True(v.Light > 0f);
+        for (int i = 0; i < 60 * PlaneWorld.TickRate && !v.Sealed; i++) Shine();
+        Assert.True(v.Sealed);
     }
 
     [Fact]

@@ -96,6 +96,7 @@ public sealed partial class PlaneWorld
         _burners.Clear();
         _lights.Clear();
         BeamBurns = false;
+        GatherBodies();
         StepBeam();
         StepArcs();
         if (!LightBurns)
@@ -110,7 +111,7 @@ public sealed partial class PlaneWorld
         {
             var m = Murklings[i];
             if (!m.Alive || m.Budding || m.Clinging) continue;
-            int n = Touch(m, m.Position, 0f, m.Radius);
+            float n = Touch(m, m.Position, 0f, m.Radius);
             if (n == 0 || Guarded(m.Position) || !m.Corruption.Sear(burn * n)) continue;
             Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, m.Position, Vector2.Zero, burn));
             BurstMurkling(m, ember: true);
@@ -119,7 +120,7 @@ public sealed partial class PlaneWorld
         {
             var w = Inkwardens[i];
             if (!w.Alive) continue;
-            int n = Touch(w, w.Position, 0f, WardenTuning.Radius);
+            float n = Touch(w, w.Position, 0f, WardenTuning.Radius);
             if (n == 0 || !w.Corruption.Sear(burn * n)) continue;
             Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, w.Position, Vector2.Zero, burn));
             FreeWarden(w);
@@ -128,7 +129,7 @@ public sealed partial class PlaneWorld
         {
             // A Hearthguard lies on its bed under her plane: a shot's light finds it as it passes over it.
             if (!f.Corrupted || f.Freed) continue;
-            int n = Touch(f, f.Position, FlounderTuning.Bed(Map, f.Home) - LevelMap.SwimBand, FlounderTuning.Radius);
+            float n = Touch(f, f.Position, FlounderTuning.Bed(Map, f.Home) - LevelMap.SwimBand, FlounderTuning.Radius);
             if (n == 0 || Guarded(f.Position) || !f.Corruption.Sear(burn * n)) continue;
             Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, FlounderSeen(f), Vector2.Zero, burn));
             FreeFlounder(f);
@@ -139,7 +140,7 @@ public sealed partial class PlaneWorld
             {
                 var b = Blotters[i];
                 if (!b.Alive || b.Rise > 0f) continue;
-                int n = Touch(b, b.Position, 0f, BlotterTuning.Radius, dazzles: false);
+                float n = Touch(b, b.Position, 0f, BlotterTuning.Radius, dazzles: false);
                 if (n == 0 || Guarded(b.Position) || !b.Corruption.Sear(burn * n)) continue;
                 Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, b.Position, Vector2.Zero, burn));
                 BurstBlotter(b, field);
@@ -148,7 +149,7 @@ public sealed partial class PlaneWorld
             {
                 var t = Thumpsquirts[i];
                 if (!t.Alive || t.Airborne) continue;
-                int n = Touch(t, t.Position, 0f, ThumpTuning.Radius, dazzles: false);
+                float n = Touch(t, t.Position, 0f, ThumpTuning.Radius, dazzles: false);
                 if (n == 0 || Guarded(t.Position) || !t.Corruption.Sear(burn * n)) continue;
                 Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, t.Position, Vector2.Zero, burn));
                 BurstThump(t);
@@ -156,7 +157,7 @@ public sealed partial class PlaneWorld
             foreach (var l in Lashjaws)
             {
                 if (!l.Alive) continue;
-                int n = Touch(l, l.Position, 0f, LashTuning.Head, dazzles: false);
+                float n = Touch(l, l.Position, 0f, LashTuning.Head, dazzles: false);
                 if (n == 0 || Guarded(l.Position) || !l.Corruption.Sear(burn * n)) continue;
                 if (l.Phase == 2) Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, l.Position, Vector2.Zero, burn));
                 BreakLashjaw(l);
@@ -192,9 +193,9 @@ public sealed partial class PlaneWorld
     /// How many of her shots light this creature (on her plane at <paramref name="at"/>, <paramref name="height"/> metres
     /// above it, this radius): some of its body within a shot's light, in sight of the shot. Dazzles it as it comes in.
     /// </summary>
-    int Touch(object kin, Vector2 at, float height, float radius, bool dazzles = true, bool beams = true)
+    float Touch(object kin, Vector2 at, float height, float radius, bool dazzles = true, bool beams = true)
     {
-        int n = 0;
+        float n = 0f;
         Vector2 from = default;
         float nearest = float.MaxValue;
         if (!Defeated)
@@ -215,8 +216,10 @@ public sealed partial class PlaneWorld
         if (!Defeated && beams)
             foreach (var (beam, worth) in HerBeams)
             {
-                if (!BeamReaches(beam, at, height, radius)) continue;
-                n += worth;
+                // As much as her beam's light reaches it: more near her, none past a body in the way.
+                float light = BeamLight(beam, at, height, radius, kin);
+                if (light <= 0f) continue;
+                n += worth * light;
                 beamed = true;
                 BeamBurns = true;
                 float d = Vector2.Distance(beam.Position, at);
@@ -238,10 +241,10 @@ public sealed partial class PlaneWorld
         }
         else g.BeamTime = 0f;
         // Electric Eel Tail: burned by an arc off what her beam burns, at half the beam's rate.
-        if (!beamed && _arced.Contains(kin)) n += HerLightTuning.BeamShots / 2;
+        if (!beamed && _arced.Contains(kin)) n += HerLightTuning.BeamShots / 2f;
         // Fire Coral, Sea Nettle: it burns on a while out of her light.
         if (n == 0 && g.Afterglow > 0f && !Defeated) n = 1;
-        if (n > 0 && g.Crit > 0f) n = (int)MathF.Round(n * MathF.Max(Run.Loadout.Shot.CritMult, 1f));
+        if (n > 0f && g.Crit > 0f) n *= MathF.Max(Run.Loadout.Shot.CritMult, 1f);
         g.Afterglow = MathF.Max(0f, g.Afterglow - Dt);
         g.Slow = MathF.Max(0f, g.Slow - Dt);
         g.Charm = MathF.Max(0f, g.Charm - Dt);
@@ -273,7 +276,7 @@ public sealed partial class PlaneWorld
         if (!BeamOn) return;
         var from = Beam.Position;
         var end = BeamEnd;
-        if (_rocks.Exists(r => r.Contains(end))) StrikeSeal(end, HerLightTuning.BeamShots * Dt, quiet: true);
+        if (_rocks.Exists(r => r.Contains(end))) StrikeSeal(end, HerLightTuning.BeamShots * Dt * BeamFalloff(Beam, Vector2.Distance(from, end)), quiet: true);
         if (Dots is not null) ClearAlong(from, end, HerLightTuning.BeamDots);
     }
 

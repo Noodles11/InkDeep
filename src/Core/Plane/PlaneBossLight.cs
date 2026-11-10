@@ -89,18 +89,18 @@ public sealed partial class PlaneWorld
             if (!sac.Alive) continue;
             var at = boss.SacAt(sac);
             float reach = PlaneBossTuning.SacRadius * (0.6f + sac.Site.Size);
-            int n = 0;
+            float n = 0f;
             foreach (var (beam, worth) in HerBeams)
             {
                 if (core && (beam != Beam || !InCore(beam, at))) continue;
-                if (BeamReaches(beam, at, 0f, reach)) n += worth;
+                n += worth * BeamLight(beam, at, 0f, reach, boss);
             }
-            if (n == 0) continue;
+            if (n <= 0f) continue;
             BeamBurns = true;
             DamageSac(boss, sac, burn * n, SafeNormalize(at - Player.Position), quiet: true);
         }
-        int shots = boss.Open ? Touch(boss, boss.LightAt, 0f, boss.LightReach, dazzles: false, beams: false) : 0;
-        int beams = BeamOnPearl(boss);
+        float shots = boss.Open ? Touch(boss, boss.LightAt, 0f, boss.LightReach, dazzles: false, beams: false) : 0f;
+        float beams = BeamOnPearl(boss);
         if (shots + beams > 0) DamageBoss(boss, burn * (shots + beams), Vector2.Zero, quiet: true);
     }
 
@@ -114,18 +114,19 @@ public sealed partial class PlaneWorld
         return angle <= beam.HalfAngle * BossLightTuning.CoreShare;
     }
 
-    /// <summary>How many shots' worth her beams burn the boss's pearl this step, by its rule (0 while it is shut).</summary>
-    int BeamOnPearl(PlaneBoss boss)
+    /// <summary>How many shots' worth her beams burn the boss's pearl this step (as much as their light reaches it), by its rule (0 while it is shut).</summary>
+    float BeamOnPearl(PlaneBoss boss)
     {
         if (!boss.Open)
         {
             boss.BeamHold = 0f;
-            return 0;
+            return 0f;
         }
-        int n = 0;
+        float n = 0f;
         foreach (var (beam, worth) in HerBeams)
         {
-            if (!BeamReaches(beam, boss.LightAt, 0f, boss.LightReach)) continue;
+            float light = BeamLight(beam, boss.LightAt, 0f, boss.LightReach, boss);
+            if (light <= 0f) continue;
             // A shielded pearl held behind the body: the body stops a beam coming through it (all but in the window), as
             // it stops a shot.
             if (boss.Spec.Shielded && boss.Act != BossAct.Window
@@ -135,14 +136,14 @@ public sealed partial class PlaneWorld
                 var way = SafeNormalize(boss.LightAt - beam.Position);
                 if (MathF.Abs(Vector2.Dot(way, boss.Facing)) > BossLightTuning.FlankCos) continue;
             }
-            n += worth;
+            n += worth * light;
         }
         if (boss.Spec.Concept == BossConcept.SlamAndSigh)
         {
-            boss.BeamHold = n > 0 ? boss.BeamHold + Dt : 0f;
-            if (boss.BeamHold < BossLightTuning.HoldSeconds) return 0;
+            boss.BeamHold = n > 0f ? boss.BeamHold + Dt : 0f;
+            if (boss.BeamHold < BossLightTuning.HoldSeconds) return 0f;
         }
-        if (n > 0) BeamBurns = true;
+        if (n > 0f) BeamBurns = true;
         return n;
     }
 

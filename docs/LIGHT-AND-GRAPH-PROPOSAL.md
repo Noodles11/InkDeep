@@ -63,15 +63,21 @@ her one pool.
 
 ### 2.3 What the beam does
 
-The beam does what her shots' light does now, continuously:
+The beam does what her shots' light did, continuously, and **by how much of its light reaches the thing**
+(`PlaneWorld.BeamLight`): `NearLight` (2) shots' worth at her bell, falling to `FarLight` (0.25) at the end of its reach
+(by (1 − d / reach)^1.4), a little less toward the cone's edge. **A creature's body in the way stops it** as rock does,
+so the one nearest her shades those behind; Swordfish Bill (her shots pierce) lets it through them all.
 
-- **Burns** the corrupted it reaches, at `Burn` per second × her damage stat, freeing them when their meter is empty.
+- **Burns** the corrupted it reaches, at `Burn` per second × her damage stat × the light reaching them, freeing them
+  when their meter is empty.
 - **Dazzles** a creature once as it comes into the light, as shots do: it holds still for `Dazzle`, then is not
   dazzled again until it has been out of all her light for `Rearm`. A creature kept in the beam is not frozen for
   ever.
 - **Strikes seals, clears ink dots and ash**: a sealed wall's carving its axis falls on gains `BeamShots` *(tune: 2)*
-  plain shots' light a second; the ink dots along its axis and the ash it falls on clear.
-- **Leaks** are not sealed by the beam: she seals one by staying close to it, her own light working on it, as now.
+  plain shots' light a second × the light reaching it; the ink dots along its axis and the ash it falls on clear.
+- **Seals leaks** as her inner light does: `LeakBeamShare` (half) of its burn on the leak's disc, the more the nearer
+  her. Her inner light near a leak works on it too, at 1 a metre inside her reach rising to 1.8 right over it; the two
+  add up.
 - **Opens a boss** where a shot would (its pearl, while open). Each boss gains one light rule of its own in stage 5,
   for example a hold time, the beam's angle, or a lit object in its arena.
 

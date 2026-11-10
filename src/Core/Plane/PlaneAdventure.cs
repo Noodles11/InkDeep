@@ -45,6 +45,12 @@ public static class AdventureTuning
     public const int LeakXp = 25, LeakShells = 5, MinStaples = 3;
     public const float StapleSpacing = 0.6f, StapleSeconds = 0.5f, StapleDrain = 0.4f, LeakSealReach = 6f, LeakHold = 1.5f;
     /// <summary>
+    /// The more of her light reaches it, the faster it seals: her inner light at a metre inside her reach works at 1, up to
+    /// 1 + LeakNearBonus right over it; her beam works on it too, LeakBeamShare of its burn (PlaneWorld.BeamLight: more
+    /// near her), on a disc of LeakBeamRadius.
+    /// </summary>
+    public const float LeakNearBonus = 0.8f, LeakBeamShare = 0.5f, LeakBeamRadius = 1f;
+    /// <summary>
     /// Its arms float and wiggle: each joint bends up to LeakWiggle (radians, more toward the tip) on a slow wave
     /// (LeakWave radians a second, LeakWaveJoint further along each joint). A stapled stretch cannot move. Touching an
     /// unstapled stretch stings her for LeakSting and throws her off at LeakKnock; a shot that meets one pops on it and
@@ -524,12 +530,21 @@ public sealed partial class PlaneWorld
             if (Tick % 15 == 0) v.Warded = Ward(v, v.Position, 1f) <= 0f;
             if (Boss is { Freed: false }) v.Warded = true;
             int staples = v.Staples, shut = v.ArmsShut;
-            // (Her glow out, her inner light works on nothing.)
-            if (!Defeated && !GlowOff && !v.Warded && Vector2.Distance(Player.Position, v.Position) <= AdventureTuning.LeakSealReach)
+            // As much of her light as reaches it: her inner light near it (none while her glow is out), the more the nearer,
+            // and her beam's (the more the nearer her; none past a body in the way).
+            float light = 0f;
+            if (!Defeated && !v.Warded)
+            {
+                float d = Vector2.Distance(Player.Position, v.Position);
+                const float Full = AdventureTuning.LeakSealReach - 1f;
+                if (!GlowOff && d <= AdventureTuning.LeakSealReach) light += 1f + AdventureTuning.LeakNearBonus * Math.Clamp(1f - d / Full, 0f, 1f);
+                foreach (var (beam, worth) in HerBeams) light += worth * AdventureTuning.LeakBeamShare * BeamLight(beam, v.Position, 0f, AdventureTuning.LeakBeamRadius, v);
+            }
+            if (light > 0f)
             {
                 if (!v.Roused) Rouse(v);
                 v.Since = 0f;
-                v.Light += Dt;
+                v.Light += Dt * light;
                 if (v.Light >= v.Needed)
                 {
                     SealLeak(v);

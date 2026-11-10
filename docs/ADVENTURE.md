@@ -31,7 +31,8 @@ All numbers are first guesses (`AdventureTuning`).
   back over about a second); a stapled stretch only stops the shot. Shots do nothing to seal it.
 - **No push:** a leak does not push the water. No creature comes nearer its disc than 2.5 m, that is all.
 - **The only thing that heals.** Every other creature's and boss's meter stays where her light leaves it.
-- **Sealing:** her inner light does it, no shots, while she stays within 6 m of its disc, which means coming in among
+- **Sealing:** her light does it, no shots: her beam on its disc (from any distance, the more the nearer her), and her
+  inner light while she stays within 6 m of it (the faster the nearer, docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.3), which means coming in among
   its arms. Gold light-staples go in one every 0.5 s, evenly spaced every 0.6 m along an arm (at least three an arm),
   from the disc out, one arm after another; so longer arms take more staples and longer (about 10 s at Menace 0, 25 s
   at Menace 1). Each staple snaps in with a clear note rising as the leak fills. As each arm is stapled shut all along

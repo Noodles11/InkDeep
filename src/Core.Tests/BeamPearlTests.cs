@@ -93,7 +93,7 @@ public class BeamPearlTests
         for (int i = 0; i < PlaneWorld.TickRate; i++) Step(w, d, true, (m, at));
         Assert.True(w.RearBeam.Shining);
         Assert.Equal(-d.X, w.RearBeam.Direction.X, 3);
-        Assert.Equal(full - HerLightTuning.Burn, m.Corruption.Value, 1);
+        Assert.Equal(full - HerLightTuning.Burn * w.BeamLight(w.RearBeam, at, 0f, m.Radius, m), m.Corruption.Value, 1);
         // Without the fin, nothing shines behind her.
         var bare = World();
         bare.Step(new PlaneInput { Beam = true, Aim = d });

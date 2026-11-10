@@ -19,6 +19,11 @@ public static class LightTuning
     /// <summary>Her beam: a cone along her aim.</summary>
     public const float BeamReach = 16f, BeamHalfAngleDeg = 22f, BeamIntensity = 1.2f;
     /// <summary>
+    /// How much of her beam's light reaches a thing (shots' worth for one shot's, PlaneWorld.BeamLight): NearLight at her
+    /// bell, falling to FarLight at the end of its reach (by (1 − d / reach)^1.4).
+    /// </summary>
+    public const float NearLight = 2f, FarLight = 0.25f;
+    /// <summary>
     /// Her pearls on the beam (docs/LIGHT-AND-GRAPH-PROPOSAL.md §5.1): her range stat lengthens it and her shot size
     /// widens it (each × its square root; at most MaxHalfAngleDeg); Sunbeam makes it a searchlight (SunbeamReach × as
     /// long, SunbeamHalfAngleDeg wide). Rear Fin adds a beam behind her (RearIntensity, RearReach × as long), Lighthouse
@@ -290,6 +295,75 @@ public sealed partial class PlaneWorld
             if (angle - widen > b.HalfAngle) return false;
         }
         return LineOfSight(b.Position, at);
+    }
+
+    /// <summary>
+    /// How much of a beam's light reaches a point (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.3), as shots' worth for one
+    /// shot's: nothing outside its cone or past rock, nor past a creature's body in the way (bodies block it as rock
+    /// does, unless her shots pierce: Swordfish Bill); else FarLight at the end of its reach rising to NearLight at her
+    /// bell, a little less toward the cone's edge. Damage, sealing and seals' wear all go by it.
+    /// </summary>
+    public float BeamLight(LightEmitter b, Vector2 at, float height, float radius, object? self = null)
+    {
+        if (!BeamReaches(b, at, height, radius)) return 0f;
+        if (BodyInTheWay(b.Position, at, radius, self)) return 0f;
+        var to = at - b.Position;
+        float flat = to.Length();
+        float cone = 1f;
+        if (flat > radius + 0.5f)
+        {
+            float angle = MathF.Acos(Math.Clamp(Vector2.Dot(to / flat, b.Direction), -1f, 1f));
+            cone = 1f - 0.4f * Math.Clamp((angle / MathF.Max(b.HalfAngle, 1e-3f) - 0.6f) / 0.4f, 0f, 1f);
+        }
+        return BeamFalloff(b, MathF.Max(0f, flat - radius)) * cone;
+    }
+
+    /// <summary>The beam's light at a distance from her along it: NearLight at her bell to FarLight at its reach.</summary>
+    public static float BeamFalloff(LightEmitter b, float distance)
+    {
+        float k = 1f - Math.Clamp(distance / MathF.Max(b.Range, 0.1f), 0f, 1f);
+        return LightTuning.FarLight + (LightTuning.NearLight - LightTuning.FarLight) * MathF.Pow(k, 1.4f);
+    }
+
+    /// <summary>The creatures' bodies that stand in her light's way this step (where they are, how big).</summary>
+    readonly List<(object Kin, Vector2 At, float R)> _bodies = new();
+
+    /// <summary>The bodies in her light's way, gathered once a step (none while her shots pierce).</summary>
+    void GatherBodies()
+    {
+        _bodies.Clear();
+        if (Run.Loadout.Shot.Pierce) return;
+        foreach (var m in Murklings)
+            if (m.Alive && !m.Budding && !m.Clinging) _bodies.Add((m, m.Position, m.Body));
+        foreach (var w in Inkwardens)
+            if (w.Alive) _bodies.Add((w, w.Position, WardenTuning.Radius));
+        foreach (var b in Blotters)
+            if (b.Alive && b.Rise <= 0f) _bodies.Add((b, b.Position, BlotterTuning.Radius));
+        foreach (var t in Thumpsquirts)
+            if (t.Alive) _bodies.Add((t, t.Position, ThumpTuning.Radius));
+        foreach (var l in Lashjaws)
+            if (l.Alive) _bodies.Add((l, l.Position, LashTuning.Head));
+        if (Boss is { Stage: BossStage.Fight, Aloft: false, Hidden: false } boss) _bodies.Add((boss, boss.Position, boss.Radius * 0.8f));
+    }
+
+    /// <summary>Whether a creature's body stands between her light at <paramref name="from"/> and a point (not the point's own).</summary>
+    bool BodyInTheWay(Vector2 from, Vector2 at, float radius, object? self)
+    {
+        if (_bodies.Count == 0) return false;
+        var line = at - from;
+        float len = line.Length();
+        if (len < 1e-3f) return false;
+        var dir = line / len;
+        foreach (var (kin, p, r) in _bodies)
+        {
+            if (ReferenceEquals(kin, self)) continue;
+            float along = Vector2.Dot(p - from, dir);
+            // In front of her, short of the point's own body.
+            if (along <= r || along >= len - radius) continue;
+            float across = MathF.Abs((p.X - from.X) * dir.Y - (p.Y - from.Y) * dir.X);
+            if (across < r * 0.85f) return true;
+        }
+        return false;
     }
 
     /// <summary>Where a beam of hers first meets rock along its axis (its full reach if nothing).</summary>

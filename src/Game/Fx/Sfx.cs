@@ -159,6 +159,7 @@ public partial class Sfx : Node
     /// </summary>
     public void PlayThrow(float volumeDb = 0f)
     {
+        if (OnlyToggle) return;
         if (_pops.Count == 0) return;
         int pick = _random.Next(_pops.Count);
         if (pick == _lastPop && _pops.Count > 1) pick = (pick + 1 + _random.Next(_pops.Count - 1)) % _pops.Count;
@@ -169,6 +170,7 @@ public partial class Sfx : Node
     /// <summary>Her light striking something it can harm: a squishy pop, a touch apart in pitch each time.</summary>
     public void PlayStrike(float volumeDb = 0f)
     {
+        if (OnlyToggle) return;
         if (_strike is not null) PlayRecorded(_strike, volumeDb, 0.9f + (float)_random.NextDouble() * 0.2f);
     }
 
@@ -182,8 +184,16 @@ public partial class Sfx : Node
         p.Play();
     }
 
+    /// <summary>
+    /// The game's sounds are off for now but her glow's pull-chain switch (the only one that plays while this holds).
+    /// </summary>
+    public static bool OnlyToggle = true;
+
+    static bool Muted(string name) => OnlyToggle && name != "lamp_switch";
+
     public void Play(string name, float volumeDb = 0f, float pitchJitter = 0.06f)
     {
+        if (Muted(name)) return;
         var p = _flat[_nextFlat];
         _nextFlat = (_nextFlat + 1) % _flat.Count;
         p.Stream = _sounds[name];
@@ -195,6 +205,7 @@ public partial class Sfx : Node
     /// <summary>A flat sound at a set pitch (1 is as made), no jitter.</summary>
     public void PlayPitched(string name, float pitch, float volumeDb = 0f)
     {
+        if (Muted(name)) return;
         var p = _flat[_nextFlat];
         _nextFlat = (_nextFlat + 1) % _flat.Count;
         p.Stream = _sounds[name];
@@ -205,6 +216,7 @@ public partial class Sfx : Node
 
     public void PlayAt(string name, Vector3 position, float volumeDb = 0f, float pitchJitter = 0.06f)
     {
+        if (Muted(name)) return;
         var p = _spatial[_nextSpatial];
         _nextSpatial = (_nextSpatial + 1) % _spatial.Count;
         p.Stream = _sounds[name];
