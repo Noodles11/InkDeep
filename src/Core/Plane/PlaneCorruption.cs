@@ -28,8 +28,14 @@ public sealed class PlaneOptions
     /// sealing it heals her whole and leaves a pearl. Her way out is open the whole time.
     /// </summary>
     public bool DiveCave;
+    /// <summary>
+    /// Her shots (PlaneInput.Fire: the thrown bubbles of light, the charged pearl, Firefly Squid's surge). Off in the game:
+    /// her beam is her one attack (docs/LIGHT-AND-GRAPH-PROPOSAL.md §5). On here by default, for what is still built on
+    /// shots (the sim's tests, an active pearl's own).
+    /// </summary>
+    public bool Shots = true;
 
-    public static PlaneOptions Default { get; set; } = new() { Adventure = true };
+    public static PlaneOptions Default { get; set; } = new() { Adventure = true, Shots = false };
 
 }
 

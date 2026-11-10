@@ -588,7 +588,7 @@ public partial class TopDownMain : Node3D
         if (spec is null) return null;
         var d = PlaneOptions.Default;
         GD.Print($"Debug boss: {spec.Name} ({spec.Tier} {spec.Form}, {spec.Concept}, {spec.Theme}, {spec.Exposure}, {spec.Signature})");
-        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Boss = spec };
+        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Shots = d.Shots, Boss = spec };
     }
 
     /// <summary>
@@ -600,7 +600,7 @@ public partial class TopDownMain : Node3D
         if (!_map.HasBoss || _map.Rift || _jelly is not { } jelly || Dives.FolkBossOf(_id, jelly) is not { } folk || Folk.Get(folk) is not { } n
             || OctoShoots.Core.Bosses.FolkBosses.For(n.Id, n.Level, _map.Menace) is not { } spec) return null;
         var d = PlaneOptions.Default;
-        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Boss = spec };
+        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Shots = d.Shots, Boss = spec };
     }
 
     /// <summary>Saves the run as it stands at the start of this level (continuing puts her back here).</summary>
@@ -2775,7 +2775,7 @@ public partial class TopDownMain : Node3D
         int left = _world.Mobs.Count(m => m.Alive);
         _info.Text = $"{_id} · mobs {left}/{_world.Mobs.Count} · pearls {_run!.Items.Count}   attempt {_map.Attempt + 1}   pos {p.Position.X:0.0}, {p.Position.Y:0.0}   " +
                      $"{Engine.GetFramesPerSecond():0} FPS" +
-                     "\nWASD swim · Space dash · hold the left mouse or arrows to shine · right mouse to shoot · Shift over the shaft dives · Tab map · Esc pause · F1 debug menu · F3 debug map · R regenerate";
+                     "\nWASD swim · Space dash · hold the left mouse or arrows to shine · Shift over a hole dives · Tab map · Esc pause · F1 debug menu · F3 debug map · R regenerate";
         Capture();
     }
 
@@ -3785,35 +3785,30 @@ public partial class TopDownMain : Node3D
         input.UseActive = use && !_activeLatched || _autoActive && _world.Run.ActiveCharge >= 1f;
         _activeLatched = use;
         if (AutoFire(ref input)) return input;
-        bool held = Input.IsActionPressed(InputSetup.Fire);
         bool shine = Input.IsActionPressed(InputSetup.Beam);
-        if (!held && !shine) _fireBlocked = false;
+        if (!shine) _fireBlocked = false;
         Vector2 aim = Input.GetVector(InputSetup.AimLeft, InputSetup.AimRight, InputSetup.AimUp, InputSetup.AimDown);
         if (_pad)
         {
-            // Controller: the right stick aims, the trigger shines her beam, the bumper shoots (her light always flies her
-            // full range). Left alone, she aims the way she swims (standing still, the way she last aimed).
+            // Controller: the right stick aims, the trigger shines her beam. Left alone, she aims the way she swims
+            // (standing still, the way she last aimed).
             if (aim.LengthSquared() > 0.04f) _padAim = new System.Numerics.Vector2(aim.X, aim.Y);
             else if (stick.LengthSquared() > 0.04f) _padAim = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(stick.X, stick.Y));
             else if (_padAim.LengthSquared() > 1e-6f) _padAim = System.Numerics.Vector2.Normalize(_padAim);
             input.Aim = _padAim.LengthSquared() > 1e-6f ? System.Numerics.Vector2.Normalize(_padAim) : _world.Player.Aim;
-            input.Fire = held && !_fireBlocked;
             input.Beam = shine && !_fireBlocked;
         }
         else if (aim.LengthSquared() > 0f)
         {
-            // The aim keys (the arrows) aim and shine her beam at once (the shoot button still shoots).
+            // The aim keys (the arrows) aim and shine her beam at once.
             input.Aim = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(aim.X, aim.Y));
             input.Beam = true;
-            input.Fire = held && !_fireBlocked;
         }
         else
         {
-            // The mouse: her beam (left) and her shots (right) toward the pointer while a button is held (only its way
-            // counts: her light flies her full range).
+            // The mouse: her beam toward the pointer while its button is held.
             var to = MouseOnBand() - _world.Player.Position;
             input.Aim = to.LengthSquared() > 1e-4f ? System.Numerics.Vector2.Normalize(to) : default;
-            input.Fire = held && !_fireBlocked;
             input.Beam = shine && !_fireBlocked;
         }
         return input;

@@ -187,6 +187,9 @@ Rare rooms where an old crab trades its best pearls for a share of her. The sim 
 
 ## 8. Her light
 
+**Her beam is her one attack:** her shots are off in the game (`PlaneOptions.Shots`), and what this document says of
+her shots holds for the sim alone, where they can still be switched on.
+
 Her light is a lamp in her bell, one sphere of it all round her, and it burns nothing. Her beam and her shots are
 what burn the corrupted. Caves are dark. The sim is in `src/Core/Plane/PlaneHerLight.cs` (`HerLightTuning`),
 `PlaneLight.cs` (the light emitters, `LightTuning`), `PlaneAsh.cs` (`AshTuning`) and the shot rules in

@@ -135,9 +135,10 @@ This is freeing, not killing: the light was hers or the reef's, and it comes bac
 The catalog stays (`data/items.json`, `ItemCatalog`, `Loadout`). 43 pearls change her shots (by a stat or by the
 shape of a shot), and 20 synergies are built on them.
 
-**The shots stay**, as her second weapon: a throw of light on the right button, with its reserve. The beam is what she
-fights with; a shot is what she sends where the beam cannot stay (round a corner, a bait left hanging, a burst). So most
-shot pearls keep working on her shots, and a few carry over to the beam as well. None goes.
+**Her beam is her one attack.** Her shots are off in the game (`PlaneOptions.Shots`; the sim still has them, for its
+tests and for what may yet be built on them), and there is no shoot button. So a pearl that works only on her shots
+(marked **Shot** below) does nothing for now, till it is carried over to the beam or taken out of the pools; the ones
+marked **Beam** or **Beam too** work as written.
 
 ### 5.1 Each shot pearl (built)
 
@@ -286,8 +287,7 @@ below it (`Stamp`, the stamp seeds), which the levels no longer shared. The rest
 
 | System | Why it stays |
 |---|---|
-| The shots' reserve and its refill | Her shots stay her second weapon (§5), and four pearls work on the reserve (Bubble Gland, Anemone Pump, Twin Siphon, Bubble Coral). It is not her light: her light is her HP (§2.1). |
-| Shots as an attack | Her second weapon (§5). |
+| Her shots, their reserve and its refill | Off in the game (§5): her beam is her one attack. The sim keeps them (`PlaneOptions.Shots`) till the shot pearls are carried over to the beam or let go. |
 | Leaks and the ink's dots | Sealing a reef's leak opens its holes (§6.3): still the heart of a reef. |
 | Blightroots and the creatures they raise | The dens' hearts and the templates' casts. |
 | Murklings hunting fish, murklings throwing | The variants (§3.2): only they hunt and throw; the basic murkling does neither. |

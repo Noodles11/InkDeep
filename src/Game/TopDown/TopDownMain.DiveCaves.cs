@@ -51,7 +51,7 @@ public partial class TopDownMain
     static PlaneOptions DiveCaveOptions()
     {
         var d = PlaneOptions.Default;
-        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, DiveCave = true };
+        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Shots = d.Shots, DiveCave = true };
     }
 
     /// <summary>
