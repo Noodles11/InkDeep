@@ -293,8 +293,8 @@ public sealed partial class PlaneWorld
     public bool InBattle => BossBattle || Mobs.Any(m => m.Alive && m.Aggro && Vector2.Distance(m.Position, Player.Position) < PlaneCombatTuning.DiveSafeDistance)
                             || Murklings.Any(m => m.Alive && !m.Budding && Vector2.Distance(m.Position, Player.Position) < PlaneCombatTuning.DiveSafeDistance);
 
-    /// <summary>She may dive now (DESIGN-TOPDOWN §4.6): over the shaft, the way open, and no battle on.</summary>
-    public bool CanDive => OverShaft && ExitOpen && !InBattle && !Defeated;
+    /// <summary>She may dive now (DESIGN-TOPDOWN §4.6): over a hole that is open (its leak sealed), and no battle on.</summary>
+    public bool CanDive => OverShaft && HoleOpen(HoleUnder) && !InBattle && !Defeated;
 
     /// <summary>Menace as the sim applies it (DESIGN-TOPDOWN §6.2), capped so later loops stay playable.</summary>
     public float Menace => MathF.Min(Map.Menace, 3f);

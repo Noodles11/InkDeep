@@ -89,7 +89,8 @@ public sealed partial class PlaneWorld
         foreach (var seal in Seals)
         {
             if (seal.Open || seal.Barred || seal.Rock.Fake || !seal.Rock.Contains(at, 0.3f) || Vector2.Distance(at, seal.Emblem) > SealTuning.Reach) continue;
-            if (seal.Kind == SealKind.Boss && LeaksLeft > 0)
+            // (A great cave's arena waits for its leak; a reef's leaks hold only its holes.)
+            if (seal.Kind == SealKind.Boss && Map.LeakCave && LeaksLeft > 0)
             {
                 // (The beam held on it says so once a second, not every step.)
                 if (!quiet || Tick % 60 == 0) Events.Add(new PlaneEvent(PlaneEventType.SealRefused, seal.Emblem, seal.Facing, LeaksLeft));

@@ -54,16 +54,16 @@ public class PlaneCurrentTests
     }
 
     [Fact]
-    public void ItSleepsUntilTheThirdLeakIsSealed_ThenWakesAndTellsSo()
+    public void ItSleepsUntilTheFirstLeakIsSealed_ThenWakesAndTellsSo()
     {
         var w = World();
         var mid = Main(w).Course[Main(w).Course.Count / 2];
         Assert.Equal(0f, Main(w).Strength);
         Assert.Equal(Vector2.Zero, Main(w).At(mid));
-        for (int i = 1; i < AdventureTuning.LeaksToClear; i++) w.DebugSealLeak();
         Run(w, 1f);
         Assert.Equal(0f, Main(w).Strength);
 
+        // (The first leak sealed opens a hole: the way on is open, and the water remembers it.)
         w.DebugSealLeak();
         Assert.Contains(w.Events, e => e.Type == PlaneEventType.MainCurrentWoke);
         Run(w, CurrentTuning.MainRise + 0.1f);
@@ -147,7 +147,6 @@ public class PlaneCurrentTests
         int want = (int)(share * dots.Open.Count(o => o));
         foreach (int i in dots.Live.ToArray()) dots.Remove(i);
         foreach (int i in Enumerable.Range(0, InkDots.N * InkDots.N).Where(i => dots.Open[i]).Take(want)) dots.Add(i);
-        for (int k = 0; k < AdventureTuning.LeaksToClear; k++) w.DebugSealLeak();
         w.Player.Position = w.Player.PrevPosition = w.Map.Exit.Position + new Vector2(6f, 0f);
         Quiet(w);
         w.Step(default);
@@ -160,7 +159,8 @@ public class PlaneCurrentTests
         var (w, boss) = AtTheBoss(0.5f);
         Assert.Equal(BossStage.Drop, boss.Stage);
         Assert.Equal(0, w.LeaksOpen);
-        Assert.Contains(w.Events, e => e.Type == PlaneEventType.LeakDrunk);
+        // (Its reef's other holes' leaks, if it has any, drunk dry as it rises.)
+        if (w.Leaks.Count > 0) Assert.Contains(w.Events, e => e.Type == PlaneEventType.LeakDrunk);
         Assert.DoesNotContain(w.Events, e => e.Type == PlaneEventType.LeakSealed);
         int total = w.Dots!.Count, gathered = 0;
         while (boss.Stage == BossStage.Drop)

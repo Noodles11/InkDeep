@@ -307,6 +307,7 @@ public partial class LevelView : Node3D
         _crackOpen = 0f;
         _crackFade = 1f;
         if (map.HasBoss) ShowCover(map);
+        ShowHoleCovers(map);
         if (!below) ShowCrack(map);
         if (OS.GetCmdlineUserArgs().Contains("--dbg-nocanopy")) foreach (var c in _canopies) c.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("fade"), 0f);
     }
@@ -1342,6 +1343,43 @@ public partial class LevelView : Node3D
     OmniLight3D? _crackLight;
     CpuParticles3D? _crackBubbles;
     MeshInstance3D? _cover, _rift;
+    /// <summary>The sand over each of the reef's holes (by index; null for a boss's Crack, which has its own), and its material.</summary>
+    readonly List<(MeshInstance3D Sheet, ShaderMaterial Material)?> _holeCovers = new();
+
+    /// <summary>
+    /// The reef's holes shut under their leaks (docs/ADVENTURE.md §1): each lies under sand like the floor round it, as
+    /// the Crack does, till its leak is sealed and the sand drains away into it (SetHoleOpen). A boss's Crack has its own.
+    /// </summary>
+    void ShowHoleCovers(LevelMap map)
+    {
+        _holeCovers.Clear();
+        if (map.LeakCave || map.Station) return;
+        foreach (var hole in map.Holes)
+        {
+            var sh = hole.Shaft;
+            if (map.HasBoss && (sh.Center - map.Shaft.Center).Length() < 0.5f)
+            {
+                _holeCovers.Add(null);
+                continue;
+            }
+            var sheet = CoverSheet(map, sh, out float mean);
+            var material = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/crack_cover.gdshader") };
+            material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("cover_center"), new Vector2(sh.Center.X, sh.Center.Y));
+            material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("drop"), mean - LevelMap.ShaftBottom + 1f);
+            Track(material);
+            var cover = new MeshInstance3D { Mesh = sheet, MaterialOverride = material };
+            AddChild(cover);
+            _holeCovers.Add((cover, material));
+        }
+    }
+
+    /// <summary>A hole of the reef opening (0 shut under its sand → 1 open): its sand sags, turns and drains down into it.</summary>
+    public void SetHoleOpen(int hole, float t)
+    {
+        if (hole < 0 || hole >= _holeCovers.Count || _holeCovers[hole] is not { } cover) return;
+        cover.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("sink"), Mathf.Clamp(t, 0f, 1f));
+        cover.Sheet.Visible = t < 1f;
+    }
     ShaderMaterial? _coverMat, _riftMat;
     /// <summary>The light the open Crack's water spills.</summary>
     const float CrackLight = 1.4f;
@@ -1395,16 +1433,19 @@ public partial class LevelView : Node3D
     /// ground's own height there and the middle at their average, so it meets the arena floor without a seam. The open
     /// rift is the same sheet: it lies flush with the floor over the shaft, hiding the drop.
     /// </summary>
-    void ShowCover(LevelMap map)
+    /// <summary>
+    /// A cap of sand over a shaft (a little past its rim), each rim point at the ground's own height there and the middle
+    /// at their average, so it meets the floor without a seam (crack_cover.gdshader drains it away); and that average.
+    /// </summary>
+    static ArrayMesh CoverSheet(LevelMap map, Shaft sh, out float mean)
     {
-        var sh = map.Shaft;
         var across = new System.Numerics.Vector2(-sh.Axis.Y, sh.Axis.X);
         const float grow = 0.8f;
         const int rings = 14, segments = 64;
         System.Numerics.Vector2 At(float r, float a, float extra) =>
             sh.Center + sh.Axis * (Mathf.Cos(a) * (sh.HalfLength + grow + extra) * r) + across * (Mathf.Sin(a) * (sh.HalfWidth + grow + extra) * r);
         var rim = new float[segments];
-        float mean = 0f;
+        mean = 0f;
         for (int j = 0; j < segments; j++)
         {
             rim[j] = map.HeightAt(At(1f, j * Mathf.Tau / segments, 0.6f));
@@ -1443,11 +1484,17 @@ public partial class LevelView : Node3D
             st.AddIndex(b0);
             st.AddIndex(b1);
         }
+        return st.Commit();
+    }
+
+    void ShowCover(LevelMap map)
+    {
+        var sh = map.Shaft;
+        var sheet = CoverSheet(map, sh, out float mean);
         _coverMat = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/crack_cover.gdshader") };
         _coverMat.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("cover_center"), new Vector2(sh.Center.X, sh.Center.Y));
         _coverMat.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("drop"), mean - LevelMap.ShaftBottom + 1f);
         Track(_coverMat);
-        var sheet = st.Commit();
         AddChild(_cover = new MeshInstance3D { Mesh = sheet, MaterialOverride = _coverMat });
         _riftMat = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/crack_rift.gdshader") };
         _riftMat.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("water"), ReefLook.For(map.Depth + 1).WaterDeep);

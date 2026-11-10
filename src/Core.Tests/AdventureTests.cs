@@ -85,7 +85,8 @@ public class AdventureTests
         foreach (bool boss in new[] { false, true })
         {
             var w = World(boss);
-            Assert.Equal(AdventureTuning.LevelLeaks, w.Leaks.Count);
+            // One over each of its holes (a boss's Crack has none).
+            Assert.Equal(w.Map.Holes.Count - (boss ? 1 : 0), w.Leaks.Count);
             Assert.False(w.ExitOpen);
             Assert.Empty(w.Murklings);
             Assert.Empty(w.Blightroots);
@@ -97,11 +98,11 @@ public class AdventureTests
             Assert.Equal(boss, w.Boss is not null);
             Assert.True(w.ReefFish.Count > 60, $"only {w.ReefFish.Count} fish");
             Assert.True(w.Dots!.Count > 0);
-            // Every leak floats in open water, clear of the others.
+            // Every leak floats over a hole, in open water.
             foreach (var v in w.Leaks)
             {
                 Assert.True(w.Clear(v.Position, 0.3f));
-                Assert.True(Vector2.Distance(v.Position, w.Map.Start.Position) >= AdventureTuning.LeakFromStart);
+                Assert.True(w.Map.HoleAt(v.Position) >= 0);
             }
         }
     }
@@ -293,13 +294,6 @@ public class AdventureTests
     }
 
     [Fact]
-    public void Leaks_float_in_the_middle_of_chambers_where_they_can()
-    {
-        var w = World();
-        Assert.Contains(w.Leaks, v => w.Map.Plazas.Any(z => Vector2.Distance(z.Center, v.Position) < 0.01f));
-    }
-
-    [Fact]
     public void Every_level_starts_part_inked_out_of_its_leaks_the_more_the_deeper()
     {
         PlaneWorld At(int depth) => new(TestLevels.Get(TestLevels.Find(p => p.Id.Depth == depth && !p.HasBoss)), new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), Adventure);
@@ -345,21 +339,36 @@ public class AdventureTests
     }
 
     [Fact]
-    public void Every_level_has_five_leaks_and_three_sealed_open_the_way_on()
+    public void A_leak_lies_over_every_hole_and_one_sealed_opens_the_hole_under_it()
     {
         foreach (var id in TestLevels.All(_ => true))
         {
             var w = new PlaneWorld(TestLevels.Get(id), new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), Adventure);
-            Assert.True(w.Leaks.Count == AdventureTuning.LevelLeaks, $"{id}: {w.Leaks.Count} leaks");
+            for (int i = 0; i < w.Map.Holes.Count; i++)
+            {
+                if (w.IsCrack(i)) continue;
+                Assert.True(w.Leaks.Count(v => w.Map.HoleAt(v.Position) == i) == 1, $"{id}: hole {i}");
+                Assert.False(w.HoleOpen(i), $"{id}: hole {i} open with its leak");
+            }
         }
-        var plain = World();
-        for (int i = 0; i < AdventureTuning.LeaksToClear; i++)
-        {
-            Assert.False(plain.ExitOpen);
-            plain.DebugSealLeak();
-        }
+        // Sealing one opens its hole alone, and that is enough to dive down it.
+        var plain = new PlaneWorld(TestLevels.Get(TestLevels.Find(p => !p.HasBoss && p.Exits.Count > 1)), new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), Adventure);
+        plain.Murklings.Clear();
+        var first = plain.Leaks[0];
+        int hole = plain.Map.HoleAt(first.Position);
+        Assert.False(plain.ExitOpen);
+        plain.DebugSealLeak(first);
+        Assert.True(plain.HoleOpen(hole));
         Assert.True(plain.ExitOpen);
-        Assert.Equal(AdventureTuning.LevelLeaks - AdventureTuning.LeaksToClear, plain.LeaksOpen);
+        Assert.Contains(plain.Events, e => e.Type == PlaneEventType.ExitOpened && (int)e.Size == hole);
+        for (int i = 0; i < plain.Map.Holes.Count; i++)
+            if (i != hole) Assert.False(plain.HoleOpen(i));
+        Assert.True(plain.LeaksOpen > 0, "not every leak need be sealed");
+        plain.Player.Position = plain.Player.PrevPosition = plain.Map.Holes[hole].Shaft.Center;
+        Assert.True(plain.CanDive);
+        int other = Enumerable.Range(0, plain.Map.Holes.Count).First(i => i != hole);
+        plain.Player.Position = plain.Player.PrevPosition = plain.Map.Holes[other].Shaft.Center;
+        Assert.False(plain.CanDive);
     }
 
     [Fact]
@@ -398,9 +407,9 @@ public class AdventureTests
         Assert.True(v.Light < lit, "it heals once she leaves");
         Shine(w, v, v.Needed + 0.5f);
         Assert.True(v.Sealed);
-        Assert.False(w.ExitOpen);
-        foreach (var o in w.Leaks.Skip(1)) w.DebugSealLeak(o);
+        // (The hole under it open: enough to go on.)
         Assert.True(w.ExitOpen);
+        Assert.True(w.HoleOpen(w.Map.HoleAt(v.Position)));
     }
 
     [Fact]
@@ -674,25 +683,22 @@ public class AdventureTests
     }
 
     [Fact]
-    public void The_boss_wall_takes_no_light_until_every_vent_is_sealed_and_no_vent_lies_behind_it()
+    public void The_boss_wall_takes_her_light_whatever_the_leaks_and_no_leak_lies_behind_it()
     {
         int walls = 0;
         foreach (var id in TestLevels.All(p => p.HasBoss && p.Id.Depth <= 4))
         {
             var w = new PlaneWorld(TestLevels.Get(id), new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), Adventure);
             var seal = w.Seals.FirstOrDefault(s => s.Kind == SealKind.Boss);
-            if (seal is null || w.Leaks.Count == 0) continue;
+            if (seal is null) continue;
             walls++;
             var rocks = w.Seals.Where(s => s.Kind == SealKind.Boss).Select(s => s.Rock).ToList();
             var reach = LevelValidator.Distances(w.Map, w.Map.Start.Position, blocked: q => rocks.Exists(r => r.Contains(q)));
             Assert.All(w.Leaks, v => Assert.False(float.IsPositiveInfinity(LevelValidator.DistanceAt(reach, v.Position))));
-            for (int k = 0; k < 60; k++) w.DebugStrikeSeal(seal);
-            Assert.False(seal.Open);
-            Assert.Equal(0, seal.Hits);
-            Assert.Contains(w.Events, e => e.Type == PlaneEventType.SealRefused);
-            for (int k = 0; k < AdventureTuning.LeaksToClear; k++) w.DebugSealLeak();
+            // (The reef's leaks hold its other holes, not its boss.)
             for (int k = 0; k < 60 && !seal.Open; k++) w.DebugStrikeSeal(seal);
             Assert.True(seal.Open);
+            Assert.DoesNotContain(w.Events, e => e.Type == PlaneEventType.SealRefused);
         }
         Assert.True(walls > 0, "no boss level with a wall and leaks");
     }

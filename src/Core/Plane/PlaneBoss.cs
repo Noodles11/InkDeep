@@ -414,12 +414,12 @@ public sealed partial class PlaneWorld
     {
         BossBattle = false;
         if (boss.Spec.Blockade) UnbarArena();
-        // The Crack opens once the arena is cleansed enough too (StepCondensation); in the adventure, once enough leaks are
-        // sealed too (SealLeak).
+        // The Crack opens once the arena is cleansed enough too (StepCondensation); in the adventure, as its boss is freed
+        // (the leaks hold only the reef's other holes).
         if (Options.Adventure)
         {
-            ExitOpen = LeaksLeft == 0;
-            if (ExitOpen) Events.Add(new PlaneEvent(PlaneEventType.ExitOpened, Map.Exit.Position, Vector2.Zero));
+            ExitOpen = !Map.LeakCave || LeaksLeft == 0;
+            if (ExitOpen) Events.Add(new PlaneEvent(PlaneEventType.ExitOpened, Map.Exit.Position, Vector2.Zero, -1));
         }
         else
         {

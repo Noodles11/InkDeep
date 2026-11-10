@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using OctoShoots.Core.Items;
 
@@ -488,5 +489,10 @@ public sealed partial class PlaneWorld
             Lights.Remove(_shotLights[s]);
             _shotLights.Remove(s);
         }
+        // Compacted, so its order is the order it was filled in (as a level put back from a save fills it): a dictionary
+        // reuses the slots of what it lost, and a saved level must carry on exactly.
+        var kept = _shotLights.ToList();
+        _shotLights.Clear();
+        foreach (var (s, e) in kept) _shotLights[s] = e;
     }
 }

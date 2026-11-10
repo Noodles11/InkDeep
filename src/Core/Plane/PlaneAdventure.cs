@@ -23,11 +23,10 @@ public static class AdventureTuning
     /// <summary>Her shots' pops and the Starburst take this many times their ground strength off a dot.</summary>
     public const float PopBite = 1.6f, BurstBite = 2f;
     /// <summary>
-    /// The leaks: LevelLeaks a level, in the middle of its chambers, LeakSpacing apart and LeakFromStart from her start
-    /// (closer if the level has no room). Sealing LeaksToClear of them opens the way on and wakes the main current.
+    /// The leaks lie over the reef's holes, one over each (PlaneWorld.PlaceLeaks): sealing one opens the hole under it, and
+    /// the first sealed wakes the main current. (A leak cave's one leak: LeaksToClear caps what is counted there.)
     /// </summary>
-    public const int LevelLeaks = 5, LeaksToClear = 3;
-    public const float LeakSpacing = 30f, LeakFromStart = 24f;
+    public const int LeaksToClear = 3;
     /// <summary>No creature comes nearer a leak's disc than LeakClear (it does not push: she must come in among its arms).</summary>
     public const float LeakClear = 2.5f;
     /// <summary>
@@ -35,7 +34,7 @@ public static class AdventureTuning
     /// LeakArmPerMenace × Menace long (Menace up to 1), tapering from LeakArmRoot to LeakArmTip (half widths).
     /// </summary>
     public const int LeakArms = 5;
-    public const float LeakDisc = 0.45f, LeakArmBase = 2.5f, LeakArmPerMenace = 3.5f, LeakArmRoot = 0.14f, LeakArmTip = 0.04f;
+    public const float LeakDisc = 0.54f, LeakArmBase = 3f, LeakArmPerMenace = 4.2f, LeakArmRoot = 0.168f, LeakArmTip = 0.048f;
     /// <summary>
     /// Sealing: her inner light does it, no shots, while she stays within LeakSealReach of its disc. It staples its arms
     /// shut one after another, from the disc out, a staple every StapleSpacing of an arm (at least MinStaples an arm),
@@ -367,7 +366,13 @@ public sealed partial class PlaneWorld
     public List<PlaneLeak> Leaks { get; } = new();
     public int LeaksOpen => Leaks.Count(v => !v.Sealed);
     /// <summary>How many more leaks she must seal before the way on opens.</summary>
-    public int LeaksLeft => Math.Max(Math.Min(AdventureTuning.LeaksToClear, Leaks.Count) - (Leaks.Count - LeaksOpen), 0);
+    /// <summary>
+    /// What the leaks still hold shut: in a leak cave (and off the reefs), those left of LeaksToClear; on a reef, 1 till
+    /// the first of its leaks is sealed (and with it a hole open), 0 after.
+    /// </summary>
+    public int LeaksLeft => Map.LeakCave || Map.Station || Map.Holes.Count == 0 && !Options.Adventure
+        ? Math.Max(Math.Min(AdventureTuning.LeaksToClear, Leaks.Count) - (Leaks.Count - LeaksOpen), 0)
+        : Leaks.Count == 0 || Leaks.Exists(v => v.Sealed) ? 0 : 1;
 
     Rng _inkRng = null!;
     readonly List<Vector2> _cleared = new();
@@ -385,12 +390,13 @@ public sealed partial class PlaneWorld
     }
 
     /// <summary>
-    /// The leaks, in the middle of the chambers: failing those, on the side routes; failing those, in any open water; and
-    /// only as a last resort on the main current. Far apart if the level allows it, closer if it must.
+    /// The leaks (docs/ADVENTURE.md §1): one over every hole out of the reef, floating at her plane over its shaft, the hole
+    /// shut under it till it is sealed (HoleOpen). A boss's Crack has none: its boss holds it. A leak cave holds one, at
+    /// the dead end where a way down would be.
     /// </summary>
     void PlaceLeaks()
     {
-        // A hand-drawn map holds none of its own, nor a labyrinth; a leak cave holds one, at the dead end where a way down would be.
+        // A hand-drawn map holds none of its own, nor a labyrinth.
         if (Map.Station || Map.Labyrinth) return;
         if (Map.LeakCave)
         {
@@ -404,23 +410,28 @@ public sealed partial class PlaneWorld
             }
             return;
         }
-        // Where she can swim with the boss's walls shut: they wait for the leaks, so none may lie behind them.
-        var bossWalls = _rocks.Where(r => r.Kind == SealKind.Boss).ToList();
-        var reach = LevelValidator.Distances(Map, Map.Start.Position, blocked: q => bossWalls.Exists(r => r.Contains(q)));
-        var safes = SafePlaces().ToList();
-        var chambers = Map.Plazas.Select(z => z.Center).ToList();
-        var sides = new List<Vector2>();
-        foreach (var c in Map.Corridors.Where(c => c.Kind == CorridorKind.Side))
-            for (int i = 0; i < c.Points.Count; i += 3) sides.Add(c.Points[i]);
-        var anywhere = new List<Vector2>();
-        for (int y = 2; y < Map.Size; y += 3)
-            for (int x = 2; x < Map.Size; x += 3) anywhere.Add(new Vector2(x, y));
-        foreach (var spots in new[] { chambers, sides, anywhere })
+        if (Map.Holes.Count == 0)
         {
-            Shuffle(spots, _inkRng);
-            PlaceLeaks(spots, reach, safes, false);
+            if (!Map.HasBoss && Map.Shaft.HalfWidth > 0.1f) Leaks.Add(NewLeak(Map.Shaft.Center));
+            return;
         }
-        PlaceLeaks(anywhere, reach, safes, true);
+        for (int i = 0; i < Map.Holes.Count; i++)
+            if (!IsCrack(i)) Leaks.Add(NewLeak(Map.Holes[i].Shaft.Center));
+    }
+
+    /// <summary>Whether a hole of the reef (by index) is a boss arena's Crack (the Exit's own, on a boss level).</summary>
+    public bool IsCrack(int hole) => Map.HasBoss && hole >= 0 && hole < Map.Holes.Count && Vector2.Distance(Map.Holes[hole].Shaft.Center, Map.Shaft.Center) < 0.5f;
+
+    /// <summary>
+    /// Whether a hole of the reef (by index in Map.Holes) is open to dive down: its leak sealed (one sealed is enough for
+    /// its own hole; the others stay shut); a boss's Crack once its boss is freed (ExitOpen). Off the adventure, and in
+    /// a leak cave, the one way down (ExitOpen).
+    /// </summary>
+    public bool HoleOpen(int hole)
+    {
+        if (hole < 0 || hole >= Map.Holes.Count) return Map.Holes.Count == 0 && ExitOpen;
+        if (IsCrack(hole) || !Options.Adventure || Map.LeakCave || Map.Station) return ExitOpen;
+        return !Leaks.Exists(v => !v.Sealed && Map.HoleAt(v.Position) == hole);
     }
 
     /// <summary>A leak here: its arms the length its Menace gives, each its own way round (a fifth of a turn apart) and its own wave.</summary>
@@ -439,24 +450,6 @@ public sealed partial class PlaneWorld
             };
         LayArms(v);
         return v;
-    }
-
-    /// <summary>Opens leaks at these spots, until the level has its number of them.</summary>
-    void PlaceLeaks(List<Vector2> spots, float[] reach, List<(Vector2 Centre, float Radius)> safes, bool lastResort)
-    {
-        int want = AdventureTuning.LevelLeaks;
-        for (float spacing = AdventureTuning.LeakSpacing; spacing > 3.5f && Leaks.Count < want; spacing *= 0.75f)
-            foreach (var at in spots)
-            {
-                if (Leaks.Count >= want) break;
-                if (!Clear(at, 1f) || float.IsPositiveInfinity(LevelValidator.DistanceAt(reach, at))) continue;
-                if (Vector2.Distance(at, Map.Start.Position) < (lastResort ? MathF.Min(AdventureTuning.LeakFromStart, spacing) : AdventureTuning.LeakFromStart)) continue;
-                if (Vector2.Distance(at, Map.Exit.Position) < Map.Exit.Radius + 6f || Map.InShaft(at, 4f)) continue;
-                if (safes.Any(s => Vector2.Distance(at, s.Centre) < s.Radius + 4f)) continue;
-                if (Leaks.Any(v => Vector2.Distance(v.Position, at) < spacing)) continue;
-                if (!lastResort && MainCurrent.Touches(Map, at, 0f)) continue;
-                Leaks.Add(NewLeak(at));
-            }
     }
 
     /// <summary>
@@ -765,10 +758,19 @@ public sealed partial class PlaneWorld
             }
             Shells.Add(new PlaneShell { Position = at, Velocity = dir * (Map.LeakCave ? _drops.Range(0.5f, 1.5f) : _drops.Range(3f, 6f)) });
         }
-        // A boss level's way down waits for its boss too (PlaneBoss's Release opens it once both are done).
-        if (LeaksLeft > 0 || ExitOpen || Boss is { Freed: false }) return;
-        ExitOpen = true;
-        Events.Add(new PlaneEvent(PlaneEventType.ExitOpened, Map.Exit.Position, Vector2.Zero));
+        if (Map.LeakCave)
+        {
+            // A great cave's way waits for its boss too (PlaneBoss's Release opens it once both are done).
+            if (LeaksLeft > 0 || ExitOpen || Boss is { Freed: false }) return;
+            ExitOpen = true;
+            Events.Add(new PlaneEvent(PlaneEventType.ExitOpened, Map.Exit.Position, Vector2.Zero));
+            return;
+        }
+        // On a reef: the hole under it opens (only that one), the way down open by it. (A boss's Crack stays its boss's.)
+        int hole = Map.HoleAt(v.Position);
+        var opened = hole >= 0 ? Map.Holes[hole].Shaft.Center : Map.Shaft.Center;
+        if (!Map.HasBoss) ExitOpen = true;
+        Events.Add(new PlaneEvent(PlaneEventType.ExitOpened, opened, Vector2.Zero, hole));
     }
 
     /// <summary>

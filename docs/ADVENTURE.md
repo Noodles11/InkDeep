@@ -1,26 +1,30 @@
 # The adventure
 
-How the adventure (branch `m3-adventure`) plays: the reef is being poisoned from **leaks** floating in its chambers; the poison
-spreads as ink dots through the water and turns the reef's fish one by one into the creatures she fights; she wins a
-level by **sealing the leaks**, and the fish she frees are fish again (freed, not killed: THEME-BIBLE).
+How the adventure (branch `m3-adventure`) plays: the reef is being poisoned from **leaks** floating over its holes; the poison
+spreads as ink dots through the water and turns the reef's fish one by one into the creatures she fights; she opens a
+way on by **sealing a leak** (the hole under it opens), and the fish she frees are fish again (freed, not killed:
+THEME-BIBLE).
 
 It is on with `PlaneOptions.Adventure` (the game's default). The simulation is in `src/Core/Plane/PlaneAdventure.cs`
 (`AdventureTuning`, `InkDots`, `PlaneVent`, the fish gauges, the three murklings, her oral arm),
 `src/Core/Plane/PlaneFlounder.cs` (flounders and Hearthguards) and
 `src/Core/Gen/TopDown/AbyssReef.cs` (the abyss); the presentation in `src/Game/TopDown/AdventureView.cs` (dots, their
 bracket marks, leaks), `BlightView` (the murklings' bodies: `murkling.gdshaderinc` spikes and tadpole tail),
-`BlightView.Flounders` (flounders and Hearthguards), `ReefFishView` (anemone pillars) and `HudView` (the gonad gauge, the leak dots). Tests: `AdventureTests`.
+`BlightView.Flounders` (flounders and Hearthguards), `ReefFishView` (anemone pillars) and `HudView` (the gonad gauge). Tests: `AdventureTests`.
 
 All numbers are first guesses (`AdventureTuning`).
 
 ## 1. Leaks
 
-- **What:** brittle stars of ink floating at her plane, always 5 a level (`PlaneLeak`, `LeakArm`). They lie in the
-  middle of chambers; failing that on side routes; failing that in any open water; only as a last resort on the main
-  current. At least 30 m apart if the level allows it and 24 m from her start, never in safe places or at the way down.
-- **Its body:** a dark disc about 0.9 m across where the ink comes through, five soft lobes toward its arms, hot air over
-  it in the post pass. Five arms reach out from it, a fifth of a turn apart, each 2.5 m + 3.5 m × Menace long (no
-  longer than at Menace 1), tapering from 0.28 m wide at the disc to 0.08 m at the tip. They are black ink in little
+- **What:** brittle stars of ink floating at her plane (`PlaneLeak`, `LeakArm`), **one over every hole out of the
+  reef** (`PlaneWorld.PlaceLeaks`): over its shaft, the hole shut under it. A boss's Crack has none (its boss holds it);
+  a leak cave holds its one leak at its dead end.
+- **Seen only in light,** as a murkling is: within her glow, where her beam falls on it, or in a lit crystal's light;
+  elsewhere nothing of it is drawn (its edge breaking up in the water), and its own glow and the water it bends show
+  only as much as it is seen (`leak_unseen` in its shaders). In the dark it must be found.
+- **Its body:** a dark disc about 1.1 m across where the ink comes through, five soft lobes toward its arms, hot air over
+  it in the post pass. Five arms reach out from it, a fifth of a turn apart, each 3 m + 4.2 m × Menace long (no
+  longer than at Menace 1), tapering from 0.34 m wide at the disc to 0.1 m at the tip. They are black ink in little
   plates with a fringe of short spines, and a violet rim that brightens on its beat (every 3 s, twice as often with her
   within 10 m) (`leak.gdshader` the disc, `leak_arm.gdshader` the arms).
 - **The arms float and wiggle:** each arm bends at a joint every staple's stretch, a little more toward its tip, on a
@@ -43,9 +47,14 @@ All numbers are first guesses (`AdventureTuning`).
   sealing, the burn reaches further in and burns brighter. The disc pales toward her gold from its rim as it fills.
 - **Her coming near rouses it:** healthy fish within 14 m turn at once.
 - **If she leaves:** after 1.5 s it heals, a staple every 0.4 s, last in first out; the last one trembles first.
-- **On the maps:** a leak cave's leak shows as a purple five-armed star (`TopoMap.DrawLeakMark`).
-- **Each one sealed** throws 5 shells out of it, as well as its experience. Sealing 3 opens the way on and wakes the main
-  current (DESIGN-TOPDOWN §4.7). The other two go on leaking until she seals them or the boss swallows them.
+- **On the maps:** a leak cave's leak shows as a purple five-armed star (`TopoMap.DrawLeakMark`). No count of the
+  leaks is shown anywhere.
+- **Each one sealed** throws 5 shells out of it, as well as its experience, and **opens the hole under it**
+  (`PlaneWorld.HoleOpen`): the sand over the shaft sags, turns and drains away into it, and its rim lights in the colour
+  of the reef below. Only that hole: the others stay shut under theirs. **One open hole is enough** to dive on; she need
+  not seal every leak. The first sealed wakes the main current (DESIGN-TOPDOWN §4.7). The rest go on leaking until she
+  seals them or the boss swallows them.
+- **A boss level:** the Crack opens as its boss is freed; its arena's walls take her light whatever the leaks.
 - **Inkwardens** still guard the leaks in their reach (§4).
 
 ## 2. The ink
@@ -164,8 +173,8 @@ the seabed, a store of healing she may come back to, too bright for any murkling
   round it, seen or not (the unseen under fog) — its edges fading softly into a dimming of the game, framed as large as
   it fits; no legend. Over it, the level's
   template name, its depth and level, and the run's clock.
-- **Vent dots:** top centre, one per leak — dark with a violet glint while it pours, gold once sealed. The level's
-  title and the banners sit under them.
+- **No leak count:** nothing on the HUD tracks the leaks; a hole shut under its leak says so as she floats over it
+  ("Seal the leak over it to open the way").
 
 ## 7. Crab Deals
 

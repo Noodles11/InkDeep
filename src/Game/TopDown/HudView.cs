@@ -75,7 +75,6 @@ public partial class HudView : Control
     int _xpLevel = 1;
     ItemDef? _active;
     /// <summary>The level's leaks: sealed or not, in order.</summary>
-    readonly List<bool> _leaks = new();
     float _time;
     /// <summary>Her bell on the HUD (hud_bell.gdshader): its middle and radius; her arms' roots under it, their spacing,
     /// length and width (root → tip); the shell counter's size beside the bell.</summary>
@@ -172,7 +171,7 @@ public partial class HudView : Control
         var ts = font.GetStringSize(_banner, HorizontalAlignment.Left, -1, fs);
         var size = new Vector2(ts.X + 56f, 36f);
         // It drops in a short way to its place (never across the title or the boss's bar).
-        float rest = Margin + (_bossShown > 0.01f ? 50f : _titleShown > 0.01f ? 76f : 6f) + (_adventure && _leaks.Count > 0 ? 20f : 0f), hidden = rest - 22f;
+        float rest = Margin + (_bossShown > 0.01f ? 50f : _titleShown > 0.01f ? 76f : 6f), hidden = rest - 22f;
         float stay = _banners.Count > 0 ? BannerStayQueued : BannerStay;
         float y, a;
         if (_bannerAge < BannerIn)
@@ -232,7 +231,7 @@ public partial class HudView : Control
     {
         if (_titleShown <= 0.01f) return;
         float a = _titleShown;
-        float drift = (1f - a) * -6f + (_adventure && _leaks.Count > 0 ? 18f : 0f);
+        float drift = (1f - a) * -6f;
         var ss = font.GetStringSize(_subtitle, HorizontalAlignment.Left, -1, 17);
         Outlined(font, new Vector2((Size.X - ss.X) * 0.5f, Margin + 20f + drift), _subtitle, 17, new Color(1f, 0.9f, 0.75f, 0.85f * a), a);
         var ts = font.GetStringSize(_title, HorizontalAlignment.Left, -1, 34);
@@ -313,11 +312,6 @@ public partial class HudView : Control
             }
             SyncBell();
             if (_shells > 0) _shellsSeen = true;
-            _leaks.Clear();
-            // (A great cave's hidden leak is its boss: no dot of its own.)
-            var shown = world.Leaks.Where(v => !v.Hidden).ToList();
-            int leaksSealed = shown.Count(v => v.Sealed);
-            for (int i = 0; i < shown.Count; i++) _leaks.Add(i < leaksSealed);
         }
         _titleAge += dt;
         _titleShown = _titleAge < TitleIn ? _titleAge / TitleIn : _titleAge < TitleIn + TitleStay ? 1f : Mathf.Max(0f, 1f - (_titleAge - TitleIn - TitleStay) / TitleOut);
@@ -345,7 +339,7 @@ public partial class HudView : Control
             // (Where the hole leads: its rim's kind, said.)
             int hole = world.HoleUnder;
             string below = hole >= 0 && hole < world.Map.Holes.Count && world.Map.Holes[hole].To != default ? $" · {ReefKinds.Below(world.Map.Holes[hole].Kind)}" : "";
-            _prompt = world.CanDive ? $"dive{below}" : !world.ExitOpen ? (world.Map.HasBoss ? "The Crack is sealed" : "The holes open once the leak is sealed") : "Not while fighting";
+            _prompt = world.CanDive ? $"dive{below}" : !world.HoleOpen(hole) ? (world.IsCrack(hole) ? "The Crack is sealed" : "Seal the leak over it to open the way") : "Not while fighting";
         }
         _promptShown = Mathf.MoveToward(_promptShown, over ? 1f : 0f, dt * 4f);
         QueueRedraw();
@@ -565,33 +559,6 @@ public partial class HudView : Control
         DrawCircle(c + new Vector2(-1.4f, -1.4f), 1.4f, new Color(1f, 1f, 1f, 0.8f));
     }
 
-    /// <summary>
-    /// The leaks, top centre: a dot each, dark with a violet glint while it pours, gold once sealed, filling from the left.
-    /// The ones she must seal to go on are full size, the ones she may leave smaller.
-    /// </summary>
-    void DrawLeaks()
-    {
-        if (_leaks.Count == 0) return;
-        const float gap = 22f, big = 6.5f, small = 4.5f;
-        float x0 = Size.X * 0.5f - (_leaks.Count - 1) * gap * 0.5f;
-        for (int i = 0; i < _leaks.Count; i++)
-        {
-            var at = new Vector2(x0 + i * gap, Margin + 6f);
-            float r = i < OctoShoots.Core.Plane.AdventureTuning.LeaksToClear ? big : small;
-            DrawCircle(at, r + 2.5f, new Color(0f, 0f, 0f, 0.5f));
-            if (_leaks[i])
-            {
-                DrawCircle(at, r, new Color(1f, 0.82f, 0.42f));
-                DrawCircle(at + new Vector2(-1.5f, -1.5f), r * 0.35f, new Color(1f, 1f, 0.9f, 0.9f));
-            }
-            else
-            {
-                DrawCircle(at, r, new Color(0.06f, 0.02f, 0.1f));
-                DrawArc(at, r - 1f, 0f, Mathf.Tau, 20, new Color(0.55f, 0.25f, 0.95f, 0.6f + 0.3f * Mathf.Sin(_time * 3f + i)), 1.6f, true);
-            }
-        }
-    }
-
     public override void _Draw()
     {
         var font = ThemeDB.FallbackFont;
@@ -603,7 +570,6 @@ public partial class HudView : Control
         DrawTitle(font);
         // The run's clock, with its setting on: small and faint, top left.
         if (ShowClock) Outlined(font, _adventure ? new Vector2(Margin, BellAt.Y + ArmTop + ArmLength + 46f) : new Vector2(Margin, Margin + 16f), Clock(Elapsed), 16, new Color(1f, 1f, 1f, 0.7f));
-        if (_adventure) DrawLeaks();
 
         // The boss's health, top centre.
         if (_bossShown > 0.01f)

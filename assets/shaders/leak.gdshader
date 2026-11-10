@@ -1,4 +1,5 @@
-// A leak's disc (AdventureView): the brittle star's middle, lying flat at her plane, where the ink comes through. A
+// A leak's disc (AdventureView): the brittle star's middle, lying flat at her plane, where the ink comes through. Seen
+// only in light (leak_unseen). A
 // dark disc of ink with five lobes toward its arms, a violet rim that brightens on the leak's beat, and a slow swirl
 // at its heart (the post pass bends the water over it like hot air, topdown_post.gdshader). As her light staples its
 // arms it pales toward her gold from the rim in; sealed, it dissolves.
@@ -6,7 +7,7 @@
 shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_disabled, shadows_disabled;
 
-global uniform vec3 her_light;
+#include "res://assets/shaders/her_burn.gdshaderinc"
 
 /// Its shimmer now (0..1), how full of her light it is (0..1), how far dissolved once sealed (0..1), drunk by the boss (1).
 instance uniform vec4 state = vec4(0.0);
@@ -24,7 +25,23 @@ float noise(vec2 p) {
 	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
 }
 
+
+// Seen only in light, as a murkling is (murkling.gdshaderinc): within her aura, where a beam of hers falls on it, or in a
+// lit crystal's light (crystal_seen, AdventureView); elsewhere it is not drawn at all, its edge breaking up in the water.
+instance uniform float crystal_seen = 0.0;
+bool leak_unseen(vec3 world, float salt) {
+	float seen = max(max(her_reveal_aura(world), her_reveal_beams(world)), crystal_seen);
+	return seen < 0.15 + 0.7 * noise(world.xz * 4.0 + vec2(TIME * 0.4, salt));
+}
+
+varying vec3 v_world;
+
+void vertex() {
+	v_world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+}
+
 void fragment() {
+	if (leak_unseen(v_world, seed)) discard;
 	vec2 p = (UV - 0.5) * 2.0;
 	float r = length(p), a = atan(p.y, p.x);
 	float shimmer = state.x, glow = state.y, shut = state.z;

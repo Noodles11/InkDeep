@@ -41,16 +41,18 @@ public static class ReefKinds
 
 /// <summary>
 /// The rims of a reef's holes (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6.3): a ring of light on each hole's floor and a glow
-/// down in it, in the colour of the reef it leads to (ReefKinds). Faint while the holes are sealed, they brighten and
-/// breathe once the leak is sealed and the holes open. A boss arena's Crack has its own light and gets none.
+/// down in it, in the colour of the reef it leads to (ReefKinds). None while a hole lies shut under its leak's sand;
+/// once its leak is sealed and it opens, its rim lights and breathes. A boss arena's Crack has its own light and gets none.
 /// </summary>
 public partial class HoleView : Node3D
 {
-    const float Lift = 0.35f, SealedEnergy = 0.15f, OpenEnergy = 1.1f;
+    const float Lift = 0.35f, OpenEnergy = 1.1f;
 
     readonly List<(MeshInstance3D Ring, OmniLight3D Glow, StandardMaterial3D Material)> _rims = new();
     LevelMap? _map;
-    float _time, _open;
+    float _time;
+    /// <summary>How open each hole is shown (0 shut → 1 open), eased.</summary>
+    readonly List<float> _open = new();
 
     void Build(LevelMap map)
     {
@@ -60,6 +62,7 @@ public partial class HoleView : Node3D
             glow.QueueFree();
         }
         _rims.Clear();
+        _open.Clear();
         _map = map;
         foreach (var hole in map.Holes)
         {
@@ -93,6 +96,7 @@ public partial class HoleView : Node3D
             AddChild(ring);
             AddChild(glow);
             _rims.Add((ring, glow, material));
+            _open.Add(-1f);
         }
     }
 
@@ -100,15 +104,18 @@ public partial class HoleView : Node3D
     {
         if (!ReferenceEquals(world.Map, _map)) Build(world.Map);
         _time += dt;
-        _open = Mathf.MoveToward(_open, world.ExitOpen ? 1f : 0f, dt * 0.8f);
         float breathe = 0.85f + 0.15f * Mathf.Sin(_time * 2.2f);
         for (int i = 0; i < _rims.Count; i++)
         {
-            var (_, glow, material) = _rims[i];
+            var (ring, glow, material) = _rims[i];
+            float want = world.HoleOpen(i) ? 1f : 0f;
+            // (As it was, on arriving; then eased.)
+            _open[i] = _open[i] < 0f ? want : Mathf.MoveToward(_open[i], want, dt * 0.8f);
             var colour = ReefKinds.Colour(world.Map.Holes[i].Kind);
-            float strength = Mathf.Lerp(0.18f, 0.8f * breathe, _open);
-            material.AlbedoColor = new Color(colour, strength);
-            glow.LightEnergy = Mathf.Lerp(SealedEnergy, OpenEnergy * breathe, _open);
+            material.AlbedoColor = new Color(colour, 0.8f * breathe * _open[i]);
+            glow.LightEnergy = OpenEnergy * breathe * _open[i];
+            bool crack = world.IsCrack(i);
+            ring.Visible = glow.Visible = !crack && _open[i] > 0.01f;
         }
     }
 }

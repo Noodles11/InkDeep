@@ -590,8 +590,8 @@ Running after the checks, it never changes what she can reach.
     a level's template seals (its `pathSeals` rule);
   - **a sword**, on **every way into the boss's arena** (each opening in its rim found by rays out from its middle, a
     wall across it from the rock on one side to the rock on the other), its crimson smouldering faintly in the groove.
-    It takes no light until 3 of the level's leaks are sealed (`SealRefused`): her shots knock dully on it, and she is
-    told how many more to seal. No leak lies behind it.
+    On a reef it takes her light whatever the leaks (they hold only its other holes); a great cave's takes none till
+    its leak is sealed (`SealRefused`): her shots knock dully on it. No leak lies behind it.
   Each of her shots that strikes the wall within 2.2 m of its carving fills it with her light (a sixth of an X, an
   eighth of the sword; damage does not matter, a merged or bouncing bubble counts once), from its heart outward (the
   X's crossing, the sword's guard), with a flash and a chime rising as it fills. **The hits must come one after

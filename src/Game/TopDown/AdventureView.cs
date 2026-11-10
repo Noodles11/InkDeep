@@ -17,7 +17,7 @@ namespace OctoShoots.Game.TopDown;
 public partial class AdventureView : Node3D
 {
     /// <summary>How high over her plane a leak floats, how much wider its arms are drawn than they sting, its disc's size.</summary>
-    const float LeakHeight = 0.12f, ArmDrawn = 1.15f, DiscSize = 1.3f;
+    const float LeakHeight = 0.12f, ArmDrawn = 1.15f, DiscSize = 1.56f;
     /// <summary>A shimmer every this long; twice as often with her within Close.</summary>
     const float ShimmerSeconds = 3f, Close = 10f;
     /// <summary>A staple snaps in or out over this long; once sealed, the leak dissolves over this long.</summary>
@@ -27,6 +27,8 @@ public partial class AdventureView : Node3D
 
     sealed class LeakNode
     {
+        /// <summary>How much of it is seen in light now (eased): its glow and the water it bends go with it.</summary>
+        public float Seen;
         public MeshInstance3D Arms = null!, Disc = null!;
         public ImmediateMesh Mesh = null!;
         public OmniLight3D Light = null!;
@@ -284,12 +286,21 @@ public partial class AdventureView : Node3D
             node.Sealing = Mathf.MoveToward(node.Sealing, sealing ? 1f : 0f, dt * 3f);
             // A staple about to snap trembles first.
             float fray = !v.Sealed && v.Light > 0f && v.Since > AdventureTuning.LeakHold * 0.5f ? 1f : 0f;
+            // Seen only in light (leak.gdshader's leak_unseen): a lit crystal shows it too; its own glow and the water it
+            // bends show only as much as it is seen, so nothing gives it away in the dark.
+            float crystal = world.CrystalSees(v.Position, AdventureTuning.LeakArmLength(world.Menace));
+            node.Arms.SetInstanceShaderParameter(SN.Of("crystal_seen"), crystal);
+            node.Disc.SetInstanceShaderParameter(SN.Of("crystal_seen"), crystal);
+            float seen = Mathf.Max(crystal, world.Aura.Shining ? 1f - Mathf.SmoothStep(world.Aura.Range * 0.8f, world.Aura.Range + 1.5f, d) : 0f);
+            foreach (var (beam, _) in world.HerBeams)
+                if (world.BeamLight(beam, v.Position, 0f, AdventureTuning.LeakDisc * 2f, v) > 0f) seen = 1f;
+            node.Seen = Mathf.MoveToward(node.Seen, seen, dt * 3f);
             DrawArms(node, v, time);
             node.Arms.SetInstanceShaderParameter(SN.Of("state"), new Vector4(shimmer, node.Sealing, shut, v.Drunk ? 1f : 0f));
             node.Disc.SetInstanceShaderParameter(SN.Of("state"), new Vector4(shimmer, v.Glow, shut, v.Drunk ? 1f : 0f));
-            node.Light.LightEnergy = (0.15f + 1.1f * shimmer) * (1f - shut);
+            node.Light.LightEnergy = (0.15f + 1.1f * shimmer) * (1f - shut) * node.Seen;
             SyncStaples(node, v, step, fray, shut, time);
-            if (!v.Sealed && shown < _airs.Length) _airs[shown++] = new Vector3(v.Position.X, v.Position.Y, 1f - 0.7f * v.Glow);
+            if (!v.Sealed && node.Seen > 0.02f && shown < _airs.Length) _airs[shown++] = new Vector3(v.Position.X, v.Position.Y, (1f - 0.7f * v.Glow) * node.Seen);
         }
         camera.SetLeaks(_airs, shown);
     }

@@ -53,6 +53,8 @@ public partial class TopDownMain : Node3D
     CrabView _crab = null!;
     float _holeShown;
     KelpView _kelp = null!;
+    /// <summary>How far each of the reef's holes has opened (0 under sand → 1 open): its sand drains as its leak is sealed.</summary>
+    readonly List<float> _holeOpen = new();
     AbyssView _abyss = null!;
     VaseView _vases = null!;
     /// <summary>Achievements: their data, what earns them on this run, and the banner that announces them (§8).</summary>
@@ -1550,6 +1552,13 @@ public partial class TopDownMain : Node3D
         _geysers.Show(_world);
         _crackOpen = _world.ExitOpen ? 1f : 0f;
         _level.SetCrackOpen(_crackOpen);
+        // The reef's holes: open as she finds them (a level put back keeps those she opened), the rest under sand.
+        _holeOpen.Clear();
+        for (int i = 0; i < _map.Holes.Count; i++)
+        {
+            _holeOpen.Add(_world.HoleOpen(i) ? 1f : 0f);
+            _level.SetHoleOpen(i, _holeOpen[i]);
+        }
         _dark.Clear();
         _inCurse = false;
         _combat.Visible = _boss.Visible = _puffers.Visible = true;
@@ -2782,6 +2791,18 @@ public partial class TopDownMain : Node3D
         _snow.Tick(dt, Focus(alpha) + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
         _plankton.Tick(dt, Focus(alpha) + Vector3.Up * 2f, _camera.Camera.GlobalBasis);
         _level.UpdateCanopy(_world.Player.Position, dt, _camera.Camera.GlobalPosition);
+        // A hole opens as its leak is sealed: the sand over it drains away into it.
+        for (int i = 0; i < _holeOpen.Count && i < _map.Holes.Count; i++)
+        {
+            if (_holeOpen[i] >= 1f || !_world.HoleOpen(i) || _world.IsCrack(i)) continue;
+            if (_holeOpen[i] <= 0f)
+            {
+                _sfx.Play("sand_sink", -4f, 0f);
+                _haptics.Pulse(0.25f, 0.5f, 1f);
+            }
+            _holeOpen[i] = Mathf.Min(1f, _holeOpen[i] + dt / CrackOpenSeconds);
+            _level.SetHoleOpen(i, _holeOpen[i]);
+        }
         // The Crack opens: the sand over it sags, turns and drains away into the dark, and its glow comes up.
         if (_map.HasBoss && _world.ExitOpen && _crackOpen < 1f)
         {
@@ -3356,14 +3377,12 @@ public partial class TopDownMain : Node3D
                 _haptics.Pulse(0.7f, 0.5f, 0.4f);
                 _sfx.PlayPitched("pop", 0.35f, -2f);
                 _sfx.PlayPitched("bell_ring", 0.85f, -6f);
-                Say(e.Size > 0 ? $"Leak sealed · {(int)e.Size} to go"
-                    : _world.LeaksOpen > 0 ? "Leak sealed"
-                    : InDiveCave ? "Leak sealed · its upwelling carries you out"
-                    : "Every leak sealed");
+                // (No count: a leak sealed opens the hole under it, and that is enough to go on.)
+                Say(InDiveCave ? "Leak sealed · its upwelling carries you out" : "Leak sealed · the hole under it opens");
                 break;
             case PlaneEventType.ExitOpened:
                 _sfx.PlayPitched("bell_ring", 0.6f, -4f);
-                Say("The way down is open");
+                if (InDiveCave || _map.HasBoss && e.Size < 0f) Say("The way down is open");
                 break;
             case PlaneEventType.DealRefused:
                 _sfx.PlayPitched("pop", 0.5f, -8f);
