@@ -30,6 +30,8 @@ instance uniform float swell = 0.0;
 instance uniform float hollow = 1.0;
 /// 1: seen only where her light falls on it (a murkling); 0: always (a Blightroot's parts).
 uniform float hidden = 0.0;
+// Whether a beam of hers reaches it (PlaneWorld.BeamSees): none past a body in the way.
+uniform float beam_seen = 1.0;
 /// The adventure's murklings: short blowfish spikes all over (a spiked one, from a blue tang); a short wiggling tadpole
 /// tail out behind it along swim (a tadpole one, from a clownfish).
 instance uniform float spikes = 0.0;
@@ -155,7 +157,9 @@ void fragment() {
 	if (fade < 1.0 && hash3(floor(v_dir * 9.0) + seed) > fade) discard;
 	if (hidden > 0.5) {
 		vec3 hw = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
-		if (her_reveal(hw) < 0.15 + 0.7 * noise2(hw.xz * 4.0 + vec2(TIME * 0.4, seed))) discard;
+		// (Her beams show it only where one reaches it, beam_seen: a body in the way shades it.)
+		float seen = max(her_reveal_aura(hw), beam_seen * her_reveal_beams(hw));
+		if (seen < 0.15 + 0.7 * noise2(hw.xz * 4.0 + vec2(TIME * 0.4, seed))) discard;
 	}
 #ifdef OVER
 	float over = over_her(v_world, VERTEX.z, VIEW_MATRIX);

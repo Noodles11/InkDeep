@@ -366,6 +366,33 @@ public sealed partial class PlaneWorld
         return false;
     }
 
+    /// <summary>Whether any beam of hers reaches this creature (none past a body in the way): it shows in it.</summary>
+    public bool BeamSees(object kin, Vector2 at, float radius)
+    {
+        foreach (var (beam, _) in HerBeams)
+            if (BeamLight(beam, at, 0f, radius, kin) > 0f) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Where a beam of hers stops along its axis: at rock, or short of the first creature's body across it (the near side
+    /// of its middle), unless her light pierces. Its fan is drawn to here.
+    /// </summary>
+    public Vector2 BeamStop(LightEmitter b)
+    {
+        var from = b.Position;
+        var end = b == Beam ? BeamEnd : StopOf(b);
+        float len = Vector2.Distance(from, end);
+        foreach (var (_, p, r) in _bodies)
+        {
+            float along = Vector2.Dot(p - from, b.Direction);
+            if (along <= 0f || along - r * 0.4f >= len) continue;
+            float across = MathF.Abs((p.X - from.X) * b.Direction.Y - (p.Y - from.Y) * b.Direction.X);
+            if (across < r * 0.85f) len = MathF.Max(0.5f, along - r * 0.4f);
+        }
+        return from + b.Direction * len;
+    }
+
     /// <summary>Where a beam of hers first meets rock along its axis (its full reach if nothing).</summary>
     public Vector2 StopOf(LightEmitter beam) => FirstBlocked(beam.Position, beam.Position + beam.Direction * beam.Range, 0.1f);
 

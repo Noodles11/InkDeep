@@ -106,7 +106,8 @@ public partial class BeamView : Node3D
             }
             var dir = new Vector3(beam.Direction.X, 0f, beam.Direction.Y);
             float range = beam.Range;
-            var end = main ? world.BeamEnd : world.StopOf(beam);
+            // (To rock, or short of the first body across it.)
+            var end = world.BeamStop(beam);
             float stop = Mathf.Clamp(System.Numerics.Vector2.Distance(beam.Position, end) / range, 0.02f, 1f);
             var origin = new Vector3(beam.Position.X, LevelMap.SwimBand + 0.3f, beam.Position.Y);
             fan.Node.GlobalTransform = new Transform3D(new Basis(Vector3.Up, Mathf.Atan2(-dir.Z, dir.X)).Scaled(new Vector3(range, 1f, range)), origin);

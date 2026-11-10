@@ -120,11 +120,17 @@ float hb_cone(vec4 lit, vec4 dir, vec3 world) {
 	return d < 0.6 ? 1.0 : cone;
 }
 
-float her_reveal(vec3 world) {
+// Her reveal's two parts: her aura's (and her burning shots'), and her beams' (which a body in the way stops: the sim
+// tells each creature whether a beam of hers reaches it, PlaneWorld.BeamSees).
+float her_reveal_aura(vec3 world) {
 	float s = her_aura.w > 0.0 ? 1.0 - smoothstep(her_aura.w * 0.8, her_aura.w, length(world.xz - her_aura.xz)) : 0.0;
-	s = max(s, max(hb_cone(her_beam_lit, her_beam_dir, world), max(hb_cone(her_beam2_lit, her_beam2_dir, world), hb_cone(her_beam3_lit, her_beam3_dir, world))));
-	s = max(s, max(max(hb_within(her_burn0, world), hb_within(her_burn1, world)), max(hb_within(her_burn2, world), hb_within(her_burn3, world))));
-	return s;
+	return max(s, max(max(hb_within(her_burn0, world), hb_within(her_burn1, world)), max(hb_within(her_burn2, world), hb_within(her_burn3, world))));
+}
+float her_reveal_beams(vec3 world) {
+	return max(hb_cone(her_beam_lit, her_beam_dir, world), max(hb_cone(her_beam2_lit, her_beam2_dir, world), hb_cone(her_beam3_lit, her_beam3_dir, world)));
+}
+float her_reveal(vec3 world) {
+	return max(her_reveal_aura(world), her_reveal_beams(world));
 }
 
 // The burn on a point of a corrupted body (world position and normal), as much of it as amount allows (0..1).

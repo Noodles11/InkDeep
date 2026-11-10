@@ -169,6 +169,12 @@ public class BeamTests
             Assert.True(front.Corruption.Value < 10000f);
             if (pierce) Assert.True(back.Corruption.Value < 10000f, "her light pierces");
             else Assert.Equal(10000f, back.Corruption.Value);
+            // It shows in the beam only where the beam reaches it; the beam is drawn to the first body across it.
+            Assert.True(w.BeamSees(front, frontAt, front.Radius));
+            Assert.Equal(pierce, w.BeamSees(back, backAt, back.Radius));
+            float stop = Vector2.Distance(her, w.BeamStop(w.Beam));
+            if (pierce) Assert.True(stop > 8f);
+            else Assert.InRange(stop, 3f, 4f);
         }
     }
 
