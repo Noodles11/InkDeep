@@ -269,6 +269,9 @@ public sealed class SuspendedRun
     /// <summary>The run's totals so far, for the death splash.</summary>
     public int Foes { get; set; }
     public int ShellsCollected { get; set; }
+    /// <summary>Leaks she has sealed and freed light (cores) she has taken on the run so far (the dive's summary).</summary>
+    public int LeaksSealed { get; set; }
+    public int CoresTaken { get; set; }
     /// <summary>When it was saved, as an ISO 8601 local time.</summary>
     public string SavedAt { get; set; } = "";
 

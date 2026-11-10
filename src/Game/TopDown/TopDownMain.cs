@@ -170,7 +170,7 @@ public partial class TopDownMain : Node3D
     bool _deathSplash;
     bool _confirmLatched;
     /// <summary>The run so far, for the death splash.</summary>
-    int _runMobs, _runShells;
+    int _runMobs, _runShells, _runLeaks, _runCores;
     float _runTime;
     LoadingSplash _splash = null!;
     Transition _transition;
@@ -354,6 +354,8 @@ public partial class TopDownMain : Node3D
         AddChild(_beam);
         _cores = new CoreView();
         AddChild(_cores);
+        _motes = new LightMotes();
+        AddChild(_motes);
         _holes = new HoleView();
         AddChild(_holes);
         _lamps = new LampView();
@@ -514,6 +516,7 @@ public partial class TopDownMain : Node3D
             // Verification: as on a controller from the start (its key hints).
             else if (arg == "--dbg-pad") InputSetup.UsingPad = _pad = true;
             else if (arg.StartsWith("--xp=") && int.TryParse(Value("--xp="), out int xp)) _startXp = xp;
+            else if (arg.StartsWith("--dbg-die=") && float.TryParse(Value("--dbg-die="), NumberStyles.Float, CultureInfo.InvariantCulture, out float die)) _dbgDie = die;
             else if (arg.StartsWith("--hp=") && float.TryParse(Value("--hp="), NumberStyles.Float, CultureInfo.InvariantCulture, out float hp)) _startHp = hp;
             else if (arg.StartsWith("--luck=") && float.TryParse(Value("--luck="), NumberStyles.Float, CultureInfo.InvariantCulture, out float luck)) _dbgLuck = luck;
             else if (arg.StartsWith("--pearls=")) _startPearls = Value("--pearls=").Split(',', StringSplitOptions.RemoveEmptyEntries);
@@ -638,6 +641,8 @@ public partial class TopDownMain : Node3D
             Elapsed = _elapsed,
             Foes = _runMobs,
             ShellsCollected = _runShells,
+            LeaksSealed = _runLeaks,
+            CoresTaken = _runCores,
             SavedAt = DateTime.Now.ToString("s", CultureInfo.InvariantCulture),
         };
 
@@ -812,12 +817,15 @@ public partial class TopDownMain : Node3D
         // A jelly's dive keeps the moment on her (docs/DIVE.md §1); in a leak cave, the level's start is what is kept.
         if (InDiveCave) return;
         if (!_persist || _debugRun || (_jelly is { } diver ? diver.Dive : GameSave.Current.Run) is not { } saved) return;
-        if (saved.Cycle != _id.Cycle || saved.Depth != _id.Depth || saved.Level != _id.Level) return;
+        if (saved.Cycle != _id.Cycle || saved.Depth != _id.Depth || saved.Level != _id.Level || saved.Lane != _id.Lane) return;
         saved.State = Moment();
         if (saved.State is null) return;
         saved.Elapsed = _elapsed;
         saved.Foes = _runMobs;
         saved.ShellsCollected = _runShells;
+        // (The level's own so far come back with its moment.)
+        saved.LeaksSealed = _runLeaks;
+        saved.CoresTaken = _runCores;
         saved.SavedAt = DateTime.Now.ToString("s", CultureInfo.InvariantCulture);
     }
 
@@ -1419,6 +1427,8 @@ public partial class TopDownMain : Node3D
                 _elapsed = _runTime = (float)saved.Elapsed;
                 _runMobs = saved.Foes;
                 _runShells = saved.ShellsCollected;
+                _runLeaks = saved.LeaksSealed;
+                _runCores = saved.CoresTaken;
                 foreach (string key in saved.Reefs)
                     if (SuspendedRun.FromReefKey(key) is { } reef) _reefs.Add(reef);
                 _resume = null;
@@ -2108,8 +2118,8 @@ public partial class TopDownMain : Node3D
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_light_at"), new Vector4(at.X, at.Y, at.Z, range));
         // Her aura (the sim's): what is seen only in her light shows within it (her_reveal).
         if (_world is { } seen)
-            RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_aura"), seen.Aura.Shining
-                ? new Vector4(seen.Aura.Position.X, LevelMap.SwimBand, seen.Aura.Position.Y, seen.Aura.Range) : new Vector4(0f, -1000f, 0f, 0f));
+            RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_aura"), seen.Aura.Shining && _auraShown > 0.01f
+                ? new Vector4(seen.Aura.Position.X, LevelMap.SwimBand, seen.Aura.Position.Y, seen.Aura.Range * _auraShown) : new Vector4(0f, -1000f, 0f, 0f));
         // Where her shots' light burns the corrupted (her_burn.gdshaderinc): the first few shots burning something, each
         // where it hangs and how far its light reaches.
         var burners = _world?.Burners;
@@ -2270,6 +2280,12 @@ public partial class TopDownMain : Node3D
             Capture();
             return;
         }
+        if (_dying)
+        {
+            StepDying(dt);
+            Capture();
+            return;
+        }
         if (_riding || _arriving)
         {
             if (_riding) StepRide(dt);
@@ -2302,6 +2318,12 @@ public partial class TopDownMain : Node3D
         }
 
         DebugMoment();
+        if (_dbgDie > 0f && _levelTime > _dbgDie)
+        {
+            // Verification: her light spent at once.
+            _dbgDie = 0f;
+            _world.Player.Hp = 0f;
+        }
         // The pause menu holds the sea still (and the clock): only the views go on, so she still moves in place.
         StepMenu(dt);
         bool held = Paused || _intro.Playing;
@@ -2571,10 +2593,10 @@ public partial class TopDownMain : Node3D
             BeginDive();
             return;
         }
-        // Out of HP: the run is over.
+        // Out of light: it goes out, then the run is over.
         if (_world.Defeated)
         {
-            BeginDeath();
+            BeginDying();
             return;
         }
         // A dive's leak cave: in by its mouth, out by its way (docs/DIVE.md §6).
@@ -2957,12 +2979,14 @@ public partial class TopDownMain : Node3D
     {
         _runMobs += _world.Stats.MobsDefeated;
         _runShells += _world.Stats.ShellsCollected;
+        _runLeaks += _world.Stats.LeaksSealed;
+        _runCores += _world.Stats.CoresTaken;
         _runTime += _levelTime;
     }
 
     void ResetRunTotals()
     {
-        _runMobs = _runShells = 0;
+        _runMobs = _runShells = _runLeaks = _runCores = 0;
         _runTime = 0f;
         _elapsed = 0f;
     }
@@ -2982,11 +3006,16 @@ public partial class TopDownMain : Node3D
             GameSave.Write();
         }
         var time = TimeSpan.FromSeconds(_runTime);
+        // The dive's summary: how deep, how far across the reefs, what she set right.
+        var graph = DiveGraph.Of(_seed);
+        int havens = _reefs.Count(r => graph.KindOf(r) == ReefKind.Haven);
         var stats = new List<(string, string)>
         {
             ("Reached", _id.ToString()),
             ("Time", $"{(int)time.TotalMinutes}:{time.Seconds:00}"),
-            ("Foes defeated", $"{_runMobs}"),
+            ("Reefs crossed", havens > 0 ? $"{_reefs.Count} · {havens} haven{(havens == 1 ? "" : "s")}" : $"{_reefs.Count}"),
+            ("Leaks sealed", $"{_runLeaks}"),
+            ("Light freed", $"{_runMobs} creatures · {_runCores} cores taken"),
             ("Shells collected", $"{_runShells}"),
             ("Pearls absorbed", $"{_run!.Items.Count}"),
             ("Seed", _seed.ToString()),
@@ -3029,6 +3058,7 @@ public partial class TopDownMain : Node3D
 
     void StartLoading()
     {
+        RelightBell();
         DropBelow();
         _nextMap = Shape(_id);
         _transition = Transition.Loading;

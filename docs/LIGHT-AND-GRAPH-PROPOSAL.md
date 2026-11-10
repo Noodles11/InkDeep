@@ -47,7 +47,7 @@ shot of hers 3.4 m (as now), intensity 0.4 to 1.3 by its bubbles (as now).
 ### 2.1 Light is her HP
 
 Her HP (`Player.Hp`, `Run.MaxHp`) stays the number the game runs on; it is now *how much light she has*. Her bell
-dims as it falls and goes out at 0, which is the end of the dive. Nothing refills it on its own: only cores (§4.2),
+dims as it falls and goes out at 0, which is the end of the dive (her light leaving her: docs/DIVE.md §2). Nothing refills it on its own: only cores (§4.2),
 the Coral Polyp pearl (slow), havens and a sealed leak cave (full, as now).
 
 Her aura and beam cost nothing to shine. They are what the murklings drink: a murkling feeding on either takes from
@@ -289,7 +289,7 @@ inside a reef (a secret, a shop, a shell cache, a Crab Deal on one reef of a dep
 | 5 | Pearls sorted and moved; one light rule per boss — built | yes |
 | 6 | The dive graph, the reef kinds and their place rules, the holes, the chart — built | yes |
 | 7 | The rules for the places within a reef; sub-levels made with their reef; the return; short transitions — built | yes |
-| 8 | The save for the graph; the death fade and the dive's summary | yes |
+| 8 | The save for the graph (and older saves migrated); the death fade and the dive's summary — built (docs/DIVE.md §2) | yes |
 | 9 | What nothing uses any more goes (shot reserve, the line of levels) | no |
 
 Each stage ends with the build, the tests and a play check in the game, and is committed on its own.

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using System.Text.Json.Nodes;
+using OctoShoots.Core.Gen.TopDown;
 using OctoShoots.Core.Run;
 using OctoShoots.Core.Saves;
 using Xunit;
@@ -163,6 +165,58 @@ public class SaveTests
         var save = SaveCodec.Deserialize(v1, migrations, currentVersion: 3);
         Assert.Equal(7, save.Run!.Shells);
         Assert.Equal(5.0, save.Run.Elapsed);
+    }
+
+    [Fact]
+    public void ASaveFromBeforeTheGraphTakesUpAtItsReefsStart_OnLaneZero_KeepingAllElse()
+    {
+        // A dive in a haven before Depth 1 · Level 3, with the moment it was left and what it carried; and a run.
+        string v2 = """
+            { "version": 2, "profile": { "achievements": ["untouchable"] },
+              "run": { "seed": "KELP7Q2Z", "cycle": 1, "depth": 2, "level": 4, "items": ["sea_chart_nautilus"], "hp": 40,
+                       "state": { "world": "AAAA", "fog": "", "visited": [1, 2] } },
+              "jellies": [ { "name": "Clementine", "level": 3, "shells": 12, "freed": ["tull"],
+                             "dive": { "seed": "KELP7Q2Z", "cycle": 1, "depth": 2, "level": 3, "haven": true, "shells": 30, "hp": 55,
+                                       "state": { "world": "AAAA" } } } ] }
+            """;
+        var save = SaveCodec.Deserialize(v2);
+        Assert.Equal(SaveCodec.CurrentVersion, save.Version);
+        Assert.Contains("untouchable", save.Profile.Achievements);
+        var run = save.Run!;
+        Assert.Null(run.State);
+        Assert.Equal(0, run.Lane);
+        Assert.Empty(run.Reefs);
+        Assert.Equal(40f, run.Hp);
+        Assert.Equal(new[] { "sea_chart_nautilus" }, run.Items);
+        var jelly = Assert.Single(save.Jellies);
+        Assert.Equal(3, jelly.Level);
+        Assert.Contains("tull", jelly.Freed);
+        var dive = jelly.Dive!;
+        Assert.Null(dive.State);
+        Assert.Equal(30, dive.Shells);
+        // It takes up on the graph's reef at that row's lane 0 (a haven only where the graph has one).
+        var reef = dive.Reef();
+        var graph = DiveGraph.Of(SeedCode.Parse("KELP7Q2Z"));
+        Assert.Equal(graph.Row(1, 2, 3)[0].Id, reef);
+        Assert.Equal(graph.KindOf(reef) == ReefKind.Haven, reef.Haven);
+    }
+
+    [Fact]
+    public void ADiveSavedOnTheGraphComesBackOnItsReef_WithTheReefsItHasBeenOn()
+    {
+        var seed = SeedCode.Parse("KELP7Q2Z");
+        var graph = DiveGraph.Of(seed);
+        var at = graph.Row(1, 2, 3).Last().Id;
+        var dive = new SuspendedRun { Seed = seed.ToString(), Cycle = at.Cycle, Depth = at.Depth, Level = at.Level, Lane = at.Lane, Haven = at.Haven, LeaksSealed = 4, CoresTaken = 9 };
+        dive.Reefs.Add(SuspendedRun.ReefKey(LevelId.FirstRun));
+        dive.Reefs.Add(SuspendedRun.ReefKey(at));
+        var save = new SaveFile();
+        save.Jellies.Add(new Jelly { Name = "Clementine", Dive = dive });
+        var back = SaveCodec.Deserialize(SaveCodec.Serialize(save)).Jellies[0].Dive!;
+        Assert.Equal(at, back.Reef());
+        Assert.Equal(new[] { LevelId.FirstRun, at with { Haven = false } }, back.Reefs.Select(k => SuspendedRun.FromReefKey(k)!.Value));
+        Assert.Equal(4, back.LeaksSealed);
+        Assert.Equal(9, back.CoresTaken);
     }
 
     [Fact]

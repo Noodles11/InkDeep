@@ -20,7 +20,7 @@ public sealed class SaveException : Exception
 /// </summary>
 public static class SaveCodec
 {
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 3;
     public const string ExportPrefix = "INKD2:";
 
     /// <summary>Migration from version N to N+1, keyed by N. Add one whenever the format changes.</summary>
@@ -32,6 +32,24 @@ public static class SaveCodec
             [1] = root =>
             {
                 root.Remove("run");
+                return root;
+            },
+            // 2 → 3: the dive is a graph of reefs (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6). A run or dive saved before it
+            // takes up on lane 0 of its row (SuspendedRun.Reef), at that reef's start: the moment it kept was of a level
+            // no longer made the same, so it goes (put back on the new reef, it would put her and its creatures in the
+            // rock). All else it carried stays.
+            [2] = root =>
+            {
+                static void Forget(JsonNode? run)
+                {
+                    if (run is not JsonObject o) return;
+                    o.Remove("state");
+                    o.Remove("lane");
+                    o.Remove("reefs");
+                }
+                Forget(root["run"]);
+                if (root["jellies"] is JsonArray jellies)
+                    foreach (var jelly in jellies) Forget(jelly?["dive"]);
                 return root;
             },
         };

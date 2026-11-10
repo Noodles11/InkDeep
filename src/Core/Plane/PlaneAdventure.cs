@@ -733,6 +733,7 @@ public sealed partial class PlaneWorld
         if (wakes && LeaksLeft == 0 && Currents.Count > 0) Events.Add(new PlaneEvent(PlaneEventType.MainCurrentWoke, v.Position, Vector2.UnitY));
         if (Map.LeakCave) DissolveAsh(v.Position);
         if (drunk) return;
+        Stats.LeaksSealed++;
         if (Options.DiveCave) RewardDiveCave(v);
         // Her reward: shells burst out of it (in a leak cave, out in a ring clear of the upwelling that rises where it was,
         // so taking them never carries her out of the cave).

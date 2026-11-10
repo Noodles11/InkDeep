@@ -26,8 +26,16 @@ reef's map, zones, cave mouths in regions, homeward current, charts, lost light 
   time, as a run always has) and her shells (`Jelly.Shells`).
   A new jelly starts with the run's starting pearls.
 - **Carried:** everything found in a dive since the last haven, pearls and shells alike. Reaching a haven banks it all (§4).
-- **Dimmed** (her meter full): the dive ends. What she carried is lost, what is banked and always hers stays, and the
-  next dive starts at the top again.
+- **Dimmed** (her light spent): the dive ends. The reef holds still round her while her beams fold away and her aura
+  draws in, her bell goes out like a lamp, and what light she had leaves her, motes of it rising off her as her bell
+  fades to nothing (`TopDownMain.Death`, about three seconds). Then the dive's summary: how deep she reached, what
+  she lost and kept, the reefs she crossed (and the havens among them), the leaks she sealed, the light she freed
+  (creatures and cores taken) and her shells. What she carried is lost, what is banked and always hers stays, and the
+  next dive starts at the top again. (Verification: `--dbg-die=seconds` spends her light that long onto the reef.)
+- **The save** (`SaveCodec`, version 3) keeps the dive where it stands: its seed, the reef she is on (with its lane),
+  the reefs she has been on, the moment she left (resumed exactly), and the dive's totals for its summary. The graph
+  itself is made again from the seed. A save from before the graph takes up at the start of the same row's first reef
+  (lane 0), all else it carried kept: the moment it held was of a level no longer made the same.
 
 ## 3. Camera
 

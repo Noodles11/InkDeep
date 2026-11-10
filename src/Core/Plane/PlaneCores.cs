@@ -63,6 +63,7 @@ public sealed partial class PlaneWorld
             core.Taken = true;
             float healed = MathF.Min(core.Light, MathF.Max(Run.MaxHp - p.Hp, 0f));
             p.Hp += healed;
+            Stats.CoresTaken++;
             Events.Add(new PlaneEvent(PlaneEventType.CoreTaken, core.Position, Vector2.Zero, healed));
         }
         Cores.RemoveAll(c => c.Taken);

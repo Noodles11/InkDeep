@@ -76,6 +76,9 @@ public sealed class PlaneStats
     public int PearlsFound;
     public float DamageTaken;
     public int BossesFreed;
+    public int LeaksSealed;
+    /// <summary>Freed light (murklings' cores) she has taken.</summary>
+    public int CoresTaken;
 }
 
 public sealed partial class PlaneWorld
