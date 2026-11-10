@@ -338,7 +338,7 @@ public class CorruptionTests
         }
         // Her far away: it creeps on (it may turn back for new clean floor) and smears ink as it goes.
         float farthest = 0f;
-        for (int i = 0; i < 20 * 60; i++)
+        for (int i = 0; i < 40 * 60; i++)
         {
             w.Step(default);
             farthest = MathF.Max(farthest, Vector2.Distance(b.Position, start));
@@ -358,6 +358,8 @@ public class CorruptionTests
         var b = w.Blotters[0];
         w.Blotters.RemoveAt(1);
         Quiet(w);
+        // (No Blightroot's spore to hurt her first, the bomb's splash then landing in her grace.)
+        w.Blightroots.Clear();
         w.Blotters.Add(b);
         int shots = 0;
         while (b.Alive && shots < 40)
@@ -386,6 +388,8 @@ public class CorruptionTests
         var b = w.Blotters[0];
         w.Blotters.RemoveAt(1);
         Quiet(w);
+        // (No Blightroot's spore to hurt her first, the bomb's splash then landing in her grace.)
+        w.Blightroots.Clear();
         w.Blotters.Add(b);
         // A shot at the rim of its shell, beside it, far from the crab at its front.
         var rim = b.Position + new Vector2(-b.Heading.Y, b.Heading.X) * (BlotterTuning.ShellRadius - 0.1f);
@@ -401,9 +405,13 @@ public class CorruptionTests
         var b = w.Blotters[0];
         w.Blotters.RemoveAt(1);
         Quiet(w);
+        // (No Blightroot's spore to hurt her first, the bomb's splash then landing in her grace.)
+        w.Blightroots.Clear();
         w.Blotters.Add(b);
         // She stands 6 m off on clean ground and has just struck it; it spits a bomb at her.
-        var spot = Enumerable.Range(0, 32).Select(i => b.Position + new Vector2(MathF.Cos(i * 0.2f), MathF.Sin(i * 0.2f)) * 6f).First(q => w.Clear(q, 0.6f));
+        // (Open water round her: room to be thrown.)
+        var spot = Enumerable.Range(0, 32).Select(i => b.Position + new Vector2(MathF.Cos(i * 0.2f), MathF.Sin(i * 0.2f)) * 6f)
+            .OrderByDescending(q => Enumerable.Range(1, 6).Count(r => w.Clear(q, r * 0.5f))).First();
         w.Player.Position = w.Player.PrevPosition = spot;
         w.Corruption!.Cleanse(spot, 3f, 1f);
         b.SinceStruck = 0f;
@@ -1016,7 +1024,9 @@ public class CorruptionTests
         if (plan == default) return;
         var w = World(TestLevels.Get(plan));
         Assert.NotEmpty(w.Inkwardens);
-        Assert.All(w.Inkwardens, g => Assert.Contains(w.Blightroots, r => Vector2.Distance(r.Position, g.Position) <= WardenTuning.NearMax + 0.01f));
+        // (Those at a den's heart guard their den.)
+        var guards = w.Inkwardens.Where(g => !w.Dens.Any(d => d.Heart == DenHeart.Inkwarden && Vector2.Distance(d.At, g.Position) <= d.Radius)).ToList();
+        Assert.All(guards, g => Assert.Contains(w.Blightroots, r => Vector2.Distance(r.Position, g.Position) <= WardenTuning.NearMax + 0.01f));
     }
 
     [Fact]

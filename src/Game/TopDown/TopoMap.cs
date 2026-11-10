@@ -312,7 +312,7 @@ public partial class TopoMap : Control
                 DrawLeakMark(p, EmblemScale);
                 continue;
             }
-            if (poi.Kind == PoiKind.Exit && ShowDetail)
+            if (poi.Kind is PoiKind.Exit or PoiKind.Hole && ShowDetail)
             {
                 Color col = LevelView.PoiColor(poi.Kind);
                 DrawCircle(p, poi.Radius * ppm, new Color(col, 0.18f));
@@ -438,7 +438,7 @@ public partial class TopoMap : Control
 
     void DrawEmblem(PoiKind kind, Vector2 p, Font font, float k)
     {
-        if (kind == PoiKind.Exit)
+        if (kind is PoiKind.Exit or PoiKind.Hole)
         {
             DrawExitSign(p, k);
             return;

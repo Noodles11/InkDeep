@@ -64,6 +64,7 @@ public partial class DebugMapOverlay : Control
             for (int i = 1; i < c.Points.Count; i++) DrawLine(P(c.Points[i - 1]), P(c.Points[i]), col, 1.5f);
         }
         DrawCircle(P(map.Shaft.Center), map.Shaft.HalfLength * Scale, new Color(0.3f, 0.6f, 1f, 0.6f));
+        foreach (var hole in map.Holes) DrawCircle(P(hole.Shaft.Center), hole.Shaft.HalfLength * Scale, new Color(ReefKinds.Colour(hole.Kind), 0.7f));
         foreach (var z in map.Plazas) DrawArc(P(z.Center), z.Radius * Scale, 0f, Mathf.Tau, 32, new Color(1f, 1f, 1f, 0.8f), 1.5f);
         foreach (var c in map.Canopies)
         {

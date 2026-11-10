@@ -287,7 +287,8 @@ public static class TopDownGenerator
             };
             Array.Fill(map.Heights, -PathDepth);
             // The wall tops come from the reef prototype's terrain for this text (the run's first try: the seed itself).
-            string text = id == LevelId.First && attempt == 0 ? streams.Seed.ToString() : $"{streams.Seed} {id.Cycle}-{id.Depth}-{id.Level}-{attempt}";
+            string text = id == LevelId.First && attempt == 0 ? streams.Seed.ToString()
+                : $"{streams.Seed} {id.Cycle}-{id.Depth}-{id.Level}{(id.Lane > 0 ? $"-L{id.Lane}" : "")}-{attempt}";
             string? problem = Build(map, streams, plan, attempt, cosmeticSalt, text) ?? LevelValidator.Validate(map);
             log?.Invoke($"Top-down level {id} attempt {attempt + 1}: {problem ?? "ok"}");
             if (problem is null)
@@ -318,7 +319,10 @@ public static class TopDownGenerator
     /// is a mistake in the map. <paramref name="asLevel"/>: the level it counts as, when not its own (a dive's haven, the
     /// level it stands before).
     /// </summary>
-    public static LevelMap FromHand(HandLayout hand, Action<string>? log = null, LevelId? asLevel = null)
+    /// <param name="exits">A dive's haven: where its holes lead (its gate's and each Hole place's, as many as it has
+    /// exits; the rest of its Hole places stay floor), and what each reef is.</param>
+    public static LevelMap FromHand(HandLayout hand, Action<string>? log = null, LevelId? asLevel = null,
+        IReadOnlyList<LevelId>? exits = null, IReadOnlyList<OctoShoots.Core.Run.ReefKind>? kinds = null)
     {
         if (!SeedCode.TryParse(hand.Seed, out var seed)) throw new InvalidOperationException($"The map {hand.Name} has no seed code ({hand.Seed})");
         var clock = System.Diagnostics.Stopwatch.StartNew();
@@ -335,6 +339,10 @@ public static class TopDownGenerator
         uint noiseSeed = (uint)(Stage("noise").NextU64() >> 32);
         var (cave, why) = CaveLayout.FromHand(hand, Stage("cave"), RadiusOf);
         if (cave is null) throw new InvalidOperationException($"The map {hand.Name} cannot be built: {why}");
+        // (Only as many further holes as it has exits past its gate's; without a dive's exits, none.)
+        int further = hand.Hole && exits is not null ? Math.Max(0, exits.Count - 1) : 0;
+        for (int k = cave.Places.Count - 1, seen = cave.Places.Count(p => p.Kind == PoiKind.Hole); k >= 0; k--)
+            if (cave.Places[k].Kind == PoiKind.Hole && seen-- > further) cave.Places.RemoveAt(k);
         var spurDirs = new Dictionary<int, Vector2>();
         RecordCave(map, cave, StartRadius, StartRadius, spurDirs);
         Done("cave");
@@ -348,11 +356,16 @@ public static class TopDownGenerator
         SoftenSlopes(map, Stage("slopes"), strata);
         Done("slopes");
         // Its exit is a current station, not a way down (a dive's haven: its hole, as a seeded level's).
-        if (hand.Hole) CutShaft(map, Stage("shaft"));
+        if (hand.Hole)
+        {
+            CutShaft(map, Stage("shaft"));
+            if (exits is not null) LeadHoles(map, exits, kinds ?? exits.Select(_ => OctoShoots.Core.Run.ReefKind.Reef).ToArray());
+        }
         else map.Shaft = NoShaft;
         ClampHeights(map);
         RoofShortcuts(map);
         SealWalls(map, tops, strata);
+        DropIdleSeals(map);
         Done("seal walls");
         Decorate(map, Stage("cosmetic"), noiseSeed, strata);
         Done("decor");
@@ -422,11 +435,16 @@ public static class TopDownGenerator
         SoftenSlopes(map, Stage("slopes"), strata);
         // A leak cave's deepest floor has no way down: its leak lies where the shaft would be (a floor above it, a hole).
         if (map.LeakCave && !map.HoleDown) map.Shaft = NoShaft;
-        else CutShaft(map, Stage("shaft"));
+        else
+        {
+            CutShaft(map, Stage("shaft"));
+            LeadHoles(map, plan.Exits, plan.ExitKinds);
+        }
         ClampHeights(map);
         RoofShortcuts(map);
         PlaceSeals(map, plan, Stage("seals"));
         SealWalls(map, tops, strata);
+        DropIdleSeals(map);
         Decorate(map, Stage("cosmetic" + cosmeticSalt), noiseSeed, strata);
         PlaceKelp(map, Stage("kelp"));
         PlacePickups(map, Stage("pickups"));
@@ -473,7 +491,7 @@ public static class TopDownGenerator
     // ───────────────────────── stages 1–2: the cave, its places and tunnels ─────────────────────────
 
     /// <summary>A special room's cave, or an open place's clearing.</summary>
-    static float RadiusOf(PoiKind kind) =>
+    static float RadiusOf(PoiKind kind) => kind == PoiKind.Hole ? ClearingRadius :
         Poi.IsCaveHosted(kind) ? (kind is PoiKind.TreasureCave or PoiKind.CurseDen or PoiKind.LeakCave ? ChamberRadius : PocketRadius) : ClearingRadius;
 
     /// <summary>
@@ -498,6 +516,8 @@ public static class TopDownGenerator
             kinds.Remove(earlyKind);
             kinds.Insert(0, earlyKind);
         }
+        // Its further holes down (one for each exit past the first: the Exit's), never the early place.
+        for (int i = 1; i < plan.Exits.Count; i++) kinds.Add(PoiKind.Hole);
 
         var (cave, why) = CaveLayout.Build(rng, plan.HasBoss, plan.EntryFromArena, kinds, RadiusOf, plan.Template?.Layout, plan.AreaScale);
         open = cave?.Open ?? Array.Empty<bool>();
@@ -767,6 +787,24 @@ public static class TopDownGenerator
             float add = now[i] - was[i];
             if (add > 0.03f && !float.IsNaN(map.Sealed[i])) map.SealedOpen[i] = MathF.Min(map.Heights[i] + add, map.Sealed[i]);
         }
+    }
+
+    /// <summary>
+    /// A sealed wall laid where the rock already stands (its slab closing no water) raises nothing: it is no wall, and
+    /// goes (it shut nothing, so nothing it was to shut opens).
+    /// </summary>
+    static void DropIdleSeals(LevelMap map)
+    {
+        int N = map.Samples;
+        map.WeakRocks.RemoveAll(rock =>
+        {
+            if (rock.Thick <= 0f) return false;
+            int r = (int)(rock.Radius + rock.Thick) + 2;
+            for (int y = Math.Max(0, (int)rock.Center.Y - r); y <= Math.Min(N - 1, (int)rock.Center.Y + r); y++)
+            for (int x = Math.Max(0, (int)rock.Center.X - r); x <= Math.Min(N - 1, (int)rock.Center.X + r); x++)
+                if (!float.IsNaN(map.Sealed[y * N + x]) && rock.Contains(new Vector2(x, y))) return false;
+            return true;
+        });
     }
 
     /// <summary>Whether open water joins a to b (4-way, on the grid).</summary>
@@ -1269,10 +1307,15 @@ public static class TopDownGenerator
         }
         else
         {
-            SinkExitChamber(map);
+            var exitWas = map.Exit.Position;
+            var middle = SinkChamber(map, exitWas);
+            map.Shaft = new Shaft(middle, Vector2.UnitX, DiveRadius, DiveRadius);
+            map.Exit.Position = middle;
+            SinkHoles(map);
             return;
         }
         map.Shaft = shaft;
+        SinkHoles(map);
         // The lip rounds over into a sheer drop: full depth a metre and a half inside the rim, so the rim is smooth
         // rather than stepped cell by cell.
         int r = (int)MathF.Ceiling(shaft.HalfLength) + 2;
@@ -1293,10 +1336,9 @@ public static class TopDownGenerator
     /// to just over the shaft's floor in its middle, where the chamber is widest. Its tunnels' mouths ease into the slope. The exit
     /// is moved to that middle, and only within DiveRadius of it can she dive.
     /// </summary>
-    static void SinkExitChamber(LevelMap map)
+    static Vector2 SinkChamber(LevelMap map, Vector2 exit)
     {
         int N = map.Samples;
-        var exit = map.Exit.Position;
         float room = map.Chambers.Count > 0 ? map.Chambers.OrderBy(c => Vector2.Distance(c.At, exit)).First().Radius : ExitChamber;
         // How far each point of the water is from the rock round it.
         var toRock = Chamfer(map.Samples, i => map.Heights[i] > 0f);
@@ -1363,12 +1405,44 @@ public static class TopDownGenerator
             float dip = 1f - Smooth(0f, DiveRadius - 0.5f, Vector2.Distance(new Vector2(k % N, k / N), middle));
             if (dip > 0f) map.Heights[k] = MathF.Min(map.Heights[k], LevelMap.ShaftBottom + BowlLift + MiddleDip * (1f - dip));
         }
-        map.Shaft = new Shaft(middle, Vector2.UnitX, DiveRadius, DiveRadius);
-        map.Exit.Position = middle;
         // The tunnels that ended at the exit end in its middle now (inside the same chamber).
         foreach (var c in map.Corridors)
             for (int k = 0; k < c.Points.Count; k++)
                 if (c.Points[k] == exit) c.Points[k] = middle;
+        return middle;
+    }
+
+    /// <summary>
+    /// A reef's further holes (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6.3): each Hole place's chamber sunk as the exit's, its
+    /// place moved to the hole's middle. Every hole (the Exit's first) goes on the map's list of holes.
+    /// </summary>
+    static void SinkHoles(LevelMap map)
+    {
+        map.Holes.Clear();
+        map.Holes.Add(new MapHole { Shaft = map.Shaft });
+        foreach (var poi in map.Pois)
+        {
+            if (poi.Kind != PoiKind.Hole) continue;
+            var middle = SinkChamber(map, poi.Position);
+            poi.Position = middle;
+            map.Holes.Add(new MapHole { Shaft = new Shaft(middle, Vector2.UnitX, DiveRadius, DiveRadius) });
+        }
+    }
+
+    /// <summary>
+    /// Where each hole leads: the holes left to right across the map take the exits left to right across the rows below
+    /// (the order the plan keeps them in).
+    /// </summary>
+    public static void LeadHoles(LevelMap map, IReadOnlyList<LevelId> exits, IReadOnlyList<OctoShoots.Core.Run.ReefKind> kinds)
+    {
+        if (map.Holes.Count == 0) map.Holes.Add(new MapHole { Shaft = map.Shaft });
+        var order = map.Holes.OrderBy(h => h.Shaft.Center.X).ToList();
+        for (int i = 0; i < order.Count && i < exits.Count; i++)
+        {
+            order[i].To = exits[i];
+            order[i].Kind = kinds[i];
+        }
+        map.Holes = order;
     }
 
     /// <summary>A minimum with a rounded crease (no flat clamp where the two meet).</summary>
@@ -1761,10 +1835,11 @@ public static class TopDownGenerator
     /// <summary>Round the start and the way down (and its arena) features keep out.</summary>
     const float EndsKeep = 12f;
 
-    /// <summary>Within reach of the start or the way down (plus a margin): features keep out.</summary>
+    /// <summary>Within reach of the start or a way down (plus a margin): features keep out.</summary>
     static bool NearEnds(LevelMap map, Vector2 p, float margin) =>
         Vector2.Distance(p, map.Start.Position) < MathF.Max(EndsKeep, map.Start.Radius) + margin
-        || Vector2.Distance(p, map.Exit.Position) < MathF.Max(EndsKeep, map.Exit.Radius + 9f) + margin;
+        || Vector2.Distance(p, map.Exit.Position) < MathF.Max(EndsKeep, map.Exit.Radius + 9f) + margin
+        || map.Pois.Exists(h => h.Kind == PoiKind.Hole && Vector2.Distance(p, h.Position) < MathF.Max(EndsKeep, h.Radius + 9f) + margin);
 
     /// <summary>The curse den: a winding dead-end tunnel bored into the ridge behind its spur, roofed like any cave.</summary>
     static string? BuildTunnel(LevelMap map, Rng rng, Poi poi, int pi, Vector2 facing)

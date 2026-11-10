@@ -445,7 +445,7 @@ public sealed partial class PlaneWorld
                 if (Leaks.Count >= want) break;
                 if (!Clear(at, 1f) || float.IsPositiveInfinity(LevelValidator.DistanceAt(reach, at))) continue;
                 if (Vector2.Distance(at, Map.Start.Position) < (lastResort ? MathF.Min(AdventureTuning.LeakFromStart, spacing) : AdventureTuning.LeakFromStart)) continue;
-                if (Vector2.Distance(at, Map.Exit.Position) < Map.Exit.Radius + 6f || Map.Shaft.Contains(at, 4f)) continue;
+                if (Vector2.Distance(at, Map.Exit.Position) < Map.Exit.Radius + 6f || Map.InShaft(at, 4f)) continue;
                 if (safes.Any(s => Vector2.Distance(at, s.Centre) < s.Radius + 4f)) continue;
                 if (Leaks.Any(v => Vector2.Distance(v.Position, at) < spacing)) continue;
                 if (!lastResort && MainCurrent.Touches(Map, at, 0f)) continue;

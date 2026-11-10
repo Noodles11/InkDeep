@@ -190,6 +190,8 @@ public class AdventureTests
     {
         var w = World();
         w.ReefFish.Clear();
+        // (No pufferfish to fill on its ink and turn warden over it.)
+        w.Fish.Clear();
         var v = w.Leaks[0];
         Assert.Equal(AdventureTuning.LeakArms, v.Arms.Length);
         Shine(w, v, v.Needed * 0.5f);
@@ -384,6 +386,8 @@ public class AdventureTests
     public void A_leak_seals_in_her_light_with_no_shots_a_staple_at_a_time()
     {
         var w = World();
+        // (No pufferfish to fill on its ink and turn warden over it.)
+        w.Fish.Clear();
         var v = w.Leaks[0];
         Assert.Equal(AdventureTuning.StapleSeconds * v.StapleCount, v.Needed, 3);
         Shine(w, v, v.Needed * 0.8f);
@@ -423,19 +427,22 @@ public class AdventureTests
         var w = Bare();
         var her = OpenSpot(w);
         w.Player.Position = w.Player.PrevPosition = her;
-        // A line of dots ahead of her, out past her light's reach; she fires one shot along it.
+        // A line of dots ahead of her, out past her light's reach (the way with the most open water); she fires one shot
+        // along it.
+        int Open(Vector2 way) => Enumerable.Range(0, 8).Count(k => w.Clear(her + way * (3.2f + k * AdventureTuning.Spacing), 0.3f));
+        var dir = Enumerable.Range(0, 8).Select(k => new Vector2(MathF.Cos(k * MathF.Tau / 8f), MathF.Sin(k * MathF.Tau / 8f))).OrderByDescending(Open).First();
         int laid = 0;
         for (float d = 3.2f; d < 7f; d += AdventureTuning.Spacing)
-            if (w.Clear(her + Vector2.UnitX * d, 0.3f) && w.DebugDot(her + Vector2.UnitX * d)) laid++;
+            if (w.Clear(her + dir * d, 0.3f) && w.DebugDot(her + dir * d)) laid++;
         Assert.True(laid >= 3, $"only {laid} dots laid");
         int cleared = 0;
-        w.Step(new PlaneInput { Aim = Vector2.UnitX, Fire = true });
+        w.Step(new PlaneInput { Aim = dir, Fire = true });
         cleared += w.Events.Count(e => e.Type == PlaneEventType.DotCleared);
         for (int i = 0; i < PlaneWorld.TickRate; i++)
         {
             w.Player.Position = her;
             w.Player.Velocity = Vector2.Zero;
-            w.Step(new PlaneInput { Aim = Vector2.UnitX });
+            w.Step(new PlaneInput { Aim = dir });
             cleared += w.Events.Count(e => e.Type == PlaneEventType.DotCleared);
         }
         Assert.Equal(laid, cleared);
@@ -791,6 +798,8 @@ public class AdventureTests
         var w = World();
         var v = w.Leaks[0];
         var puffer = w.Fish[0];
+        // (Only this one: no other turns warden on its own.)
+        w.Fish.RemoveAll(f => f != puffer);
         puffer.Position = v.Position + new Vector2(3f, 0f);
         puffer.Ink = 1f;
         Run(w, 1);

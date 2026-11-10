@@ -36,5 +36,5 @@ public static class RunLaunch
 
     /// <summary>Where a saved run takes up again.</summary>
     public static LevelId Start(SuspendedRun run) =>
-        new(Math.Max(1, run.Cycle), Math.Clamp(run.Depth, 1, LevelPlan.Depths), Math.Clamp(run.Level, 1, 5));
+        run.Reef();
 }

@@ -14,6 +14,8 @@ public static class LevelValidator
     public const float MinExitGeodesic = 55f;
     /// <summary>The longest spur from the network to a place.</summary>
     public const float MaxSpur = 34f;
+    /// <summary>How much nearer than placed a further hole may end up, sunk to its chamber's middle.</summary>
+    const float HoleGive = 10f;
 
     /// <summary>Null when the level keeps every rule; otherwise the first one it breaks.</summary>
     public static string? Validate(LevelMap map)
@@ -26,7 +28,18 @@ public static class LevelValidator
         // Scatter rules.
         var start = map.Start;
         var exit = map.Exit;
-        var others = map.Pois.Where(p => p.Kind is not (PoiKind.Start or PoiKind.Exit)).ToList();
+        var others = map.Pois.Where(p => p.Kind is not (PoiKind.Start or PoiKind.Exit or PoiKind.Hole)).ToList();
+        // A reef's further holes (each sunk to its chamber's middle, so a little nearer than placed): away from the start,
+        // the exit, each other and the places.
+        var holes = map.Pois.Where(p => p.Kind == PoiKind.Hole).ToList();
+        for (int i = 0; i < holes.Count; i++)
+        {
+            if (Vector2.Distance(holes[i].Position, map.Start.Position) < CaveLayout.FromStart - HoleGive) return "a hole down too close to the start";
+            if (Vector2.Distance(holes[i].Position, map.Exit.Position) < CaveLayout.FromExit - HoleGive) return "a hole down too close to the exit";
+            for (int j = i + 1; j < holes.Count; j++)
+                if (Vector2.Distance(holes[i].Position, holes[j].Position) < CaveLayout.HoleSpacing - HoleGive) return "two holes down too close";
+            if (others.Any(o => Vector2.Distance(o.Position, holes[i].Position) < CaveLayout.Spacing - HoleGive)) return "a place too close to a hole down";
+        }
         if (others.Count + (map.HasBoss ? 1 : 0) > LevelStocking.MaxPlaces) return $"{others.Count} places (want at most {LevelStocking.MaxPlaces})";
         for (int i = 0; i < others.Count; i++)
         {
@@ -47,7 +60,7 @@ public static class LevelValidator
         if (flat is not null) return flat;
 
         // Topography: the shaft is the only deep water (the deepest point of the level lies in it).
-        if (!map.LeakCave && !map.Shaft.Contains(DeepestPoint(map), 1f)) return "the shaft is not the deepest point";
+        if (!map.LeakCave && !map.InShaft(DeepestPoint(map), 1f)) return "the shaft is not the deepest point";
         float peak = InteriorPeak(map);
         if (peak is < 3f or > 14f) return $"highest peak {peak:0.0} m (want 3–14 m)";
 

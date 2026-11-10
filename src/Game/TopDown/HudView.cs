@@ -342,7 +342,10 @@ public partial class HudView : Control
         if (over)
         {
             _promptReady = world.CanDive;
-            _prompt = world.CanDive ? "dive" : !world.ExitOpen ? "The Crack is sealed" : "Not while fighting";
+            // (Where the hole leads: its rim's kind, said.)
+            int hole = world.HoleUnder;
+            string below = hole >= 0 && hole < world.Map.Holes.Count && world.Map.Holes[hole].To != default ? $" · {ReefKinds.Below(world.Map.Holes[hole].Kind)}" : "";
+            _prompt = world.CanDive ? $"dive{below}" : !world.ExitOpen ? (world.Map.HasBoss ? "The Crack is sealed" : "The holes open once the leak is sealed") : "Not while fighting";
         }
         _promptShown = Mathf.MoveToward(_promptShown, over ? 1f : 0f, dt * 4f);
         QueueRedraw();

@@ -36,7 +36,7 @@ public partial class PauseMenu : Control
     const float Width = 640f, SlideSeconds = OctoShoots.Game.Ui.DrawerStyle.SlideSeconds;
     /// <summary>The right stick scrolls the list (pixels a second, pushed all the way).</summary>
     const float ScrollSpeed = 900f;
-    const int LevelTab = 0, StatTab = 1, RequestTab = 4, Tabs = 5;
+    const int LevelTab = 0, StatTab = 1, RequestTab = 4, ChartTab = 5, Tabs = 6;
 
     static readonly Color Gold = OctoShoots.Game.Ui.DrawerStyle.Gold;
     static readonly Color Soft = OctoShoots.Game.Ui.DrawerStyle.Soft;
@@ -51,6 +51,8 @@ public partial class PauseMenu : Control
     PanelContainer _panel = null!;
     ScrollContainer _scroll = null!;
     VBoxContainer _levelUp = null!, _rows = null!, _pearls = null!, _achievements = null!, _requests = null!;
+    /// <summary>The dive's chart (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6.3).</summary>
+    ChartView _chart = null!;
     GridContainer _stats = null!;
     readonly Button[] _tabs = new Button[Tabs];
     Label _summary = null!, _hint = null!, _tabLeft = null!, _tabRight = null!;
@@ -91,7 +93,7 @@ public partial class PauseMenu : Control
         box.AddChild(tabs);
         _tabLeft = TabHint();
         tabs.AddChild(_tabLeft);
-        string[] names = { "Level up", "Stats", "Pearls", "Achievements", "Requests" };
+        string[] names = { "Level up", "Stats", "Pearls", "Achievements", "Requests", "Chart" };
         for (int i = 0; i < Tabs; i++)
         {
             int tab = i;
@@ -130,6 +132,8 @@ public partial class PauseMenu : Control
         _requests = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, Visible = false };
         _requests.AddThemeConstantOverride("separation", 12);
         lists.AddChild(_requests);
+        _chart = new ChartView { Visible = false };
+        lists.AddChild(_chart);
 
         box.AddChild(new HSeparator());
         _resume = new Button { CustomMinimumSize = new Vector2(0f, 40f) };
@@ -158,7 +162,7 @@ public partial class PauseMenu : Control
     /// <summary>Verification: opens on a tab.</summary>
     public void ShowTab(int tab) => ShowList(Math.Clamp(tab, 0, Tabs - 1));
 
-    /// <summary>0 the level-up, 1 her stats, 2 the absorbed pearls, 3 the achievements, 4 the requests she carries.</summary>
+    /// <summary>0 the level-up, 1 her stats, 2 the absorbed pearls, 3 the achievements, 4 the requests she carries, 5 the chart.</summary>
     void ShowList(int tab)
     {
         _tab = tab;
@@ -167,6 +171,7 @@ public partial class PauseMenu : Control
         _pearls.Visible = tab == 2;
         _achievements.Visible = tab == 3;
         _requests.Visible = tab == RequestTab;
+        _chart.Visible = tab == ChartTab;
         for (int i = 0; i < Tabs; i++) _tabs[i].ButtonPressed = tab == i;
         _scroll.ScrollVertical = 0;
         if (_opening && InputSetup.UsingPad) FocusFirst();
@@ -316,6 +321,13 @@ public partial class PauseMenu : Control
     /// what it asks and how far along, what it pays, and Let go; and whether the HUD shows them as ribbons. On a run,
     /// only a line saying there are none.
     /// </summary>
+    /// <summary>The Chart tab: the dive's graph round where she is (ChartView); hidden off a dive's graph (the open reef).</summary>
+    public void FillChart(OctoShoots.Core.Run.DiveGraph? graph, OctoShoots.Core.Gen.TopDown.LevelId at, IEnumerable<OctoShoots.Core.Gen.TopDown.LevelId> visited, int sight)
+    {
+        _tabs[ChartTab].Visible = graph is not null;
+        if (graph is not null) _chart.Show(graph, at, visited, sight);
+    }
+
     public void FillRequests(IReadOnlyList<FanMenu.Entry> carried, bool ribbons, bool reef)
     {
         Empty(_requests);

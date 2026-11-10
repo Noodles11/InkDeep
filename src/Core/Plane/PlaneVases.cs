@@ -98,7 +98,7 @@ public sealed partial class PlaneWorld
             if (h < VaseTuning.FloorMin || h > VaseTuning.FloorMax || !Clear(p, radius)) return false;
             if (Vector2.Distance(p, Map.Start.Position) < VaseTuning.StartClear) return false;
             if (Vector2.Distance(p, Map.Exit.Position) < Map.Exit.Radius + VaseTuning.PlaceClear) return false;
-            if (Map.Shaft.Contains(p)) return false;
+            if (Map.InShaft(p)) return false;
             foreach (var poi in Map.Pois)
                 if (poi.Kind != PoiKind.Start && Vector2.Distance(p, poi.Position) < poi.Radius + VaseTuning.PlaceClear) return false;
             if (!Wide(p)) return false;

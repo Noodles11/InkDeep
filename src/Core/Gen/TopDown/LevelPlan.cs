@@ -6,8 +6,9 @@ using OctoShoots.Core.Run;
 namespace OctoShoots.Core.Gen.TopDown;
 
 /// <summary>
-/// Which level of the run (DESIGN-TOPDOWN §8): the loop through the seven depths, the depth (biome) and the level within
-/// it. A depth is a chain of 5 levels; its boss stands on the last one. The first depth (Depth 1 here, the Sunlit
+/// Which reef of the dive (DESIGN-TOPDOWN §8, docs/LIGHT-AND-GRAPH-PROPOSAL.md §6): the loop through the depths, the
+/// depth (biome), the row within it (Level) and the reef across that row (Lane, from 0 at the left; Run.DiveGraph). A
+/// depth has 5 rows; its boss stands alone on the last. The first depth (Depth 1 here, the Sunlit
 /// Shallows) is the tutorial, Depth 0 to the player: two levels, no boss; runs start below it (Depth 2 here, Depth 1 to
 /// the player) once she has passed it. Depth is kept 1-based in code and saves; only its name is one less.
 /// </summary>
@@ -23,10 +24,10 @@ public readonly record struct LevelId(int Cycle, int Depth, int Level)
 
     public bool IsTutorial => Depth == LevelPlan.Tutorial;
 
-    /// <summary>
-    /// A haven (docs/DIVE.md §4): the calm stop before this level, not the level itself. Its hole leads on to the level
-    /// (Run.Dives.NextOf).
-    /// </summary>
+    /// <summary>The reef across its row (Run.DiveGraph), from 0 at the left.</summary>
+    public int Lane { get; init; }
+
+    /// <summary>A haven (docs/DIVE.md §4): Lantern Bay's water, a reef of the graph of its own kind (Run.ReefKind.Haven).</summary>
     public bool Haven { get; init; }
 
     public override string ToString() => Haven ? $"A haven · Depth {ShownDepth}"
@@ -41,12 +42,8 @@ public readonly record struct LevelId(int Cycle, int Depth, int Level)
 public static class LevelStocking
 {
     public const int MaxPlaces = 5;
-    /// <summary>
-    /// At most two treasure rooms per depth: always one on level 1, and this often a second on one level from 2 to the
-    /// boss level (5).
-    /// </summary>
-    public const float SecondTreasure = 0.5f;
-    public const float Secret = 0.4f, Curse = 0.3f;
+    /// <summary>(Treasure rooms and curse dens come with their reef's kind: Run.ReefPlaces.)</summary>
+    public const float Secret = 0.4f;
     /// <summary>Past the first depth, this often a depth hides one Crab Deal, on a level short of its boss (about three a run).</summary>
     public const float CrabDepth = 0.6f;
     /// <summary>From level 2 of a depth: a shop, and a guarded shell cache.</summary>
@@ -94,7 +91,13 @@ public sealed class LevelPlan
     /// loop (DESIGN-TOPDOWN §6.2).
     /// </summary>
     public float Menace { get; init; }
+    /// <summary>Where its first hole leads (Exits[0]).</summary>
     public LevelId Next { get; init; }
+    /// <summary>Where each of its holes leads (Run.DiveGraph), in the graph's order, and what each of those reefs is.</summary>
+    public IReadOnlyList<LevelId> Exits { get; init; } = Array.Empty<LevelId>();
+    public IReadOnlyList<ReefKind> ExitKinds { get; init; } = Array.Empty<ReefKind>();
+    /// <summary>Its own kind in the graph.</summary>
+    public ReefKind Kind { get; init; }
     /// <summary>A leak cave (LevelMap.LeakCave): no way down, one leak where it would be.</summary>
     public bool LeakCave { get; init; }
     /// <summary>A leak cave's floor (from 1) and how many it has (LevelMap.Floor, Floors).</summary>
@@ -109,44 +112,32 @@ public sealed class LevelPlan
     public static int BossLevel(SeedCode seed, int cycle, int depth) =>
         depth == Tutorial ? LevelStocking.TutorialLevels : LevelStocking.LevelsPerDepth;
 
-    /// <summary>The level of this depth (in this loop) with its second treasure room (2 to the boss level), or 0 for none.</summary>
-    public static int SecondTreasureLevel(SeedCode seed, int cycle, int depth)
-    {
-        if (depth == Tutorial) return 0;
-        var rng = new RunStreams(seed).TreasureRoll(cycle, depth);
-        if (rng.NextFloat() >= LevelStocking.SecondTreasure) return 0;
-        int boss = BossLevel(seed, cycle, depth);
-        return 2 + rng.Int(boss - 1);
-    }
+    /// <summary>Where the reef's first hole leads (Run.DiveGraph.ExitsOf).</summary>
+    public static LevelId NextOf(SeedCode seed, LevelId id) => DiveGraph.Of(seed).ExitsOf(id)[0];
 
-    public static LevelId NextOf(SeedCode seed, LevelId id)
+    /// <summary>
+    /// The reef of this depth that hides its Crab Deal (its row 0: none): one reef of a row from 2 to 4 (none where that
+    /// reef is a haven). Never in the first real depth, nor on a boss level.
+    /// </summary>
+    static (int Row, int Lane) CrabReef(RunStreams streams, LevelId id)
     {
-        if (id.Level < BossLevel(seed, id.Cycle, id.Depth)) return id with { Level = id.Level + 1 };
-        // After the last depth the loop begins again below the tutorial.
-        return id.Depth < Depths ? new LevelId(id.Cycle, id.Depth + 1, 1) : new LevelId(id.Cycle + 1, Tutorial + 1, 1);
-    }
-
-    /// <summary>The level of this depth that hides its Crab Deal (0: none). Never in the first real depth, nor on a boss level.</summary>
-    static int CrabLevel(RunStreams streams, LevelId id)
-    {
-        if (id.Depth <= Tutorial + 1) return 0;
+        if (id.Depth <= Tutorial + 1) return (0, 0);
         var rng = streams.Plan(new LevelId(id.Cycle, id.Depth, 0));
-        if (rng.NextFloat() >= LevelStocking.CrabDepth) return 0;
+        if (rng.NextFloat() >= LevelStocking.CrabDepth) return (0, 0);
         int boss = BossLevel(streams.Seed, id.Cycle, id.Depth);
         var levels = Enumerable.Range(2, 3).Where(l => l != boss).ToList();
-        return levels[rng.Int(levels.Count)];
+        int row = levels[rng.Int(levels.Count)];
+        return (row, rng.Int(DiveGraph.Of(streams.Seed).Row(id.Cycle, id.Depth, row).Count));
     }
 
-    /// <summary>The level she dived from, or null for the first level of the run.</summary>
-    public static LevelId? PreviousOf(SeedCode seed, LevelId id)
-    {
-        if (id.Level > 1) return id with { Level = id.Level - 1 };
-        // Only the first loop has the tutorial above its first real depth.
-        if (id.Depth > (id.Cycle > 1 ? Tutorial + 1 : 1)) return new LevelId(id.Cycle, id.Depth - 1, BossLevel(seed, id.Cycle, id.Depth - 1));
-        if (id.Cycle > 1) return new LevelId(id.Cycle - 1, Depths, BossLevel(seed, id.Cycle - 1, Depths));
-        return null;
-    }
+    /// <summary>A reef whose hole leads here (the first of them), or null for the first reef of the dive.</summary>
+    public static LevelId? PreviousOf(SeedCode seed, LevelId id) =>
+        DiveGraph.Of(seed).Node(id).From is { Count: > 0 } from ? from[0] : null;
 
+    /// <summary>
+    /// A reef's Menace: by its depth alone (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6.1), never by how many reefs she has
+    /// crossed: 0 at the first real depth (and in the tutorial), one step a depth, on through every later loop.
+    /// </summary>
     public static float MenaceOf(LevelId id) =>
         id.Depth == Tutorial ? 0f : ((id.Cycle - 1) * (Depths - 1) + id.Depth - Tutorial - 1) / (float)(Depths - Tutorial - 1);
 
@@ -156,13 +147,15 @@ public sealed class LevelPlan
         var streams = new RunStreams(seed);
         var rng = streams.Plan(id);
         if (id.Depth == Tutorial) return Tutorial_(seed, streams, id);
-        bool boss = id.Level == BossLevel(seed, id.Cycle, id.Depth);
+        var graph = DiveGraph.Of(seed);
+        var node = graph.Node(id);
+        bool boss = node.Kind == ReefKind.Boss;
         bool first = id.Level == 1;
-        var (templates, treasureLevels) = DepthTemplates(seed, id.Cycle, id.Depth);
+        var (templates, _) = DepthTemplates(seed, id.Cycle, id.Depth, node.Id.Lane);
         var template = templates[id.Level - 1];
-        int treasures = treasureLevels.Contains(id.Level) ? 1 : 0;
+        int treasures = node.Kind == ReefKind.Treasure ? 1 : 0;
         int secrets = rng.NextFloat() < LevelStocking.Secret ? 1 : 0;
-        int curses = rng.NextFloat() < LevelStocking.Curse ? 1 : 0;
+        int curses = node.Kind == ReefKind.Den ? 1 : 0;
         int shops = !first && rng.NextFloat() < LevelStocking.Shop ? 1 : 0;
         int caches = !first && rng.NextFloat() < LevelStocking.Cache ? 1 : 0;
 
@@ -180,7 +173,9 @@ public sealed class LevelPlan
             return rule.Chance is { } p ? (rng.NextFloat() < p ? 1 : 0) : general;
         }
         secrets = Apply(PoiKind.Secret, secrets);
-        curses = Apply(PoiKind.CurseDen, curses);
+        // (A curse den comes with the reef's kind, which its hole's rim shows: the template only picks fitting kinds, and
+        // a treasure reef's may ask for one besides.)
+        if (template?.Requires(PoiKind.CurseDen) == true) curses = 1;
         shops = Apply(PoiKind.Shop, shops);
         caches = Apply(PoiKind.ShellCache, caches);
         // The general rule wins: a depth's first level has no shop and no shell cache.
@@ -193,25 +188,28 @@ public sealed class LevelPlan
                 treasures = 1;
         }
 
-        // Over the cap: drop the curse den, then the secret, the shell cache — what the template requires last.
-        // Treasure rooms stay.
-        int crabs = CrabLevel(streams, id) == id.Level ? 1 : 0;
+        // Over the cap: drop the secret, then the shell cache — what the template requires last. Treasure rooms and
+        // curse dens stay (the reef's kind).
+        int crabs = CrabReef(streams, id) == (id.Level, node.Id.Lane) ? 1 : 0;
         int Total() => treasures + secrets + curses + shops + caches + crabs + (boss ? 1 : 0);
         for (int pass = 0; pass < 2 && Total() > LevelStocking.MaxPlaces; pass++)
             while (Total() > LevelStocking.MaxPlaces)
             {
                 bool Free(PoiKind k) => pass == 1 || !required.Contains(k);
-                if (curses > 0 && Free(PoiKind.CurseDen)) curses--;
-                else if (secrets > 0 && Free(PoiKind.Secret)) secrets--;
+                if (secrets > 0 && Free(PoiKind.Secret)) secrets--;
                 else if (caches > 0 && Free(PoiKind.ShellCache)) caches--;
                 else break;
             }
 
-        var previous = PreviousOf(seed, id);
-        var next = NextOf(seed, id);
+        // (Left to right across the rows below, as its holes are across the map.)
+        var exits = graph.ExitsOf(id).OrderBy(e => graph.Node(e).X).ToList();
+        var next = exits[0];
         return new LevelPlan
         {
-            Id = id,
+            Id = node.Id,
+            Kind = node.Kind,
+            Exits = exits.ToArray(),
+            ExitKinds = exits.Select(graph.KindOf).ToArray(),
             HasBoss = boss,
             Treasures = treasures,
             Secrets = secrets,
@@ -220,7 +218,8 @@ public sealed class LevelPlan
             Shops = shops,
             Caches = caches,
             EntryStamp = streams.StampSeed(id),
-            EntryFromArena = previous is { } prev && prev.Level == BossLevel(seed, prev.Cycle, prev.Depth),
+            // (Into a depth's first row from its boss's arena above, or the tutorial's rift.)
+            EntryFromArena = first,
             ExitStamp = streams.StampSeed(next),
             Menace = MenaceOf(id),
             Next = next,
@@ -229,35 +228,38 @@ public sealed class LevelPlan
     }
 
     /// <summary>
-    /// The templates of a depth's levels (from its own stream, so any level's is known on its own), and the levels that
-    /// hold its treasure rooms. Each level draws from the templates that fit its depth and slot (the first level, a
-    /// middle one, the one before the boss, the boss's), by weight: never the same as the level before, no more of one
-    /// than its MaxPerDepth, at least three different ones in a depth of three or more, and never one that forbids the
-    /// treasure room a level must hold. The first level always holds one; a template that requires one elsewhere takes
-    /// the depth's second (at most one such), else the second falls where the general roll put it.
+    /// The templates down one lane of a depth (from its own stream, so any reef's is known on its own): the reef of each
+    /// row at that lane (or the row's last) takes the row's. Each draws from the templates that fit its depth and slot
+    /// (the first row, a middle one, the one before the boss, the boss's), by weight: never the same as the row before,
+    /// no more of one than its MaxPerDepth, at least three different ones down a lane of three or more, and only one
+    /// that fits the reef's kind (none forbidding the treasure room or curse den the kind holds, none requiring one it
+    /// does not, but for a treasure reef's curse den). Also the rows whose reef holds a treasure room.
     /// </summary>
-    public static (LevelTemplate?[] Templates, HashSet<int> TreasureLevels) DepthTemplates(SeedCode seed, int cycle, int depth)
+    public static (LevelTemplate?[] Templates, HashSet<int> TreasureLevels) DepthTemplates(SeedCode seed, int cycle, int depth, int lane = 0)
     {
         int boss = BossLevel(seed, cycle, depth);
-        int second = SecondTreasureLevel(seed, cycle, depth);
+        var graph = DiveGraph.Of(seed);
+        var kinds = Enumerable.Range(1, boss).Select(level => graph.Node(new LevelId(cycle, depth, level) { Lane = lane }).Kind).ToArray();
         var all = LevelTemplates.All;
         var fallback = LevelTemplates.Get("default");
-        var rng = new RunStreams(seed).TemplateRoll(cycle, depth);
+        var streams = new RunStreams(seed);
+        var rng = lane == 0 ? streams.TemplateRoll(cycle, depth) : streams.TemplateRoll(cycle, depth * 8 + lane);
         int shown = depth - Tutorial;
+        var treasures = new HashSet<int>(Enumerable.Range(1, boss).Where(level => kinds[level - 1] == ReefKind.Treasure));
+        bool FitsKind(LevelTemplate t, ReefKind kind) =>
+            (kind == ReefKind.Treasure ? !t.Forbids(PoiKind.TreasureCave) : !t.Requires(PoiKind.TreasureCave))
+            // (A treasure reef may hold the curse den its template asks for too: The Hoard's.)
+            && (kind == ReefKind.Den ? !t.Forbids(PoiKind.CurseDen) : kind == ReefKind.Treasure || !t.Requires(PoiKind.CurseDen));
         for (int attempt = 0; ; attempt++)
         {
             var picked = new LevelTemplate?[boss];
-            var treasures = new HashSet<int> { 1 };
-            bool secondFree = true;
             for (int level = 1; level <= boss; level++)
             {
                 var slot = level == boss ? TemplateSlot.Boss : level == 1 ? TemplateSlot.First : level == boss - 1 ? TemplateSlot.BeforeBoss : TemplateSlot.Middle;
-                bool mustTreasure = level == 1 || secondFree && level == second;
                 var previous = level > 1 ? picked[level - 2] : null;
                 var fits = all.Where(t => t.Fits(shown, slot) && t != previous
                     && (t.MaxPerDepth <= 0 || picked.Count(x => x == t) < t.MaxPerDepth)
-                    && !(mustTreasure && t.Forbids(PoiKind.TreasureCave))
-                    && !(!mustTreasure && t.Requires(PoiKind.TreasureCave) && !secondFree)).ToList();
+                    && FitsKind(t, kinds[level - 1])).ToList();
                 LevelTemplate? choice = fallback;
                 float sum = fits.Sum(t => t.WeightOn(slot));
                 if (sum > 0f)
@@ -271,18 +273,8 @@ public sealed class LevelPlan
                     }
                 }
                 picked[level - 1] = choice;
-                if (level == second && secondFree && !(choice?.Forbids(PoiKind.TreasureCave) ?? false))
-                {
-                    treasures.Add(level);
-                    secondFree = false;
-                }
-                else if (level > 1 && choice is not null && choice.Requires(PoiKind.TreasureCave) && secondFree)
-                {
-                    treasures.Add(level);
-                    secondFree = false;
-                }
             }
-            // A depth of three levels or more shows at least three different ones (a few rolls, then as it is).
+            // A lane of three rows or more shows at least three different ones (a few rolls, then as it is).
             if (boss < 3 || picked.Distinct().Count() >= 3 || attempt >= 12) return (picked, treasures);
         }
     }
@@ -329,7 +321,9 @@ public sealed class LevelPlan
     static LevelPlan Tutorial_(SeedCode seed, RunStreams streams, LevelId id)
     {
         bool rift = id.Level >= LevelStocking.TutorialLevels;
-        var next = NextOf(seed, id);
+        var graph = DiveGraph.Of(seed);
+        var exits = graph.ExitsOf(id);
+        var next = exits[0];
         return new LevelPlan
         {
             Id = id,
@@ -345,6 +339,8 @@ public sealed class LevelPlan
             ExitStamp = streams.StampSeed(next),
             Menace = 0f,
             Next = next,
+            Exits = exits.ToArray(),
+            ExitKinds = exits.Select(graph.KindOf).ToArray(),
         };
     }
 }

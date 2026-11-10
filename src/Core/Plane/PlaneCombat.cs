@@ -283,8 +283,11 @@ public sealed partial class PlaneWorld
     /// <summary>The way down: open, except on a boss level until the boss is freed.</summary>
     public bool ExitOpen { get; set; } = true;
 
-    /// <summary>She floats over the shaft.</summary>
-    public bool OverShaft => Map.Shaft.Contains(Player.Position);
+    /// <summary>She floats over a hole down (any of the reef's).</summary>
+    public bool OverShaft => Map.InShaft(Player.Position);
+
+    /// <summary>The hole she floats over (its index in Map.Holes), or −1.</summary>
+    public int HoleUnder => Map.HoleAt(Player.Position);
 
     /// <summary>An active battle: the arena is sealed, or a creature that has noticed her is close.</summary>
     public bool InBattle => BossBattle || Mobs.Any(m => m.Alive && m.Aggro && Vector2.Distance(m.Position, Player.Position) < PlaneCombatTuning.DiveSafeDistance)

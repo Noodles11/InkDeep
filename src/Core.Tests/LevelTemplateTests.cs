@@ -49,8 +49,8 @@ public class LevelTemplateTests
                     if (level == templates.Length) Assert.Contains(TemplateSlot.Boss, t.Slots);
                     else if (level == 1) Assert.Contains(TemplateSlot.First, t.Slots);
                 }
-                Assert.Contains(1, treasures);
-                Assert.InRange(treasures.Count, 1, 2);
+                // The rows whose reef (down lane 0) holds a clam room: its kind's.
+                Assert.All(treasures, l => Assert.Equal(1, LevelPlan.For(seed, new LevelId(1, depth, l)).Treasures));
             }
         }
     }
@@ -65,11 +65,13 @@ public class LevelTemplateTests
             var streams = new RunStreams(seed);
             for (int depth = LevelPlan.Tutorial + 1; depth <= LevelPlan.Depths; depth++)
             for (int level = 1; level <= LevelPlan.BossLevel(seed, 1, depth); level++)
+            foreach (var node in DiveGraph.Of(seed).Row(1, depth, level))
             {
-                var id = new LevelId(1, depth, level);
+                if (node.Kind == ReefKind.Haven) continue;
+                var id = node.Id;
                 var plan = LevelPlan.For(seed, id);
                 var t = plan.Template!;
-                // Each template once (its first level on these seeds).
+                // Each template once (its first reef on these seeds).
                 if (t.Id == "default" || !seen.Add(t.Id)) continue;
                 // Its places: required ones there (unless the cap or level 1 took them), forbidden ones not.
                 var counts = new Dictionary<PoiKind, int>

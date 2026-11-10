@@ -183,50 +183,71 @@ holding it on the pearl:
 
 Drippus Prime and Queen Clam keep their rules (the whole body; the pearl while the shell is open).
 
-## 6. The dive as a graph
+## 6. The dive as a graph (built)
 
 ### 6.1 Shape
 
-A dive is a layered graph of reefs, generated from the dive's seed when it starts:
+A dive is a layered graph of reefs, built from the dive's seed a depth at a time as it is reached (`DiveGraph`,
+`DiveTuning`, in `src/Core/Run`; the same from the same seed):
 
-- **Depths**: the five depths, as now. Each depth has 4 rows of reefs *(tune)* and ends in its folk boss's reef.
-- **Lanes**: each row has 2 to 4 reefs. Each reef has 2 to 4 exits down to reefs in the next row. Now and then an exit
-  is a **shortcut** that skips a row.
-- **Menace** comes from a reef's depth and row, never from how many reefs she has crossed: a shortcut lands her
-  somewhere harder.
-- **Rules the generator keeps** (the generator retries with the next sub-seed if any is broken):
-  - every reef can be reached from the top;
-  - every reef leads on to its depth's boss;
-  - no two exits of a reef lead to the same reef;
-  - every route meets a haven within 4 rows (§6.2).
-- Past the fifth depth the loop starts again below the tutorial, as now.
+- **Depths**: the five depths, as before. Each has 4 rows of reefs and ends in its folk boss's reef, one wide (row 5).
+  The tutorial is two reefs, one wide; the very first row of the dive (where every dive begins) is one reef.
+- **Lanes**: each row has 2 to 4 reefs. Each reef has 2 to 4 holes down to the nearest reefs of the row below (fewer
+  only where that row is narrower, or is the boss's); the boss's reef leads to every reef of the next depth's first row.
+  Now and then (15%) a reef has a **shortcut** past the row below to the one after (never to the boss's).
+- **Menace** comes from a reef's depth alone, never from how many reefs she has crossed. A shortcut is a reef fewer
+  for her pearls and shells, not a harder one.
+- **Rules the generator keeps** (it retries the depth on its next sub-seed if one breaks):
+  - every reef can be reached from the top, and leads on to its depth's boss;
+  - no two holes of a reef lead to the same reef;
+  - from every reef of a depth's first two rows, a haven of the depth can be reached (§6.2);
+  - no row two wide or more is all havens.
+- Past the fifth depth the loop starts again below the tutorial, as before.
 
 ### 6.2 Kinds of reef
 
 | Kind | What it is |
 |---|---|
-| Reef | an ordinary seeded level, as now |
-| Haven | as now: calm, heals and banks, all the freed folk, the Tide Fan, the shop. Its map stays hand-drawn. |
-| Folk boss | the bottom of each depth, one reef wide, as now |
-| Treasure, Den | the special reefs from stage 6's place rules (§7) |
+| Reef | an ordinary seeded level |
+| Haven | calm, heals and banks, all the freed folk, the Tide Fan, the shop. Its map stays hand-drawn, with a hole in its gate and in each of its two coves (as many as it has reefs below). From row 2 to row 4 of a depth: 15% by chance (never straight after one), then where most of the reefs that could reach none would reach it. |
+| Boss | the bottom of each depth, one reef wide |
+| Treasure | a reef with a clam room (rows 1–4, 30%; at least one a depth) |
+| Den | a reef with a curse den (rows 2–4, 20%) |
+
+Treasure and Den follow one rule each (`ReefPlaces`): the rows they may stand in, how often, how many at least a depth,
+and never straight after one of their kind. A reef's template is drawn to fit its kind (none forbidding the room it
+holds, none requiring one it does not; a treasure reef may hold the curse den its template asks for too). The spots
+inside a reef (a secret, a shop, a shell cache, a Crab Deal on one reef of a depth) are rolled by its plan.
 
 ### 6.3 Holes and choosing
 
-- **Opening the holes**: a reef has a hole for each of its exits. Sealing the reef's leak opens them all at once (as
-  the one hole opens now).
-- **Showing where each leads**: each hole's rim shows the kind of reef it leads to: haven, boss, treasure or plain reef.
-- **The chart**: the pause menu gains a **chart** of the graph, showing where she has been, the reefs she can see from
-  here, and the rest unknown. The cartographer pearls show two rows further.
+- **Opening the holes**: a reef has a hole for each of its exits: its Exit's chamber, and further chambers sunk the same
+  way (`PoiKind.Hole`), far from the start and the exit and 28 m apart. Sealing the reef's leak (on a boss's reef,
+  freeing the boss) opens them all at once.
+- **Which leads where**: left to right across the map as the reefs they lead to lie left to right across the rows below.
+- **Showing where each leads**: each hole's rim is a ring of light in the colour of the reef below (`HoleView`,
+  `ReefKinds`): plain reef pale water, clam room gold, curse den red, haven green, boss violet. Faint while sealed, it
+  brightens and breathes once the holes open. Over a hole the prompt says it too ("dive · a clam room below").
+- **The level below**: each hole's reef is made off the main thread, the nearest first; the one under the hole she is
+  nearest shows through it, and she dives into whichever she is over.
+- **The chart**: the pause menu's Chart tab (`ChartView`) shows the depth she is in and the next depth's first row: the
+  reefs she has been on, filled; the one she is on, ringed in gold; the reefs she can see (every hole's reef of a reef
+  she has been on, and down to one row below her, two more for each cartographer pearl: Sea Chart Nautilus, Brass
+  Compass), in their kind's colour; the rest unknown.
 
-### 6.4 What changes in the code
+### 6.4 In the code
 
-- **LevelId**: gains a **Lane**; its Level becomes the row. The seed of each reef comes from (cycle, depth, row, lane).
-- **The graph**: a new `DiveGraph` (in `src/Core/Run`) is built from the dive's seed. `LevelPlan.NextOf` and
-  `Dives.NextOf` give way to the graph's exits. `Dives.HavenBefore` goes, since havens are reefs in the graph.
-- **The save**: the dive's save keeps the reef she is on and the reefs she has visited. The graph itself is rebuilt
-  from the seed. An older dive save is resumed by mapping its level onto lane 0 of its row.
+- **LevelId** has a **Lane**; its Level is the row. A reef's streams come from (cycle, depth, row, lane).
+- **The graph** (`DiveGraph.Of(seed)`): `Node`, `Row`, `ExitsOf`, `KindOf`, `Resolve`. `LevelPlan.For` takes a reef's
+  kind and its exits from it (`LevelPlan.Exits`, `ExitKinds`, left to right). `LevelPlan.NextOf` is its first exit.
+- **The map**: `LevelMap.Holes` (each its shaft, the reef it leads to and its kind), `InShaft`, `HoleAt`;
+  `PlaneWorld.HoleUnder`.
+- **The save**: the dive's save keeps the reef she is on (`SuspendedRun.Lane`) and the reefs she has been on
+  (`Reefs`). The graph itself is rebuilt from the seed. An older save is resumed on lane 0 of its row.
 - **Unchanged**: the Tide Fan's requests ("seal 3 leaks on the way down") and the chains ("dive to Depth N") count
   depths and kinds, so they keep working.
+- **Verification**: `--lane=K` (with `--depth=`, `--level=`), `--at=holeK` (over the K-th hole from the left),
+  `--at=rimK` (a few metres south of it), `--pause-tab=5` (the chart).
 
 ## 7. Places and sub-levels
 
@@ -251,8 +272,8 @@ A dive is a layered graph of reefs, generated from the dive's seed when it start
 | 3 | The basic murkling on the registry; variants by depth — built | yes |
 | 4 | Invisible in the dark (built for murklings; the other corrupted kinds follow); cores and healing; the magnet — built | yes |
 | 5 | Pearls sorted and moved; one light rule per boss — built | yes |
-| 6 | The dive graph, the reef kinds, the chart; place rules | yes |
-| 7 | Sub-levels generated with their reef; exact return; short transitions | yes |
+| 6 | The dive graph, the reef kinds and their place rules, the holes, the chart — built | yes |
+| 7 | The rules for the spots within a reef; sub-levels generated with their reef; exact return; short transitions | yes |
 | 8 | The save for the graph; the death fade and the dive's summary | yes |
 | 9 | What nothing uses any more goes (shot reserve, the line of levels) | no |
 

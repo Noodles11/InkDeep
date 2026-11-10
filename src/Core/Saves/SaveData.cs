@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace OctoShoots.Core.Saves;
@@ -222,11 +223,33 @@ public sealed class SuspendedRun
     public int Cycle { get; set; } = 1;
     public int Depth { get; set; } = 1;
     public int Level { get; set; } = 1;
-    /// <summary>A dive's haven before that level (docs/DIVE.md §4), not the level itself.</summary>
+    /// <summary>Its reef across that row of the dive's graph (Run.DiveGraph; an older save's: lane 0).</summary>
+    public int Lane { get; set; }
+    /// <summary>That reef is a haven (docs/DIVE.md §4).</summary>
     public bool Haven { get; set; }
+    /// <summary>The reefs of the dive's graph she has been on, each "cycle/depth/row/lane" (the chart's).</summary>
+    public List<string> Reefs { get; set; } = new();
 
     /// <summary>Where the run stands, as the HUD names it.</summary>
     public string Where => new OctoShoots.Core.Gen.TopDown.LevelId(Cycle, Depth, Level) { Haven = Haven }.ToString();
+
+    /// <summary>The reef she is on, as the dive's graph has it (an older save's level: lane 0 of its row).</summary>
+    public OctoShoots.Core.Gen.TopDown.LevelId Reef()
+    {
+        int depth = Math.Clamp(Depth, OctoShoots.Core.Gen.TopDown.LevelPlan.Tutorial, OctoShoots.Core.Gen.TopDown.LevelPlan.Depths);
+        var id = new OctoShoots.Core.Gen.TopDown.LevelId(Math.Max(1, Cycle), depth, Math.Clamp(Level, 1, OctoShoots.Core.Run.DiveGraph.RowsOf(depth))) { Lane = Math.Max(0, Lane) };
+        return OctoShoots.Core.Run.SeedCode.TryParse(Seed, out var seed) ? OctoShoots.Core.Run.DiveGraph.Of(seed).Resolve(id) : id;
+    }
+
+    /// <summary>A reef as the save keeps it, and back.</summary>
+    public static string ReefKey(OctoShoots.Core.Gen.TopDown.LevelId id) => $"{id.Cycle}/{id.Depth}/{id.Level}/{id.Lane}";
+
+    public static OctoShoots.Core.Gen.TopDown.LevelId? FromReefKey(string key)
+    {
+        var parts = key.Split('/');
+        if (parts.Length != 4 || !int.TryParse(parts[0], out int c) || !int.TryParse(parts[1], out int d) || !int.TryParse(parts[2], out int l) || !int.TryParse(parts[3], out int lane)) return null;
+        return new OctoShoots.Core.Gen.TopDown.LevelId(c, d, l) { Lane = lane };
+    }
     public List<string> Items { get; set; } = new();
     public float Hp { get; set; }
     /// <summary>The Crab Deals she has struck.</summary>

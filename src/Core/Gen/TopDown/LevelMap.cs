@@ -12,8 +12,9 @@ namespace OctoShoots.Core.Gen.TopDown;
 /// A named place on the level (DESIGN-TOPDOWN §4.1 stage 1). Exit: the way down — a blue hole, or on a boss level the
 /// boss arena with the Crack across its floor. ShellCache: a guarded clearing of shells.
 /// </summary>
-/// <summary>A level's places. LeakCave: a leak cave's mouth in the rock (docs/DIVE.md §6), where a curse den once was.</summary>
-public enum PoiKind { Start, ShellCache, Exit, Shop, Secret, CurseDen, TreasureCave, CrabDeal, LeakCave }
+/// <summary>A level's places. LeakCave: a leak cave's mouth in the rock (docs/DIVE.md §6), where a curse den once was.
+/// Hole: one of a reef's further holes down (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6.3), a sunken chamber as its Exit's.</summary>
+public enum PoiKind { Start, ShellCache, Exit, Shop, Secret, CurseDen, TreasureCave, CrabDeal, LeakCave, Hole }
 
 public sealed class Poi
 {
@@ -99,6 +100,17 @@ public readonly record struct Shaft(Vector2 Center, Vector2 Axis, float HalfLeng
         float a = Vector2.Dot(d, Axis) / (HalfLength + margin), b = Vector2.Dot(d, Geo.Perp(Axis)) / (HalfWidth + margin);
         return a * a + b * b <= 1f;
     }
+}
+
+/// <summary>
+/// One of a reef's holes down (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6.3): its shaft, the reef of the dive's graph it leads
+/// to (Run.DiveGraph), and what that reef is (its rim shows it).
+/// </summary>
+public sealed class MapHole
+{
+    public Shaft Shaft;
+    public LevelId To;
+    public OctoShoots.Core.Run.ReefKind Kind;
 }
 
 /// <summary>
@@ -386,8 +398,16 @@ public sealed class LevelMap
     public const float FanClear = 3.5f;
     public ulong EntryStampSeed, ExitStampSeed;
     public bool EntryFromArena;
-    /// <summary>Where the floor gives way to the level below.</summary>
+    /// <summary>Where the floor gives way to the level below: its first hole (the Exit's; Holes[0] when it has holes).</summary>
     public Shaft Shaft;
+    /// <summary>Every hole down (the Exit's and each Hole place's), left to right across the map, each with where it leads.</summary>
+    public List<MapHole> Holes = new();
+
+    /// <summary>Whether a point lies over any of its holes (grown by <paramref name="margin"/> metres).</summary>
+    public bool InShaft(Vector2 p, float margin = 0f) => Shaft.Contains(p, margin) || Holes.Exists(h => h.Shaft.Contains(p, margin));
+
+    /// <summary>The hole a point lies over (its index in Holes), or −1.</summary>
+    public int HoleAt(Vector2 p) => Holes.FindIndex(h => h.Shaft.Contains(p));
     /// <summary>The adventure's abyss reef (AbyssReef): the open floor dropped away outside the caves and tunnels.</summary>
     public bool Abyss;
     /// <summary>Her luck as the level was made (LuckTuning): it may bring a light spring (LightSprings).</summary>
@@ -561,6 +581,13 @@ public sealed class LevelMap
         V(Shaft.Axis);
         w.Write(Shaft.HalfLength);
         w.Write(Shaft.HalfWidth);
+        w.Write(Holes.Count);
+        foreach (var hole in Holes)
+        {
+            V(hole.Shaft.Center);
+            w.Write(hole.To.Level);
+            w.Write(hole.To.Lane);
+        }
         foreach (float h in Heights) w.Write(h);
         foreach (float h in Lid) w.Write(h);
         foreach (float h in Sealed) w.Write(h);

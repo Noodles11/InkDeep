@@ -73,31 +73,7 @@ public class TopDownGenTests
 
     [Theory]
     [MemberData(nameof(Seeds))]
-    public void EveryDepthHasOneOrTwoTreasureRooms(string seed)
-    {
-        var code = SeedCode.Parse(seed);
-        for (int depth = 1; depth <= LevelPlan.Depths; depth++)
-        {
-            int boss = LevelPlan.BossLevel(code, 1, depth);
-            int second = LevelPlan.SecondTreasureLevel(code, 1, depth);
-            Assert.True(second == 0 || (second >= 2 && second <= boss), $"depth {depth}: second treasure on level {second}");
-            int total = 0;
-            for (int level = 1; level <= boss; level++)
-            {
-                int t = LevelPlan.For(code, new LevelId(1, depth, level)).Treasures;
-                Assert.InRange(t, 0, 1);
-                total += t;
-            }
-            // The general roll's second always comes (on its level, or on a level whose template requires one);
-            // with no second rolled, a template that requires a clam room may still bring one.
-            if (second == 0) Assert.InRange(total, 1, 2);
-            else Assert.Equal(2, total);
-        }
-    }
-
-    [Theory]
-    [MemberData(nameof(Seeds))]
-    public void EveryDepthEndsWithItsBossOnLevelFourOrFive(string seed)
+    public void EveryDepthEndsWithItsBossOnLevelFive(string seed)
     {
         var code = SeedCode.Parse(seed);
         var id = LevelId.FirstRun;
@@ -105,12 +81,11 @@ public class TopDownGenTests
         {
             var plan = LevelPlan.For(code, id);
             int boss = LevelPlan.BossLevel(code, id.Cycle, id.Depth);
-            Assert.InRange(boss, 4, 5);
+            Assert.Equal(5, boss);
             Assert.Equal(id.Level == boss, plan.HasBoss);
             Assert.True(plan.Places <= LevelStocking.MaxPlaces, $"{id}: {plan.Places} places");
             if (id.Level == 1)
             {
-                Assert.Equal(1, plan.Treasures);
                 Assert.Equal(0, plan.Shops);
                 Assert.Equal(0, plan.Caches);
             }
@@ -119,21 +94,18 @@ public class TopDownGenTests
             if (plan.HasBoss)
             {
                 Assert.Equal(1, next.Level);
-                Assert.Equal(id.Depth == LevelPlan.Depths ? new LevelId(id.Cycle + 1, LevelPlan.Tutorial + 1, 1) : new LevelId(id.Cycle, id.Depth + 1, 1), next);
-                Assert.True(LevelPlan.MenaceOf(next) > plan.Menace);
+                Assert.Equal(id.Depth == LevelPlan.Depths ? (id.Cycle + 1, LevelPlan.Tutorial + 1) : (id.Cycle, id.Depth + 1), (next.Cycle, next.Depth));
             }
-            else
-            {
-                Assert.Equal(id with { Level = id.Level + 1 }, next);
-                Assert.Equal(plan.Menace, LevelPlan.MenaceOf(next));
-            }
-            Assert.Equal(id, LevelPlan.PreviousOf(code, next));
-            // The hole of this level and the start of the next share one stamp.
-            Assert.Equal(plan.ExitStamp, LevelPlan.For(code, next).EntryStamp);
-            Assert.Equal(plan.HasBoss, LevelPlan.For(code, next).EntryFromArena);
+            else Assert.Equal(id.Depth, next.Depth);
+            if (plan.HasBoss) Assert.True(LevelPlan.MenaceOf(next) > plan.Menace);
+            else Assert.Equal(plan.Menace, LevelPlan.MenaceOf(next));
+            Assert.Contains(id, DiveGraph.Of(code).Node(next).From);
+            Assert.Equal(plan.HasBoss || id.IsTutorial && next.Level == 1, LevelPlan.For(code, next).EntryFromArena);
+            // (Havens are hand-drawn: on along the reefs past them.)
+            while (DiveGraph.Of(code).KindOf(next) == ReefKind.Haven) next = DiveGraph.Of(code).ExitsOf(next)[0];
             id = next;
         }
-        Assert.True(id.Cycle >= 2, "40 levels loop past the seventh depth");
+        Assert.True(id.Cycle >= 2, "40 levels loop past the last depth");
     }
 
     // ───────────────────────── the way down ─────────────────────────
@@ -162,17 +134,20 @@ public class TopDownGenTests
     {
         foreach (var map in new[] { Map(seed), Map(seed, BossLevel(seed)) })
         {
-            Assert.True(map.Shaft.Contains(LevelValidator.DeepestPoint(map), 1f));
+            Assert.True(map.InShaft(LevelValidator.DeepestPoint(map), 1f));
             // The Crack's floor is the level below's seabed; an exit chamber's bowl stops just over it.
             Assert.True(map.HeightAt(map.Shaft.Center) <= LevelMap.ShaftBottom + (map.HasBoss ? 0.01f : 1f));
             Assert.True(map.Shaft.Contains(map.Exit.Position));
-            // The Crack drops sheer from the arena; an ordinary exit's whole chamber slopes down to its dive zone.
-            float room = map.HasBoss ? 1.5f : map.Chambers.OrderBy(c => Vector2.Distance(c.At, map.Exit.Position)).First().Radius + 4.5f;
+            // The Crack drops sheer from the arena; an ordinary hole's whole chamber slopes down to its dive zone (as do
+            // a reef's further holes').
+            float RoomOf(Vector2 at) => map.Chambers.OrderBy(c => Vector2.Distance(c.At, at)).First().Radius + 4.5f;
+            var bowls = map.Holes.Where(h => h.Shaft.HalfLength <= h.Shaft.HalfWidth + 0.01f).Select(h => (h.Shaft.Center, Room: RoomOf(h.Shaft.Center) + h.Shaft.HalfLength)).ToList();
+            Assert.Equal(map.Holes.Count - (map.HasBoss ? 1 : 0), bowls.Count);
             for (int y = 0; y <= LevelMap.Seeded; y++)
             for (int x = 0; x <= LevelMap.Seeded; x++)
             {
                 var p = new Vector2(x, y);
-                bool way = map.HasBoss ? map.Shaft.Contains(p, room) : Vector2.Distance(p, map.Exit.Position) < room + map.Shaft.HalfLength;
+                bool way = map.HasBoss && map.Shaft.Contains(p, 1.5f) || bowls.Any(b => Vector2.Distance(p, b.Center) < b.Room);
                 if (!way) Assert.True(map[x, y] > -4.5f, $"deep water at ({x}, {y}): {map[x, y]:0.0} m");
             }
         }
@@ -422,8 +397,11 @@ public class TopDownGenTests
     [MemberData(nameof(Seeds))]
     public void CaveMouthsFaceCorridorsOrOpenWater(string seed)
     {
-        var map = Map(seed);
-        // Level 1 always has a treasure room, in a cave.
+        // The first reef of the first depth with a room in a cave.
+        var code = SeedCode.Parse(seed);
+        var id = Enumerable.Range(1, 4).SelectMany(r => DiveGraph.Of(code).Row(1, LevelPlan.Tutorial + 1, r)).Select(n => n.Id)
+            .First(i => !i.Haven && LevelPlan.For(code, i) is var p && p.Treasures + p.Shops + p.Secrets + p.Crabs > 0);
+        var map = Map(seed, id);
         Assert.NotEmpty(map.Caves);
         foreach (var cave in map.Caves)
         {
@@ -459,7 +437,9 @@ public class TopDownGenTests
 
             var start = map.Start.Position;
             var exit = map.Exit.Position;
-            var others = map.Pois.Where(p => p.Kind is not (PoiKind.Start or PoiKind.Exit)).ToList();
+            // (A reef's further holes are not its places: LevelValidator keeps them apart.)
+            Assert.Equal(plan.Exits.Count - 1, Count(PoiKind.Hole));
+            var others = map.Pois.Where(p => p.Kind is not (PoiKind.Start or PoiKind.Exit or PoiKind.Hole)).ToList();
             for (int i = 0; i < others.Count; i++)
             {
                 Assert.True(Vector2.Distance(others[i].Position, exit) >= CaveLayout.FromExit);

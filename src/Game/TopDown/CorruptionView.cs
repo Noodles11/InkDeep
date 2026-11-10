@@ -197,7 +197,7 @@ public partial class CorruptionView : Node3D
             {
                 var p = new System.Numerics.Vector2((x + Rand()) * CorruptionTuning.Cell, (y + Rand()) * CorruptionTuning.Cell);
                 float floor = map.HeightAt(p);
-                if (floor > LevelMap.BlockHeight || map.Shaft.Contains(p, GatewayClear)) continue;
+                if (floor > LevelMap.BlockHeight || map.InShaft(p, GatewayClear)) continue;
                 float radius = RadiusMin + (RadiusMax - RadiusMin) * Rand();
                 float rise = RiseMin + (RiseMax - RiseMin) * Rand();
                 // Its scale is the drop's radius (the shader reads it back).

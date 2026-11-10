@@ -81,7 +81,7 @@ public sealed partial class PlaneWorld
                     float a = _blightRng.Range(0f, MathF.Tau), r = _blightRng.Range(0f, nave.Radius * 0.55f);
                     var at = nave.At + new Vector2(MathF.Cos(a), MathF.Sin(a)) * r;
                     if (!Clear(at, body) || float.IsPositiveInfinity(LevelValidator.DistanceAt(reach, at))) continue;
-                    if (Map.Shaft.Contains(at, 3f)) continue;
+                    if (Map.InShaft(at, 3f)) continue;
                     return at;
                 }
                 return null;

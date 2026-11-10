@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using OctoShoots.Core.Gen.TopDown;
 using OctoShoots.Core.Items;
@@ -176,6 +177,14 @@ public sealed partial class PlaneWorld
             foreach (var (kin, g) in _glare)
                 if (Tick - g.Seen > 60) gone.Add(kin);
             foreach (var kin in gone) _glare.Remove(kin);
+            // Kept in the order they came (a removal leaves a gap the next one would take): a saved level restored lists
+            // them the same way.
+            if (gone.Count > 0)
+            {
+                var kept = _glare.ToList();
+                _glare.Clear();
+                foreach (var (kin, g) in kept) _glare[kin] = g;
+            }
         }
     }
 

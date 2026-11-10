@@ -50,7 +50,7 @@ public static class Geysers
             if (found.Count >= count) break;
             if (Vector2.Distance(at, map.Start.Position) < GeyserTuning.FromStart) continue;
             if (Vector2.Distance(at, map.Exit.Position) < map.Exit.Radius + GeyserTuning.FromExit) continue;
-            if (map.Shaft.Contains(at, 4f) || places.Any(p => Vector2.Distance(at, p.Position) < p.Radius + GeyserTuning.FromPlace)) continue;
+            if (map.InShaft(at, 4f) || places.Any(p => Vector2.Distance(at, p.Position) < p.Radius + GeyserTuning.FromPlace)) continue;
             if (springs.Any(s => Vector2.Distance(at, s) < SpringTuning.Radius + 4f)) continue;
             if (found.Any(f => Vector2.Distance(at, f) < GeyserTuning.Apart)) continue;
             bool open = map.IsOpen(at);

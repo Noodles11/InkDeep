@@ -343,10 +343,12 @@ of the corrupted (`PlaneExperience.cs`, `PlaneRun`).
   menace and light — never from map size.
 - The square is **ringed by an impassable reef wall** — cliffs and coral
   ramparts; the rim is scenery and collision, never a soft boundary.
-- **A depth is a chain of 5 levels** (§8). **Every level has exactly one way
-  out:** a blue hole in its floor, or — on the depth's boss level — the Crack in
-  the boss arena, which opens when the boss is freed. She dives down it (§4.6),
-  or perishes. No return to shallower levels within a run.
+- **A depth is 5 rows of a graph of reefs** (§8; docs/LIGHT-AND-GRAPH-PROPOSAL.md
+  §6). **A level's ways out are its holes:** one for each reef below it it leads
+  to (2–4), a blue hole each — on the depth's boss level the Crack in the boss
+  arena is one, all of them opening when the boss is freed. Each hole's rim shows
+  the kind of reef below it. She dives down one (§4.6), or perishes. No return to
+  shallower levels within a run.
 - **Something in every side chamber** (§4.9): each nave holds a place or a den
   to clear, so every detour pays.
 - **Pacing contract (the master knobs):** rushing start→exit takes **~45–60
@@ -1125,8 +1127,9 @@ The FP staging ("look up through the surface") is replaced:
 
 - **7 depths** (Shallows → Kelp → Galleon → Carnival → Trench → Abyss → Tank),
   numbered from **Depth 0**: the Sunlit Shallows are Depth 0, the tutorial, and
-  the run proper is Depths 1–6. Each real depth is a chain of **5 levels**: the
-  boss stands on level 5. HUD `Depth x · Level y`. After
+  the run proper is Depths 1–6. Each real depth is **5 rows of reefs** (a graph,
+  `DiveGraph`): rows 1–4 two to four reefs across, the boss alone on row 5. HUD
+  `Depth x · Level y` (the row). After
   the Tank's boss **the run loops** endlessly: Depth 1 again (never the
   tutorial), with Menace still rising (the cycle shows in the HUD from the second
   pass). Menace rises only through the Crack (§6.2). (In code and saves a depth

@@ -47,7 +47,7 @@ public static class LightSprings
             if (map.InHaven(at, SpringTuning.FromStart)) continue;
             if (Vector2.Distance(at, map.Start.Position) < SpringTuning.FromStart) continue;
             if (Vector2.Distance(at, map.Exit.Position) < map.Exit.Radius + SpringTuning.FromExit) continue;
-            if (map.Shaft.Contains(at, 4f) || places.Any(p => Vector2.Distance(at, p.Position) < p.Radius + 5f)) continue;
+            if (map.InShaft(at, 4f) || places.Any(p => Vector2.Distance(at, p.Position) < p.Radius + 5f)) continue;
             // Never on the main current: she would be swept out of it.
             if (MainCurrent.Touches(map, at, SpringTuning.Radius)) continue;
             bool open = map.IsOpen(at);

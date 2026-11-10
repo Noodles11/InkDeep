@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Concurrent;
 using OctoShoots.Core.Gen.TopDown;
 using OctoShoots.Core.Run;
@@ -16,20 +17,30 @@ static class TestLevels
     /// <summary>A level on the general rules alone (the tutorial's, or the default template's): what the mechanics tests assume.</summary>
     public static bool General(LevelPlan p) => p.Template is null || p.Template.Id == "default";
 
-    /// <summary>The first level of the seed's first loop whose plan matches (from the tutorial on).</summary>
-    public static LevelId Find(Func<LevelPlan, bool> match)
+    /// <summary>The seed's seeded reefs, from the tutorial on, row by row and lane by lane (Run.DiveGraph; no havens).</summary>
+    public static System.Collections.Generic.IEnumerable<LevelId> Reefs()
     {
-        var id = LevelId.First;
-        for (int i = 0; i < 60; i++, id = LevelPlan.NextOf(Seed, id))
-            if (match(LevelPlan.For(Seed, id))) return id;
-        throw new InvalidOperationException("no such level in the seed's first 60");
+        var graph = DiveGraph.Of(Seed);
+        for (int row = 1; row <= DiveGraph.RowsOf(LevelPlan.Tutorial); row++) yield return graph.Row(1, LevelPlan.Tutorial, row)[0].Id;
+        for (int cycle = 1; cycle <= 2; cycle++)
+        for (int depth = LevelPlan.Tutorial + 1; depth <= LevelPlan.Depths; depth++)
+        for (int row = 1; row <= DiveGraph.RowsOf(depth); row++)
+            foreach (var node in graph.Row(cycle, depth, row))
+                if (node.Kind != ReefKind.Haven) yield return node.Id;
     }
 
-    /// <summary>Every level of the seed's first 60 whose plan matches, in order.</summary>
+    /// <summary>The first reef of the seed's whose plan matches (from the tutorial on).</summary>
+    public static LevelId Find(Func<LevelPlan, bool> match)
+    {
+        foreach (var id in Reefs().Take(120))
+            if (match(LevelPlan.For(Seed, id))) return id;
+        throw new InvalidOperationException("no such reef in the seed's first 120");
+    }
+
+    /// <summary>Every reef of the seed's first 120 whose plan matches, in order.</summary>
     public static System.Collections.Generic.IEnumerable<LevelId> All(Func<LevelPlan, bool> match)
     {
-        var id = LevelId.First;
-        for (int i = 0; i < 60; i++, id = LevelPlan.NextOf(Seed, id))
+        foreach (var id in Reefs().Take(120))
             if (match(LevelPlan.For(Seed, id))) yield return id;
     }
 

@@ -121,7 +121,7 @@ public sealed partial class PlaneWorld
         at = CorruptionField.CellCentre(cell % CorruptionField.N, cell / CorruptionField.N);
         if (field.Density[cell] < 0.6f || !Clear(at, BlotterTuning.Radius + 0.3f)) return false;
         if (Map.HasBoss && Vector2.Distance(at, ArenaCenter) < ArenaRadius + 3f) return false;
-        return !Map.Shaft.Contains(at, 3f);
+        return !Map.InShaft(at, 3f);
     }
 
     Blotter NewBlotter(Vector2 at, float rise)

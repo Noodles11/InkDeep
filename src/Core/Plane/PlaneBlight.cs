@@ -403,7 +403,7 @@ public sealed partial class PlaneWorld
             var guards = AnchorPlace(cast, Blightroots.Count);
             if (safes.Any(s => Vector2.Distance(at, s.Centre) < s.Radius + (guards is { } g && Map.Pois.Any(q => q.Kind == g && q.Position == s.Centre) ? 4f : BlightTuning.SafeDistance))) continue;
             if (Map.HasBoss && Vector2.Distance(at, ArenaCenter) < ArenaRadius + BlightTuning.Reach + 2f) continue;
-            if (Map.Shaft.Contains(at, BlightTuning.Reach)) continue;
+            if (Map.InShaft(at, BlightTuning.Reach)) continue;
             if (Blightroots.Any(b => Vector2.Distance(b.Position, at) < BlightTuning.Spacing)) continue;
             AddBlightroot(at, field);
         }

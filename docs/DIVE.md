@@ -10,8 +10,10 @@ reef's map, zones, cave mouths in regions, homeward current, charts, lost light 
 
 - **A jelly is a save slot.** The title's jellyfish cards (docs/TITLE-MENU-PROPOSAL.md) are the three slots. Choosing
   one continues her dive where it stands, or starts a new one.
-- **A dive** (`Jelly.Dive`, a `SuspendedRun`) runs Depth 1 to Depth 5, five levels a depth with a boss on the fifth,
-  then loops to the next cycle as runs always have (`LevelPlan.NextOf`). It is saved at the start of every level.
+- **A dive** (`Jelly.Dive`, a `SuspendedRun`) runs Depth 1 to Depth 5 down a graph of reefs (`DiveGraph`,
+  docs/LIGHT-AND-GRAPH-PROPOSAL.md §6): five rows a depth, the boss alone on the fifth, each reef 2–4 holes down to
+  reefs of the row below, then loops to the next cycle. It is saved at the start of every reef, with the reef she is
+  on (its lane) and the reefs she has been on (`SuspendedRun.Lane`, `Reefs`).
 - **Its seed** comes from the jelly's own seed and how many dives she has ended (`Dives.SeedOf`), so every dive is a
   different reef.
 - **The tutorial.** A new jelly's first dive starts in the tutorial (Depth 0); once she has dived out of it
@@ -36,20 +38,23 @@ their dimmed look (`ReefLook.OpenShallows`) so the wider view never washes out.
 
 ## 4. Havens
 
-A haven is a level of its own between two others: Lantern Bay's water (`data/maps/haven.json`, drawn by hand, the same
-every time), in the bay's warm look, all of it haven water where nothing harms her. Its gate chamber's floor is the
-hole on to the level it stands before (`HandLayout.Hole`), open from the start.
+A haven is a reef of the dive's graph of its own kind (`ReefKind.Haven`, `LevelId.Haven`): Lantern Bay's water
+(`data/maps/haven.json`, drawn by hand, the same every time), in the bay's warm look, all of it haven water where
+nothing harms her. Its gate chamber's floor is a hole down, and so are its west and east coves' (`HandLayout.Hole`,
+its `Hole` places), as many as it has reefs below it (at most `DiveTuning.HavenExits`, three; a cove without one
+stays floor), all open from the start.
 
-- **When** (`Dives.NextOf`, `HavenTuning`): never straight after a haven, nor in the tutorial; after two levels without
-  one, 35% of the time (rolled from the dive's seed and the level); after three, always. A haven never takes a level's
-  place: it is `LevelId.Haven`, the stop before that level.
+- **Where** (`DiveGraph`): from a depth's second row to the row before its boss, never in its first row. Each such reef
+  is one 15% of the time (never straight after one by chance); then more go where most of the reefs that could reach
+  none would reach them, until from every reef of a depth's first two rows a haven of the depth can be reached. Never a
+  whole row of them. A haven is a choice, shown on the holes' rims and the chart, never a toll.
 - **Who is there:** a home round the lagoon for every neighbour she has freed, each with their service
   (docs/NPC-BOSSES-PROPOSAL.md): Tull's Tide Fan, Kip's mirror, Fennel's brood bed, Ottilie's pearl collector, Bubbles's
   dusk dance. The mirror stays silted until Kip is home.
 - **Always:** the shop off the market. Arriving heals her whole and banks all she carries (`BankDive`): her pearls and
   shells are hers for good from then on.
-- **Verification:** `--dbg-dive --dbg-haven --depth=N --level=L` starts in the haven before that level (with
-  `--dbg-freed=tull,kip,…` for its folk).
+- **Verification:** `--dbg-dive --depth=N --level=L --lane=K` starts on that reef (a haven where the graph has one);
+  `--dbg-haven` makes any reef Lantern Bay (with `--dbg-freed=tull,kip,…` for its folk).
 
 ## 5. Folk as the depths' bosses
 

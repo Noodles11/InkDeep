@@ -45,7 +45,8 @@ public class BeamPearlTests
 
     static Murkling Pinned(PlaneWorld w, Vector2 at, float meter = 36f)
     {
-        var m = new Murkling { Position = at, Bud = 0f, ThrowTimer = 100f };
+        // (A thrower that never throws: a basic murkling this near would cling to her, out of her light.)
+        var m = new Murkling { Position = at, Bud = 0f, ThrowTimer = 100f, Kind = MurkKind.Thrower };
         m.Corruption.Max = m.Corruption.Value = meter;
         w.Murklings.Add(m);
         return m;
@@ -141,7 +142,8 @@ public class BeamPearlTests
         var at = w.Map.Start.Position + d * 4f;
         var m = Pinned(w, at, 10000f);
         int frozenLate = 0;
-        for (int i = 0; i < 20 * PlaneWorld.TickRate; i++)
+        // (A roll a second at its chance: a minute of it.)
+        for (int i = 0; i < 60 * PlaneWorld.TickRate; i++)
         {
             Step(w, d, true, (m, at));
             if (i > 2 * PlaneWorld.TickRate && w.Dazzled(m)) frozenLate++;

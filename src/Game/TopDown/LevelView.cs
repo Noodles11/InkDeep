@@ -575,7 +575,7 @@ public partial class LevelView : Node3D
     /// </summary>
     internal static LevelShape.Surface? ChunkSurface(LevelMap map, int x0, int y0, int x1, int y1) =>
         SurfaceMesh(map.Size, (x, y) => SmoothHeight(map, x, y), x0, y0, x1, y1,
-            (x, y) => SmoothHeight(map, x, y) > LevelMap.ShaftBottom + 0.3f || map.Abyss && !map.Shaft.Contains(new System.Numerics.Vector2(x, y), 3f));
+            (x, y) => SmoothHeight(map, x, y) > LevelMap.ShaftBottom + 0.3f || map.Abyss && !map.InShaft(new System.Numerics.Vector2(x, y), 3f));
 
 
     /// <summary>How far (metres) the reef is drawn past the square on every side: wider than the view reaches.</summary>
@@ -1461,7 +1461,7 @@ public partial class LevelView : Node3D
         PoiKind.TreasureCave => "Clam room",
         PoiKind.CurseDen => "Curse den",
         PoiKind.CrabDeal => "Crab's Deal",
-        PoiKind.Exit => "Blue hole",
+        PoiKind.Exit or PoiKind.Hole => "Blue hole",
         _ => kind.ToString(),
     };
 
@@ -1569,7 +1569,7 @@ public partial class LevelView : Node3D
             if (h > -0.6f || h < -6f) continue;
             float slope = map.Gradient(p).Length();
             if (slope > 0.9f) continue;
-            if (map.HasBoss ? System.Numerics.Vector2.Distance(p, rift.Position) < rift.Radius * 0.6f : map.Shaft.Contains(p, 1.5f)) continue;
+            if (map.HasBoss ? System.Numerics.Vector2.Distance(p, rift.Position) < rift.Radius * 0.6f || map.InShaft(p, 1.5f) : map.InShaft(p, 1.5f)) continue;
             bool nearWall = false;
             for (int i = 0; i < 6 && !nearWall; i++)
             {

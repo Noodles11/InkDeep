@@ -39,6 +39,8 @@ public partial class TopDownMain : Node3D
     BeamView _beam = null!;
     CoreView _cores = null!;
     LampView _lamps = null!;
+    /// <summary>The rims of the reef's holes, each in the colour of where it leads.</summary>
+    HoleView _holes = null!;
     CurrentView _currents = null!;
     CrabView _crab = null!;
     float _holeShown;
@@ -194,7 +196,6 @@ public partial class TopDownMain : Node3D
 
     // The level below (DESIGN-TOPDOWN §4.6): made off the main thread as soon as she arrives on a level, then shown
     // under the hole, drawn only through the shaft until she dives.
-    Task<LevelShape>? _belowTask;
     LevelView? _below;
     LevelMap? _belowMap;
     // The corruption (docs/CORRUPTION.md): its shards and creatures, the live texture, and the shards being laid out.
@@ -351,6 +352,8 @@ public partial class TopDownMain : Node3D
         AddChild(_beam);
         _cores = new CoreView();
         AddChild(_cores);
+        _holes = new HoleView();
+        AddChild(_holes);
         _lamps = new LampView();
         AddChild(_lamps);
         _combat = new CombatView { Swells = _swells };
@@ -443,6 +446,8 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--cycle=") && int.TryParse(Value("--cycle="), out int c)) _id = _id with { Cycle = Math.Max(1, c) };
             else if (arg.StartsWith("--depth=") && int.TryParse(Value("--depth="), out int d)) _id = _id with { Depth = Math.Clamp(d, 1, LevelPlan.Depths) };
             else if (arg.StartsWith("--level=") && int.TryParse(Value("--level="), out int l)) _id = _id with { Level = Math.Clamp(l, 1, 5) };
+            // Verification: the reef across that row of the dive's graph (from 0 at the left).
+            else if (arg.StartsWith("--lane=") && int.TryParse(Value("--lane="), out int lane)) _id = _id with { Lane = Math.Max(0, lane) };
             // Verification: the haven before that level (docs/DIVE.md §4).
             else if (arg == "--dbg-haven") _id = _id with { Haven = true };
             // Verification: that many seconds into a dive's leak cave, she is taken back out of it (docs/DIVE.md §6).
@@ -513,6 +518,10 @@ public partial class TopDownMain : Node3D
                 foreach (string f in Value("--frames=").Split(','))
                     if (int.TryParse(f, out int n)) _captureFrames.Enqueue(n);
         }
+        // The reef as the dive's graph has it (a haven where it is one), unless one is asked for.
+        bool haven = _id.Haven;
+        _id = DiveGraph.Of(_seed).Resolve(_id);
+        if (haven) _id = _id with { Haven = true };
     }
 
     /// <summary>What the title screen asked for: a new run, a seeded run, or the saved one.</summary>
@@ -609,7 +618,9 @@ public partial class TopDownMain : Node3D
             Cycle = _id.Cycle,
             Depth = _id.Depth,
             Level = _id.Level,
+            Lane = _id.Lane,
             Haven = _id.Haven,
+            Reefs = _reefs.Select(SuspendedRun.ReefKey).ToList(),
             Items = _run.Items.ToList(),
             Hp = _run.Hp,
             ArmCuts = _run.ArmCuts,
@@ -646,8 +657,8 @@ public partial class TopDownMain : Node3D
     public static (SeedCode Seed, LevelId Id, float Luck) DiveStart(Jelly jelly) =>
         jelly.Dive is { } dive && SeedCode.TryParse(dive.Seed, out var seed) ? (seed, DiveLevel(dive), dive.Luck) : (Dives.SeedOf(jelly), Dives.StartOf(jelly), 0f);
 
-    /// <summary>A saved dive's level (the tutorial's too).</summary>
-    static LevelId DiveLevel(SuspendedRun dive) => new(Math.Max(1, dive.Cycle), Math.Clamp(dive.Depth, LevelPlan.Tutorial, LevelPlan.Depths), Math.Clamp(dive.Level, 1, 5)) { Haven = dive.Haven };
+    /// <summary>A saved dive's reef (the tutorial's too).</summary>
+    static LevelId DiveLevel(SuspendedRun dive) => dive.Reef();
 
     /// <summary>A dive's haven's map (data/maps/haven.json).</summary>
     const string HavenMap = "haven";
@@ -741,11 +752,13 @@ public partial class TopDownMain : Node3D
 
     public static Task<LevelShape> Shape(SeedCode seed, LevelId id, float luck, bool background = false)
     {
-        // A dive's haven: Lantern Bay's water, the same every time (docs/DIVE.md §4).
+        // A dive's haven: Lantern Bay's water, the same every time (docs/DIVE.md §4), its holes to the reefs below it.
         if (id.Haven)
         {
             var hand = LoadMap(HavenMap);
-            return Task.Run(() => LevelShape.Prepare(TopDownGenerator.FromHand(hand, asLevel: id)));
+            var graph = DiveGraph.Of(seed);
+            var exits = graph.ExitsOf(id).OrderBy(e => graph.Node(e).X).ToList();
+            return Task.Run(() => LevelShape.Prepare(TopDownGenerator.FromHand(hand, asLevel: id, exits: exits, kinds: exits.Select(graph.KindOf).ToList())));
         }
         var streams = new RunStreams(seed);
         return Task.Run(() => LevelShape.Prepare(Abyss(TopDownGenerator.Generate(streams, id, background: background, luck: luck))));
@@ -1352,6 +1365,7 @@ public partial class TopDownMain : Node3D
         if (!keepRun || _run is null)
         {
             ResetRunTotals();
+            _reefs.Clear();
             _announced.Clear();
             _run = new PlaneRun(_catalog, _tuning);
             // Her earned achievements are the run's unlocks (the profile's own set: one earned mid-run applies at once).
@@ -1389,6 +1403,8 @@ public partial class TopDownMain : Node3D
                 _elapsed = _runTime = (float)saved.Elapsed;
                 _runMobs = saved.Foes;
                 _runShells = saved.ShellsCollected;
+                foreach (string key in saved.Reefs)
+                    if (SuspendedRun.FromReefKey(key) is { } reef) _reefs.Add(reef);
                 _resume = null;
             }
             // The tutorial is not a run of its own: the run is counted when she dives out of it (TutorialPassed).
@@ -1396,6 +1412,7 @@ public partial class TopDownMain : Node3D
             _recorder.StartRun(_seed.ToString(), _customSeed, _run.Items, continuing || _id.IsTutorial);
         }
         _run.Level = _id;
+        if (!InDiveCave) _reefs.Add(_id with { Haven = false });
         // Waking in a haven (Lantern Bay): she is healed whole.
         if (map.InHaven(arriveAt ?? map.Start.Position)) _run.Hp = _run.MaxHp;
         _world = new PlaneWorld(_map, _tuning, _run, InDiveCave ? DiveCaveOptions() : DebugBoss() ?? DiveBoss());
@@ -1526,8 +1543,8 @@ public partial class TopDownMain : Node3D
         // The Tab map's title: the level's template (else what the arrival card calls it), and where it is.
         _fullMap.Title = title;
         _fullMap.Subtitle = _id.ToString();
-        GD.Print($"Top-down level {_seed} {_id}: attempt {_map.Attempt + 1}, {ms} ms, {_map.Pois.Count} POIs{(_map.HasBoss ? ", boss" : "")}, {_map.Canopies.Count} canopy pieces, {_map.Decor.Count} decor{(_world.Options.Adventure ? $", {_world.Leaks.Count} leaks, {_world.ReefFish.Count} fish, {_world.Murklings.Count} murklings ({_world.Murklings.Count(m => m.Prime)} prime)" : "")}");
-        if (!InDiveCave) _belowTask = Shape(Dives.NextOf(_seed, _id), background: true);
+        GD.Print($"Top-down level {_seed} {_id}{(_id.Lane > 0 ? $" (lane {_id.Lane})" : "")}: attempt {_map.Attempt + 1}, {ms} ms, {_map.Pois.Count} POIs{(_map.HasBoss ? ", boss" : "")}, {_map.Canopies.Count} canopy pieces, {_map.Decor.Count} decor{(_world.Options.Adventure ? $", {_world.Leaks.Count} leaks, {_world.ReefFish.Count} fish, {_world.Murklings.Count} murklings ({_world.Murklings.Count(m => m.Prime)} prime)" : "")}");
+        if (!InDiveCave) PrepareHoles();
     }
 
     /// <summary>
@@ -1742,10 +1759,18 @@ public partial class TopDownMain : Node3D
         _routeProgress = 0;
     }
 
-    /// <summary>Forgets the level below (a new run, a regenerated level).</summary>
+    /// <summary>Forgets the levels below (a new run, a regenerated level).</summary>
     void DropBelow()
     {
-        _belowTask = null;
+        _holeShapes.Clear();
+        _diveHole = -1;
+        DropBelowView();
+    }
+
+    /// <summary>Takes the level below away from under its hole (its shape kept).</summary>
+    void DropBelowView()
+    {
+        _belowHole = -1;
         _below?.QueueFree();
         _below = null;
         _belowMap = null;
@@ -1758,13 +1783,14 @@ public partial class TopDownMain : Node3D
     /// The level below is ready: shown under this one, its start right under the hole and a level's drop down, drawn only
     /// through the shaft (under a boss level's Crack, the Crack's glow fills it until the boss is freed).
     /// </summary>
-    void ShowBelow(LevelShape shape)
+    void ShowBelow(LevelShape shape, int at)
     {
+        _belowHole = at;
         _belowMap = shape.Map;
         _below = new LevelView();
         AddChild(_below);
         _below.Show(shape, below: true);
-        var hole = _map.Exit.Position;
+        var hole = HoleCenter(at);
         var start = shape.Map.Start.Position;
         _belowOffset = new Vector3(hole.X - start.X, -LevelMap.LevelDrop, hole.Y - start.Y);
         _below.Place(_belowOffset, _origin + new Vector2(_belowOffset.X, _belowOffset.Z));
@@ -1870,6 +1896,9 @@ public partial class TopDownMain : Node3D
             "cave" => _map.Caves.Select(c => (System.Numerics.Vector2?)(c.Mouth + c.Facing * 5f)).FirstOrDefault(),
             "exit" => _map.Exit.Position + new System.Numerics.Vector2(0f, _map.Exit.Radius + 3f),
             "hole" => _map.Exit.Position,
+            // Over a reef's holes left to right (hole0 the leftmost), or a few metres south of one (rim0…).
+            _ when where is { } w0 && w0.StartsWith("hole") && int.TryParse(w0[4..], out int k) && k >= 0 && k < _map.Holes.Count => _map.Holes[k].Shaft.Center,
+            _ when where is { } w1 && w1.StartsWith("rim") && int.TryParse(w1[3..], out int r) && r >= 0 && r < _map.Holes.Count => _map.Holes[r].Shaft.Center + new System.Numerics.Vector2(0f, 7f),
             // On the bay's mirror (its drawer opens), or a few metres south of it (captures of the pool).
             "mirror" => _map.Mirror,
             // At the Tide Fan's foot (its drawer opens).
@@ -2216,12 +2245,7 @@ public partial class TopDownMain : Node3D
                 _belowLayoutMap = _belowMap;
             }
         }
-        if (_belowTask is { IsCompleted: true } below && _transition == Transition.None)
-        {
-            _belowTask = null;
-            if (below.IsFaulted) GD.PushError(below.Exception?.ToString());
-            else ShowBelow(below.Result);
-        }
+        if (_transition == Transition.None) StepHoles();
         if (_diving)
         {
             StepDive(dt);
@@ -2578,6 +2602,7 @@ public partial class TopDownMain : Node3D
         Guard("beam", () => _beam.Sync(_world, _bell.LightPosition, dt));
         Guard("cores", () => _cores.Sync(_world));
         Guard("lamps", () => _lamps.Sync(_world, dt));
+        Guard("holes", () => _holes.Sync(_world, dt));
         Guard("surge", () => _surgeView.Sync(_world, dt));
         Guard("geysers", () => _geysers.Sync(_world, dt, _camera.Camera));
         _camera.SetBubbleLights(_combat.Lights, _combat.LightCount);
@@ -2728,11 +2753,14 @@ public partial class TopDownMain : Node3D
         OctoShoots.Game.Fx.SunMap.Enable(false);
         _diveTime = 0f;
         _diveFrom = _world.Player.Position;
-        var next = Dives.NextOf(_seed, _id);
+        // Down the hole she is over (the first, if she is somehow over none).
+        _diveHole = Math.Max(0, _world.HoleUnder);
+        var next = _diveTo = DestinationOf(_diveHole);
         _lookFrom = _id.Haven ? ReefLook.Bay : ReefLook.For(_id.Depth);
         _lookTo = next.Haven ? ReefLook.Bay : ReefLook.For(next.Depth);
         _bell.Kick();
         _hud.Diving = true;
+        _holes.Visible = false;
         if (_captureDir is not null) GD.Print($"Dive begins at frame {_frame}");
         // The level's life stays behind (only she goes down): it fades out with the iris (FadeLevelLife).
     }
@@ -2749,7 +2777,8 @@ public partial class TopDownMain : Node3D
     void StepDive(float dt)
     {
         _diveTime += dt;
-        if (_below is null && _diveTime > 0.25f) _diveTime = 0.25f;
+        bool ready = _below is not null && _belowHole == _diveHole;
+        if (!ready && _diveTime > 0.25f) _diveTime = 0.25f;
         float t = _diveTime, k = Mathf.Clamp(t / DiveSeconds, 0f, 1f);
         // The descent: in three pulses, each a quick lurch then a glide.
         float sink = Ease((t - 0.25f) / 0.95f);
@@ -2775,12 +2804,13 @@ public partial class TopDownMain : Node3D
         _plankton.Tick(dt, focus + Vector3.Up * 2f, _camera.Camera.GlobalBasis);
 
         // The iris: the level above is cut away from the hole outward; the level below shows inside the same ring.
-        var hole = new Vector2(_map.Exit.Position.X, _map.Exit.Position.Y);
+        var centre = HoleCenter(_diveHole);
+        var hole = new Vector2(centre.X, centre.Y);
         // It opens from nothing (its dissolving edge reaches 3 m past the radius) to the shaft's width as she gathers,
         // then sweeps outward.
         float radius = t < 0.35f ? Mathf.Lerp(-3f, 6f, Ease(t / 0.35f)) : Mathf.Lerp(6f, 150f, Mathf.Pow(Ease((t - 0.35f) / 0.9f), 2f));
         _level.SetPortal(hole, radius, 1);
-        _below?.SetPortal(hole, Mathf.Max(radius, Stamp.Pin), 2);
+        if (ready) _below!.SetPortal(hole, Mathf.Max(radius, Stamp.Pin), 2);
         // What lived on the level above goes with it: each piece as the iris's edge passes, the rest with the descent;
         // the Crack's glow, light and bubbles fade as she sinks through it. All gone before the level is let go.
         float stay = 1f - Ease((t - 0.3f) / 1.0f);
@@ -2794,7 +2824,7 @@ public partial class TopDownMain : Node3D
         _damage.Tick(dt);
         _hud.Elapsed = _elapsed;
         _hud.Track(_world, _catalog, dt);
-        if (_diveTime >= DiveSeconds && _below is not null) FinishDive();
+        if (_diveTime >= DiveSeconds && ready) FinishDive();
     }
 
     /// <summary>
@@ -2824,9 +2854,13 @@ public partial class TopDownMain : Node3D
         _bell.DiveDepth = 0f;
         _bell.DiveTurn = 0f;
         _hud.Diving = false;
+        _holes.Visible = true;
         _diving = false;
-        bool leftTutorial = _id.IsTutorial && !Dives.NextOf(_seed, _id).IsTutorial;
-        _id = Dives.NextOf(_seed, _id);
+        bool leftTutorial = _id.IsTutorial && !_diveTo.IsTutorial;
+        _id = _diveTo;
+        _diveHole = -1;
+        _holeShapes.Clear();
+        _belowHole = -1;
         if (leftTutorial) TutorialPassed();
         EnterLevel(map, keepRun: true, 0, arrived);
         _minimap.Arrive();
@@ -3079,6 +3113,10 @@ public partial class TopDownMain : Node3D
             _pause.Sells = BayOpen(BayService.PearlCollector);
             _pause.Open(_world.Run, _catalog, _seed.ToString(), InDiveCave || _id.Haven ? PlaceTitle().Title : $"{_id} · {HudView.Clock(_elapsed)}", _world.Player.Hp, _achievementData);
             FillPauseRequests();
+            // The chart: what she can see below her, two rows more for each cartographer pearl.
+            var flags = _world.Run.Loadout.Flags;
+            int sight = 1 + (flags.Contains("minimap") ? 2 : 0) + (flags.Contains("landmarks") ? 2 : 0);
+            _pause.FillChart(InDiveCave || _map.Station && !_id.Haven ? null : DiveGraph.Of(_seed), _id, _reefs, sight);
             if (_pad) _pause.FocusFirst();
             if (_pauseTab >= 0) _pause.ShowTab(_pauseTab);
         }

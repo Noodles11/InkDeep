@@ -99,7 +99,7 @@ public sealed partial class PlaneWorld
             if (!Clear(at, 1.2f) || Vector2.Distance(at, Map.Start.Position) < ThumpTuning.FromStart) continue;
             if (!Anchored(cast, Thumpsquirts.Count, at)) continue;
             if (Map.HasBoss && Vector2.Distance(at, ArenaCenter) < ArenaRadius + 4f) continue;
-            if (Map.Shaft.Contains(at, 3f) || float.IsPositiveInfinity(Gen.TopDown.LevelValidator.DistanceAt(reach, at))) continue;
+            if (Map.InShaft(at, 3f) || float.IsPositiveInfinity(Gen.TopDown.LevelValidator.DistanceAt(reach, at))) continue;
             if (Thumpsquirts.Any(t => Vector2.Distance(t.Position, at) < ThumpTuning.Spacing)) continue;
             AddThumpsquirt(at);
         }

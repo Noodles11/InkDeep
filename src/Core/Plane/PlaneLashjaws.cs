@@ -82,7 +82,7 @@ public sealed partial class PlaneWorld
             if (!Clear(at, 0.5f) || Vector2.Distance(at, Map.Start.Position) < LashTuning.FromStart) continue;
             if (!Anchored(cast, Lashjaws.Count, at)) continue;
             if (Map.HasBoss && Vector2.Distance(at, ArenaCenter) < ArenaRadius + 6f) continue;
-            if (Map.Shaft.Contains(at, 4f) || float.IsPositiveInfinity(Gen.TopDown.LevelValidator.DistanceAt(reach, at))) continue;
+            if (Map.InShaft(at, 4f) || float.IsPositiveInfinity(Gen.TopDown.LevelValidator.DistanceAt(reach, at))) continue;
             if (Map.Pois.Any(p => Vector2.Distance(p.Position, at) < p.Radius + LashTuning.FromPlaces)) continue;
             if (Lashjaws.Any(l => Vector2.Distance(l.Position, at) < LashTuning.Spacing)) continue;
             // Never under an arch or overhang (it would be hidden), nor in a cave.

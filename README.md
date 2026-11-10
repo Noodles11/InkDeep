@@ -19,12 +19,12 @@ A top-down action roguelite in a darkening ocean.
   light cleanses; Blightroot pylons that regrow it and starve when ringed by clean ground; murklings budding from it;
   gloomvines; valves of darkness; the boss arena as the condensation zone. The pufferling enemies are retracted for
   now (`PlaneOptions`).
-- **Presentation.** The Godot layer: heightfield chunks, the tilted camera with depth focus, the level below drawn
-  through the shaft and the dive into it, HUD and run clock, minimap with fog of war, pause menu, splashes, and the
-  F3 debug map.
+- **Presentation.** The Godot layer: heightfield chunks, the tilted camera with depth focus, the reef below drawn
+  through the hole she is nearest and the dive into it, each hole's rim in the colour of the reef it leads to, HUD and
+  run clock, minimap with fog of war, pause menu (with the dive's chart), splashes, and the F3 debug map.
 
 The game boots into the **title screen**: continue, a new run, a seeded run, the Sea-pedia, statistics, save & load and
-settings. **WASD** swims (north is up), **Space** dashes, **Shift** over the shaft dives, the mouse aims, the **left
+settings. **WASD** swims (north is up), **Space** dashes, **Shift** over a hole dives, the mouse aims, the **left
 button** (or the arrow keys, which aim too) shines her beam, the **right button** shoots, **Esc** pauses, **Tab**
 shows the whole level, **F1** the debug menu (jump to any level, switch any pearl on or off; a debug run is not saved), **F3** the debug map, **R** regenerates from the seed field (Enter applies a typed seed).
 

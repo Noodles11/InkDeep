@@ -61,6 +61,11 @@ public sealed class CaveLayout
     /// <summary>The scatter rules (the validator checks them): how far every place keeps from the start and the way down
     /// and from each other (rooms further), and how far from the start the early place may lie.</summary>
     public const float FromStart = 30f, FromExit = 30f, Spacing = 17f, CaveSpacing = 20f, EarlyMax = 38f;
+    /// <summary>A reef's further holes keep this far from each other (and from the start and the exit, as any place).</summary>
+    public const float HoleSpacing = 28f;
+    /// <summary>On a boss level, its further holes keep this much further from the arena (off its sealed walls).</summary>
+    const float BossHoleGap = 12f;
+    bool _boss;
     const int Misses = 1500;
 
     public enum Role { Start, Main, Branch, Exit }
@@ -120,7 +125,7 @@ public sealed class CaveLayout
     /// </summary>
     public static (CaveLayout? Layout, string? Why) Build(Rng rng, bool boss, bool fromArena, IReadOnlyList<PoiKind> kinds, Func<PoiKind, float> radius, LayoutRule? shape = null, float areaScale = 1f)
     {
-        var g = new CaveLayout { _shape = shape ?? new LayoutRule(), _scale = areaScale };
+        var g = new CaveLayout { _shape = shape ?? new LayoutRule(), _scale = areaScale, _boss = boss };
         uint seed = (uint)(rng.NextU64() >> 34);
         g.MainChain(rng, boss, fromArena);
         if (Vector2.Distance(g.Exit.At, g.Start.At) < MinStraight * g.Reach) return (null, "the way down is too close to the start");
@@ -681,10 +686,28 @@ public sealed class CaveLayout
                 && !Tunnels.Any(tn => tn.Kind == CorridorKind.Main && tn.Points.Zip(tn.Points.Skip(1)).Any(s => Geo.SegmentDistance(p, s.First, s.Second) <= tn.Width / 2f));
         }
         bool earlyTaken = Places.Any(p => p.Early);
+        // A further hole down: a whole chamber sunk (as the exit's), the farthest from the start first, apart from the others.
+        var holeSpots = Chambers.Where(c => !c.Room && c.Role is Role.Branch or Role.Main).OrderByDescending(c => Vector2.Distance(c.At, Start.At)).Select(c => c.At).ToList();
         for (int k = 0; k < kinds.Count; k++)
         {
             var kind = kinds[k];
-            if (Poi.IsCaveHosted(kind)) continue;
+            if (kind != PoiKind.Hole) continue;
+            float r = radius(kind);
+            Vector2? at = null;
+            foreach (var s in holeSpots)
+                if (Fits(s, r) && Spaced(s, kind, false) && Places.All(p => p.Kind != PoiKind.Hole || Vector2.Distance(p.At, s) >= HoleSpacing)
+                    && (!_boss || Vector2.Distance(s, Exit.At) >= FromExit + BossHoleGap))
+                {
+                    at = s;
+                    break;
+                }
+            if (at is not { } p) return "no room for a hole down";
+            Places.Add(new Place { Kind = kind, At = p, Radius = r });
+        }
+        for (int k = 0; k < kinds.Count; k++)
+        {
+            var kind = kinds[k];
+            if (Poi.IsCaveHosted(kind) || kind == PoiKind.Hole) continue;
             float r = radius(kind);
             bool early = k == 0 && !earlyTaken;
             Vector2? at = null;
@@ -710,12 +733,12 @@ public sealed class CaveLayout
         // Exactly one early place (unless a lone shell cache is all there is).
         if (Places.Count > 0 && !Places.Any(p => p.Early))
         {
-            if (Places.All(p => p.Kind == PoiKind.ShellCache)) return null;
+            if (Places.All(p => p.Kind is PoiKind.ShellCache or PoiKind.Hole)) return null;
             // Swap a clearing into the early band if one can move there.
             for (int i = 0; i < Places.Count; i++)
             {
                 var place = Places[i];
-                if (place.Spur is not null) continue;
+                if (place.Spur is not null || place.Kind == PoiKind.Hole) continue;
                 Places.RemoveAt(i);
                 foreach (var s in spots)
                     if (Fits(s, place.Radius) && Suits(s, place.Kind) && Spaced(s, place.Kind, true))

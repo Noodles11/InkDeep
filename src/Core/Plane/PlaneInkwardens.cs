@@ -126,7 +126,7 @@ public sealed partial class PlaneWorld
     {
         if (!Clear(at, WardenTuning.Radius + 0.4f) || Vector2.Distance(at, Map.Start.Position) < WardenTuning.FromStart) return false;
         if (Map.HasBoss && Vector2.Distance(at, ArenaCenter) < ArenaRadius + 4f) return false;
-        if (Map.Shaft.Contains(at, 3f) || float.IsPositiveInfinity(Gen.TopDown.LevelValidator.DistanceAt(reach, at))) return false;
+        if (Map.InShaft(at, 3f) || float.IsPositiveInfinity(Gen.TopDown.LevelValidator.DistanceAt(reach, at))) return false;
         return !Inkwardens.Any(w => Vector2.Distance(w.Position, at) < WardenTuning.Spacing);
     }
 
