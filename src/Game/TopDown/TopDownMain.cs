@@ -197,6 +197,8 @@ public partial class TopDownMain : Node3D
     // The level below (DESIGN-TOPDOWN §4.6): made off the main thread as soon as she arrives on a level, then shown
     // under the hole, drawn only through the shaft until she dives.
     LevelView? _below;
+    /// <summary>The reef she is on as it was made, and the one shown under the hole (its caves with each).</summary>
+    LevelShape? _levelShape, _belowShape;
     LevelMap? _belowMap;
     // The corruption (docs/CORRUPTION.md): its shards and creatures, the live texture, and the shards being laid out.
     CorruptionView _corruption = null!;
@@ -451,6 +453,8 @@ public partial class TopDownMain : Node3D
             // Verification: the haven before that level (docs/DIVE.md §4).
             else if (arg == "--dbg-haven") _id = _id with { Haven = true };
             // Verification: that many seconds into a dive's leak cave, she is taken back out of it (docs/DIVE.md §6).
+            else if (arg.StartsWith("--dbg-cavein=") && float.TryParse(Value("--dbg-cavein="), NumberStyles.Float, CultureInfo.InvariantCulture, out float cin)) _dbgCaveIn = cin;
+            else if (arg.StartsWith("--dbg-caverounds=") && int.TryParse(Value("--dbg-caverounds="), out int rounds)) _dbgCaveRounds = rounds;
             else if (arg.StartsWith("--dbg-caveback=") && float.TryParse(Value("--dbg-caveback="), NumberStyles.Float, CultureInfo.InvariantCulture, out float back)) _dbgCaveBack = back;
             else if (arg == "--dive") _autoDive = true;
             else if (arg == "--calm") _calm = true;
@@ -761,7 +765,13 @@ public partial class TopDownMain : Node3D
             return Task.Run(() => LevelShape.Prepare(TopDownGenerator.FromHand(hand, asLevel: id, exits: exits, kinds: exits.Select(graph.KindOf).ToList())));
         }
         var streams = new RunStreams(seed);
-        return Task.Run(() => LevelShape.Prepare(Abyss(TopDownGenerator.Generate(streams, id, background: background, luck: luck))));
+        // Its sub-levels made with it (docs/LIGHT-AND-GRAPH-PROPOSAL.md §7).
+        return Task.Run(() =>
+        {
+            var shape = LevelShape.Prepare(Abyss(TopDownGenerator.Generate(streams, id, background: background, luck: luck)));
+            PrepareCaves(seed, shape);
+            return shape;
+        });
     }
 
     /// <summary>
@@ -1219,6 +1229,7 @@ public partial class TopDownMain : Node3D
         _camera.SetWorldOrigin(_origin);
         _level.Show(shape);
         _level.Place(Vector3.Zero, _origin);
+        _levelShape = shape;
         EnterLevel(shape.Map, keepRun, ms, arriveAt);
         // A verification start applies to the first level only (later levels begin at their start).
         PlaceAt(_startAt);
@@ -1356,7 +1367,12 @@ public partial class TopDownMain : Node3D
         bool returning = _returnState is not null;
         var moment = _returnState ?? (keepRun ? null : _resume?.State);
         _returnState = null;
-        if (!returning && !InDiveCave) _caveMouth = -1;
+        if (!returning && !InDiveCave)
+        {
+            _caveMouth = -1;
+            // A new reef: its caves as they were made.
+            _caveStates.Clear();
+        }
         // The look where she arrives (her world is the last place's still).
         ApplyLook(Look);
         // Where the sun reaches into this level's water (its god rays and caustics end at the rock that shades them).
@@ -1440,7 +1456,8 @@ public partial class TopDownMain : Node3D
         // Nor round the Tide Fan's rock.
         if (map.Fan is { } fanAt) _level.KeepClear(new[] { fanAt }, LevelMap.FanClear);
         _anchors = _world.SaveAnchors(_recorder.Profile, _achievements, _recorder);
-        _levelAnchors = InDiveCave ? null : _world.SaveLevelAnchors(_recorder.Profile);
+        // (In a cave too: a cave she leaves unsealed is kept as she left it.)
+        _levelAnchors = _world.SaveLevelAnchors(_recorder.Profile);
         // Synergies she came in with (a resumed run, debug pearls) are not news.
         foreach (string id in _run.Loadout.Synergies) _announced.Add(id);
         if (arriveAt is { } at)
@@ -1630,7 +1647,7 @@ public partial class TopDownMain : Node3D
             if (door.Measure(next).In < Doorway.Depth - 0.4f) p.Position = next;
             p.Velocity = _rideDir * DoorSpeed;
             lift = 0f;
-            _blackout.Set(Ease(t / DoorDark), loading: true);
+            _blackout.Set(Ease(t / DoorDark), loading: _rideTask is not { IsCompleted: true });
         }
         else if (_rideWay is RideWay.Down or RideWay.Up)
         {
@@ -1639,7 +1656,7 @@ public partial class TopDownMain : Node3D
             var next = p.Position + p.Velocity * dt;
             if (_world.Clear(next, _world.Radius)) p.Position = next;
             lift = (_rideWay == RideWay.Down ? -FloorSink : RideLift * 1.5f) * Ease(t / FloorDark);
-            _blackout.Set(Ease(t / FloorDark), loading: true);
+            _blackout.Set(Ease(t / FloorDark), loading: _rideTask is not { IsCompleted: true });
         }
         else
         {
@@ -1786,6 +1803,7 @@ public partial class TopDownMain : Node3D
     void ShowBelow(LevelShape shape, int at)
     {
         _belowHole = at;
+        _belowShape = shape;
         _belowMap = shape.Map;
         _below = new LevelView();
         AddChild(_below);
@@ -2842,6 +2860,8 @@ public partial class TopDownMain : Node3D
         _below = null;
         var map = _belowMap!;
         _belowMap = null;
+        _levelShape = _belowShape;
+        _belowShape = null;
         _origin += new Vector2(offset.X, offset.Z);
         _level.Promote(_origin);
         _camera.Shift(shift);

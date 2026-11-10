@@ -29,6 +29,11 @@ public sealed class LevelShape
     public List<FloraItem> Flora { get; } = new();
     public List<Transform3D> Rocks { get; } = new();
     public List<Transform3D> Glows { get; } = new();
+    /// <summary>
+    /// Its sub-levels (docs/LIGHT-AND-GRAPH-PROPOSAL.md §7), made with it: the leak cave behind each of its mouths, in
+    /// order (none of their own).
+    /// </summary>
+    public IReadOnlyList<LevelShape> Caves { get; set; } = Array.Empty<LevelShape>();
 
     /// <summary>Pure work on the map: safe to run on any thread.</summary>
     public static LevelShape Prepare(LevelMap map)

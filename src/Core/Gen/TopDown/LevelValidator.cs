@@ -37,7 +37,7 @@ public static class LevelValidator
             if (Vector2.Distance(holes[i].Position, map.Start.Position) < CaveLayout.FromStart - HoleGive) return "a hole down too close to the start";
             if (Vector2.Distance(holes[i].Position, map.Exit.Position) < CaveLayout.FromExit - HoleGive) return "a hole down too close to the exit";
             for (int j = i + 1; j < holes.Count; j++)
-                if (Vector2.Distance(holes[i].Position, holes[j].Position) < CaveLayout.HoleSpacing - HoleGive) return "two holes down too close";
+                if (Vector2.Distance(holes[i].Position, holes[j].Position) < PlaceRules.HoleApart - HoleGive) return "two holes down too close";
             if (others.Any(o => Vector2.Distance(o.Position, holes[i].Position) < CaveLayout.Spacing - HoleGive)) return "a place too close to a hole down";
         }
         if (others.Count + (map.HasBoss ? 1 : 0) > LevelStocking.MaxPlaces) return $"{others.Count} places (want at most {LevelStocking.MaxPlaces})";

@@ -36,18 +36,13 @@ public readonly record struct LevelId(int Cycle, int Depth, int Level)
 
 /// <summary>
 /// What a level holds (DESIGN-TOPDOWN §4.1 stage 1): rolled per level from the run seed, before the level is shaped.
-/// At most <see cref="MaxPlaces"/> places besides the start and the exit; over the cap, places are dropped in the order
-/// curse den, secret, shell cache.
+/// What each kind of place asks (where, how often, how far apart) is its rule (PlaceRules). At most
+/// <see cref="MaxPlaces"/> places besides the start, the exit and its holes; over the cap, places are dropped in the
+/// order secret, shell cache.
 /// </summary>
 public static class LevelStocking
 {
     public const int MaxPlaces = 5;
-    /// <summary>(Treasure rooms and curse dens come with their reef's kind: Run.ReefPlaces.)</summary>
-    public const float Secret = 0.4f;
-    /// <summary>Past the first depth, this often a depth hides one Crab Deal, on a level short of its boss (about three a run).</summary>
-    public const float CrabDepth = 0.6f;
-    /// <summary>From level 2 of a depth: a shop, and a guarded shell cache.</summary>
-    public const float Shop = 0.45f, Cache = 0.6f;
     /// <summary>The tutorial's two levels, between them every kind of place: level 1 a clam room, a secret and a shell
     /// cache; level 2 a shop, a curse den and the open rift (the arena with no boss).</summary>
     public const int TutorialLevels = 2;
@@ -123,7 +118,7 @@ public sealed class LevelPlan
     {
         if (id.Depth <= Tutorial + 1) return (0, 0);
         var rng = streams.Plan(new LevelId(id.Cycle, id.Depth, 0));
-        if (rng.NextFloat() >= LevelStocking.CrabDepth) return (0, 0);
+        if (rng.NextFloat() >= PlaceRules.CrabDepth) return (0, 0);
         int boss = BossLevel(streams.Seed, id.Cycle, id.Depth);
         var levels = Enumerable.Range(2, 3).Where(l => l != boss).ToList();
         int row = levels[rng.Int(levels.Count)];
@@ -154,10 +149,10 @@ public sealed class LevelPlan
         var (templates, _) = DepthTemplates(seed, id.Cycle, id.Depth, node.Id.Lane);
         var template = templates[id.Level - 1];
         int treasures = node.Kind == ReefKind.Treasure ? 1 : 0;
-        int secrets = rng.NextFloat() < LevelStocking.Secret ? 1 : 0;
+        int secrets = PlaceRules.Rolls(PoiKind.Secret, id.Level, rng) ? 1 : 0;
         int curses = node.Kind == ReefKind.Den ? 1 : 0;
-        int shops = !first && rng.NextFloat() < LevelStocking.Shop ? 1 : 0;
-        int caches = !first && rng.NextFloat() < LevelStocking.Cache ? 1 : 0;
+        int shops = PlaceRules.Rolls(PoiKind.Shop, id.Level, rng) ? 1 : 0;
+        int caches = PlaceRules.Rolls(PoiKind.ShellCache, id.Level, rng) ? 1 : 0;
 
         // The template's places over the general roll: required, a chance, or none (treasure rooms keep the depth's rule).
         var required = new HashSet<PoiKind>();
@@ -179,7 +174,8 @@ public sealed class LevelPlan
         shops = Apply(PoiKind.Shop, shops);
         caches = Apply(PoiKind.ShellCache, caches);
         // The general rule wins: a depth's first level has no shop and no shell cache.
-        if (first) shops = caches = 0;
+        if (id.Level < PlaceRules.Shop.FromRow) shops = 0;
+        if (id.Level < PlaceRules.ShellCache.FromRow) caches = 0;
         // Her luck: a clam room where there was none (unless the template forbids one).
         if (luck > 0f)
         {
@@ -246,10 +242,11 @@ public sealed class LevelPlan
         var rng = lane == 0 ? streams.TemplateRoll(cycle, depth) : streams.TemplateRoll(cycle, depth * 8 + lane);
         int shown = depth - Tutorial;
         var treasures = new HashSet<int>(Enumerable.Range(1, boss).Where(level => kinds[level - 1] == ReefKind.Treasure));
-        bool FitsKind(LevelTemplate t, ReefKind kind) =>
+        bool FitsKind(LevelTemplate t, ReefKind kind, int level) =>
             (kind == ReefKind.Treasure ? !t.Forbids(PoiKind.TreasureCave) : !t.Requires(PoiKind.TreasureCave))
-            // (A treasure reef may hold the curse den its template asks for too: The Hoard's.)
-            && (kind == ReefKind.Den ? !t.Forbids(PoiKind.CurseDen) : kind == ReefKind.Treasure || !t.Requires(PoiKind.CurseDen));
+            // (A treasure reef may hold the curse den its template asks for too, The Hoard's, where a den may stand.)
+            && (kind == ReefKind.Den ? !t.Forbids(PoiKind.CurseDen)
+                : kind == ReefKind.Treasure && level >= PlaceRules.LeakCave.FromRow || !t.Requires(PoiKind.CurseDen));
         for (int attempt = 0; ; attempt++)
         {
             var picked = new LevelTemplate?[boss];
@@ -259,7 +256,7 @@ public sealed class LevelPlan
                 var previous = level > 1 ? picked[level - 2] : null;
                 var fits = all.Where(t => t.Fits(shown, slot) && t != previous
                     && (t.MaxPerDepth <= 0 || picked.Count(x => x == t) < t.MaxPerDepth)
-                    && FitsKind(t, kinds[level - 1])).ToList();
+                    && FitsKind(t, kinds[level - 1], level)).ToList();
                 LevelTemplate? choice = fallback;
                 float sum = fits.Sum(t => t.WeightOn(slot));
                 if (sum > 0f)
@@ -297,7 +294,7 @@ public sealed class LevelPlan
         {
             Id = id,
             HasBoss = boss && floor >= floors,
-            Secrets = rng.NextFloat() < LevelStocking.Secret ? 1 : 0,
+            Secrets = PlaceRules.Rolls(PoiKind.Secret, 1, rng) ? 1 : 0,
             // (No curse den, nor a cave within the cave.)
             Curses = 0,
             EntryStamp = streams.StampSeed(id),

@@ -58,11 +58,9 @@ public sealed class CaveLayout
     /// </summary>
     static float RoomKeep(PoiKind kind) => kind is PoiKind.CurseDen or PoiKind.LeakCave ? 9f : 6f;
     const int RoomTries = 600;
-    /// <summary>The scatter rules (the validator checks them): how far every place keeps from the start and the way down
-    /// and from each other (rooms further), and how far from the start the early place may lie.</summary>
-    public const float FromStart = 30f, FromExit = 30f, Spacing = 17f, CaveSpacing = 20f, EarlyMax = 38f;
-    /// <summary>A reef's further holes keep this far from each other (and from the start and the exit, as any place).</summary>
-    public const float HoleSpacing = 28f;
+    /// <summary>The scatter rules (PlaceRules; the validator checks them): how far every place keeps from the start and
+    /// the way down and from each other (rooms and holes further), and how far from the start the early place may lie.</summary>
+    public const float FromStart = PlaceRules.FromStart, FromExit = PlaceRules.FromExit, Spacing = PlaceRules.Apart, EarlyMax = PlaceRules.EarlyMax;
     /// <summary>On a boss level, its further holes keep this much further from the arena (off its sealed walls).</summary>
     const float BossHoleGap = 12f;
     bool _boss;
@@ -610,11 +608,7 @@ public sealed class CaveLayout
         if (fromStart < FromStart || early && fromStart > EarlyMax) return false;
         if (Vector2.Distance(p, Exit.At) < FromExit) return false;
         foreach (var o in Places)
-        {
-            float d = Vector2.Distance(o.At, p);
-            if (d < Spacing) return false;
-            if (Poi.IsCaveHosted(kind) && Poi.IsCaveHosted(o.Kind) && d < CaveSpacing) return false;
-        }
+            if (Vector2.Distance(o.At, p) < PlaceRules.Between(kind, o.Kind)) return false;
         return true;
     }
 
@@ -695,7 +689,7 @@ public sealed class CaveLayout
             float r = radius(kind);
             Vector2? at = null;
             foreach (var s in holeSpots)
-                if (Fits(s, r) && Spaced(s, kind, false) && Places.All(p => p.Kind != PoiKind.Hole || Vector2.Distance(p.At, s) >= HoleSpacing)
+                if (Fits(s, r) && Spaced(s, kind, false)
                     && (!_boss || Vector2.Distance(s, Exit.At) >= FromExit + BossHoleGap))
                 {
                     at = s;

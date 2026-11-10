@@ -68,7 +68,8 @@ later haven, and from then on her depth's boss is the Leak's own, Drippus Prime.
 The curse dens are leak caves now: where a level's curse den would be, at the end of its spur, a mouth is cut in the
 rock (`PoiKind.LeakCave`, `TopDownGenerator.CutLeakMouths`, `LevelMap.Mouths`), weeping the Leak's ink. It leads into
 a cave of its own, half a level's water (`DiveCaveTuning.Area`, `CaveLayout`'s area scale), a little meaner than its
-level, its leak at its dead end.
+level, its leak at its dead end. Each is made with its reef, from its own sub-seed (`LevelShape.Caves`,
+`TopDownMain.PrepareCaves`), so the ride in and out is a short fade, the loader showing only if a cave is not ready.
 
 - **Inside, it harms her** (`PlaneOptions.DiveCave`, `DiveCaveTuning.Sting`, 1.6 HP a second at any depth) for as long
   as its leak is open.
@@ -76,10 +77,13 @@ level, its leak at its dead end.
 - **Sealing its leak** stops the harm at once, heals her whole and leaves a pearl she could be offered beside it
   (`RewardDiveCave`); its upwelling carries her out, and the mouth closes behind her.
 - **The level waits as she left it:** going in keeps its state (`PlaneWorld.SaveLevelAnchors`, which leaves her run as
-  it is) and coming out puts it back, with all she gained in the cave and its harm still hers.
+  it is) and the reef as it was made; coming out puts it back, out of the mouth she went in by, with all she gained in
+  the cave and its harm still hers.
+- **So does the cave:** one she leaves unsealed waits as she left it, should she go back in (till she leaves the reef).
 - **The level keeps its own leak:** sealing that opens the hole onward, so the caves are a choice, never the way down.
 - **Verification:** `--dbg-dive --at=mouth` starts by a level's mouth, `--dbg-steer=x,y` swims her in, and
-  `--dbg-caveback=seconds` takes her back out that long after.
+  `--dbg-caveback=seconds` takes her back out that long after; `--dbg-cavein=seconds` takes her into a reef's first
+  cave that long after she is on it, `--dbg-caverounds=n` so many times.
 
 ## 7. Requests and chains
 

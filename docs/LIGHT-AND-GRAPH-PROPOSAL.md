@@ -249,19 +249,34 @@ inside a reef (a secret, a shop, a shell cache, a Crab Deal on one reef of a dep
 - **Verification**: `--lane=K` (with `--depth=`, `--level=`), `--at=holeK` (over the K-th hole from the left),
   `--at=rimK` (a few metres south of it), `--pause-tab=5` (the chart).
 
-## 7. Places and sub-levels
+## 7. Places and sub-levels (built)
 
-- **Rules for each kind of place.** Each kind of place gets one definition of where it may go, how often and how far
-  from others. These rules replace the conditions now spread through `LevelPlan` and `TopDownGenerator`. Places come
-  in two sorts:
-  - a spot on the reef (an ambush, a hidden tunnel, a secret);
-  - a way into a sub-level (a leak cave, a secret cave, a treasure grotto).
-- **Sub-levels are generated with their reef**, while the reef is being prepared, each from its own sub-seed. A
-  sub-level has no sub-levels of its own.
+- **One rule for each kind of place** (`PlaceRules`): its sort, the first row of a depth it may stand in, how often a
+  reef holds one, and how far it keeps from other places. `LevelPlan` rolls them, `CaveLayout` spaces them and
+  `LevelValidator` holds a level to them.
+
+  | Kind | Sort | From row | How often | Apart |
+  |---|---|---|---|---|
+  | Secret | spot | 1 | 40% | 17 m (20 m from another cave) |
+  | Shop | spot | 2 | 45% | 17 m (20 m) |
+  | Shell cache | spot | 2 | 60% | 17 m |
+  | Crab Deal | spot | 2 | one reef a depth, 60% of depths past the first | 17 m (20 m) |
+  | Clam room | spot | 1 | the reef's kind (§6.2) | 17 m (20 m) |
+  | Leak cave | sub-level | 2 | the reef's kind (§6.2), or the template's (a clam-room reef's, from row 2) | 17 m (20 m) |
+  | Hole | spot | 1 | one for each exit past the first | 17 m (28 m from another hole) |
+
+  Every place keeps 30 m from the start and from the exit; the early place lies within 38 m of the start. A clam room,
+  a secret and a shop are rooms in the reef's rock; the leak cave is the one way into a sub-level.
+- **Sub-levels are made with their reef**, on the same thread right after it, each from its own sub-seed (its reef's
+  cycle, depth, row and lane in it): `LevelShape.Caves`. A sub-level has no sub-levels of its own. A reef under a hole is
+  made with its caves before she dives.
 - **Coming back**:
-  - She returns to the exact point where she went in, facing the way she was swimming.
-  - A sub-level keeps its state if she leaves it and comes back.
-- **The ride in and out** is a short transition rather than the full blackout and loader, since the map is ready.
+  - The reef as it was made is kept while she is below, so nothing is made on the way back; she comes back out of the
+    mouth she went in by, swimming out of it, the reef as she left it.
+  - A cave she leaves unsealed keeps its state, should she go back in (till she leaves the reef). A sealed one's mouth
+    closes behind her.
+- **The ride in and out** is a short fade (under half a second of black), the loader showing only if the place is
+  not made yet.
 
 ## 8. Order of work
 
@@ -273,7 +288,7 @@ inside a reef (a secret, a shop, a shell cache, a Crab Deal on one reef of a dep
 | 4 | Invisible in the dark (built for murklings; the other corrupted kinds follow); cores and healing; the magnet — built | yes |
 | 5 | Pearls sorted and moved; one light rule per boss — built | yes |
 | 6 | The dive graph, the reef kinds and their place rules, the holes, the chart — built | yes |
-| 7 | The rules for the spots within a reef; sub-levels generated with their reef; exact return; short transitions | yes |
+| 7 | The rules for the places within a reef; sub-levels made with their reef; the return; short transitions — built | yes |
 | 8 | The save for the graph; the death fade and the dive's summary | yes |
 | 9 | What nothing uses any more goes (shot reserve, the line of levels) | no |
 
