@@ -1719,7 +1719,6 @@ public partial class TopDownMain : Node3D
             _level.SetPortal(from, radius, 1);
             float stay = 1f - Ease(t / 1.2f);
             FadeLevelLife(from, radius, stay);
-            _portals.Visible = stay > 0.05f;
             _corruption.Fade(stay);
             _minimap.DiveOut(Ease(t / 0.9f));
         }
@@ -1750,7 +1749,7 @@ public partial class TopDownMain : Node3D
         _closeBehind = -1;
         DiveCaveArrived();
         foreach (var view in LevelLife) ResetFade(view);
-        _portals.Visible = true;
+        ResetFade(_level);
         _minimap.Arrive();
         _portalsArmed = false;
         _arriving = true;
@@ -2963,37 +2962,82 @@ public partial class TopDownMain : Node3D
     }
 
     /// <summary>The views of a level's life: its creatures, pickups and shots, Queen Clam, damage numbers, currents.</summary>
-    IEnumerable<Node> LevelLife => new Node[] { _crab, _combat, _puffers, _reefFish, _curseDen, _clamRooms, _geysers, _boss, _damage, _currents, _vases, _abyss };
+    /// <summary>
+    /// Everything of the level's own that is drawn beside its rock (the rock, its flora and its kelp are cut by the iris
+    /// itself): its creatures and their ink, its places, leaks and lights, the reef's crystals, seals, springs and
+    /// mouths. All of it fades out with the dive or the ride (FadeLevelLife), so nothing just vanishes as the old level
+    /// is let go.
+    /// </summary>
+    IEnumerable<Node> LevelLife => new Node[]
+    {
+        _crab, _combat, _puffers, _reefFish, _curseDen, _clamRooms, _geysers, _boss, _damage, _currents, _vases, _abyss,
+        _kelp, _crystals, _cores, _lamps, _motes, _seals, _surgeView, _blight, _ash, _adventure, _springs, _portals,
+        _mirrorView, _fanView, _vapour,
+    };
 
     /// <summary>
     /// Fades the old level's life during the dive: each piece fades out over a few metres as the iris's dissolving edge
     /// passes over it (as the reef under it does), and whatever is left fades with <paramref name="stay"/> (1 → 0), so
-    /// nothing is switched off in one frame. It only ever fades further.
+    /// nothing is switched off in one frame. It only ever fades further. Its lights dim with it. Of the level itself,
+    /// what the iris does not cut (its plainly drawn glows and lights) fades the same way.
     /// </summary>
     void FadeLevelLife(Vector2 hole, float radius, float stay)
     {
-        foreach (var view in LevelLife) FadeTree(view, hole, radius, stay);
+        foreach (var view in LevelLife) FadeTree(view, hole, radius, stay, all: true);
+        FadeTree(_level, hole, radius, stay, all: false);
     }
 
-    static void FadeTree(Node node, Vector2 hole, float radius, float stay)
+    /// <summary>
+    /// One tree faded (FadeLevelLife). <paramref name="all"/>: every mesh in it; else only those the iris does not cut
+    /// (not drawn with the level's own shaders).
+    /// </summary>
+    static void FadeTree(Node node, Vector2 hole, float radius, float stay, bool all)
     {
         foreach (var child in node.GetChildren())
         {
-            if (child is GeometryInstance3D g && g.IsInsideTree())
+            if (child is Node3D n && n.IsInsideTree())
             {
-                var p = g.GlobalPosition;
+                var p = n.GlobalPosition;
                 float keep = Mathf.Clamp((new Vector2(p.X, p.Z).DistanceTo(hole) - (radius - 3f)) / 5f, 0f, 1f) * stay;
-                g.Transparency = Mathf.Max(g.Transparency, 1f - keep);
-                // Fading, it casts no shadow on the level below (a faded clam must not leave hers behind).
-                if (g.Transparency > 0f && g.CastShadow != GeometryInstance3D.ShadowCastingSetting.Off)
+                if (child is GeometryInstance3D g && (all || !IrisCuts(g)))
                 {
-                    g.SetMeta("dive_shadow", (int)g.CastShadow);
-                    g.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+                    g.Transparency = Mathf.Max(g.Transparency, 1f - keep);
+                    // Gone, it is hidden too: a shader that sets its own alpha takes no transparency, and must not stay
+                    // on after the iris has passed it, to vanish as the level is let go.
+                    if (keep <= 0.02f && g.Visible)
+                    {
+                        g.Visible = false;
+                        g.SetMeta("dive_hidden", true);
+                    }
+                    // Fading, it casts no shadow on the level below (a faded clam must not leave hers behind).
+                    if (g.Transparency > 0f && g.CastShadow != GeometryInstance3D.ShadowCastingSetting.Off)
+                    {
+                        g.SetMeta("dive_shadow", (int)g.CastShadow);
+                        g.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+                    }
+                }
+                else if (child is Light3D light)
+                {
+                    // (Its energy as it was, the first time; then only ever dimmer.)
+                    if (!light.HasMeta("dive_energy")) light.SetMeta("dive_energy", light.LightEnergy);
+                    light.LightEnergy = Mathf.Min(light.LightEnergy, (float)light.GetMeta("dive_energy") * keep);
+                }
+                else if (child is Decal decal)
+                {
+                    if (!decal.HasMeta("dive_modulate")) decal.SetMeta("dive_modulate", decal.Modulate);
+                    var was = (Color)decal.GetMeta("dive_modulate");
+                    decal.Modulate = was with { A = Mathf.Min(decal.Modulate.A, was.A * keep) };
                 }
             }
-            FadeTree(child, hole, radius, stay);
+            FadeTree(child, hole, radius, stay, all);
         }
     }
+
+    /// <summary>Whether a mesh of the level is drawn with a shader of its own (the level's: the iris cuts it itself).</summary>
+    static bool IrisCuts(GeometryInstance3D g) =>
+        g.MaterialOverride is ShaderMaterial
+        || g is MeshInstance3D { Mesh: { } mesh } m && mesh.GetSurfaceCount() > 0 && m.GetActiveMaterial(0) is ShaderMaterial
+        || g is MultiMeshInstance3D { Multimesh.Mesh: { } many } && many.GetSurfaceCount() > 0 && many.SurfaceGetMaterial(0) is ShaderMaterial;
 
     /// <summary>A new level's life is drawn whole again.</summary>
     static void ResetFade(Node node)
@@ -3003,11 +3047,26 @@ public partial class TopDownMain : Node3D
             if (child is GeometryInstance3D g)
             {
                 g.Transparency = 0f;
+                if (g.HasMeta("dive_hidden"))
+                {
+                    g.Visible = true;
+                    g.RemoveMeta("dive_hidden");
+                }
                 if (g.HasMeta("dive_shadow"))
                 {
                     g.CastShadow = (GeometryInstance3D.ShadowCastingSetting)(int)g.GetMeta("dive_shadow");
                     g.RemoveMeta("dive_shadow");
                 }
+            }
+            else if (child is Light3D light && light.HasMeta("dive_energy"))
+            {
+                light.LightEnergy = (float)light.GetMeta("dive_energy");
+                light.RemoveMeta("dive_energy");
+            }
+            else if (child is Decal decal && decal.HasMeta("dive_modulate"))
+            {
+                decal.Modulate = (Color)decal.GetMeta("dive_modulate");
+                decal.RemoveMeta("dive_modulate");
             }
             ResetFade(child);
         }

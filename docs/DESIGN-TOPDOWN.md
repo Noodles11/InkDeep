@@ -1383,6 +1383,11 @@ at mist distance (inherited fade rule).
     she only swims beside stays whole. A canopy fading over Clementine is drawn unblurred while it fades.
   - **Verification:** `--at=hidden` starts her where rock hides her (`--dbg-hidden2`: another such spot);
     `--dbg-nocarve` keeps every wall whole; `--dbg-nofloor` leaves out the see floor.
+- **Leaving a level fades all of it** (`TopDownMain.FadeLevelLife`): down a hole, or up and out of a sub-level, the
+  old level's rock and flora are cut by the iris, and everything else of it — its creatures and their ink, leaks,
+  crystals, springs, seals, mouths, kelp, places and its lights and decals — fades out as the iris's edge passes over
+  it and with the descent; what a shader of its own keeps opaque is hidden as the edge passes. Nothing is switched off
+  in one frame as the level is let go; the next level's life is drawn whole again on arrival.
 - **Combat** (`PlaneCombat.cs`; the Depth-1 bestiary is being ported onto the plane, the Pufferling first): Clementine has
   100 HP (shown by the gonad rings on her bell, §2.5; the run's play time, stopped while paused, §9) and shoots toward the mouse (held) or the
   arrow keys — 10 damage, 4–5 volleys a second. Her shots are light (docs/LIGHT-BUBBLES.md), and a shot never stops

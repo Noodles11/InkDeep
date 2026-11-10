@@ -113,7 +113,7 @@ own sub-seed.
 - **Its reward lies at its heart:** the secret's shells, or now and then a pearl instead (`PlaneWorld.PlaceShells`,
   `SecretPearl`). Nothing lives in it: no murklings, fish, leaks, springs or currents, and its water does not harm her.
 - **No map in it:** neither the minimap nor the whole level's map shows inside.
-- **She can give up at any time** with the key that uses her active pearl (F, or Y on the controller): it carries her
+- **She can give up at any time** with the key that uses her active pearl (as bound; Y on the controller): it carries her
   straight back out of the mouth (`TopDownMain.DiveCaveWay`). She may also swim out by its way out.
 - **The reef waits as she left it**, as for a leak cave. Leaving with the reward still there, the labyrinth waits as she
   left it too; its reward taken, the mouth closes behind her.
