@@ -847,7 +847,8 @@ Clementine is near or not. At level build it draws a schedule from the run's
 20 minutes ahead; the sim pops events as the level's clock reaches them.
 Deterministic and cheap: the same level always schedules the same events.
 
-- **Bubble geysers** (`PlaneGeysers.cs`, `GeyserView`): each level has 2–4 small vents in the seabed (on open floor,
+- **Bubble geysers** (`PlaneGeysers.cs`, `GeyserView`) are **off in the game** (`PlaneOptions.Geysers`, on only in
+  their own tests): no vents are placed and none spray. As built, each level has 2–4 small vents in the seabed (on open floor,
   18 m from the start, clear of the way down, the places and the light spring, 14 m apart), seeded. Each sprays on its
   own clock (from its own `geysers` stream): the first spray 6–25 s into the
   level, each next 14–35 s after the vent's last. A spray begins with **1.5 s of fizzing** (a stream of small

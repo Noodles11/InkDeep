@@ -37,11 +37,12 @@ public sealed class ReefDirector
     readonly PriorityQueue<ReefEvent, float> _queue = new();
     readonly List<ReefEvent> _active = new();
 
-    public ReefDirector(LevelMap map)
+    /// <param name="geysers">Whether the reef has its bubble geysers (PlaneOptions.Geysers: off in the game).</param>
+    public ReefDirector(LevelMap map, bool geysers = true)
     {
         Map = map;
         var rng = new RunStreams(SeedCode.FromValue(map.Seed)).Events(map.Id);
-        ScheduleGeysers(rng.Stream("geysers"));
+        if (geysers) ScheduleGeysers(rng.Stream("geysers"));
     }
 
     public LevelMap Map { get; }

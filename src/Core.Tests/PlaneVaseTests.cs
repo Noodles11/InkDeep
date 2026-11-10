@@ -21,7 +21,7 @@ public class PlaneVaseTests
     {
         var run = new PlaneRun(Catalog.Value, new Tuning());
         foreach (string id in pearls) run.Add(id);
-        var w = new PlaneWorld(Level.Value, new Tuning(), run, new PlaneOptions { Corruption = false, Pufferlings = true, Vases = true });
+        var w = new PlaneWorld(Level.Value, new Tuning(), run, new PlaneOptions { Corruption = false, Pufferlings = true, Vases = true, Geysers = true });
         w.Mobs.Clear();
         return w;
     }

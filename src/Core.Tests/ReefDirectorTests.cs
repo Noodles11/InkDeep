@@ -16,7 +16,7 @@ public class ReefDirectorTests
     public void TheReefActsWhetherSheIsThereOrNot()
     {
         // She idles at the start; the first spray still starts and ends on time.
-        var w = new PlaneWorld(Level.Value, new Tuning());
+        var w = new PlaneWorld(Level.Value, new Tuning(), null, new PlaneOptions { Geysers = true });
         w.Mobs.Clear();
         var first = w.Director.GeyserSchedule[0];
         bool started = false, ended = false;
@@ -69,5 +69,14 @@ public class ReefDirectorTests
         Assert.True(burst.X > steady.X && steady.X > 0f, $"{burst} then {steady}");
         Assert.Equal(0f, burst.Y, 3);
         Assert.Equal(Vector2.Zero, Geysers.PushAt(vent, e, vent + new Vector2(GeyserTuning.Reach + 0.5f, 0f), 10f + GeyserTuning.Warn + 1f));
+    }
+
+    [Fact]
+    public void The_game_has_no_geysers()
+    {
+        Assert.False(PlaneOptions.Default.Geysers);
+        var w = new PlaneWorld(Level.Value, new Tuning());
+        Assert.Empty(w.Director.Geysers);
+        Assert.Empty(w.Director.GeyserSchedule);
     }
 }

@@ -34,6 +34,8 @@ public sealed class PlaneOptions
     /// shots (the sim's tests, an active pearl's own).
     /// </summary>
     public bool Shots = true;
+    /// <summary>The reef's bubble geysers (PlaneGeysers.cs): off (none are placed or spray); on only for their own tests.</summary>
+    public bool Geysers;
 
     public static PlaneOptions Default { get; set; } = new() { Adventure = true, Shots = false };
 

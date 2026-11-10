@@ -160,7 +160,7 @@ public sealed partial class PlaneWorld
         _wasInHaven = map.InHaven(Player.Position);
         _rocks = new List<WeakRock>(map.WeakRocks);
         _bubbleRng = new Rng(map.Seed ^ 0xB0BB1EUL ^ ((ulong)map.Level << 24) ^ ((ulong)map.Depth << 32) ^ ((ulong)map.Attempt << 48));
-        Director = new ReefDirector(map);
+        Director = new ReefDirector(map, Options.Geysers);
         if (Options.Pufferlings) PlaceMobs();
         PlaceFish();
         PlaceReefFish();
