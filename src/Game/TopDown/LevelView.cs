@@ -1543,6 +1543,66 @@ public partial class LevelView : Node3D
             }
         }
         Scatter(map, items, rocks);
+        if (ReefLook.Painted) Gardens(map, items);
+    }
+
+    /// <summary>
+    /// The game's look (docs/VISUAL-SHOWCASE.md): coral gardens, as in a reef seen from above — clusters of sea rods, tube
+    /// sponges, staghorn, sea fans and brain corals packed in patches on the walls' tops and ledges, and in a band along
+    /// their feet at the edge of the open floor; the open sand and her plane's way left clear. For the look only.
+    /// </summary>
+    static void Gardens(LevelMap map, List<FloraItem> items)
+    {
+        uint seed = unchecked((uint)(map.Seed ^ (map.Seed >> 32)) ^ (uint)(map.Level * 6151 + map.Depth * 98317 + map.Cycle * 3079) ^ 0x6A4D3Bu);
+        float Hash(float x, float y, int k)
+        {
+            uint h = unchecked((uint)((int)(x * 10f) * 73856093) ^ (uint)((int)(y * 10f) * 19349663) ^ (uint)(k * 83492791) ^ seed);
+            h ^= h >> 13;
+            h = unchecked(h * 0x5bd1e995u);
+            h ^= h >> 15;
+            return (h & 0xFFFFFF) / 16777216f;
+        }
+        FloraKind[] top = { FloraKind.SeaRod, FloraKind.TubeSponge, FloraKind.Staghorn, FloraKind.SeaFan, FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Elkhorn };
+        FloraKind[] foot = { FloraKind.TubeSponge, FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Staghorn, FloraKind.BarrelSponge };
+        const float step = 1.05f;
+        for (float y = LevelMap.RimWidth + 1f; y < map.Size - LevelMap.RimWidth - 1f; y += step)
+        for (float x = LevelMap.RimWidth + 1f; x < map.Size - LevelMap.RimWidth - 1f; x += step)
+        {
+            var p = new System.Numerics.Vector2(x + Hash(x, y, 1) * step, y + Hash(x, y, 2) * step);
+            if (map.InShaft(p, 3f)) continue;
+            float h = map.HeightAt(p);
+            float slope = map.Gradient(p).Length();
+            // Patches: the gardens grow in drifts, thick in their middles, none between.
+            float patch = TerrainNoise.Fbm(p.X * 0.06f, p.Y * 0.06f, seed, 3);
+            float r = Hash(x, y, 3);
+            FloraKind kind;
+            float scale;
+            if (h > 0.6f && slope < 1.3f)
+            {
+                // A wall's top or a ledge.
+                if (r > 0.8f * Mathf.SmoothStep(-0.3f, 0.15f, patch)) continue;
+                kind = top[(int)(Hash(x, y, 4) * top.Length) % top.Length];
+                scale = 1.8f + 1.6f * Hash(x, y, 5);
+            }
+            else if (h < -0.4f && h > -6f && slope < 0.9f)
+            {
+                // The open floor: only a band along the walls' feet.
+                bool foots = false;
+                for (int i = 0; i < 6 && !foots; i++)
+                {
+                    float a = i * Mathf.Tau / 6f;
+                    foots = map.HeightAt(p + new System.Numerics.Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 1.8f) > 0.2f;
+                }
+                if (!foots || r > 0.55f * Mathf.SmoothStep(-0.2f, 0.25f, patch)) continue;
+                kind = foot[(int)(Hash(x, y, 4) * foot.Length) % foot.Length];
+                scale = 1.1f + 1.1f * Hash(x, y, 5);
+            }
+            else continue;
+            var at = new Vector3(p.X, h - 0.08f, p.Y);
+            var basis = new Basis(Vector3.Up, Hash(x, y, 6) * Mathf.Tau).Scaled(Vector3.One * scale);
+            var tint = new Color(Hash(x, y, 7) < 0.5f ? 1f : 0f, 0.9f + 0.25f * Hash(x, y, 8), 1f, Hash(x, y, 9));
+            items.Add(new FloraItem(kind, new Transform3D(basis, at), tint));
+        }
     }
 
     /// <summary>
