@@ -17,7 +17,7 @@ public class TutorialTests
     {
         var code = SeedCode.Parse(seed);
         var one = LevelPlan.For(code, LevelId.First);
-        var two = LevelPlan.For(code, LevelPlan.NextOf(code, LevelId.First));
+        var two = LevelPlan.For(code, DiveGraph.Of(code).ExitsOf(LevelId.First)[0]);
         Assert.Equal(new LevelId(1, LevelPlan.Tutorial, 2), two.Id);
         Assert.Equal(1, one.Treasures);
         Assert.False(one.HasBoss);
@@ -27,7 +27,7 @@ public class TutorialTests
         Assert.Equal(0f, one.Menace);
         Assert.Equal(0f, two.Menace);
         // Out of the rift: the first real depth, as gentle as runs have always started.
-        Assert.Equal(LevelId.FirstRun, two.Next);
+        Assert.Equal(new[] { LevelId.FirstRun }, two.Exits);
         Assert.Equal(0f, LevelPlan.MenaceOf(LevelId.FirstRun));
         Assert.Equal(1f, LevelPlan.MenaceOf(new LevelId(1, LevelPlan.Depths, 1)), 4);
     }
@@ -57,10 +57,15 @@ public class TutorialTests
     {
         var code = SeedCode.Parse("KELP7Q2Z");
         var last = new LevelId(1, LevelPlan.Depths, LevelPlan.BossLevel(code, 1, LevelPlan.Depths));
-        var next = LevelPlan.NextOf(code, last);
-        Assert.Equal(new LevelId(2, LevelPlan.Tutorial + 1, 1), next);
-        Assert.Equal(last, LevelPlan.PreviousOf(code, next));
-        Assert.Null(LevelPlan.PreviousOf(code, LevelId.First));
+        // The last depth's boss leads to every reef of the next loop's first row, below the tutorial.
+        var exits = DiveGraph.Of(code).ExitsOf(last);
+        Assert.Equal(DiveGraph.Of(code).Row(2, LevelPlan.Tutorial + 1, 1).Select(n => n.Id), exits);
+        foreach (var next in exits)
+        {
+            Assert.Equal((2, LevelPlan.Tutorial + 1, 1), (next.Cycle, next.Depth, next.Level));
+            Assert.Equal(new[] { last }, DiveGraph.Of(code).Node(next).From);
+        }
+        Assert.Empty(DiveGraph.Of(code).Node(LevelId.First).From);
         Assert.Equal("Depth 0 · Level 1", LevelId.First.ToString());
         Assert.Equal("Depth 1 · Level 1", LevelId.FirstRun.ToString());
         Assert.True(LevelId.First.IsTutorial);

@@ -89,7 +89,7 @@ public class TopDownGenTests
                 Assert.Equal(0, plan.Shops);
                 Assert.Equal(0, plan.Caches);
             }
-            var next = LevelPlan.NextOf(code, id);
+            var next = DiveGraph.Of(code).ExitsOf(id)[0];
             // After the boss: the next depth (or, after the last, the first again in the next loop), with Menace up.
             if (plan.HasBoss)
             {
@@ -117,7 +117,7 @@ public class TopDownGenTests
         var code = SeedCode.Parse(seed);
         foreach (var id in new[] { LevelId.First, new LevelId(1, LevelPlan.Tutorial, 2), BossLevel(seed) })
         {
-            var below = Map(seed, LevelPlan.NextOf(code, id));
+            var below = Map(seed, DiveGraph.Of(code).ExitsOf(id)[0]);
             // She lands in the start's chamber: open water all round, and a floor under her (no shaft).
             for (int i = 0; i < 16; i++)
             {

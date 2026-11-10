@@ -33,7 +33,7 @@ public partial class TopDownMain : Node3D
 {
     /// <summary>Every game starts on a random seed (--seed= pins one, for verification).</summary>
     SeedCode _seed = SeedCode.NewRandom();
-    /// <summary>The level she is on: one hole leads down to the next (LevelPlan.NextOf).</summary>
+    /// <summary>The reef she is on: its holes lead down to the reefs below it (Run.DiveGraph).</summary>
     LevelId _id = LevelId.First;
     CombatView _combat = null!;
     BeamView _beam = null!;
@@ -1822,7 +1822,7 @@ public partial class TopDownMain : Node3D
         var start = shape.Map.Start.Position;
         _belowOffset = new Vector3(hole.X - start.X, -LevelMap.LevelDrop, hole.Y - start.Y);
         _below.Place(_belowOffset, _origin + new Vector2(_belowOffset.X, _belowOffset.Z));
-        _below.SetPortal(new Vector2(hole.X, hole.Y), Stamp.Pin, 2);
+        _below.SetPortal(new Vector2(hole.X, hole.Y), BelowPortal, 2);
         // Its corruption, laid out off the main thread: the floor's ink for the dive, the shards for when she lands.
         if (PlaneOptions.Default.Corruption)
         {
@@ -2850,7 +2850,7 @@ public partial class TopDownMain : Node3D
         // then sweeps outward.
         float radius = t < 0.35f ? Mathf.Lerp(-3f, 6f, Ease(t / 0.35f)) : Mathf.Lerp(6f, 150f, Mathf.Pow(Ease((t - 0.35f) / 0.9f), 2f));
         _level.SetPortal(hole, radius, 1);
-        if (ready) _below!.SetPortal(hole, Mathf.Max(radius, Stamp.Pin), 2);
+        if (ready) _below!.SetPortal(hole, Mathf.Max(radius, BelowPortal), 2);
         // What lived on the level above goes with it: each piece as the iris's edge passes, the rest with the descent;
         // the Crack's glow, light and bubbles fade as she sinks through it. All gone before the level is let go.
         float stay = 1f - Ease((t - 0.3f) / 1.0f);

@@ -38,14 +38,10 @@ public sealed class RunStreams
     public Rng Plan(LevelId id) => _root.Stream($"plan/{Key(id)}");
     /// <summary>Her luck's rolls on a level's plan (apart from the plan's own, so a run without luck plans the same).</summary>
     public Rng Luck(LevelId id) => _root.Stream($"luck/{Key(id)}");
-    /// <summary>Whether a depth has its second treasure room, and on which level.</summary>
-    public Rng TreasureRoll(int cycle, int depth) => _root.Stream($"treasure/{cycle}/{depth}");
     /// <summary>A depth's level templates (LevelPlan.DepthTemplates).</summary>
     public Rng TemplateRoll(int cycle, int depth) => _root.Stream($"templates/{cycle}/{depth}");
     /// <summary>The reef director's schedule of world events on a level (currents, …).</summary>
     public Rng Events(LevelId id) => _root.Stream($"events/{Key(id)}");
-    /// <summary>The stamp of rock around the start of a level (and around the hole above it).</summary>
-    public ulong StampSeed(LevelId entered) => _root.Stream($"stamp/{Key(entered)}").NextU64();
     /// <summary>A reef's part of a stream's name: its cycle, depth and row, and its lane past the first.</summary>
     static string Key(LevelId id) => id.Lane == 0 ? $"{id.Cycle}/{id.Depth}/{id.Level}" : $"{id.Cycle}/{id.Depth}/{id.Level}/lane{id.Lane}";
     public Rng Snacks() => _root.Stream("snacks");

@@ -239,7 +239,7 @@ inside a reef (a secret, a shop, a shell cache, a Crab Deal on one reef of a dep
 
 - **LevelId** has a **Lane**; its Level is the row. A reef's streams come from (cycle, depth, row, lane).
 - **The graph** (`DiveGraph.Of(seed)`): `Node`, `Row`, `ExitsOf`, `KindOf`, `Resolve`. `LevelPlan.For` takes a reef's
-  kind and its exits from it (`LevelPlan.Exits`, `ExitKinds`, left to right). `LevelPlan.NextOf` is its first exit.
+  kind and its exits from it (`LevelPlan.Exits`, `ExitKinds`, left to right). There is no line of levels any more: where a reef leads is its exits.
 - **The map**: `LevelMap.Holes` (each its shaft, the reef it leads to and its kind), `InShaft`, `HoleAt`;
   `PlaneWorld.HoleUnder`.
 - **The save**: the dive's save keeps the reef she is on (`SuspendedRun.Lane`) and the reefs she has been on
@@ -278,6 +278,22 @@ inside a reef (a secret, a shop, a shell cache, a Crab Deal on one reef of a dep
 - **The ride in and out** is a short fade (under half a second of black), the loader showing only if the place is
   not made yet.
 
+## 9. What stays from before
+
+Each of the older systems was looked at once the graph and the light were in. What nothing used went: the line of
+levels (`LevelPlan.NextOf`, `PreviousOf`, a plan's `Next`) and the shared stamps of rock round a hole and the start
+below it (`Stamp`, the stamp seeds), which the levels no longer shared. The rest stays, each for a reason:
+
+| System | Why it stays |
+|---|---|
+| The shots' reserve and its refill | Her shots stay her second weapon (§5), and four pearls work on the reserve (Bubble Gland, Anemone Pump, Twin Siphon, Bubble Coral). It is not her light: her light is her HP (§2.1). |
+| Shots as an attack | Her second weapon (§5). |
+| Leaks and the ink's dots | Sealing a reef's leak opens its holes (§6.3): still the heart of a reef. |
+| Blightroots and the creatures they raise | The dens' hearts and the templates' casts. |
+| Murklings hunting fish, murklings throwing | The variants (§3.2): only they hunt and throw; the basic murkling does neither. |
+| The other corrupted kinds' own lights | Until they too are seen only in her light (§8, stage 4). |
+| Lantern Bay's hand-drawn map | The haven stays the same place every time (§6.2). |
+
 ## 8. Order of work
 
 | Stage | What | Plays differently? |
@@ -290,6 +306,6 @@ inside a reef (a secret, a shop, a shell cache, a Crab Deal on one reef of a dep
 | 6 | The dive graph, the reef kinds and their place rules, the holes, the chart — built | yes |
 | 7 | The rules for the places within a reef; sub-levels made with their reef; the return; short transitions — built | yes |
 | 8 | The save for the graph (and older saves migrated); the death fade and the dive's summary — built (docs/DIVE.md §2) | yes |
-| 9 | What nothing uses any more goes (shot reserve, the line of levels) | no |
+| 9 | What nothing uses any more goes (the line of levels, the shared stamps); the rest reviewed (§9) — built | no |
 
 Each stage ends with the build, the tests and a play check in the game, and is committed on its own.

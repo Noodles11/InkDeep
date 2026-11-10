@@ -396,7 +396,6 @@ public sealed class LevelMap
     public Vector2? Fan;
     /// <summary>The floor kept bare round the fan's rock (metres).</summary>
     public const float FanClear = 3.5f;
-    public ulong EntryStampSeed, ExitStampSeed;
     public bool EntryFromArena;
     /// <summary>Where the floor gives way to the level below: its first hole (the Exit's; Holes[0] when it has holes).</summary>
     public Shaft Shaft;
@@ -575,8 +574,6 @@ public sealed class LevelMap
         w.Write(HasBoss);
         w.Write(Rift);
         w.Write(Menace);
-        w.Write(EntryStampSeed);
-        w.Write(ExitStampSeed);
         V(Shaft.Center);
         V(Shaft.Axis);
         w.Write(Shaft.HalfLength);

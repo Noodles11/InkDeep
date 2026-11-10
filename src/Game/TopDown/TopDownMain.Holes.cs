@@ -40,7 +40,10 @@ public partial class TopDownMain
 
     /// <summary>Where a hole leads (a map without its list of holes: the graph's first exit).</summary>
     LevelId DestinationOf(int hole) =>
-        hole >= 0 && hole < _map.Holes.Count && _map.Holes[hole].To != default ? _map.Holes[hole].To : LevelPlan.NextOf(_seed, _id);
+        hole >= 0 && hole < _map.Holes.Count && _map.Holes[hole].To != default ? _map.Holes[hole].To : DiveGraph.Of(_seed).ExitsOf(_id)[0];
+
+    /// <summary>How far round the hole she is nearest the level below shows through, before she dives (metres).</summary>
+    const float BelowPortal = 14f;
 
     int HoleCount => System.Math.Max(1, _map.Holes.Count);
 

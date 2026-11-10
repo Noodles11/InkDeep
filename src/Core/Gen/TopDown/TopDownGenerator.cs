@@ -281,7 +281,7 @@ public static class TopDownGenerator
             var map = new LevelMap
             {
                 Seed = streams.Seed.Value, Id = id, Attempt = attempt, HasBoss = plan.HasBoss, Rift = plan.Rift, Menace = plan.Menace,
-                EntryStampSeed = plan.EntryStamp, ExitStampSeed = plan.ExitStamp, EntryFromArena = plan.EntryFromArena,
+                EntryFromArena = plan.EntryFromArena,
                 Template = plan.Template, Luck = luck, LeakCave = plan.LeakCave, Floor = plan.Floor, Floors = plan.Floors,
                 AreaScale = plan.AreaScale,
             };
@@ -414,10 +414,9 @@ public static class TopDownGenerator
     static readonly Shaft NoShaft = new(new Vector2(-100f, -100f), Vector2.UnitX, 0.01f, 0.01f);
 
     /// <summary>
-    /// Runs the stages — POIs on the bare seabed (the start and the exit where their stamps fit), the route canyons
-    /// between them out through the stamps' openings, the labyrinth of side canyons, the walls raised around all of it,
-    /// the stamps pinned in, caves, passes and arches, the stamps pinned again, the shaft cut, then decoration, loot and
-    /// spawns — and returns why the attempt failed, or null.
+    /// Runs the stages — the cave laid out (its chambers, tunnels and places: CaveLayout), the walls raised around it,
+    /// its features (caves, passes and arches), the seabed flattened and the slopes eased, the holes cut, the seals, then
+    /// decoration, loot and spawns — and returns why the attempt failed, or null.
     /// </summary>
     static string? Build(LevelMap map, RunStreams streams, LevelPlan plan, int attempt, string cosmeticSalt, string terrainText)
     {
@@ -938,8 +937,7 @@ public static class TopDownGenerator
     /// A flat seabed (DESIGN-TOPDOWN §4.1): every floor deeper than <see cref="Seabed"/> is raised to it, so nothing on the
     /// floor draws the eye from what matters; the walls' feet keep their slope. Only where all its neighbours lie under
     /// the swim level, so no cell's ground rises into it: the water she can swim is exactly what it was. It runs before
-    /// the shaft is cut, so the shaft keeps its depth; the rift's arena keeps its own, and the stamps' floors are lifted
-    /// with the rest (alike on both levels that share them).
+    /// the shaft is cut, so the shaft keeps its depth; the rift's arena keeps its own.
     /// </summary>
     static void FlattenSeabed(LevelMap map)
     {

@@ -50,5 +50,5 @@ static class TestLevels
     /// <summary>A level with exactly one treasure room, and the level after it.</summary>
     public static LevelMap OneTreasure() => Get(Find(p => p.Treasures == 1 && !p.HasBoss));
 
-    public static LevelMap After(LevelMap map) => Get(LevelPlan.NextOf(Seed, map.Id));
+    public static LevelMap After(LevelMap map) => Get(DiveGraph.Of(Seed).ExitsOf(map.Id)[0]);
 }

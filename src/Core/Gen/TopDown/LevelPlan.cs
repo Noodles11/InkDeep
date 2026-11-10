@@ -51,10 +51,9 @@ public static class LevelStocking
 }
 
 /// <summary>
-/// A level's plan, from the run seed and its <see cref="LevelId"/> alone: whether its boss stands here, what places it
-/// holds, its Menace, and the seeds of the two stamps it shares with its neighbours — the rock around its start (shared
-/// with the hole of the level above) and the rock around its exit (shared with the start of the level below). Any level
-/// can be generated on its own; no level needs another one generated first.
+/// A level's plan, from the run seed and its <see cref="LevelId"/> alone: what its reef is in the dive's graph (Run.DiveGraph)
+/// and where its holes lead, whether its boss stands here, what places it holds, and its Menace. Any level can be
+/// generated on its own; no level needs another one generated first.
 /// </summary>
 public sealed class LevelPlan
 {
@@ -75,19 +74,13 @@ public sealed class LevelPlan
     public int Curses { get; init; }
     public int Shops { get; init; }
     public int Caches { get; init; }
-    /// <summary>The rock around the start: the same stamp as the exit of the level above.</summary>
-    public ulong EntryStamp { get; init; }
     /// <summary>The level above was a boss level: she arrives on its arena's floor.</summary>
     public bool EntryFromArena { get; init; }
-    /// <summary>The rock around the exit: the same stamp as the start of the level below.</summary>
-    public ulong ExitStamp { get; init; }
     /// <summary>
     /// 0 at the first real depth (and in the tutorial), 1 at the last, and on up by the same step through every later
     /// loop (DESIGN-TOPDOWN §6.2).
     /// </summary>
     public float Menace { get; init; }
-    /// <summary>Where its first hole leads (Exits[0]).</summary>
-    public LevelId Next { get; init; }
     /// <summary>Where each of its holes leads (Run.DiveGraph), in the graph's order, and what each of those reefs is.</summary>
     public IReadOnlyList<LevelId> Exits { get; init; } = Array.Empty<LevelId>();
     public IReadOnlyList<ReefKind> ExitKinds { get; init; } = Array.Empty<ReefKind>();
@@ -107,9 +100,6 @@ public sealed class LevelPlan
     public static int BossLevel(SeedCode seed, int cycle, int depth) =>
         depth == Tutorial ? LevelStocking.TutorialLevels : LevelStocking.LevelsPerDepth;
 
-    /// <summary>Where the reef's first hole leads (Run.DiveGraph.ExitsOf).</summary>
-    public static LevelId NextOf(SeedCode seed, LevelId id) => DiveGraph.Of(seed).ExitsOf(id)[0];
-
     /// <summary>
     /// The reef of this depth that hides its Crab Deal (its row 0: none): one reef of a row from 2 to 4 (none where that
     /// reef is a haven). Never in the first real depth, nor on a boss level.
@@ -124,10 +114,6 @@ public sealed class LevelPlan
         int row = levels[rng.Int(levels.Count)];
         return (row, rng.Int(DiveGraph.Of(streams.Seed).Row(id.Cycle, id.Depth, row).Count));
     }
-
-    /// <summary>A reef whose hole leads here (the first of them), or null for the first reef of the dive.</summary>
-    public static LevelId? PreviousOf(SeedCode seed, LevelId id) =>
-        DiveGraph.Of(seed).Node(id).From is { Count: > 0 } from ? from[0] : null;
 
     /// <summary>
     /// A reef's Menace: by its depth alone (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6.1), never by how many reefs she has
@@ -199,7 +185,6 @@ public sealed class LevelPlan
 
         // (Left to right across the rows below, as its holes are across the map.)
         var exits = graph.ExitsOf(id).OrderBy(e => graph.Node(e).X).ToList();
-        var next = exits[0];
         return new LevelPlan
         {
             Id = node.Id,
@@ -213,12 +198,9 @@ public sealed class LevelPlan
             Curses = curses,
             Shops = shops,
             Caches = caches,
-            EntryStamp = streams.StampSeed(id),
             // (Into a depth's first row from its boss's arena above, or the tutorial's rift.)
             EntryFromArena = first,
-            ExitStamp = streams.StampSeed(next),
             Menace = MenaceOf(id),
-            Next = next,
             Template = template,
         };
     }
@@ -297,10 +279,7 @@ public sealed class LevelPlan
             Secrets = PlaceRules.Rolls(PoiKind.Secret, 1, rng) ? 1 : 0,
             // (No curse den, nor a cave within the cave.)
             Curses = 0,
-            EntryStamp = streams.StampSeed(id),
-            ExitStamp = streams.StampSeed(id with { Level = id.Level + 1 }),
             Menace = menace + FloorMenace * (floor - 1),
-            Next = id,
             Template = LevelTemplates.Get("default"),
             LeakCave = true,
             Floor = floor,
@@ -320,7 +299,6 @@ public sealed class LevelPlan
         bool rift = id.Level >= LevelStocking.TutorialLevels;
         var graph = DiveGraph.Of(seed);
         var exits = graph.ExitsOf(id);
-        var next = exits[0];
         return new LevelPlan
         {
             Id = id,
@@ -331,11 +309,8 @@ public sealed class LevelPlan
             Caches = rift ? 0 : 1,
             Shops = rift ? 1 : 0,
             Curses = rift ? 1 : 0,
-            EntryStamp = streams.StampSeed(id),
             EntryFromArena = false,
-            ExitStamp = streams.StampSeed(next),
             Menace = 0f,
-            Next = next,
             Exits = exits.ToArray(),
             ExitKinds = exits.Select(graph.KindOf).ToArray(),
         };
