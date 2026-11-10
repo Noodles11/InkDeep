@@ -15,6 +15,8 @@
 //   her_horizon    the horizon map (R: running steepest slope; x the direction, y the distance)
 //   her_scatter    how strongly the water scatters her light (0 none)
 
+#ifndef LIGHT_FIELD_INC
+#define LIGHT_FIELD_INC
 global uniform vec4 her_light_at;
 global uniform sampler2D her_horizon : filter_linear, repeat_enable;
 global uniform float her_scatter;
@@ -125,3 +127,4 @@ float her_inscatter(vec3 o, vec3 dir, float t0, float t1, float jitter) {
 	}
 	return her_scatter * (b - a) / h * sum / float(N);
 }
+#endif

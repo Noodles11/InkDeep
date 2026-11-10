@@ -11,6 +11,7 @@
 #include "res://assets/shaders/sunlight.gdshaderinc"
 #include "res://assets/shaders/level_frame.gdshaderinc"
 #include "res://assets/shaders/reef_art.gdshaderinc"
+#include "res://assets/shaders/reef_show.gdshaderinc"
 
 global uniform vec3 reef_water_shallow;
 global uniform vec3 reef_water_deep;
@@ -114,9 +115,19 @@ vec3 rs_rock(vec3 w, vec3 n) {
 	float strata = 0.5 + 0.5 * sin(w.y * 2.6 + f * 5.0);
 	vec3 c = reef_rock * (0.74 + 0.34 * f) * (0.88 + 0.14 * strata);
 	// Coralline crust in lilac and pink patches over the faces.
-	float crust = smoothstep(0.5, 0.66, rs_fbm(w * 0.42 + 11.0));
+	// (The showcase reef is thick with it, in four colours: reef_show.gdshaderinc.)
+	float more = reef_showcase;
+	float crust = smoothstep(0.5 - 0.1 * more, 0.66 - 0.1 * more, rs_fbm(w * 0.42 + 11.0));
 	vec3 crustCol = mix(reef_coral2, reef_coral, smoothstep(0.35, 0.65, rs_noise(w * 0.16 + 4.0)));
-	c = mix(c, crustCol * (0.85 + 0.25 * rs_noise(w * 3.0)), crust * 0.8);
+	if (more > 0.0) {
+		float which = rs_noise(w * 0.11 + 27.0);
+		crustCol = mix(crustCol, reef_sponge, smoothstep(0.62, 0.7, which));
+		crustCol = mix(crustCol, reef_butter, smoothstep(0.74, 0.8, which) * 0.9);
+		// Clusters: its crust broken into polyps and heads, not a smooth stain.
+		vec3 cell = rs_cells(w.xz * 2.6 + w.y * 0.7);
+		crust *= mix(1.0, 0.55 + 0.45 * smoothstep(0.05, 0.3, cell.y), more);
+	}
+	c = mix(c, crustCol * (0.85 + 0.25 * rs_noise(w * 3.0)), crust * (0.8 + 0.15 * more));
 	// Turf on ledges and the faces near the swim level.
 	float turf = smoothstep(0.25, 0.75, n.y) * smoothstep(0.42, 0.6, rs_fbm(w * 0.6 + 21.0));
 	c = mix(c, reef_algae * (0.8 + 0.3 * rs_noise(w * 5.0)), turf * 0.65);
@@ -172,4 +183,25 @@ ReefSkin reef_surface(vec3 local, vec3 n, float time, float px) {
 	// The corruption leaves the floor itself as it is (docs/CORRUPTION.md): its mark is the ink dripping up out of it
 	// (corruption_shards.gdshader), and when it is cleansed only those drops light up.
 	return s;
+}
+
+// The showcase reef (reef_show.gdshaderinc): where her light shows it (and by as much as the reef is awake), the skin as
+// it is (nat) over the drawn one (s), lit from where she is; a wave's front lights it as it passes. Returns how much
+// it shows (0 off a showcase reef), for the light() pass.
+float reef_show_skin(inout ReefSkin s, ReefSkin nat, vec3 world) {
+	if (reef_showcase <= 0.0) return 0.0;
+	float show = reef_show(world);
+	s.albedo = mix(s.albedo, nat.albedo, show);
+	s.normal = normalize(mix(s.normal, nat.normal, show));
+	s.caustic = mix(s.caustic, nat.caustic, show);
+	float lit = reef_lit(world);
+	if (lit > 0.0) {
+		vec3 to = normalize(her_show_aura.xyz + vec3(0.0, 0.8, 0.0) - world);
+		float ndl = clamp(dot(nat.normal, to), 0.0, 1.0);
+		s.emission += nat.albedo * her_show_light * lit * (0.3 + 0.7 * ndl) * 1.25;
+	}
+	s.emission += (nat.albedo * 0.9 + 0.08) * her_show_light * reef_wave_front(world) * 1.4;
+	// Awake, the reef has a faint light of its own again.
+	s.emission += nat.albedo * reef_awake(world) * 0.1;
+	return show;
 }

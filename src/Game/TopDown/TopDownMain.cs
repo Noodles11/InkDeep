@@ -493,7 +493,10 @@ public partial class TopDownMain : Node3D
             else if (arg == "--dbg-steer-fight") _dbgSteerFight = true;
             // Verification: another art direction (docs/ART-LOOKS.md: 6 the game's own; 0 the old look; 1–5 the studies).
             else if (arg.StartsWith("--look=") && int.TryParse(Value("--look="), out int look))
+            {
                 OctoShoots.Game.Fx.ArtLook.Set(look);
+                _artLook = look;
+            }
             else if (arg == "--reset-profile")
             {
                 // Verification: the saved profile's achievements (and so its unlocked pearls) are cleared.
@@ -516,6 +519,8 @@ public partial class TopDownMain : Node3D
             // Verification: as on a controller from the start (its key hints).
             else if (arg == "--dbg-pad") InputSetup.UsingPad = _pad = true;
             else if (arg.StartsWith("--xp=") && int.TryParse(Value("--xp="), out int xp)) _startXp = xp;
+            else if (arg == "--showcase") _dbgShowcase = true;
+            else if (arg == "--showcase=0") _dbgShowcase = false;
             else if (arg.StartsWith("--dbg-die=") && float.TryParse(Value("--dbg-die="), NumberStyles.Float, CultureInfo.InvariantCulture, out float die)) _dbgDie = die;
             else if (arg.StartsWith("--hp=") && float.TryParse(Value("--hp="), NumberStyles.Float, CultureInfo.InvariantCulture, out float hp)) _startHp = hp;
             else if (arg.StartsWith("--luck=") && float.TryParse(Value("--luck="), NumberStyles.Float, CultureInfo.InvariantCulture, out float luck)) _dbgLuck = luck;
@@ -919,7 +924,7 @@ public partial class TopDownMain : Node3D
     /// <summary>
     /// This level's look: its depth's, a leak cave's dark, or in a haven the bay's summer evening.
     /// </summary>
-    ReefLook Look => _map is { } map ? LookAt(map, _world?.Player.Position ?? map.Start.Position) : ReefLook.For(_id.Depth);
+    ReefLook Look => IsShowcase ? ReefLook.Showcase : _map is { } map ? LookAt(map, _world?.Player.Position ?? map.Start.Position) : ReefLook.For(_id.Depth);
 
     /// <summary>A level's own look: a leak cave's dark, a haven's bay evening, else its depth's.</summary>
     static ReefLook LookOf(LevelMap map) =>
@@ -929,6 +934,8 @@ public partial class TopDownMain : Node3D
 
     void ApplyLook(ReefLook look)
     {
+        // The showcase reef is painted as the reef was (look 0), the rest drawn.
+        OctoShoots.Game.Fx.ArtLook.Set(ReferenceEquals(look, ReefLook.Showcase) ? 0 : _artLook);
         look.Apply();
         look.ApplyTo(_environment.Environment);
         SetFloorFog(_floorFog);
@@ -1489,6 +1496,7 @@ public partial class TopDownMain : Node3D
             den.Reward = forced;
             if (forced == CurseReward.Pearl) _world.Pearls.Add(new PlanePearl { ItemId = PlaneRun.PortedPearls[0], Position = den.End, Placed = true });
         }
+        EnterShowcase();
         _achievements.EnterLevel();
         // A pearl unlocked by an achievement, offered here for the first time, wears a NEW chip.
         var fresh = new HashSet<string>();
@@ -2643,6 +2651,7 @@ public partial class TopDownMain : Node3D
         Guard("cores", () => _cores.Sync(_world));
         Guard("lamps", () => _lamps.Sync(_world, dt));
         Guard("holes", () => _holes.Sync(_world, dt));
+        Guard("showcase", () => StepShowcase(dt));
         Guard("surge", () => _surgeView.Sync(_world, dt));
         Guard("geysers", () => _geysers.Sync(_world, dt, _camera.Camera));
         _camera.SetBubbleLights(_combat.Lights, _combat.LightCount);
@@ -3235,6 +3244,7 @@ public partial class TopDownMain : Node3D
                 _sfx.PlayPitched("pop", e.Size > 0f ? 0.8f : 1.2f, -9f);
                 break;
             case PlaneEventType.LeakSealed:
+                ShowcaseLeakSealed(e.Position);
                 // It pulls shut: a shudder, felt; the count of those left.
                 _camera.Shake(0.4f);
                 _haptics.Pulse(0.7f, 0.5f, 0.4f);

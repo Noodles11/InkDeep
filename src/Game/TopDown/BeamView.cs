@@ -110,7 +110,7 @@ public partial class BeamView : Node3D
             float stop = Mathf.Clamp(System.Numerics.Vector2.Distance(beam.Position, end) / range, 0.02f, 1f);
             var origin = new Vector3(beam.Position.X, LevelMap.SwimBand + 0.3f, beam.Position.Y);
             fan.Node.GlobalTransform = new Transform3D(new Basis(Vector3.Up, Mathf.Atan2(-dir.Z, dir.X)).Scaled(new Vector3(range, 1f, range)), origin);
-            fan.Material.SetShaderParameter("tint", color);
+            fan.Material.SetShaderParameter("tint", TopDownMain.ShowcaseOn ? color.Lerp(new Color(0.9f, 0.96f, 1f), 0.65f) : color);
             fan.Material.SetShaderParameter("strength", FanStrength * fan.On * dim * beam.Intensity / LightTuning.BeamIntensity);
             fan.Material.SetShaderParameter("half_angle", beam.HalfAngle);
             fan.Material.SetShaderParameter("stop", stop);
@@ -121,7 +121,7 @@ public partial class BeamView : Node3D
             // Her own beam's spotlight: from her heart, along the beam and a little down onto the reef.
             var look = (dir + Vector3.Down * SpotTilt).Normalized();
             _spot.GlobalTransform = new Transform3D(Basis.LookingAt(look, Vector3.Up), heart);
-            _spot.LightColor = color;
+            _spot.LightColor = TopDownMain.ShowcaseOn ? color.Lerp(new Color(0.9f, 0.96f, 1f), 0.65f) : color;
             _spot.LightEnergy = SpotEnergy * fan.On * dim;
             _spot.SpotRange = range * 1.25f;
             _spot.SpotAngle = Mathf.RadToDeg(beam.HalfAngle);

@@ -155,6 +155,23 @@ public sealed record ReefLook
     };
 
     /// <summary>
+    /// The showcase reef (docs/VISUAL-SHOWCASE.md): painted as the reef was (look 0), in a deep clear blue: blue-slate
+    /// rock crusted with vivid coral (pink, violet, orange, a butter yellow), pale sand that her light and the shafts
+    /// from above pool on, teal turf; a few god rays reaching down. After the references of a lit night reef and a
+    /// coral canyon seen from above.
+    /// </summary>
+    public static readonly ReefLook Showcase = Shallows with
+    {
+        Name = "The Blue Hollow",
+        WaterShallow = C("#2F66A8"), WaterDeep = C("#143C7A"), Murk = C("#050F2A"),
+        Sand = C("#8EA6C4"), Rock = C("#43577F"),
+        Coral = C("#F0559F"), Coral2 = C("#9A5CF0"), Algae = C("#3BAE90"), Sponge = C("#F59A32"), Butter = C("#F6D24E"),
+        Sun = C("#C8E8FF"), SunEnergy = 0.5f, Ambient = C("#2E4E92"), AmbientEnergy = 0.22f,
+        Caustics = 0.7f, Rays = 0.6f, Menace = 0.3f, Saturation = 1.35f, Vignette = 0.7f, Fog = 0.22f, Contrast = 1.2f, Lantern = 1.4f,
+        FanA = C("#A472F2"), FanB = C("#F26AB4"), SoftCoral = C("#FF86C6"), HardCoral = C("#FFB23E"), Grass = C("#3FCBA4"),
+    };
+
+    /// <summary>
     /// The deepest two stay readable: no darker than a little past the Coral Carnival (Depth 3). The Trench is about as
     /// light as the Carnival in its own cold blue; the Abyss a shade darker in indigo, its life glowing neon.
     /// </summary>

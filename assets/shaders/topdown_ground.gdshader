@@ -58,13 +58,16 @@ void fragment() {
 	vec3 local = lf_local(world);
 	float px = length(fwidth(world.xz));
 	ReefSkin s = reef_surface(local, normalize(world_normal), TIME, px);
+	ReefSkin nat = s;
 	art(s, local, fwidth(local.y), px);
+	float show = reef_show_skin(s, nat, world);
 	float dark = door_count > 0 ? door_dark(local) : 0.0;
 	s.albedo *= 1.0 - 0.95 * dark;
 	s.emission *= 1.0 - dark;
 	s.caustic *= 1.0 - dark;
 	// The caustics ride to light() in BACKLIGHT (this shader does its own lighting, so nothing else reads it).
-	BACKLIGHT = vec3(s.caustic * 1.5);
+	// (And how much the showcase shows it as it is, in .y: lit plainly there, not in the drawn look's steps.)
+	BACKLIGHT = vec3(s.caustic * 1.5, show, 0.0);
 	ALBEDO = s.albedo;
 	EMISSION = s.emission;
 	NORMAL = normalize((VIEW_MATRIX * vec4(s.normal, 0.0)).xyz);
@@ -75,7 +78,8 @@ void fragment() {
 }
 
 void light() {
-	float ndl = art_light(clamp(dot(NORMAL, LIGHT), 0.0, 1.0));
+	float plain = clamp(dot(NORMAL, LIGHT), 0.0, 1.0);
+	float ndl = mix(art_light(plain), plain, BACKLIGHT.y);
 	// The sun also brings the caustics; other lights (her glow) light the reef plainly.
 	float extra = LIGHT_IS_DIRECTIONAL ? BACKLIGHT.x : 0.0;
 	DIFFUSE_LIGHT += (ndl + extra) * ATTENUATION * LIGHT_COLOR / PI;

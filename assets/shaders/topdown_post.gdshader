@@ -55,6 +55,8 @@ uniform float aberration = 0.0;
 // An art direction under study (reef_art.gdshaderinc, docs/ART-LOOKS.md): painted, depth is told by flat layers of
 // water, not by a lens's blur (look 4: by felt-tip stippling, the water a light veil; 0 and 5: the game's own water).
 global uniform int reef_art;
+// The showcase reef (reef_show.gdshaderinc, docs/VISUAL-SHOWCASE.md): its colours kept through the water, her light whiter.
+global uniform float reef_showcase;
 // The mountains' tall tops (DESIGN-TOPDOWN §4.1): above peak_from metres over her plane, rock softens further out of
 // focus, rising to full over peak_span — so the range reads as distant and calm, and the floor she plays on stays the
 // sharpest thing on screen.
@@ -379,6 +381,7 @@ void fragment() {
 	float column_in = clamp((sea_surface_y - (open_deep ? -40.0 : one_reef ? swim_level - seen : world.y)) / 20.0, 0.0, 1.5);
 	// What her own light falls on keeps its warmth: her light travels a few metres, not down from the surface.
 	float lit = open_deep ? 0.0 : her_clear(world);
+	column_in *= 1.0 - 0.55 * reef_showcase;
 	col *= mix(vec3(1.0), vec3(0.64, 0.9, 1.05), column_in * (1.0 - 0.6 * lit));
 	col = mix(col, reef_water_deep * 0.7, 0.13 * column_in);
 
@@ -468,7 +471,7 @@ void fragment() {
 	// (The drawn look's bubbles' halos are stronger, for their fluorescence; her own glow in the water fainter and
 	// nearer white, so the floor round her is not washed orange.)
 	float glow_boost = reef_art == 6 ? 1.35 : 1.0;
-	vec3 her_tint = reef_art == 6 ? mix(her_warm, vec3(1.0), 0.4) : her_warm;
+	vec3 her_tint = reef_art == 6 ? mix(her_warm, vec3(1.0), 0.4) : mix(her_warm, vec3(0.95, 0.97, 1.0), 0.55 * reef_showcase);
 	float her_k = reef_art == 6 ? 0.55 : 1.0;
 	col += her_tint * her_inscatter(cam, ray, t0, open_deep ? t0 + 120.0 : t1, ign) * her_k;
 	// Her light: a faint glow in the water all round her, and where it falls on the reef a warm lift of what is there
@@ -504,7 +507,7 @@ void fragment() {
 	// Shadows take the water's hue at their own brightness (cool, not lifted).
 	float wl = max(dot(reef_water_deep, vec3(0.299, 0.587, 0.114)), 0.01);
 	// (Not what her own light falls on: her warmth reaches the eye.)
-	col = mix(col, reef_water_deep / wl * luma, (1.0 - smoothstep(0.0, 0.3, luma)) * 0.45 * (1.0 - lit));
+	col = mix(col, reef_water_deep / wl * luma, (1.0 - smoothstep(0.0, 0.3, luma)) * 0.45 * (1.0 - lit) * (1.0 - 0.5 * reef_showcase));
 	col = mix(col, col * (reef_sun * 0.2 + 0.82), smoothstep(0.5, 1.0, luma) * 0.3 * (1.0 - lit));
 
 	// A cave's dark is never black: where the depth breaks (an edge of rock, a ledge, a creature's rim) a faint cool line

@@ -68,6 +68,18 @@ public partial class CameraRig : Node3D
     /// <summary>Debug: the floor's fog and depth blur on (the game's look) or off (the floor seen clear).</summary>
     public void SetFloorFog(bool on) => _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("floor_fog"), on);
 
+    /// <summary>
+    /// The showcase reef (docs/VISUAL-SHOWCASE.md): crisp, as the references are — the deeps barely blurred, a thin
+    /// veil of water over them; else the painted look's own soft depths.
+    /// </summary>
+    public void SetShowcase(bool on)
+    {
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("below_blur"), on ? 1.4f : 5.2f);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("above_blur"), on ? 1.6f : 3.4f);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("deep_fog"), on ? 0.025f : 0.06f);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("reef_water"), on ? 1.2f : 3.0f);
+    }
+
     public void SetReducedMotion(bool reduced) => _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("wobble"), reduced ? 0f : 1f);
 
     /// <summary>Light bubbles: the halos her bubbles and their pop blooms cast on the swim layer (x, z, radius, strength).</summary>

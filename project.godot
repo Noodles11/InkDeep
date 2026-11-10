@@ -247,3 +247,31 @@ her_scatter={
 "type": "float",
 "value": 0.0
 }
+reef_showcase={
+"type": "float",
+"value": 0.0
+}
+her_show_aura={
+"type": "vec4",
+"value": Vector4(0, -1000, 0, 0)
+}
+her_beam_show={
+"type": "vec4",
+"value": Vector4(0, -1000, 0, 0)
+}
+her_show_dir={
+"type": "vec4",
+"value": Vector4(1, 0, 0, 0.38)
+}
+her_show_light={
+"type": "vec3",
+"value": Vector3(1, 0.769, 0.42)
+}
+reef_wake={
+"type": "float",
+"value": 0.0
+}
+reef_wave={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
