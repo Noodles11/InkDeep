@@ -115,7 +115,7 @@ public class ItemTests
 
     [Theory]
     [InlineData("pufferfish_pout", "+35% damage")]
-    [InlineData("pufferfish_pout", "−20% shot speed")]
+    [InlineData("pufferfish_pout", "−20% beam carry")]
     [InlineData("shark_tooth", "+14% damage")]
     [InlineData("squid_ink_espresso", "+30% swim speed")]
     [InlineData("coral_crown", "+20 max HP")]

@@ -44,7 +44,7 @@ public partial class PauseMenu : Control
     /// <summary>The stat sheet's name for each modifier (its values are read from there).</summary>
     static readonly Dictionary<Stat, string> SheetName = new()
     {
-        [Stat.MaxHp] = "Max HP", [Stat.Damage] = "Damage per shot", [Stat.FireRate] = "Fire rate", [Stat.ShotSpeed] = "Shot speed",
+        [Stat.MaxHp] = "Max HP", [Stat.Damage] = "Damage per shot", [Stat.FireRate] = "Beam tick rate", [Stat.ShotSpeed] = "Beam carry",
         [Stat.Range] = "Range", [Stat.ShotSize] = "Shot size", [Stat.Speed] = "Swim speed", [Stat.DashCooldown] = "Dash cooldown", [Stat.Glow] = "Glow",
     };
 

@@ -42,13 +42,14 @@ public static class PlaneStatSheet
             new("Max HP", F(run.MaxHp, "0"), Share(run.MaxHp, bare.MaxHp)),
             new("Damage per shot", F(damage, "0.#"), Share(damage, PlaneCombatTuning.ShotDamage)),
             new("Shots per throw", shots.ToString(Inv), shots - 1f),
-            new("Fire rate", F(rate, "0.#") + "/s" + (minigun ? $" (×{F(PlaneCombatTuning.MinigunMax, "0")} spun up)" : ""), Share(rate, baseRate)),
-            new("Shot speed", F(speed, "0") + " m/s", Share(speed, PlaneCombatTuning.ShotSpeed)),
+            // (Her fire rate is her beam's tick rate, her shot speed its carry: docs/BEAM-PEARLS-PLAN.md.)
+            new("Beam tick rate", "×" + F(rate / baseRate, "0.##") + (minigun ? $" (×{F(PlaneCombatTuning.MinigunMax, "0")} spun up)" : ""), Share(rate, baseRate)),
+            new("Beam carry", "×" + F(speed / PlaneCombatTuning.ShotSpeed, "0.##"), Share(speed, PlaneCombatTuning.ShotSpeed)),
             new("Range", F(range, "0.#") + " m", Share(range, PlaneCombatTuning.BubbleRange)),
             new("Shot size", "×" + F(size, "0.##"), size - 1f),
             new("Swim speed", F(swim, "0.#") + " m/s", Share(swim, t.PlaneCruiseSpeed)),
             new("Dash cooldown", F(dash, "0.##") + " s", Share(dash, t.DashCooldown), LowerIsBetter: true),
-            new("Knockback", "×" + F(stats[Stat.Knockback], "0.##"), stats[Stat.Knockback] - 1f),
+            new("Light pressure", "×" + F(stats[Stat.Knockback], "0.##"), stats[Stat.Knockback] - 1f),
             new("Glow", "×" + F(stats[Stat.Glow], "0.##"), stats[Stat.Glow] - 1f),
             new("Luck", F(stats.Luck, "0.#"), stats.Luck - bare.Luck),
         };

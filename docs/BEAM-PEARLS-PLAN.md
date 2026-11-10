@@ -2,7 +2,7 @@
 
 Her beam is her one attack (docs/LIGHT-AND-GRAPH-PROPOSAL.md §5), so every pearl that only changed her shots does
 nothing now. This plan carries each one over to the beam where light gives it a natural meaning, and drops the ones
-where it does not. Step 1 (the split beams) is built; the rest is to come.
+where it does not. Steps 1 (the split beams) and 2 (the stats) are built; the rest is to come.
 
 ## What the beam already takes
 
@@ -24,9 +24,9 @@ These need nothing:
 
 | Stat | On shots | On the beam |
 |---|---|---|
-| Fire rate (Squid Ink Espresso, Plankton Swarm) | throws faster | **Tick rate**: the beam's burn ticks faster (× the stat against her base fire rate), so it burns, seals and charges faster: its damage rises with it. |
-| Shot speed (Cuttlebone; drawbacks: Pufferfish Pout, Cannonball) | bubbles fly faster | **Carry**: the beam keeps more of its strength far from her: the far end of its falloff (`LightTuning.FarLight`) rises with the stat, or drops with it. |
-| Knockback (Captain's Hook, Cannonball) | hits push foes | **Light pressure**: creatures in the beam are pushed slowly away from her (× the stat), more near her. |
+| Fire rate (Squid Ink Espresso, Plankton Swarm) | throws faster | **Tick rate** (built, `BeamTick`): every beam's worth × her fire rate against her base, so it burns, seals, opens walls and charges crystals faster: its damage rises with it. Electric Eel Tail's arcs too. |
+| Shot speed (Cuttlebone; drawbacks: Pufferfish Pout, Cannonball) | bubbles fly faster | **Carry** (built, `BeamCarry`): the light the beam keeps at the end of its reach is `FarLight` × her shot speed against her base (0.05 to 1.5); near her it is the same. |
+| Knockback (Captain's Hook, Cannonball) | hits push foes | **Light pressure** (built, `LightPressure`): murklings and blotters in the beam are pushed away from her at 1.2 m/s for each × of knockback past her own, as much as its light reaches them (none with no knockback pearl). |
 
 ## Each shot pearl
 
@@ -84,7 +84,9 @@ These need nothing:
    off her aim, width, reach and worth), `HerBeams` carries them with their worth, and each burns, strikes seals and
    clears ink along its own line. `BeamView` draws a fan for each, and her_reveal and the reef's showing take the whole
    fan (`BeamAim`, `BeamSpread`). The forks and reflections will be rays of the same kind. Tests: `SplitBeamTests`.
-2. **The stats' new meanings**: tick rate (fire rate), carry (far light) and light pressure.
+2. **The stats' new meanings** (built): tick rate (fire rate), carry (far light) and light pressure, named so in the
+   pearls' captions and the pause menu's stat sheet ("Beam tick rate", "Beam carry", "Light pressure"). Tests:
+   `BeamStatTests`.
 3. **Held beam**: focus (Pearl Diver), spin-up (Sardine Run), snap (Pistol Shrimp Claw), the synergies on them.
 4. **Bending light**: homing (Anglerfish Lure), reflections (Mirror Scale, Pinball Storm), through rock (Ghost Jelly,
    Will-o'-Wisp).

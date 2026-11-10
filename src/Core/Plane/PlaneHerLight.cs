@@ -90,6 +90,14 @@ public sealed partial class PlaneWorld
     /// <summary>Whether this creature is dazzled now (it holds still).</summary>
     public bool Dazzled(object creature) => _glare.TryGetValue(creature, out var g) && g.Frozen > 0f;
 
+    /// <summary>A creature's knock held at least at the light pressure on it (the knock eases off; the pressure is steady).</summary>
+    static void Press(ref Vector2 knock, Vector2 pressure)
+    {
+        if (pressure == Vector2.Zero) return;
+        float along = Vector2.Dot(knock, Vector2.Normalize(pressure));
+        if (along < pressure.Length()) knock += Vector2.Normalize(pressure) * (pressure.Length() - MathF.Max(along, 0f));
+    }
+
     /// <summary>Her shots' light on the corrupted in it: each one burns and, coming into it, is dazzled.</summary>
     void StepHerLight()
     {
@@ -112,6 +120,9 @@ public sealed partial class PlaneWorld
             var m = Murklings[i];
             if (!m.Alive || m.Budding || m.Clinging) continue;
             float n = Touch(m, m.Position, 0f, m.Radius);
+            // Her knockback is her beam's light pressure: it is pushed away from her while it is in it (held steady
+            // against the knock's easing off).
+            Press(ref m.Knock, LightPressure(m, m.Position, m.Radius));
             if (n == 0 || Guarded(m.Position) || !m.Corruption.Sear(burn * n)) continue;
             Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, m.Position, Vector2.Zero, burn));
             BurstMurkling(m, ember: true);
@@ -141,6 +152,7 @@ public sealed partial class PlaneWorld
                 var b = Blotters[i];
                 if (!b.Alive || b.Rise > 0f) continue;
                 float n = Touch(b, b.Position, 0f, BlotterTuning.Radius, dazzles: false);
+                Press(ref b.Knock, LightPressure(b, b.Position, BlotterTuning.Radius));
                 if (n == 0 || Guarded(b.Position) || !b.Corruption.Sear(burn * n)) continue;
                 Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, b.Position, Vector2.Zero, burn));
                 BurstBlotter(b, field);
@@ -241,7 +253,7 @@ public sealed partial class PlaneWorld
         }
         else g.BeamTime = 0f;
         // Electric Eel Tail: burned by an arc off what her beam burns, at half the beam's rate.
-        if (!beamed && _arced.Contains(kin)) n += HerLightTuning.BeamShots / 2f;
+        if (!beamed && _arced.Contains(kin)) n += HerLightTuning.BeamShots / 2f * BeamTick;
         // Fire Coral, Sea Nettle: it burns on a while out of her light.
         if (n == 0 && g.Afterglow > 0f && !Defeated) n = 1;
         if (n > 0f && g.Crit > 0f) n *= MathF.Max(Run.Loadout.Shot.CritMult, 1f);

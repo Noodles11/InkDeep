@@ -93,7 +93,9 @@ Taking a pearl is a moment of its own. It plays round Clementine while she swims
 ### Stats
 
 Every stat counts on the plane: damage, max HP, fire rate, shot speed, range, shot size, swim speed, dash cooldown,
-HP regeneration (her corruption ebbing), luck, glow and knockback. Stat pearls are never unique, so each copy stacks
+HP regeneration (her corruption ebbing), luck, glow and knockback. On her beam (docs/BEAM-PEARLS-PLAN.md) her fire rate
+is its **tick rate** (it burns, seals and charges faster), her shot speed its **carry** (the light it keeps far out) and
+her knockback its **light pressure** (what is in it is pushed away from her). Stat pearls are never unique, so each copy stacks
 (including the drawbacks: Glass Squid, Sea Cucumber, Pufferfish Pout and Cannonball all trade something away).
 
 **Luck**, per point (each capped; `LuckTuning`): every freed foe leaves one more shell; a level without a clam room gets
@@ -106,11 +108,11 @@ comes to it (the level below is laid out while she plays the one above); a run w
 | Unique | Built | Pearl | Tagline | Effect | Quality | Found in | Unlocked by |
 |:---:|:---:|---|---|---|---|---|---|
 | No | ✅ | **Coral Crown** | *A reef princess's lost tiara* | +20 max HP; +0.3 damage; Heals 20 HP | ★★ | treasure, boss |  |
-| No | ✅ | **Squid Ink Espresso** | *The Galleon's cook swore by it* | +0.3 speed; +0.4 fire rate | ★★ | treasure, shop |  |
+| No | ✅ | **Squid Ink Espresso** | *The Galleon's cook swore by it* | +0.3 speed; +0.4 beam tick rate | ★★ | treasure, shop |  |
 | No | ✅ | **Whale Lung** | *Deep breath!* | +1 range; ×1.3 shot size | ★★ | treasure |  |
-| No | ✅ | **Pufferfish Pout** | *Angry and proud of it* | ×1.35 damage; −0.2 shot speed | ★★★ | treasure, boss |  |
+| No | ✅ | **Pufferfish Pout** | *Angry and proud of it* | ×1.35 damage; −0.2 beam carry | ★★★ | treasure, boss |  |
 | No | ✅ | **Lucky Sea Glass** | *Found only on moonlit tides* | +2 luck | ★ | treasure, shop | untouchable |
-| No | ✅ | **Plankton Swarm** | *Tiny friends* | +0.5 fire rate; Splits the beam into 3 rays, each 46% of the beam; ×0.6 shot size; ×0.85 shot damage | ★★ | treasure |  |
+| No | ✅ | **Plankton Swarm** | *Tiny friends* | +0.5 beam tick rate; Splits the beam into 3 rays, each 46% of the beam; ×0.6 shot size; ×0.85 shot damage | ★★ | treasure |  |
 | No | ✅ | **Glass Squid** | *See-through, and sharp for it* | +1 damage; −20 max HP | ★★ | treasure, curse |  |
 | No | ✅ | **Sea Cucumber** | *Slow, soft, and very hard to stop* | +30 max HP; −0.15 speed; Heals 30 HP | ★ | treasure, shop |  |
 | No |  | **Barnacle Armor** | *Clingy but protective* | −0.1 speed; +30 foam HP | ★ | treasure, shop |  |
@@ -148,13 +150,13 @@ comes to it (the level below is laid out while she plays the one above); a run w
 | No | ✅ | **Shark Tooth** | *Still sharp* | +0.5 damage | ★★ | treasure, curse |  |
 | No (+range) | ✅ | **Remora Sucker** | *Sticks to everything* | Pulls pickups toward you | ★ | shop, treasure |  |
 | No |  | **Manta Shawl** | *Glide like a ray* | +0.2 speed; ×0.8 dash cooldown | ★★ | treasure, whale |  |
-| No | ✅ | **Cuttlebone** | *Light as foam, hard as shell* | +0.3 shot speed; +1 range | ★ | treasure, shop |  |
+| No | ✅ | **Cuttlebone** | *Light as foam, hard as shell* | +0.3 beam carry; +1 range | ★ | treasure, shop |  |
 | No (+5% chance)| ✅ | **Giant Squid Eye** | *It sees your weak spot* | 10% chance of a ×3 critical hit | ★★★ | treasure, boss | shucked_in_fifteen |
 | No | ✅ | **Coral Polyp** | *Slowly, the reef rebuilds* | +0.25 HP regeneration per second | ★★ | treasure, whale |  |
 | No |  | **Brain Coral** | *Thinks two moves ahead* | +1 luck; ×1.35 active item recharge speed | ★★ | treasure, shop |  |
 | No | ✅ | **Pirate's Doubloon** | *Finders keepers* | +15 sand dollars; Shell caches hold 50% more | ★ | treasure, goldenClam | hermit_hoarder |
-| No | ✅ | **Cannonball** | *Fire in the hold!* | +0.8 damage; −0.15 shot speed; ×1.4 shot size; ×2 knockback | ★★ | treasure, boss |  |
-| No | ✅ | **Captain's Hook** | *Get over here* | ×2.5 knockback | ★ | treasure, shop |  |
+| No | ✅ | **Cannonball** | *Fire in the hold!* | +0.8 damage; −0.15 beam carry; ×1.4 shot size; ×2 light pressure | ★★ | treasure, boss |  |
+| No | ✅ | **Captain's Hook** | *Get over here* | ×2.5 light pressure | ★ | treasure, shop |  |
 | No (+1s) |  | **Stingray Barb** | *Numbs on contact* | 30% chance to slow foes for 2s | ★ | treasure |  |
 | No (+1HP) |  | **Lamprey Mouth** | *Every bite counts* | Each creature freed heals 3 HP | ★★★ | treasure, curse | hollow_maw |
 | Yes | ✅ | **Hammerhead** | *Wide-angle view* | Opens the beam into a 5-ray floodlight, each 32% of the beam | ★★★ | treasure, boss |  |

@@ -25,6 +25,13 @@ public static class LightTuning
     /// </summary>
     public const float NearLight = 2f, FarLight = 0.25f;
     /// <summary>
+    /// Her stats on the beam (docs/BEAM-PEARLS-PLAN.md, step 2): her fire rate is its tick rate (every beam's worth × her
+    /// fire rate against her base); her shot speed its carry (FarLight × her shot speed against her base, between
+    /// LeastCarry and MostCarry); her knockback its light pressure (creatures in it pushed away from her at Pressure m/s
+    /// for each × of knockback past her own, at full light, less as it falls off).
+    /// </summary>
+    public const float LeastCarry = 0.05f, MostCarry = 1.5f, Pressure = 1.2f;
+    /// <summary>
     /// Her pearls on the beam (docs/LIGHT-AND-GRAPH-PROPOSAL.md §5.1): her range stat lengthens it and her shot size
     /// widens it (each × its square root; at most MaxHalfAngleDeg); Sunbeam makes it a searchlight (SunbeamReach × as
     /// long, SunbeamHalfAngleDeg wide). Rear Fin adds a beam behind her (RearIntensity, RearReach × as long), Lighthouse
@@ -285,10 +292,12 @@ public sealed partial class PlaneWorld
     {
         get
         {
-            yield return (Beam, _beamWorth);
-            for (int i = 0; i < _rays.Count; i++) yield return (_rays[i], _rayWorth[i]);
-            yield return (RearBeam, 1f);
-            yield return (SweepBeam, 1f);
+            // (Her fire rate is its tick rate: each burns, seals and charges the faster.)
+            float tick = BeamTick;
+            yield return (Beam, _beamWorth * tick);
+            for (int i = 0; i < _rays.Count; i++) yield return (_rays[i], _rayWorth[i] * tick);
+            yield return (RearBeam, tick);
+            yield return (SweepBeam, tick);
         }
     }
 
@@ -389,11 +398,39 @@ public sealed partial class PlaneWorld
         return BeamFalloff(b, MathF.Max(0f, flat - radius)) * cone;
     }
 
-    /// <summary>The beam's light at a distance from her along it: NearLight at her bell to FarLight at its reach.</summary>
-    public static float BeamFalloff(LightEmitter b, float distance)
+    /// <summary>
+    /// The beam's light at a distance from her along it: NearLight at her bell to its carry at its reach (FarLight, raised
+    /// or lowered by her shot speed).
+    /// </summary>
+    public float BeamFalloff(LightEmitter b, float distance)
     {
         float k = 1f - Math.Clamp(distance / MathF.Max(b.Range, 0.1f), 0f, 1f);
-        return LightTuning.FarLight + (LightTuning.NearLight - LightTuning.FarLight) * MathF.Pow(k, 1.4f);
+        float far = BeamCarry;
+        return far + (LightTuning.NearLight - far) * MathF.Pow(k, 1.4f);
+    }
+
+    /// <summary>Her beam's tick rate: her fire rate against her base (1 with no pearls).</summary>
+    public float BeamTick => MathF.Max(FireScale, 0.05f);
+
+    /// <summary>Her beam's carry: the light it keeps at the end of its reach (FarLight × her shot speed against her base).</summary>
+    public float BeamCarry => Math.Clamp(LightTuning.FarLight * ShotSpeedScale, LightTuning.LeastCarry, LightTuning.MostCarry);
+
+    /// <summary>
+    /// Her beam's light pressure on a creature (m/s, away from her): Pressure for each × of her knockback past her own,
+    /// as much as her beams' light reaches it (a share of NearLight). None with no knockback pearl.
+    /// </summary>
+    public Vector2 LightPressure(object kin, Vector2 at, float radius)
+    {
+        float past = Run.Loadout.Stats[Stat.Knockback] - 1f;
+        if (past <= 0f || Defeated) return Vector2.Zero;
+        var push = Vector2.Zero;
+        foreach (var (beam, _) in HerBeams)
+        {
+            float light = BeamLight(beam, at, 0f, radius, kin);
+            if (light <= 0f) continue;
+            push += SafeNormalize(at - beam.Position) * (LightTuning.Pressure * past * MathF.Min(light / LightTuning.NearLight, 1f));
+        }
+        return push;
     }
 
     /// <summary>The creatures' bodies that stand in her light's way this step (where they are, how big).</summary>
