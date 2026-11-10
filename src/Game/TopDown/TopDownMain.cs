@@ -42,6 +42,7 @@ public partial class TopDownMain : Node3D
     /// <summary>How lit her bell stays with her glow out (a faint shape for the player, no light for the reef).</summary>
     const float GlowOffLit = 0.12f;
     bool _dbgGlowOff;
+    float _dbgSealAt;
     /// <summary>The rims of the reef's holes, each in the colour of where it leads.</summary>
     HoleView _holes = null!;
     CurrentView _currents = null!;
@@ -524,6 +525,7 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--xp=") && int.TryParse(Value("--xp="), out int xp)) _startXp = xp;
             else if (arg == "--showcase") _dbgShowcase = true;
             else if (arg == "--dbg-glowoff") _dbgGlowOff = true;
+            else if (arg.StartsWith("--dbg-sealat=") && float.TryParse(Value("--dbg-sealat="), NumberStyles.Float, CultureInfo.InvariantCulture, out float sealAt)) _dbgSealAt = sealAt;
             else if (arg == "--showcase=0")
             {
                 _dbgShowcase = false;
@@ -2334,6 +2336,13 @@ public partial class TopDownMain : Node3D
         }
 
         DebugMoment();
+        if (_dbgSealAt > 0f && _levelTime > _dbgSealAt && _world.Leaks.Where(v => !v.Sealed).OrderBy(v => System.Numerics.Vector2.Distance(v.Position, _world.Player.Position)).FirstOrDefault() is { } leak)
+        {
+            // Verification (--dbg-sealat=seconds): the leak nearest her sealed then, its wave with it.
+            _dbgSealAt = 0f;
+            _world.DebugSealLeak(leak);
+            ShowcaseLeakSealed(leak.Position);
+        }
         if (_dbgDie > 0f && _levelTime > _dbgDie)
         {
             // Verification: her light spent at once.

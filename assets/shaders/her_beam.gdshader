@@ -40,6 +40,17 @@ void fragment() {
 	// Not over her own bell: it begins a little out from her heart.
 	float near = smoothstep(0.0, 0.05, along);
 	float shimmer = 0.8 + 0.2 * bh_noise(vec2(along * 14.0 - TIME * 1.6, across * 3.0 + TIME * 0.3));
-	ALBEDO = tint;
-	ALPHA = clamp(strength * fall * edge * cut * near * shimmer, 0.0, 1.0);
+	// Light in water: shafts streaming out along it (bright and dark rays fanning from her, slowly drifting), and motes
+	// of the water's plankton lit where they cross it, twinkling as they turn.
+	float angle = atan(local.y, local.x);
+	float rays = 0.55 + 0.45 * bh_noise(vec2(angle * 24.0 + TIME * 0.15, along * 1.5 - TIME * 0.25));
+	rays *= 0.75 + 0.25 * bh_noise(vec2(angle * 90.0 - TIME * 0.1, 3.0));
+	vec2 cell_at = local * 46.0 + vec2(TIME * 0.35, TIME * 0.12);
+	vec2 cell = floor(cell_at), in_cell = fract(cell_at) - 0.5;
+	float seed = fract(sin(dot(cell, vec2(41.3, 289.1))) * 43758.5453);
+	vec2 spot = vec2(fract(seed * 7.13), fract(seed * 13.7)) - 0.5;
+	float mote = step(0.86, seed) * (1.0 - smoothstep(0.04, 0.12, length(in_cell - spot * 0.6)));
+	mote *= 0.6 + 0.4 * sin(TIME * 3.0 + seed * 40.0);
+	ALBEDO = tint + vec3(mote * 0.6);
+	ALPHA = clamp(strength * fall * edge * cut * near * shimmer * rays + strength * mote * 2.2 * edge * cut * near * (0.4 + 0.6 * fall), 0.0, 1.0);
 }
