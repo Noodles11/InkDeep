@@ -204,7 +204,7 @@ her shots holds for the sim alone, where they can still be switched on.
 Her light is a lamp in her bell, one sphere of it all round her, and it burns nothing. Her beam and her shots are
 what burn the corrupted. Caves are dark. The sim is in `src/Core/Plane/PlaneHerLight.cs` (`HerLightTuning`),
 `PlaneLight.cs` (the light emitters, `LightTuning`), `PlaneAsh.cs` (`AshTuning`) and the shot rules in
-`PlaneCombat.cs`; the presentation in `BellView` (her light), `BeamView` and `her_beam.gdshader`,
+`PlaneCombat.cs`; the presentation in `BellView` (her light), `BeamView`, `BeamShadow` and `her_beam_volume.gdshader`,
 `her_burn.gdshaderinc`, `BlightView.Burn`, `CombatView` (the shots' lamps), `ReefLook.Cave`, `GlowPlankton` and
 `AshView`. Tests: `HerLightTests`, `BeamTests`, `LightEmitterTests`, `LightQueryTests`, `CaveAshTests`.
 

@@ -26,7 +26,8 @@ namespace OctoShoots.Game.TopDown;
 /// Verification flags: --seed=, --cycle=, --depth=, --level=, --at=start|arch|arch-near|cave|exit|hole|kelp|shop|shop-out|cache|cache-near|secret|secret-in|treasure|treasure-out|clam-pearl|mob|boss|spring|spring-in,
 /// --autopilot, --dive (dives whenever it can), --dbg-pad (on the controller from the start), --calm (no creatures), --fire, --pearls=, --hp=, --luck=, --boss-hp=, --paused, --map, --f3, --no-focus, --dbg-nofog (no floor fog),
 /// --capture=dir --frames=a,b, --dbg-say=text (a message banner, a second in), --dbg-loose=id (that pearl loose near her), --at=prism|trio|charge (in a prism stones' bed, a charge stones' trio's
-/// nook, before a charge stone), --dbg-prism (a coloured seal's stones laid on her way to it; --fire aims at it),
+/// nook, before a charge stone), --dbg-prism (a coloured seal's stones laid on her way to it; --fire aims at it), --dbg-shadow (her beam held
+/// along the most open way, two murklings held still in it),
 /// --dbg-charge (every charge stone charged), --at=gate (swims into the boss arena through its
 /// opened way in), --dbg-free=seconds (the boss freed that long after it lands), --dbg-steer=x,y (she swims that way;
 /// --dbg-steer-fight: once the boss fights), --dbg-freed=tull,… (the bay's folk freed, at home), --look=N (an art direction under study for the reef, docs/ART-LOOKS.md).
@@ -335,6 +336,9 @@ public partial class TopDownMain : Node3D
     /// </summary>
     bool _dbgPrism;
     SecretSeal? _dbgPrismSeal;
+    /// <summary>Verification (--dbg-shadow): her beam held along the most open way from her, two murklings held still in it (her beam's shadows).</summary>
+    bool _dbgShadow;
+    System.Numerics.Vector2? _dbgShadowWay;
     /// <summary>Verification: murklings bud round an Inkwarden (the first, or a turned pufferfish set 6 m ahead of her), so its tethers show.</summary>
     bool _dbgWard;
     /// <summary>Verification: the first seal starts with this many hits less one, and takes the last a second in (0: off).</summary>
@@ -541,6 +545,7 @@ public partial class TopDownMain : Node3D
             else if (arg == "--autopilot") _autopilot = true;
             else if (arg.StartsWith("--boss-hp=") && float.TryParse(Value("--boss-hp="), NumberStyles.Float, CultureInfo.InvariantCulture, out float bhp)) _bossHp = bhp;
             else if (arg == "--fire") _autoFire = true;
+            else if (arg == "--dbg-shadow") _autoFire = _dbgShadow = true;
             else if (arg == "--use-active") _autoActive = true;
             else if (arg.StartsWith("--dbg-leaks=")) _dbgLeaks = int.Parse(Value("--dbg-leaks="));
             else if (arg.StartsWith("--dbg-leak-hits=")) _dbgLeakHits = int.Parse(Value("--dbg-leak-hits="));
@@ -4235,6 +4240,34 @@ public partial class TopDownMain : Node3D
     {
         if (!_autoFire) return false;
         var from = _world.Player.Position;
+        if (_dbgShadow)
+        {
+            if (_dbgShadowWay is null)
+            {
+                float best = -1f;
+                for (int k = 0; k < 36; k++)
+                {
+                    var w = new System.Numerics.Vector2(Mathf.Cos(k * Mathf.Tau / 36f), Mathf.Sin(k * Mathf.Tau / 36f));
+                    float r = _world.LineReach(from, w, 16f, out _);
+                    if (r > best) { best = r; _dbgShadowWay = w; }
+                }
+            }
+            var way = _dbgShadowWay!.Value;
+            var side = new System.Numerics.Vector2(-way.Y, way.X);
+            System.Numerics.Vector2[] held = { from + way * 3.5f, from + way * 7.5f - side * 1.2f };
+            while (_world.Murklings.Count(m => m.Alive && !m.Budding) < held.Length) _world.Murklings.Add(new Murkling { Position = held[0], Bud = 0f, Seed = _world.Murklings.Count });
+            int n = 0;
+            foreach (var m in _world.Murklings.Where(m => m.Alive && !m.Budding).Take(held.Length))
+            {
+                m.Position = held[n++];
+                m.Velocity = System.Numerics.Vector2.Zero;
+                m.Corruption.Value = m.Corruption.Max;
+            }
+            _world.Player.Velocity = System.Numerics.Vector2.Zero;
+            input.Aim = way;
+            input.Beam = true;
+            return true;
+        }
         System.Numerics.Vector2? target = _dbgPrismSeal is { } aimed ? aimed.Emblem : _world.Boss is { Stage: BossStage.Fight } queen ? queen.Position
             : _world.Mobs.Where(m => m.Alive).OrderBy(m => System.Numerics.Vector2.Distance(m.Position, from)).Select(m => (System.Numerics.Vector2?)m.Position).FirstOrDefault()
               // Else the nearest corrupted creature (not the wardens: what they guard).

@@ -41,15 +41,22 @@ between).
 - **Coral gardens** (`LevelView.Gardens`): sea rods, tube sponges, staghorn, sea fans, elkhorn and brain corals packed
   in drifting patches on the walls' tops and ledges, and in a band along their feet at the edge of the open floor.
 
-- **Her beam as a flashlight's** (`BeamView`, `her_beam_volume.gdshader`, `her_beam.gdshader`): lines of her light,
-  about one a degree, are each cast from her bell on their own (`PlaneWorld.LineReach`) and stopped by what they meet,
-  rock or a creature's body. They are not drawn; they shape the beam. It is a round cone, reaching up and down from her
-  plane as far as either side, each way out to where its line is stopped, so what is not in a line's way lets the light
-  on past. Its haze is faint, brightest down its middle and soft at its sides, fading along it, with tiny motes of
-  plankton drifting and twinkling in it. Where it lands on what stopped it the light stays as bright however far it
-  came: its far end glows there, softly, with no hard edge anywhere: every end of it melts away over its last fifth, and
-  where it goes into rock it fades out over the 2.5 m before it (from the depth). No line is drawn along what it
-  touches. (Her beam's spotlight lights the reef it falls on, its rim and its shadows soft.)
+- **Her beam as a flashlight's, lit as light is** (`BeamView`, `BeamShadow`, `her_beam_volume.gdshader`): each frame
+  a grid of 64 × 64 rays is cast in three dimensions from her bell over the whole of her round cone (±22°, a little
+  past its rim), each going on until something stops it: the seabed under it, rock rising into it (rock across her
+  plane stands at least 1.4 m above it, so it stops the light there as the sim's lines do), or a creature's body, a
+  sphere of its own size at her plane (`PlaneWorld.LightBodies`; none while her shots pierce). The rays' reach is a
+  texture. The water in the cone glows by as much of her light as gets to each point of it, marched along each pixel's
+  line of sight (28 steps, jittered): brightest down its middle and soft to nothing at its rim, dimming with the
+  distance (spreading, and taken up by the water), a little brighter seen against the way it goes (forward
+  scattering), and dark where the ray to it was stopped first. So every creature in it casts its own round shadow down
+  the beam, as wide as its body, and the light flows on round it; the beam ends where it lands, softly, the march
+  stopping at the reef in front of it (from the depth). Tiny motes of plankton sparkle in it only where the light
+  reaches them. Lines of her light across her plane (`PlaneWorld.LineReach`, about one a degree) are cast as well,
+  for how far it reaches and for prism stones' colours; nothing is drawn along them. Her own beam's light on the reef
+  (`rs_beam`) is shadowed by the creatures alike (`her_beam_shadow`, the rays across her plane cast straight down onto
+  it), and her beam's spotlight lights the reef it falls on, its rim and its shadows soft (the creatures cast them).
+  `--dbg-shadow` holds her beam along the most open way from her with two murklings held still in it.
 
 ## Still to do
 

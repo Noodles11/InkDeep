@@ -16,6 +16,9 @@
 //   her_show_light  her light's colour
 //   reef_wake       how awake the reef is (0..1)
 //   reef_wave       a wave's middle (xy: world xz), its front's radius (z; 0 none) and how awake the reef is behind it (w)
+//   her_beam_shadow where her own beam's light gets to (BeamShadow: each ray's reach past the creatures (g), a share of her_beam_frame.w; x
+//                   across the cone, y up it, ±her_beam_axis.z radians), from her_beam_frame.xyz along her_beam_axis.xy
+//                   (world xz; w 0: off)
 #ifndef REEF_SHOW_INC
 #define REEF_SHOW_INC
 
@@ -28,6 +31,9 @@ global uniform vec4 her_show_dir;
 global uniform vec3 her_show_light;
 global uniform float reef_wake;
 global uniform vec4 reef_wave;
+global uniform sampler2D her_beam_shadow : filter_linear, repeat_disable;
+global uniform vec4 her_beam_frame;
+global uniform vec4 her_beam_axis;
 
 // Her aura's light on a point (0..1): full round her, fading to its reach, only where it gets to.
 float rs_aura(vec3 p) {
@@ -36,8 +42,25 @@ float rs_aura(vec3 p) {
 	return (1.0 - smoothstep(her_show_aura.w * 0.4, her_show_aura.w * 1.15, d)) * her_sight(p);
 }
 
+// How much of her own beam's light gets to a point of the reef (0..1): 0 in the shadow of a creature's body in its
+// way, soft at the shadow's edge; 1 outside her own beam's grid (another ray's light). Her light
+// on the reef is laid over it from above (rs_beam), so its shadows are too: the ray across her plane at the point's
+// side, cast straight down onto it.
+float rs_beam_shadow(vec3 p) {
+	if (her_beam_axis.w <= 0.0) return 1.0;
+	vec3 v = p - her_beam_frame.xyz;
+	vec3 a = vec3(her_beam_axis.x, 0.0, her_beam_axis.y), across = vec3(-a.z, 0.0, a.x);
+	float x = dot(v, a), z = dot(v, across), dist = length(vec2(x, z));
+	if (x <= 0.0) return 1.0;
+	float u = atan(z, x) / (2.0 * her_beam_axis.z) + 0.5;
+	if (u < 0.0 || u > 1.0) return 1.0;
+	float soft = 0.2 + 0.05 * dist;
+	// (The creatures' shadows only: the rock's is her_sight's.)
+	return smoothstep(-soft, soft, texture(her_beam_shadow, vec2(u, 0.5)).g * her_beam_frame.w - dist);
+}
+
 // Her beam's light on a point (0..1): strongest down its middle and near her, soft at the cone's sides, fading to its
-// reach, cut off by the rock between.
+// reach, cut off by the rock between and by what stands in its way (rs_beam_shadow).
 float rs_beam(vec3 p) {
 	if (her_beam_show.w <= 0.0 || her_show_dir.y <= 0.0) return 0.0;
 	vec2 to = p.xz - her_beam_show.xz;
@@ -46,7 +69,7 @@ float rs_beam(vec3 p) {
 	float angle = acos(clamp(dot(to / max(d, 1e-3), normalize(her_show_dir.xz)), -1.0, 1.0));
 	float cone = d < 0.8 ? 1.0 : 1.0 - smoothstep(her_show_dir.w * 0.6, her_show_dir.w * 1.1, angle);
 	float fall = pow(1.0 - d / her_beam_show.w, 0.9);
-	return cone * fall * her_show_dir.y * her_sight(p);
+	return cone * fall * her_show_dir.y * her_sight(p) * rs_beam_shadow(p);
 }
 
 // How much of her light falls on a point (0..1): her aura's or her beam's.
