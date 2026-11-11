@@ -67,8 +67,13 @@ Taking a pearl is a moment of its own. It plays round Clementine while she swims
 
 - **Seen before it is taken:** the clam's mouth faces the room's entrance as far as it can with the pearl in sight: never
   past side-on to the camera, where its upper valve would stand in front of it, so the pearl's icon always shows. Within 6
-  m of a clam room's pearl, the absorbing banner's card, 72% of its size, floats up over the shell with what the pearl
-  does (`PearlHint`), and fades as she leaves or begins to absorb it.
+  m of any pearl (in a clam room, on a shop's or the crab's stand, or loose on the reef), the absorbing banner's card,
+  72% of its size, floats up over the nearest with what the pearl does (`PearlHint`), and fades as she leaves or begins
+  to absorb it.
+- **Floating and glowing:** every pearl floats slowly up and down (0.3 m, about every 7 s; a clam room's half as far,
+  just over its valve, `CombatView.PearlBob`) and sheds its own light round it (an omni light, 8 m), with a haze of its
+  colour on the water (4.5 m, `TopDownMain.SyncPearlGlows`). Round it the reef keeps its colour as in her light, so a
+  pearl shows in the dark of a secret room's maze.
 - **The pull:** whenever a pearl is within 6 m, her tentacles and oral arms are drawn toward it like a magnet. The
   nearer it is, the harder the pull.
 - **Touch (0 s):** the ritual begins. One plays at a time. A bought pearl begins its ritual by her too. The pearl

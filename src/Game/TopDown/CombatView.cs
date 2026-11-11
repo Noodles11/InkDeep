@@ -299,7 +299,7 @@ public partial class CombatView : Node3D
                     Mesh = new SphereMesh { Radius = 0.42f, Height = 0.84f, RadialSegments = 24, Rings = 12 },
                     MaterialOverride = new StandardMaterial3D { AlbedoColor = a, EmissionEnabled = true, Emission = b, EmissionEnergyMultiplier = 1.4f, Roughness = 0.15f, Metallic = 0.3f, RimEnabled = true, Rim = 1f },
                 });
-                node.AddChild(new OmniLight3D { LightColor = b.Lerp(Colors.White, 0.3f), LightEnergy = 1.2f, OmniRange = 4f, ShadowEnabled = false });
+                node.AddChild(new OmniLight3D { LightColor = b.Lerp(Colors.White, 0.3f), LightEnergy = WorldPearlLight, OmniRange = WorldPearlReach, ShadowEnabled = false });
             }
             else
             {
@@ -416,7 +416,14 @@ public partial class CombatView : Node3D
     }
     const float PearlFall = 1.4f, PearlFallHeight = 7f;
     /// <summary>A pearl lying in the world: its glow from within (pearl_common's glow) and the light it sheds round it.</summary>
-    const float WorldPearlGlow = 0.55f, WorldPearlLight = 0.9f;
+    const float WorldPearlGlow = 0.55f, WorldPearlLight = 2.6f, WorldPearlReach = 8f;
+
+    /// <summary>
+    /// Every pearl floats slowly up and down (loose, on a stand, or over its clam's valve): how far above its rest it is
+    /// now (m), Bob at most, once every 2π/BobRate seconds, each at its own phase.
+    /// </summary>
+    public static float PearlBob(float time, float phase) => PearlBobHeight * (0.5f + 0.5f * Mathf.Sin(time * PearlBobRate + phase));
+    public const float PearlBobHeight = 0.3f, PearlBobRate = 0.9f;
 
     /// <summary>How a shell lying near this point is turned right now (for its flight to the counter), if one is.</summary>
     public Basis? ShellLie(System.Numerics.Vector2 at)
@@ -454,7 +461,7 @@ public partial class CombatView : Node3D
                 Mesh = new SphereMesh { Radius = 0.42f, Height = 0.84f, RadialSegments = 24, Rings = 12 },
                 MaterialOverride = look_ is not null ? look_ : new StandardMaterial3D { AlbedoColor = a, EmissionEnabled = true, Emission = b, EmissionEnergyMultiplier = 1.4f, Roughness = 0.15f, Metallic = 0.3f, RimEnabled = true, Rim = 1f },
             });
-            var light = new OmniLight3D { LightColor = b.Lerp(Colors.White, 0.3f), LightEnergy = WorldPearlLight, OmniRange = 5f, ShadowEnabled = false };
+            var light = new OmniLight3D { LightColor = b.Lerp(Colors.White, 0.3f), LightEnergy = WorldPearlLight, OmniRange = WorldPearlReach, ShadowEnabled = false };
             node.AddChild(light);
             AddChild(node);
             _pearls.Add(node);
@@ -1207,9 +1214,9 @@ void fragment() {
             _pearls[i].Scale = Vector3.One;
             float fall = Mathf.Clamp((_time - _pearlBorn[i]) / PearlFall, 0f, 1f);
             float drop = PearlFallHeight * (1f - fall) * (1f - fall);
-            // A clam room's pearl lies still on the clam's lower valve; others float and bob.
+            // Every pearl floats slowly up and down: a clam room's just over its clam's lower valve, others on her plane.
             bool resting = world.Map.Pois.Exists(q => q.Kind == PoiKind.TreasureCave && q.Position == pearl.Position);
-            float y = resting ? ClamRoomView.RestHeight : LevelMap.SwimBand + 0.25f * Mathf.Sin(_time * 1.6f + i);
+            float y = resting ? ClamRoomView.RestHeight + PearlBob(_time, i) * 0.5f : LevelMap.SwimBand - PearlBobHeight * 0.5f + PearlBob(_time, i);
             // In its clam its light is shadowed: the shell keeps it off what lies behind.
             _pearlLooks[i].Light.ShadowEnabled = resting && OctoShoots.Game.Settings.ViewOptions.Shadows;
             _pearls[i].Position = new Vector3(pearl.Position.X, y + drop, pearl.Position.Y);
@@ -1286,7 +1293,7 @@ void fragment() {
         {
             var stand = world.Stands[i];
             _stands[i].Visible = !stand.Sold;
-            _stands[i].Position = new Vector3(stand.Position.X, LevelMap.SwimBand + 0.2f * Mathf.Sin(_time * 1.6f + i * 1.3f), stand.Position.Y);
+            _stands[i].Position = new Vector3(stand.Position.X, LevelMap.SwimBand - PearlBobHeight * 0.5f + PearlBob(_time, i * 1.3f), stand.Position.Y);
         }
         bool inShop = _shops.Exists(shop => System.Numerics.Vector2.Distance(world.Player.Position, shop.Position) <= shop.Radius + 1f);
         foreach (var price in _prices) price.Visible = inShop;

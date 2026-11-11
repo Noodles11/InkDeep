@@ -25,7 +25,7 @@ namespace OctoShoots.Game.TopDown;
 /// level, any pearls), F3 toggles the debug map, R regenerates from the seed field.
 /// Verification flags: --seed=, --cycle=, --depth=, --level=, --at=start|arch|arch-near|cave|exit|hole|kelp|shop|shop-out|cache|cache-near|secret|secret-in|treasure|treasure-out|clam-pearl|mob|boss|spring|spring-in,
 /// --autopilot, --dive (dives whenever it can), --dbg-pad (on the controller from the start), --calm (no creatures), --fire, --pearls=, --hp=, --luck=, --boss-hp=, --paused, --map, --f3, --no-focus, --dbg-nofog (no floor fog),
-/// --capture=dir --frames=a,b, --dbg-say=text (a message banner, a second in), --at=gate (swims into the boss arena through its
+/// --capture=dir --frames=a,b, --dbg-say=text (a message banner, a second in), --dbg-loose=id (that pearl loose near her), --at=gate (swims into the boss arena through its
 /// opened way in), --dbg-free=seconds (the boss freed that long after it lands), --dbg-steer=x,y (she swims that way;
 /// --dbg-steer-fight: once the boss fights), --dbg-freed=tull,… (the bay's folk freed, at home), --look=N (an art direction under study for the reef, docs/ART-LOOKS.md).
 /// </summary>
@@ -259,13 +259,61 @@ public partial class TopDownMain : Node3D
     string? _startAt;
     /// <summary>Verification: bud a murkling ("murk") or a prime ("prime") on the densest ink near her at the start.</summary>
     string? _dbgBud;
-    /// <summary>A Crab Deal's pearl near her: what it does, floating over it.</summary>
-    (string Id, Vector3 Over)? NearDeal()
+    /// <summary>
+    /// The pearl nearest her within PearlHint.Reach, wherever it is (in a clam room, on a shop's or the crab's stand, or
+    /// loose on the reef), and the point over it its card floats at (world).
+    /// </summary>
+    (string Id, Vector3 Over)? NearPearl()
     {
+        var her = _world.Player.Position;
+        (string Id, Vector3 Over)? best = _clamRooms.Near(_world, PearlHint.Reach);
+        float nearest = best is not null ? PearlHint.Reach * 0.5f : PearlHint.Reach;
         foreach (var stand in _world.Stands)
-            if (stand.Kind == StandKind.Deal && !stand.Sold && System.Numerics.Vector2.Distance(stand.Position, _world.Player.Position) <= PearlHint.Reach)
-                return (stand.ItemId, new Vector3(stand.Position.X, LevelMap.SwimBand + 1.5f, stand.Position.Y));
-        return null;
+        {
+            if (stand.Kind is not (StandKind.Pearl or StandKind.Deal) || stand.Sold) continue;
+            float d = System.Numerics.Vector2.Distance(stand.Position, her);
+            if (d > nearest) continue;
+            nearest = d;
+            best = (stand.ItemId, new Vector3(stand.Position.X, LevelMap.SwimBand + 1.5f, stand.Position.Y));
+        }
+        foreach (var pearl in _world.Pearls)
+        {
+            if (pearl.Taken || pearl.Absorbing || _world.Map.Pois.Exists(q => q.Kind == PoiKind.TreasureCave && q.Position == pearl.Position)) continue;
+            float d = System.Numerics.Vector2.Distance(pearl.Position, her);
+            if (d > nearest) continue;
+            nearest = d;
+            best = (pearl.ItemId, new Vector3(pearl.Position.X, LevelMap.SwimBand + 1.5f, pearl.Position.Y));
+        }
+        return best;
+    }
+
+    /// <summary>A loose pearl's (or a stand's) glow on the water round it: its radius (m) and strength.</summary>
+    const float PearlGlowRadius = 4.5f, PearlGlowStrength = 1f;
+    readonly List<Vector4> _pearlGlows = new();
+    readonly List<Color> _pearlGlowColors = new();
+
+    /// <summary>The clam rooms' glows and each loose pearl's (the nearest her first), for the water's haze.</summary>
+    void SyncPearlGlows()
+    {
+        _pearlGlows.Clear();
+        _pearlGlowColors.Clear();
+        _pearlGlows.AddRange(_clamRooms.Glows);
+        _pearlGlowColors.AddRange(_clamRooms.GlowColors);
+        var her = _world.Player.Position;
+        var loose = new List<(float D, System.Numerics.Vector2 At, string Id)>();
+        foreach (var stand in _world.Stands)
+            if (stand.Kind is StandKind.Pearl or StandKind.Deal && !stand.Sold) loose.Add((System.Numerics.Vector2.Distance(stand.Position, her), stand.Position, stand.ItemId));
+        foreach (var pearl in _world.Pearls)
+            if (!pearl.Taken && !pearl.Absorbing && !_world.Map.Pois.Exists(q => q.Kind == PoiKind.TreasureCave && q.Position == pearl.Position))
+                loose.Add((System.Numerics.Vector2.Distance(pearl.Position, her), pearl.Position, pearl.ItemId));
+        loose.Sort((a, b) => a.D.CompareTo(b.D));
+        foreach (var (_, at, id) in loose)
+        {
+            if (_pearlGlows.Count >= CameraRig.MostPearlGlows) break;
+            _pearlGlows.Add(new Vector4(at.X, at.Y, PearlGlowRadius, PearlGlowStrength));
+            _pearlGlowColors.Add(_catalog is not null && _catalog.TryGet(id, out var item) ? PearlLight.Mean(item) : Colors.White);
+        }
+        _camera.SetClamGlows(_pearlGlows, _pearlGlowColors);
     }
 
     /// <summary>Verification (--dbg-leak-hits=n): the first leak held with this many staples in.</summary>
@@ -274,6 +322,8 @@ public partial class TopDownMain : Node3D
     int _dbgLeaks;
     /// <summary>Verification (--dbg-exit): the way down is open from the start.</summary>
     bool _dbgExit;
+    /// <summary>Verification (--dbg-loose=id): that pearl lies loose on the reef a few metres from her at the start.</summary>
+    string? _dbgLoose;
     /// <summary>Verification: murklings bud round an Inkwarden (the first, or a turned pufferfish set 6 m ahead of her), so its tethers show.</summary>
     bool _dbgWard;
     /// <summary>Verification: the first seal starts with this many hits less one, and takes the last a second in (0: off).</summary>
@@ -493,6 +543,7 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--dbg-bud=")) _dbgBud = Value("--dbg-bud=");
             else if (arg == "--dbg-ward") _dbgWard = true;
             else if (arg == "--dbg-exit") _dbgExit = true;
+            else if (arg.StartsWith("--dbg-loose=")) _dbgLoose = Value("--dbg-loose=");
             else if (arg.StartsWith("--dbg-moment=")) _dbgMoment = float.Parse(Value("--dbg-moment="), CultureInfo.InvariantCulture);
             else if (arg.StartsWith("--boss=")) _dbgBoss = Value("--boss=");
             else if (arg == "--boss-level") _dbgBossLevel = true;
@@ -1372,6 +1423,18 @@ public partial class TopDownMain : Node3D
             _dbgWard = false;
         }
         if (_dbgExit) _world.ExitOpen = true;
+        if (_dbgLoose is { } loose)
+        {
+            _dbgLoose = null;
+            for (int k = 0; k < 16; k++)
+            {
+                float a = Mathf.Tau * k / 16f;
+                var at = _world.Player.Position + new System.Numerics.Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 3.5f;
+                if (!_world.Clear(at, 1f)) continue;
+                _world.Pearls.Add(new PlanePearl { ItemId = loose, Position = at, Placed = true });
+                break;
+            }
+        }
         if (_dbgSeal > 0 && _world.Seals.Count > 0) _world.Seals[0].Hits = Math.Max(0, _dbgSeal - 1);
         if (_dbgThrow)
         {
@@ -2292,8 +2355,8 @@ public partial class TopDownMain : Node3D
             ItemDef? absorbing = null;
             if (_world?.Pearls.Find(q => q.Absorbing) is { } ritual && _catalog is not null && _catalog.TryGet(ritual.ItemId, out var item)) absorbing = item;
             _pearlBanner.Step(dt, absorbing, _achievementBanner.Busy);
-            // A clam room's pearl near her: what it does, floating over its shell.
-            var waiting = _clamRooms.Near(_world, PearlHint.Reach) ?? NearDeal();
+            // A pearl near her (in a clam room, on a stand or loose): what it does, floating over it.
+            var waiting = NearPearl();
             ItemDef? told = null;
             if (waiting is { } near) _catalog?.TryGet(near.Id, out told);
             _pearlHint.Step(dt, told, waiting is { } over ? _camera.Camera.UnprojectPosition(over.Over) : default);
@@ -2760,7 +2823,7 @@ public partial class TopDownMain : Node3D
             }
             _dbgSeal = 0;
         }
-        _camera.SetClamGlows(_clamRooms.Glows, _clamRooms.GlowColors);
+        SyncPearlGlows();
         // The battle begun: the boss's cut-in plays (once), the game held under it. (Off for now: BossTitles.)
         if (_world.Boss is { Stage: BossStage.Banner } introBoss && !_introShown)
         {

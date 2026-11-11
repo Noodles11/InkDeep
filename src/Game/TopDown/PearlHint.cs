@@ -4,8 +4,9 @@ using OctoShoots.Core.Items;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// A clam room's pearl, told before she takes it: as she nears it the absorbing banner's card (PearlBanner), smaller, floats
-/// up over the shell with what the pearl does, bobbing a little, and fades as she leaves or begins to absorb it.
+/// A pearl, told before she takes it, wherever it lies (in a clam room, on a shop's or the crab's stand, or loose on the
+/// reef): as she nears it the absorbing banner's card (PearlBanner), smaller, floats up over it with what the pearl does,
+/// bobbing a little, and fades as she leaves or begins to absorb it.
 /// </summary>
 public partial class PearlHint : Control
 {

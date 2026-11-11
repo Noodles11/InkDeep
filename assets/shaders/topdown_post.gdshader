@@ -78,12 +78,13 @@ uniform float halo_strength = 0.16;
 /// Light bubbles (docs/LIGHT-BUBBLES.md): up to 16 small halos on the swim layer, from her bubbles and the blooms they
 /// leave where they pop: x, z (world), radius (metres), strength (a share of her halo's, ≤ 0.4).
 uniform vec4 bubble_lights[16];
-// Clam rooms (ClamRoomView): warm gold glows filling the room and spilling from its mouth (xz, radius, strength), laid
-// over the water's veil so the room reads through the depth.
-uniform vec4 clam_glows[6];
+// Pearls' glows (xz, radius, strength): a clam room's filling the room and spilling from its mouth (ClamRoomView), and
+// each pearl lying loose or on a stand its own, laid over the water's veil so it reads through the depth; round each
+// the reef keeps its colour, as in her light.
+uniform vec4 clam_glows[12];
 uniform int clam_count = 0;
-// Each glow in the colour of the pearl lying in its room.
-uniform vec3 clam_colors[6];
+// Each glow in its pearl's colour.
+uniform vec3 clam_colors[12];
 uniform int bubble_count = 0;
 // Fish far under her plane (DeepShoals): x, z (world), how far under it, length; their heading (xy), tail's beat, softness.
 uniform vec4 deep_fish[16];
@@ -506,17 +507,20 @@ void fragment() {
 	// The clam rooms' light, each in its pearl's colour: lifting what lies in them toward it, and a haze of it in the
 	// water over them, so a room shows from afar what it holds.
 	vec3 clam = vec3(0.0);
+	float pearl_shown = 0.0;
 	for (int i = 0; i < clam_count; i++) {
 		vec4 g = clam_glows[i];
 		vec2 og = on_layer.xz - g.xy;
-		clam += clam_colors[i] * exp(-dot(og, og) / (g.z * g.z)) * g.w;
+		float near_glow = exp(-dot(og, og) / (g.z * g.z));
+		clam += clam_colors[i] * near_glow * g.w;
+		pearl_shown = max(pearl_shown, near_glow * min(g.w * 3.0, 1.0));
 	}
 	// (Gently: lifted hard, the room and its pearl wash out and the pearl's pattern is lost.)
 	col = col * (1.0 + clam * 0.45) + clam * 0.1;
 
 	// Grade: the depth's saturation; shadows cooled toward the water, highlights a touch of sun. Outside her light (her
 	// glow and her beam, and what the sealed leaks have woken) the reef keeps little of its colour and some of its light.
-	float shown = open_deep ? 0.0 : max(lit, reef_show(world));
+	float shown = open_deep ? 0.0 : max(max(lit, reef_show(world)), pearl_shown * 0.9);
 	col *= mix(unlit_dim, 1.0, shown);
 	float luma = dot(col, vec3(0.299, 0.587, 0.114));
 	col = mix(vec3(luma), col, reef_saturation * mix(unlit_saturation, 1.0, shown));

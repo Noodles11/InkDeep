@@ -93,13 +93,16 @@ public partial class CameraRig : Node3D
     public void SetReducedMotion(bool reduced) => _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("wobble"), reduced ? 0f : 1f);
 
     /// <summary>Light bubbles: the halos her bubbles and their pop blooms cast on the swim layer (x, z, radius, strength).</summary>
-    /// <summary>The clam rooms' glows on the water (xz, radius, strength), at most six.</summary>
+    /// <summary>The most pearl glows the water takes (clam rooms' and loose pearls').</summary>
+    public const int MostPearlGlows = 12;
+
+    /// <summary>The pearls' glows on the water (xz, radius, strength): the clam rooms' and each loose pearl's, at most MostPearlGlows.</summary>
     public void SetClamGlows(IReadOnlyList<Vector4> glows, IReadOnlyList<Color> colors)
     {
-        int n = Mathf.Min(glows.Count, 6);
+        int n = Mathf.Min(glows.Count, MostPearlGlows);
         // Sent flattened, as the bubble lights are; each glow in its pearl's colour.
-        var flat = new float[24];
-        var tint = new float[18];
+        var flat = new float[MostPearlGlows * 4];
+        var tint = new float[MostPearlGlows * 3];
         for (int i = 0; i < n && i < colors.Count; i++)
         {
             var l = colors[i].SrgbToLinear();
