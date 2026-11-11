@@ -145,6 +145,7 @@ public partial class TopDownMain : Node3D
     float _spendIn;
     string[] _startPearls = Array.Empty<string>();
     HudView _hud = null!;
+    HealthBars _bars = null!;
     ItemCatalog? _catalog;
     /// <summary>What Clementine carries through the rift (HP, pearls); a new seed or R starts a fresh run.</summary>
     PlaneRun? _run;
@@ -1087,6 +1088,9 @@ public partial class TopDownMain : Node3D
             Visible = false,
         };
         layer.AddChild(_padCross);
+        // Thin health bars over the creatures she can see, under the HUD.
+        _bars = new HealthBars();
+        layer.AddChild(_bars);
         _hud = new HudView();
         // The HUD is laid out on a 1080-line screen and scaled with the window (HudScale), so it keeps its share of it.
         _hudRoot = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
@@ -2017,6 +2021,8 @@ public partial class TopDownMain : Node3D
         _lastHp = hp;
         _vapour.Tick(dt, _camera.Camera);
         _blight.Sync(_world, dt, _camera.Camera);
+        _bars.Visible = _hudRoot.Visible;
+        _bars.Sync(_world, _camera.Camera, _blight);
         _ash.Sync(_world, dt, _camera.Camera);
         _adventure.Sync(_world, dt, _camera);
         _crab.Sync(_world, dt);

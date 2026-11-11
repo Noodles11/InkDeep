@@ -11,8 +11,9 @@ namespace OctoShoots.Game.TopDown;
 /// own (PlaneWorld.LineReach) and stopped by what they meet, rock or a creature's body; they are not drawn, but shape it.
 /// It is a flashlight's beam (her_beam_volume.gdshader): a round cone, up and down from her plane as well as either side,
 /// each way out to where its line is stopped; a faint haze with plankton motes drifting in it, its far end a disc of
-/// light as bright where it lands on something as anywhere. At her plane a thin glow traces the edge of what stops it
-/// (her_beam.gdshader). (Both meshes are laid out afresh each frame from the lines' ends.) Her own beam also has a
+/// light as bright where it lands on something as anywhere, soft at every edge (it fades out before the rock it goes
+/// into). (Its mesh is laid out afresh each frame from the lines' ends; the lines' own glow along what stops them,
+/// her_beam.gdshader, is not drawn.) Her own beam also has a
 /// spotlight from her bell tilted down along it, lighting the reef it falls on (its shadows keep it off what lies behind
 /// the walls). A split beam's other rays (docs/BEAM-PEARLS-PLAN.md) are fans of their own; Rear Fin's and Lighthouse's
 /// are fainter fans. The corrupted show where any of them falls (her_beam_lit: the whole of her beam's fan, every ray of
@@ -53,7 +54,7 @@ public partial class BeamView : Node3D
     /// <summary>The cone's rings round its axis and along it.</summary>
     const int Around = 28, Along = 14;
     /// <summary>How far up and down from her plane the cone reaches, as a share of how far it reaches either side.</summary>
-    const float VerticalShare = 0.5f;
+    const float VerticalShare = 1f;
     SpotLight3D _spot = null!;
     MeshInstance3D _arcs = null!;
     ImmediateMesh _arcMesh = null!;
@@ -75,7 +76,7 @@ public partial class BeamView : Node3D
         _volumeShader = GD.Load<Shader>("res://assets/shaders/her_beam_volume.gdshader");
         _spot = new SpotLight3D
         {
-            SpotAngle = LightTuning.BeamHalfAngleDeg, SpotAngleAttenuation = 0.6f, SpotAttenuation = 1.1f, LightSpecular = 0.5f,
+            SpotAngle = LightTuning.BeamHalfAngleDeg, SpotAngleAttenuation = 0.35f, ShadowBlur = 3f, SpotAttenuation = 1.1f, LightSpecular = 0.5f,
             ShadowEnabled = OctoShoots.Game.Settings.ViewOptions.Shadows, ShadowBias = 0.06f, ShadowNormalBias = 1.2f, Visible = false,
         };
         AddChild(_spot);
@@ -234,7 +235,7 @@ public partial class BeamView : Node3D
             reach[m] = r * Mathf.Cos(a);
             endHit[m] = stopped ? 1f : 0f;
         }
-        // (Rounder across her plane than up and down: VerticalShare of its width each way up and down.)
+        // (As far up and down as either side, VerticalShare of it: a round cone.)
         Vector3 Point(float s, float phi, float t) => new(s, s * t * Mathf.Sin(phi) * VerticalShare, s * t * Mathf.Cos(phi));
         Vector3 Normal(float phi) => new Vector3(-tan, Mathf.Sin(phi) / VerticalShare, Mathf.Cos(phi)).Normalized();
         // Its sides: each way round out to its own end, in rings. UV.y: how far along its own way (1 at its end);
@@ -306,9 +307,11 @@ public partial class BeamView : Node3D
             i++;
             bool on = beam.Shining;
             fan.On = Mathf.MoveToward(fan.On, on ? 1f : 0f, dt * (on ? 10f : 5f));
-            fan.Node.Visible = fan.Volume.Visible = fan.On > 0.001f;
-            if (main) _spot.Visible = fan.Node.Visible;
-            if (!fan.Node.Visible)
+            fan.Volume.Visible = fan.On > 0.001f;
+            // (Its lines shape the cone; their own glow along what stops them is not drawn.)
+            fan.Node.Visible = false;
+            if (main) _spot.Visible = fan.Volume.Visible;
+            if (!fan.Volume.Visible)
             {
                 if (slot > 0) RenderingServer.GlobalShaderParameterSet(fan.Lit, new Vector4(0f, -1000f, 0f, 0f));
                 if (main) RenderingServer.GlobalShaderParameterSet(BeamAt, new Vector4(0f, -1000f, 0f, 0f));

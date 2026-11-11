@@ -34,6 +34,10 @@ public partial class BlightView : Node3D
     readonly List<Murkling?> _murkFor = new();
     /// <summary>Murklings farther than this from her are off the screen (metres).</summary>
     const float Drawn = 50f;
+    /// <summary>A sealed leak's wave of her light running out (TopDownMain.Showcase): its middle and its front's radius (null: none).</summary>
+    public (System.Numerics.Vector2 At, float Radius)? Wave { get; set; }
+    /// <summary>How near its front a murkling is touched by it (m), and how long it shows after (s).</summary>
+    const float WaveTouch = 1.5f, WaveShows = 1.2f;
     readonly List<Ripple> _ripples = new();
     ShaderMaterial _orb = null!, _sacMat = null!, _ring = null!;
     /// <summary>The swells in the water (WaterSwells): a Blightroot's head coming down shoves the water out in rings.</summary>
@@ -146,13 +150,22 @@ public partial class BlightView : Node3D
             // Seen only where her light falls on it (her_reveal; each murkling's body has its own material).
             body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("hidden"), 1f);
             // Her beam shows it only if one reaches it (a body in the way shades it).
-            body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("beam_seen"), world.BeamSees(m, m.Position, m.Radius) ? 1f : 0f);
+            bool beamSees = world.BeamSees(m, m.Position, m.Radius);
+            body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("beam_seen"), beamSees ? 1f : 0f);
             // A lit charge stone's light shows it too, as much as it glows.
-            body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("charge_seen"), world.ChargeStoneSees(m.Position, m.Radius));
+            float chargeSees = world.ChargeStoneSees(m.Position, m.Radius);
+            body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("charge_seen"), chargeSees);
             // Light on its core shows all of it (eased in quickly, out a little slower).
             bool core = world.CoreLit(m, m.Position);
             body.Core = Mathf.MoveToward(body.Core, core ? 1f : 0f, dt * (core ? 6f : 3f));
             body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("core_seen"), body.Core);
+            // A sealed leak's wave of her light shows it as its front passes over it, fading out a moment after.
+            if (Wave is { } wave && Mathf.Abs(System.Numerics.Vector2.Distance(m.Position, wave.At) - wave.Radius) < WaveTouch) body.Waved = 1f;
+            else body.Waved = Mathf.MoveToward(body.Waved, 0f, dt / WaveShows);
+            body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("wave_seen"), body.Waved);
+            float auraReach = world.Aura.Shining ? world.Aura.Range * 0.9f + m.Radius : 0f;
+            body.Shown = !m.Budding && (body.Core > 0.3f || body.Waved > 0.15f || chargeSees > 0.3f
+                || System.Numerics.Vector2.Distance(m.Position, world.Aura.Position) < auraReach || beamSees);
             StepBody(m, body, dt);
             float y = LevelMap.SwimBand + 0.08f * Mathf.Sin(_time * 2.3f + m.Seed);
             float scale = m.Radius;

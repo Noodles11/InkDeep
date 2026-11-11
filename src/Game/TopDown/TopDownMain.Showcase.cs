@@ -78,6 +78,8 @@ public partial class TopDownMain
                 _waveRadius = 0f;
             }
         }
+        // (It shows the hidden murklings it passes over.)
+        _blight.Wave = _waveRadius > 0f ? (_waveAt, _waveRadius) : null;
         PushShowcase();
     }
 

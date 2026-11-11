@@ -35,6 +35,8 @@ between).
 - **Verification:** `--dbg-sealat=seconds` seals the leak nearest her then, its wave with it.
 - **The reef wakes**: each sealed leak sends a wave of her light out across the reef (30 m/s), and behind it the reef
   keeps a glow of its own, the more the more of its leaks are sealed (`reef_wake`, `reef_wave`).
+  The wave shows the hidden murklings it passes over as its front touches them (within 1.5 m of it), all of each,
+  fading out over 1.2 s after (`BlightView.Wave`, `murkling`'s `wave_seen`).
 
 - **Coral gardens** (`LevelView.Gardens`): sea rods, tube sponges, staghorn, sea fans, elkhorn and brain corals packed
   in drifting patches on the walls' tops and ledges, and in a band along their feet at the edge of the open floor.
@@ -42,11 +44,12 @@ between).
 - **Her beam as a flashlight's** (`BeamView`, `her_beam_volume.gdshader`, `her_beam.gdshader`): lines of her light,
   about one a degree, are each cast from her bell on their own (`PlaneWorld.LineReach`) and stopped by what they meet,
   rock or a creature's body. They are not drawn; they shape the beam. It is a round cone, reaching up and down from her
-  plane (half as far as either side) as well as across it, each way out to where its line is stopped, so what is not in
-  a line's way lets the light on past. Its haze is faint, brightest down its middle and soft at its sides, fading along
-  it, with tiny motes of plankton drifting and twinkling in it. Where it lands on what stopped it the light stays as
-  bright however far it came: its far end glows there, and at her plane a thin glow 0.2 m deep traces the edge of what
-  it touches. (Her beam's spotlight lights the reef it falls on.)
+  plane as far as either side, each way out to where its line is stopped, so what is not in a line's way lets the light
+  on past. Its haze is faint, brightest down its middle and soft at its sides, fading along it, with tiny motes of
+  plankton drifting and twinkling in it. Where it lands on what stopped it the light stays as bright however far it
+  came: its far end glows there, softly, with no hard edge anywhere: every end of it melts away over its last fifth, and
+  where it goes into rock it fades out over the 2.5 m before it (from the depth). No line is drawn along what it
+  touches. (Her beam's spotlight lights the reef it falls on, its rim and its shadows soft.)
 
 ## Still to do
 

@@ -2,8 +2,8 @@
 // and down from her plane as well as either side, each way only as far as the line of her light that way gets (rock or
 // a body stops it). Its sides are a faint haze, thicker where the eye looks through more of it, bright at her and
 // fading out along it; inside it tiny motes of the water's plankton drift and twinkle where the light catches them. Its
-// far end glows where the light lands on what stopped it, as bright however far it came (the light on the reef does not
-// dim with the distance), and fades away where it only runs out in open water.
+// far end glows softly where the light lands on what stopped it, as bright however far it came (the light on the reef
+// does not dim with the distance), and every end melts away without a hard edge.
 //   tint      her light's colour
 //   strength  how bright (0: off; the view eases it in and out)
 //   UV.x      how far along her aim (a share of its full reach); UV.y how far along its own way (1 at its end)
@@ -13,6 +13,9 @@ render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabl
 
 uniform vec3 tint : source_color = vec3(1.0, 0.82, 0.45);
 uniform float strength = 0.0;
+// (Where the cone goes into rock it fades out over this many metres before it: no hard line where they meet.)
+uniform float soft_meet = 2.5;
+uniform sampler2D depth_tex : hint_depth_texture, filter_nearest;
 
 varying vec3 v_world;
 varying vec3 v_normal;
@@ -42,8 +45,15 @@ void fragment() {
 	vec3 spot = vec3(bv_hash(cell + 3.1), bv_hash(cell + 7.7), bv_hash(cell + 1.3)) - 0.5;
 	float mote = step(0.8, seed) * (1.0 - smoothstep(0.05, 0.13, length(in_cell - spot * 0.7)));
 	mote *= (0.5 + 0.5 * sin(TIME * (2.0 + 3.0 * seed) + seed * 50.0)) * (0.35 + 0.65 * fall) * near * pow(facing, 0.7);
-	// Its far end where the light lands on something: as bright however far it came (no falloff there).
-	float land = stopped * smoothstep(0.78, 1.0, u) * 0.12 * pow(facing, 0.8);
+	// Its far end where the light lands on something: as bright however far it came (no falloff there), a soft glow
+	// swelling toward it and melting away at its very edge (no hard rim anywhere it ends).
+	float land = stopped * smoothstep(0.5, 0.9, u) * (1.0 - smoothstep(0.9, 1.0, u)) * 0.12 * facing;
+	float ends = 1.0 - smoothstep(0.82, 1.0, u);
+	haze *= ends;
+	mote *= ends;
 	ALBEDO = mix(tint, vec3(1.0), clamp(mote * 0.6, 0.0, 1.0));
-	ALPHA = clamp(strength * (haze + mote * 2.6 + land), 0.0, 1.0);
+	float scene = texture(depth_tex, SCREEN_UV).r;
+	vec4 behind = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, scene, 1.0);
+	float meet = smoothstep(0.0, soft_meet, -behind.z / behind.w + VERTEX.z);
+	ALPHA = clamp(strength * (haze + mote * 2.6 + land) * meet, 0.0, 1.0);
 }

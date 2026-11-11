@@ -382,7 +382,12 @@ meter that starts full. Each shot of her light takes its damage (illuminance) of
 meter regrows, at a rate set by the creature's kind and the Menace. Emptied, the creature is cleansed: one strong
 enough shot does it at once, or keep shooting until the meter runs out.
 
-No meter is drawn. Instead **her light's outline** (a warm-white line round the silhouette) **stays** round the
+**Health bars** (`HealthBars`): a thin bar over each corrupted creature (murklings, Blightroots, Blotters,
+Thumpsquirts, Inkwardens, Lashjaws, corrupted flounders) shows how much of its meter is left: green above 60%, yellow
+above 30%, red below. It is drawn only while the creature can be seen: a murkling only while her glow, her beam, a lit
+charge stone or a sealed leak's wave shows it; the others while they are on the screen. An emptied creature has none.
+
+**Her light's outline** (a warm-white line round the silhouette) **stays** round the
 creature for as long as its corruption is not full (`corruption_orb`'s `worn`, `BlightView.SyncOutlines`): thin after
 the first hit, thicker the less corruption it has left, up to about a fifth of its radius near empty, and a little
 brighter. A hit does not flash it (the shader's `hit` is left at 0 for now). Regrowing to full, it is gone; emptied,

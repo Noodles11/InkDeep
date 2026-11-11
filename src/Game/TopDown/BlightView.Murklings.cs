@@ -31,6 +31,10 @@ public partial class BlightView
         public float LastThrowAge = 10f;
         /// <summary>How much light on its core shows the whole of it (eased).</summary>
         public float Core;
+        /// <summary>How much a sealed leak's wave of light, passing over it, still shows it (1 as it touches it, fading).</summary>
+        public float Waved;
+        /// <summary>Whether it showed at all this frame (her light, a charge stone's, the wave): its health bar is drawn only then.</summary>
+        public bool Shown;
         /// <summary>A second material drawing it over her (a Blightroot's head: murkling_over), kept in step with Material.</summary>
         public ShaderMaterial? Over;
         public MurkBody(ShaderMaterial material) { Material = material; }
@@ -67,6 +71,9 @@ public partial class BlightView
 
     /// <summary>Liquid bodies by what they belong to: a murkling, or a Blightroot's head.</summary>
     readonly Dictionary<object, MurkBody> _bodies = new();
+
+    /// <summary>Whether a murkling showed this frame (her light, a charge stone's, a sealed leak's wave): its health bar is drawn only then.</summary>
+    public bool Shown(Murkling m) => _bodies.TryGetValue(m, out var b) && b.Shown;
     Shader? _murkShader;
 
     MurkBody BodyOf(object m)
