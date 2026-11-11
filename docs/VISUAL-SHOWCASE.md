@@ -19,8 +19,20 @@ between).
   rock, pale grey sand; coral in four colours; a cool pale sun, some god rays, caustics; a heavy vignette. Painted in
   look 0 (`ArtLook.Painted`, set by `TopDownMain.ApplyLook` and the title).
 - **Her light brings the colour** (`topdown_post.gdshader`'s `unlit_saturation`, `unlit_dim`; `CameraRig.SetShowcase`):
-  outside her glow and her beam (and what sealed leaks have woken) the reef keeps 30% of its colour and 88% of its
+  outside her glow and her beam (and what sealed leaks have woken) the reef keeps 15% of its colour and 80% of its
   light, so it reads grey until she lights it, and her light is plain to see.
+- **The order of the eye** (`CameraRig.SetShowcase`, `topdown_post.gdshader`; the Bible's Sixth-of-a-Second Test): her
+  and her light first, then threats and pickups, then walls and ways, the reef's beauty last.
+  - *Values drawn together* outside her light (`unlit_flatten`, 35% of the way to a quiet mid-dark): the unlit reef
+    is a calm ground, not a picture competing with the play.
+  - *Nothing of the reef outshines her* (`highlight_knee`): the reef's brightest is rolled off from 0.5, her pool of
+    light on pale sand included; she and her light, drawn after the pass, stay the brightest on screen.
+  - *Her seat* (`her_seat`): the reef right under her is held up to half darker over about a metre, so her bell stands
+    off her own pool of light.
+  - *The walls' line* (`wall_line`): where the reef's surface rises through her plane, a thin pale line runs along
+    it (on whole surfaces only, never at a silhouette's edge), brighter where her light falls. Where she can swim and
+    where she cannot is plain at a glance; pots and stones standing in her plane are ringed the same way.
+  - *The camera draws in* in a fight (docs/DIVE.md §3).
 - **Fog under her plane** (`below_fog`): the water thickens below the swim height, 80% of the way to the water's grey
   over the first 5 m down, thinner where her light reaches.
 - **Crisp water** (`CameraRig.SetShowcase`): the deeps barely blurred and a thin veil over them, so the reef reads as
@@ -34,7 +46,9 @@ between).
   between, lifts in its own colours. (Under a drawn look it also swaps the drawn skin for the painted one there.)
 - **Verification:** `--dbg-sealat=seconds` seals the leak nearest her then, its wave with it.
 - **The reef wakes**: each sealed leak sends a wave of her light out across the reef (30 m/s), and behind it the reef
-  keeps a glow of its own, the more the more of its leaks are sealed (`reef_wake`, `reef_wave`).
+  keeps a glow of its own, the more the more of its leaks are sealed (`reef_wake`, `reef_wave`): half its colour back
+  while some still pour, **the whole painting once every leak is sealed** (`reef_show`). The reef's beauty is the
+  reward of cleansing it.
   The wave shows the hidden murklings it passes over as its front touches them (within 1.5 m of it), all of each,
   fading out over 1.2 s after (`BlightView.Wave`, `murkling`'s `wave_seen`).
 

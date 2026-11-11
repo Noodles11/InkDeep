@@ -94,10 +94,13 @@ float reef_wave_front(vec3 p) {
 	return band * (1.0 - smoothstep(70.0, 170.0, reef_wave.z));
 }
 
-// How much the reef shows as it is at a point (0..1): in her light, and by as much as it is awake.
+// How much the reef shows as it is at a point (0..1): in her light, and by as much as it is awake: half its colour
+// back while some of its leaks still pour, the whole painting once every one is sealed (the reward of cleansing it).
 float reef_show(vec3 p) {
 	if (reef_showcase <= 0.0) return 0.0;
-	return clamp(max(reef_lit(p), max(reef_awake(p) * 0.5, reef_wave_front(p))), 0.0, 1.0);
+	float awake = reef_awake(p);
+	awake *= 0.5 + 0.5 * smoothstep(0.9, 1.0, awake);
+	return clamp(max(reef_lit(p), max(awake, reef_wave_front(p))), 0.0, 1.0);
 }
 
 #endif

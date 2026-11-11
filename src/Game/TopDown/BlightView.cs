@@ -166,6 +166,7 @@ public partial class BlightView : Node3D
             float auraReach = world.Aura.Shining ? world.Aura.Range * 0.9f + m.Radius : 0f;
             body.Shown = !m.Budding && (body.Core > 0.3f || body.Waved > 0.15f || chargeSees > 0.3f
                 || System.Numerics.Vector2.Distance(m.Position, world.Aura.Position) < auraReach || beamSees);
+            SenseUnseen(world, m, body, dt);
             StepBody(m, body, dt);
             float y = LevelMap.SwimBand + 0.08f * Mathf.Sin(_time * 2.3f + m.Seed);
             float scale = m.Radius;
@@ -493,6 +494,59 @@ public partial class BlightView : Node3D
         ReefFishKind.Clownfish => new Color(1f, 0.5f, 0.15f, 1f),
         _ => new Color(0.3f, 0.55f, 1f, 1f),
     };
+
+    /// <summary>
+    /// Sensing the unseen (docs/CORRUPTION.md): she is never harmed by something she had no way to sense. A murkling no
+    /// light shows, within SenseReach of her, troubles the water: a pale ripple spreads from where it is, the oftener the
+    /// nearer it comes (RippleFar to RippleNear seconds apart), and its coming is heard once from where it is (Sensed;
+    /// again only after it has been out of her sensing for Rearm). One drinking her unseen (her glow out) draws motes of
+    /// her light off her toward it, so the thief is plain.
+    /// </summary>
+    public const float SenseReach = 13f, RippleFar = 1.5f, RippleNear = 0.55f, Rearm = 4f;
+    static readonly Color RippleTint = new(0.72f, 0.9f, 1f, 0.42f);
+    /// <summary>An unseen murkling has come within her sensing, here.</summary>
+    public event System.Action<System.Numerics.Vector2>? Sensed;
+
+    void SenseUnseen(PlaneWorld world, Murkling m, MurkBody body, float dt)
+    {
+        var her = world.Player.Position;
+        float d = System.Numerics.Vector2.Distance(m.Position, her);
+        bool sensed = !body.Shown && !m.Budding && m.Alive && !world.Defeated && d < SenseReach + m.Radius;
+        if (!sensed)
+        {
+            body.Unsensed += dt;
+            if (body.Unsensed > Rearm) body.Heard = false;
+            body.Ripple = 0f;
+            return;
+        }
+        body.Unsensed = 0f;
+        if (!body.Heard)
+        {
+            body.Heard = true;
+            Sensed?.Invoke(m.Position);
+        }
+        body.Ripple -= dt;
+        if (body.Ripple <= 0f)
+        {
+            float near = 1f - Mathf.Clamp((d - m.Radius) / SenseReach, 0f, 1f);
+            body.Ripple = Mathf.Lerp(RippleFar, RippleNear, near);
+            var tint = RippleTint with { A = RippleTint.A * (0.55f + 0.45f * near) };
+            AddRipple(m.Position, LevelMap.SwimBand - 0.05f, m.Radius * 0.5f, m.Radius * 1.5f + 0.7f, 0.9f, tint);
+        }
+        // Drinking her unseen: her light leaves her toward it.
+        if (m.Clinging)
+        {
+            var from = new Vector3(her.X, LevelMap.SwimBand + 0.3f, her.Y);
+            var to = new Vector3(m.Position.X, LevelMap.SwimBand, m.Position.Y);
+            var way = to - from;
+            float len = Mathf.Max(way.Length(), 0.05f);
+            int n = (int)(18f * dt) + (_motes.RandRange(0f, 1f) < 18f * dt % 1f ? 1 : 0);
+            var gold = OctoShoots.Game.Fx.HerColor.Light;
+            for (int k = 0; k < n; k++)
+                _motes.Emit(from + _motes.RandDir() * 0.25f, way / len * _motes.RandRange(1.6f, 2.8f) + _motes.RandDir() * 0.3f, len / 2.2f + 0.15f,
+                    _motes.RandRange(0.04f, 0.07f), 0.015f, gold with { A = 0.95f }, gold with { A = 0f }, drag: 0.4f, buoyancy: 0f);
+        }
+    }
 
     void AddRipple(System.Numerics.Vector2 at, float y, float from, float to, float life, Color tint)
     {

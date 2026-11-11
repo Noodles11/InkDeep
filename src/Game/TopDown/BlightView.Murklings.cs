@@ -35,6 +35,11 @@ public partial class BlightView
         public float Waved;
         /// <summary>Whether it showed at all this frame (her light, a charge stone's, the wave): its health bar is drawn only then.</summary>
         public bool Shown;
+        /// <summary>Unseen but near her: till its next ripple on the water (s), and whether its coming has been heard.</summary>
+        public float Ripple;
+        public bool Heard;
+        /// <summary>How long it has been out of her sensing (re-arms its sound).</summary>
+        public float Unsensed;
         /// <summary>A second material drawing it over her (a Blightroot's head: murkling_over), kept in step with Material.</summary>
         public ShaderMaterial? Over;
         public MurkBody(ShaderMaterial material) { Material = material; }

@@ -389,6 +389,17 @@ sheen on its lip. As the creature is cleansed the ink draws back and thins, down
 or red. It is drawn only while the creature can be seen: a murkling only while her glow, her beam, a lit charge stone or
 a sealed leak's wave shows it; the others while they are on the screen. An emptied creature has none.
 
+**Sensing the unseen** (`BlightView.SenseUnseen`; the Bible's Unseen Test): she is never harmed by something she had
+no way to sense. A murkling that no light shows, within 13 m of her (`SenseReach`), gives itself away without being
+seen:
+- **the water is troubled round it**: a pale ripple spreads from where it is, every 1.5 s at the edge of her sensing
+  and as often as every 0.55 s as it closes on her;
+- **it is heard** once as it comes within her sensing, from where it is (a low gurgle, placed in the world), and again
+  only after it has been out of her sensing for 4 s;
+- **the camera draws in** as it comes within 12 m (docs/DIVE.md §3);
+- **drinking her unseen** (her glow out), it draws motes of her light off her toward it, so the thief is plain.
+Her light on it shows the creature itself, as ever. `--dbg-sense` holds two murklings past her glow with her beam dark.
+
 **Her light's outline** (a warm-white line round the silhouette) **stays** round the
 creature for as long as its corruption is not full (`corruption_orb`'s `worn`, `BlightView.SyncOutlines`): thin after
 the first hit, thicker the less corruption it has left, up to about a fifth of its radius near empty, and a little

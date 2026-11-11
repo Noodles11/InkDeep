@@ -172,7 +172,7 @@ Clementine never speaks. Her character is communicated entirely through motion a
 ### 6.1 Camera & composition (fixed)
 
 - Tilted top-down, 55–65°, perspective, narrow FOV (~35°) so arches and reef walls parallax softly. North is always up; the world and minimap agree.
-- View on screen about 44 × 67 m of ground (the camera 55 m back): about 15% of a reef at once (docs/DIVE.md §3).
+- View on screen about 36 × 54 m of ground while calm (the camera 55 m back), drawing in to 38 m in a fight: she is larger when it matters (docs/DIVE.md §3).
 - Canopy fade: arch bodies, cave roofs and overhangs live on a canopy layer that blurs and dissolves while Clementine is underneath — the reef reads as layered and physical, not painted flat. Ridge walls between camera and player are cut open round her in a clean round opening, the floor seen running on under them (DESIGN-TOPDOWN §12.2's cutout).
 - Depth focus (the look, after Below): the swim plane is the focal plane. Within ~0.6 m below / 1.6 m above stays sharp; below blurs, fogs and darkens toward dim blue-green; above blurs and darkens into foreground silhouettes. Heavy oval vignette, cool grade on top. Clementine, the gateway, pearls, shells and ink are drawn after the pass — always sharp.
 - Only two camera breaks, ever: the boss-awakening dip (2 s low swell) and the Tank transition (the pipe draws her up a vertical shaft — the game’s single sanctioned moment of verticality). The dive between reefs is not a break: it is the ordinary way down.
@@ -370,6 +370,8 @@ Rule one: diegetic first. The HUD exists only where the body can’t carry the i
 ## 12. Theme tests — run every new idea through these
 
 - The Warmth Test: is Clementine still the warmest light in the scene?
+- The Sixth-of-a-Second Test: in any screenshot, can a stranger point at her, at the danger and at the way on within a sixth of a second? The order of the eye is fixed: her and her light first, then threats and pickups, then walls and ways, and the reef's beauty last.
+- The Unseen Test: can she be harmed by something she had no way to sense a second earlier? Then it needs a tell that is not sight: the water troubled round it, a sound from where it is, the camera drawing in, her light leaving her toward it.
 - The Read-at-Range Test: does a corrupted creature read as corrupted at 30 m through mist — wrong anatomy, the ink look, and the drip?
 - The Light Test: does this pearl or system show in her light or on her body? If it can’t, why not?
 - The Freeing Test: could this moment be mistaken for a kill? Fix it.
@@ -396,5 +398,7 @@ Rule one: diegetic first. The HUD exists only where the body can’t carry the i
 - **No faces, anywhere in play:** no boss cut-in; creatures and bosses are real animals.
 - **The corrupted's meters** are rings of ink, never coloured bars.
 - **The build shows in her light** (§5.2).
+- **The reef's colour is the reward of cleansing it:** grey and quiet outside her light while its leak pours, the whole
+  painting once it is sealed (docs/VISUAL-SHOWCASE.md).
 
 *Ink Deep — the dark is the ocean, the light is you, and everything you swallow becomes part of the lantern.*

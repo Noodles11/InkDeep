@@ -27,7 +27,8 @@ namespace OctoShoots.Game.TopDown;
 /// --autopilot, --dive (dives whenever it can), --dbg-pad (on the controller from the start), --calm (no creatures), --fire, --pearls=, --hp=, --luck=, --boss-hp=, --paused, --map, --f3, --no-focus, --dbg-nofog (no floor fog),
 /// --capture=dir --frames=a,b, --dbg-say=text (a message banner, a second in), --dbg-loose=id (that pearl loose near her), --at=prism|trio|charge (in a prism stones' bed, a charge stones' trio's
 /// nook, before a charge stone), --dbg-prism (a coloured seal's stones laid on her way to it; --fire aims at it), --dbg-shadow (her beam held
-/// along the most open way, two murklings held still in it),
+/// along the most open way, two murklings held still in it), --dbg-sense (the same with her beam dark and the murklings
+/// held past her glow: unseen, sensed),
 /// --dbg-charge (every charge stone charged), --at=gate (swims into the boss arena through its
 /// opened way in), --dbg-free=seconds (the boss freed that long after it lands), --dbg-steer=x,y (she swims that way;
 /// --dbg-steer-fight: once the boss fights), --dbg-freed=tull,… (the bay's folk freed, at home), --look=N (an art direction under study for the reef, docs/ART-LOOKS.md).
@@ -333,6 +334,8 @@ public partial class TopDownMain : Node3D
     SecretSeal? _dbgPrismSeal;
     /// <summary>Verification (--dbg-shadow): her beam held along the most open way from her, two murklings held still in it (her beam's shadows).</summary>
     bool _dbgShadow;
+    /// <summary>Verification (--dbg-sense): as --dbg-shadow, her beam dark and the murklings held past her glow, unseen.</summary>
+    bool _dbgSense;
     System.Numerics.Vector2? _dbgShadowWay;
     /// <summary>Verification: murklings bud round an Inkwarden (the first, or a turned pufferfish set 6 m ahead of her), so its tethers show.</summary>
     bool _dbgWard;
@@ -465,6 +468,8 @@ public partial class TopDownMain : Node3D
         _corruption = new CorruptionView();
         AddChild(_corruption);
         _blight = new BlightView { Swells = _swells };
+        // An unseen murkling coming near is heard from where it is (docs/CORRUPTION.md, "Sensing the unseen").
+        _blight.Sensed += at => _sfx.PlayAt("gurgle", new Vector3(at.X, LevelMap.SwimBand, at.Y), -9f, 0.12f);
         AddChild(_blight);
         _ash = new AshView();
         AddChild(_ash);
@@ -541,6 +546,7 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--boss-hp=") && float.TryParse(Value("--boss-hp="), NumberStyles.Float, CultureInfo.InvariantCulture, out float bhp)) _bossHp = bhp;
             else if (arg == "--fire") _autoFire = true;
             else if (arg == "--dbg-shadow") _autoFire = _dbgShadow = true;
+            else if (arg == "--dbg-sense") _autoFire = _dbgShadow = _dbgSense = true;
             else if (arg == "--use-active") _autoActive = true;
             else if (arg.StartsWith("--dbg-leaks=")) _dbgLeaks = int.Parse(Value("--dbg-leaks="));
             else if (arg.StartsWith("--dbg-leak-hits=")) _dbgLeakHits = int.Parse(Value("--dbg-leak-hits="));
@@ -2844,6 +2850,9 @@ public partial class TopDownMain : Node3D
         // The pause menu's close framing: nearer, and looking past her so she sits at the screen's left.
         float framing = _menuBlend * _menuBlend * (3f - 2f * _menuBlend);
         _camera.Zoom = Mathf.Lerp(1f, MenuZoom, framing);
+        // In a fight the camera draws in on her (and so tells her of danger near that she cannot see yet); calm, it
+        // stands back again. Not in a haven, nor while the pause menu frames her.
+        _camera.Tense(!Paused && !_world.Calm && !_world.Defeated && _world.Time > ExperienceTuning.CalmSeconds + 0.5f, _world.Boss is { Stage: BossStage.Fight }, dt);
         _camera.Track(Focus(alpha), dt, look: new Vector3(MenuShift() * framing, 0f, 0f));
         _dark.Sync(_world, _camera.Camera, _bell.GlobalPosition, dt);
         // A wall between the camera and her (a tunnel's roof, a wall in front) is cut open round her while it hides her,
@@ -4215,7 +4224,7 @@ public partial class TopDownMain : Node3D
             }
             var way = _dbgShadowWay!.Value;
             var side = new System.Numerics.Vector2(-way.Y, way.X);
-            System.Numerics.Vector2[] held = { from + way * 3.5f, from + way * 7.5f - side * 1.2f };
+            System.Numerics.Vector2[] held = _dbgSense ? new[] { from + way * 7.5f, from + way * 10.5f - side * 2f } : new[] { from + way * 3.5f, from + way * 7.5f - side * 1.2f };
             while (_world.Murklings.Count(m => m.Alive && !m.Budding) < held.Length) _world.Murklings.Add(new Murkling { Position = held[0], Bud = 0f, Seed = _world.Murklings.Count });
             int n = 0;
             foreach (var m in _world.Murklings.Where(m => m.Alive && !m.Budding).Take(held.Length))
@@ -4226,7 +4235,7 @@ public partial class TopDownMain : Node3D
             }
             _world.Player.Velocity = System.Numerics.Vector2.Zero;
             input.Aim = way;
-            input.Beam = true;
+            input.Beam = !_dbgSense;
             return true;
         }
         System.Numerics.Vector2? target = _dbgPrismSeal is { } aimed ? aimed.Emblem : _world.Boss is { Stage: BossStage.Fight } queen ? queen.Position

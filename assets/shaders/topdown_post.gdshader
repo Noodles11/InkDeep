@@ -65,6 +65,16 @@ uniform float below_fog = 0.0;
 uniform float below_fog_depth = 5.0;
 uniform float unlit_saturation = 1.0;
 uniform float unlit_dim = 1.0;
+// Readability (docs/GAME.md §11): outside her light the reef's values are drawn together toward a quiet mid-dark
+// (unlit_flatten: how far), the brightest of the reef is rolled off so nothing of it outshines her (highlight_knee: the
+// brightness it starts at, 0 off), and where rock rises through her plane a thin pale line is drawn along it
+// (wall_line: its strength), so where she can swim and where she cannot is plain at a glance.
+uniform float unlit_flatten = 0.0;
+uniform float highlight_knee = 0.0;
+uniform float wall_line = 0.0;
+// Her seat: the reef right under her held darker (her_seat: by how much at its middle, over about a metre), so her
+// bell stands off her own pool of light instead of melting into it.
+uniform float her_seat = 0.0;
 // The mountains' tall tops (DESIGN-TOPDOWN §4.1): above peak_from metres over her plane, rock softens further out of
 // focus, rising to full over peak_span — so the range reads as distant and calm, and the floor she plays on stays the
 // sharpest thing on screen.
@@ -493,7 +503,9 @@ void fragment() {
 	col += her_tint * her_water(cam, ray, t0, open_deep ? t0 + 120.0 : t1, ign) * 0.15 * her_k;
 	if (!open_deep) {
 		float on = her_reach(world) * her_k;
-		col = col * (1.0 + her_tint * on * 0.6 * her_lantern) + her_tint * on * on * 0.05 * her_lantern;
+		col = col * (1.0 + her_tint * on * (her_seat > 0.0 ? 0.42 : 0.6) * her_lantern) + her_tint * on * on * 0.05 * her_lantern;
+		vec2 seat = on_layer.xz - player_pos.xz;
+		col *= 1.0 - her_seat * exp(-dot(seat, seat) / 1.7);
 	}
 	// Her bubbles carry light: each a small halo of its own on the same layer, the same depth-darkness scaling as hers
 	// (subtle in the bright Shallows, glorious in the deep).
@@ -523,7 +535,27 @@ void fragment() {
 	float shown = open_deep ? 0.0 : max(max(lit, reef_show(world)), pearl_shown * 0.9);
 	col *= mix(unlit_dim, 1.0, shown);
 	float luma = dot(col, vec3(0.299, 0.587, 0.114));
+	// (Its values drawn together where she does not light it: darks lifted a little, lights held down.)
+	if (unlit_flatten > 0.0) {
+		float flat_to = mix(luma, 0.2, unlit_flatten * (1.0 - shown));
+		col *= flat_to / max(luma, 1e-3);
+		luma = flat_to;
+	}
+	// (The reef's brightest rolled off: her own body and light, drawn after this pass, stay the brightest on screen.)
+	if (highlight_knee > 0.0) {
+		float over_knee = max(luma - highlight_knee, 0.0);
+		float rolled = 1.0 / (1.0 + 2.2 * over_knee);
+		col *= rolled;
+		luma *= rolled;
+	}
 	col = mix(vec3(luma), col, reef_saturation * mix(unlit_saturation, 1.0, shown));
+	// The walls' line: where the reef's surface crosses her plane (only on a whole surface, not at a silhouette's edge).
+	if (wall_line > 0.0 && !open_deep) {
+		float dy = world.y - swim_level - 0.1;
+		float fw = max(fwidth(dy), 1e-4);
+		float on_line = (1.0 - smoothstep(0.8, 2.0, abs(dy) / fw)) * (1.0 - smoothstep(0.3, 1.0, fw));
+		col = mix(col, vec3(0.72, 0.88, 1.0), on_line * wall_line * (0.45 + 0.55 * shown));
+	}
 	// Shadows take the water's hue at their own brightness (cool, not lifted).
 	float wl = max(dot(reef_water_deep, vec3(0.299, 0.587, 0.114)), 0.01);
 	// (Not what her own light falls on: her warmth reaches the eye.)

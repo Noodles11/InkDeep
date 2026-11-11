@@ -163,6 +163,10 @@ much corruption is left (CORRUPTION, "Corruption rings").
   its bezel her corruption meter; top centre a dot per leak. Messages slide down from the top edge. Nothing else stays on
   the screen.
 - **On the reef**: corruption rings round the corrupted she can see; the pearl she is absorbing on its own card.
+- **Readable at a glance** (VISUAL-SHOWCASE, "The order of the eye"): outside her light the reef is grey and quiet and
+  never outshines her; a pale line runs along the walls at her plane; the camera draws in on her in a fight; what she
+  cannot see near her troubles the water and is heard (CORRUPTION, "Sensing the unseen"). A wholly cleansed reef gets
+  its full colour back.
 - **The pause menu**: Level up, Stats, Pearls, Achievements, Requests, Chart.
 - **The title** (TITLE-MENU): the three jellies over a live sea; statistics; the Sea-pedia; settings.
 
@@ -174,7 +178,7 @@ much corruption is left (CORRUPTION, "Corruption rings").
 - **The lore's folklore frame** (THEME-BIBLE §4): the folk's lines, the Sea-pedia and the bosses' cut-ins carry the tale
   of the jellyfish's errand and the Palace, piece by piece across many dives.
 - **The rest of the pearls** on the beam, status effects, transformations (proposals/BEAM-PEARLS-PLAN.md).
-- **The next steps of the project review** (proposals/MASTERPIECE-REVIEW.md §9): readability, the light grammar for
+- **The next steps of the project review** (proposals/MASTERPIECE-REVIEW.md §9): playtests, the light grammar for
   pearls, the tide clock and a 30-minute mode, sound as a system, co-op.
 
 ## 13. Known gaps between the documents and the game

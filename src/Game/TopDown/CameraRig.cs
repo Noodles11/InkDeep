@@ -14,13 +14,19 @@ public partial class CameraRig : Node3D
     public const float Tilt = 60f;
     public const float Fov = 35f;
     /// <summary>
-    /// Distance from the followed point: ~36 m of ground top to bottom and ~54 m across at 16:9; at the players' zoom
-    /// about 44 × 67 m, so a screen shows about 15% of a 140 m level (docs/DIVE.md §3).
+    /// Distance from the followed point while the reef is calm: ~36 m of ground top to bottom and ~54 m across at 16:9,
+    /// about a tenth of a 140 m level (docs/DIVE.md §3). In a fight the camera draws in (FightZoom).
     /// </summary>
     public const float Distance = 55f;
+    /// <summary>
+    /// In a fight (the corrupted near her, PlaneWorld.Calm false) the camera draws in to this share of its distance
+    /// (38 m), and to BossZoom in a boss's arena (the whole arena stays in view); it eases in at ZoomIn a second and
+    /// back out, slower, at ZoomOut.
+    /// </summary>
+    public const float FightZoom = 0.69f, BossZoom = 0.85f, ZoomIn = 0.5f, ZoomOut = 0.18f;
     const float Follow = 6f;
-    /// <summary>The zoom: fixed for players at 0.8 (69 m); the debug menu alone moves it, from 0.5 (farther) to 2 (closer).</summary>
-    public const float DefaultZoom = 0.8f, MinZoom = 0.5f, MaxZoom = 2f;
+    /// <summary>The zoom: fixed for players at 1 (55 m); the debug menu alone moves it, from 0.5 (farther) to 2 (closer).</summary>
+    public const float DefaultZoom = 1f, MinZoom = 0.5f, MaxZoom = 2f;
     /// <summary>Verification: `--dbg-zoom=metres` brings the camera closer (to inspect Clementine); it overrides the setting.</summary>
     readonly float? _dbgDistance = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--dbg-zoom=")) is { } zoom
         && float.TryParse(zoom["--dbg-zoom=".Length..], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float d) ? d : null;
@@ -35,6 +41,15 @@ public partial class CameraRig : Node3D
     public Camera3D Camera { get; private set; } = null!;
     /// <summary>The dive pulls the camera in (1 is the usual distance).</summary>
     public float Zoom { get; set; } = 1f;
+    /// <summary>The fight's draw-in (1 calm, FightZoom in a fight), eased by Tense.</summary>
+    public float Close { get; private set; } = 1f;
+
+    /// <summary>Eases the fight's draw-in toward its mark: in quickly as danger nears, out slowly once it is calm.</summary>
+    public void Tense(bool fight, bool boss, float dt)
+    {
+        float to = boss ? BossZoom : fight ? FightZoom : 1f;
+        Close = Mathf.MoveToward(Close, to, dt * (to < Close ? ZoomIn : ZoomOut));
+    }
     Vector3 _focus;
     ShaderMaterial _post = null!;
     bool _snapped;
@@ -76,7 +91,13 @@ public partial class CameraRig : Node3D
     /// The game's look: how much fog lies under her plane (thickening over 5 m down), and what is left outside her light
     /// of the reef's colour and of its brightness.
     /// </summary>
-    public const float BelowFog = 0.8f, UnlitSaturation = 0.3f, UnlitDim = 0.88f;
+    public const float BelowFog = 0.8f, UnlitSaturation = 0.15f, UnlitDim = 0.8f;
+    /// <summary>
+    /// Readability (docs/GAME.md §11): how far the unlit reef's values are drawn together, the brightness the reef's
+    /// highlights are rolled off from, how strong the pale line along the walls at her plane is, and how much darker
+    /// the reef right under her is held (her seat).
+    /// </summary>
+    public const float UnlitFlatten = 0.35f, HighlightKnee = 0.5f, WallLine = 0.4f, HerSeat = 0.5f;
 
     public void SetShowcase(bool on)
     {
@@ -88,6 +109,10 @@ public partial class CameraRig : Node3D
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("below_fog"), on ? BelowFog : 0f);
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("unlit_saturation"), on ? UnlitSaturation : 1f);
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("unlit_dim"), on ? UnlitDim : 1f);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("unlit_flatten"), on ? UnlitFlatten : 0f);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("highlight_knee"), on ? HighlightKnee : 0f);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("wall_line"), on ? WallLine : 0f);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("her_seat"), on ? HerSeat : 0f);
     }
 
     public void SetReducedMotion(bool reduced) => _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("wobble"), reduced ? 0f : 1f);
@@ -263,7 +288,7 @@ public partial class CameraRig : Node3D
         }
         float tilt = Mathf.DegToRad(Tilt);
         // North is −Z: the camera sits south of the focus, looking north and down.
-        Vector3 offset = new Vector3(0f, Mathf.Sin(tilt), Mathf.Cos(tilt)) * _distance * Zoom;
+        Vector3 offset = new Vector3(0f, Mathf.Sin(tilt), Mathf.Cos(tilt)) * _distance * Zoom * Close;
         _shakeTime += dt;
         _shake = Mathf.MoveToward(_shake, 0f, dt * 1.6f);
         Vector3 jolt = _shake > 0f ? new Vector3(Mathf.Sin(_shakeTime * 53f), Mathf.Sin(_shakeTime * 61f + 1f), Mathf.Sin(_shakeTime * 47f + 2f)) * _shake * _shake : Vector3.Zero;
