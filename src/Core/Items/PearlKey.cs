@@ -75,6 +75,10 @@ public static class PearlKey
             if (s.Explosive || s.Charge || s.Laser || s.ChainTargets > 0 || s.CritChance > 0f) Add(Damage, Shots);
             if (s.Pierce || s.Spectral || s.Bounces > 0) Add(Range, Shots);
             if (s.Homing || s.Boomerang || s.Spiral) Add(ShotSpeed, Shots);
+            // Her light's colours: each pearl its colour.
+            if (s.Ember > 0) Add(Burn, Status, 2f);
+            if (s.Bloom > 0) Add(Health, Status, 2f);
+            if (s.Frost > 0) Add(Freeze, Status, 2f);
             if (s.FreezeChance > 0f) Add(Freeze, Status);
             if (s.BurnChance > 0f) Add(Burn, Status);
             if (s.PoisonChance > 0f) Add(Poison, Status);

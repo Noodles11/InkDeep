@@ -115,6 +115,9 @@ public static class ItemCaption
         if (s.Laser) lines.Add("Her beam reaches half as far again, narrowed to a searchlight");
         if (s.Rear) lines.Add("A fainter beam shines out of her back too");
         if (s.ChainTargets > 0) lines.Add($"What her beam burns arcs its burn to {s.ChainTargets} more within {N(s.ChainRange)} m, at half the rate");
+        if (s.Ember > 0) lines.Add($"Her light turns ember: what it lights keeps burning {N(ColourTuning.Ember(s.Ember))} s after it leaves");
+        if (s.Bloom > 0) lines.Add($"Her light turns to bloom: ink and ash clear ×{N(ColourTuning.Bloom(ColourTuning.BloomClear, s.Bloom))} as fast in it, and a murkling it frees leaves ×{N(ColourTuning.Bloom(ColourTuning.BloomCore, s.Bloom))} the light");
+        if (s.Frost > 0) lines.Add($"Her light turns to frost: what it lights slows, and stands still after {N(ColourTuning.Frost(s.Frost))} s");
         if (s.FreezeChance > 0) lines.Add($"{Pct(s.FreezeChance)} chance to freeze foes for {N(StatusRules.FreezeTime)}s");
         if (s.BurnChance > 0) lines.Add($"{Pct(s.BurnChance)} chance to burn foes for {N(StatusRules.BurnTime)}s");
         if (s.PoisonChance > 0) lines.Add($"{Pct(s.PoisonChance)} chance to poison foes for {N(StatusRules.PoisonTime)}s");

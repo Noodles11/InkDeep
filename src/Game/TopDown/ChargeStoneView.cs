@@ -127,6 +127,11 @@ public partial class ChargeStoneView : Node3D
             s.Material.EmissionEnergyMultiplier = Mathf.Lerp(glint, LitEmission * flicker, s.Glow);
             s.Light.Visible = s.Glow > 0.01f;
             s.Light.LightEnergy = LightEnergy * s.Glow * flicker;
+            // Charged in a colour of hers, it glows in that colour (and lends it: docs/LIGHT-AND-GRAPH.md §10).
+            var own = new Color(ChargeStoneTuning.Colours[c.Colour].X, ChargeStoneTuning.Colours[c.Colour].Y, ChargeStoneTuning.Colours[c.Colour].Z);
+            var shown = c.Lent != LightHue.None ? OctoShoots.Game.Fx.LightColour.Of(c.Lent) : own;
+            s.Material.Emission = shown;
+            s.Light.LightColor = shown;
         }
         bool spent = world.Trio is { Opened: true };
         foreach (var (material, stone) in _sign)

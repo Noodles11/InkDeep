@@ -48,6 +48,8 @@ public sealed class ChargeStone : ILightOwner
     public int Colour;
     /// <summary>Seconds of glow it holds (0: dark).</summary>
     public float Charge;
+    /// <summary>The colour of her light that last charged it (her pearls', the prism stones'): it glows in it and lends it to what is in its light.</summary>
+    public LightHue Lent;
     public LightEmitter Light = null!;
     public float Seed;
     /// <summary>One of the level's trio (its place in it, 0..2), or not (-1).</summary>
@@ -212,11 +214,23 @@ public sealed partial class PlaneWorld
         foreach (var c in ChargeStones)
         {
             float light = 0f;
+            var hue = LightHue.None;
             if (!Defeated)
-                foreach (var (beam, worth) in HerBeams) light += worth * BeamLight(beam, c.Position, 0f, ChargeStoneTuning.Radius, c);
+                foreach (var (beam, worth) in HerBeams)
+                {
+                    float l = BeamLight(beam, c.Position, 0f, ChargeStoneTuning.Radius, c);
+                    if (l <= 0f) continue;
+                    light += worth * l;
+                    hue |= RayHue(beam) | HueAlong(beam.Position, c.Position);
+                }
             bool was = c.Charge > 0f;
-            if (light > 0f) c.Charge = MathF.Min(ChargeStoneTuning.MaxGlow, c.Charge + light * ChargeStoneTuning.ChargeRate * Dt);
+            if (light > 0f)
+            {
+                c.Charge = MathF.Min(ChargeStoneTuning.MaxGlow, c.Charge + light * ChargeStoneTuning.ChargeRate * Dt);
+                c.Lent = hue;
+            }
             else c.Charge = MathF.Max(0f, c.Charge - Dt);
+            if (c.Charge <= 0f) c.Lent = LightHue.None;
             if (!was && c.Charge > 0f) Events.Add(new PlaneEvent(PlaneEventType.ChargeStoneLit, c.Face, c.Out));
             c.Light.Intensity = ChargeStoneTuning.Bright * c.Glow;
         }

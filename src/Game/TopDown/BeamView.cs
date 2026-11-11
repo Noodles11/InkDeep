@@ -59,6 +59,8 @@ public partial class BeamView : Node3D
     readonly List<(float In, float Out, LightHue Hue, float Across)> _hues = new(), _prevHues = new();
     /// <summary>How strong the coloured light is near the stone it comes out of, and at the end of its way.</summary>
     const float TintNear = 0.3f, TintFar = 0.1f;
+    /// <summary>How much thicker a coloured ray's haze is drawn (docs/LIGHT-AND-GRAPH.md §10).</summary>
+    const float ColouredHaze = 1.7f;
     float _time;
 
     static readonly StringName BeamAt = "her_beam_at", BeamShadowTex = "her_beam_shadow", BeamFrame = "her_beam_frame", BeamAxis = "her_beam_axis";
@@ -266,8 +268,11 @@ public partial class BeamView : Node3D
             }
             fan.Volume.GlobalTransform = new Transform3D(new Basis(Vector3.Up, Mathf.Atan2(-dir.Z, dir.X)).Scaled(new Vector3(range, range, range)), origin);
             var m = fan.VolumeMaterial;
-            m.SetShaderParameter("tint", TopDownMain.ShowcaseOn ? color.Lerp(new Color(0.9f, 0.96f, 1f), 0.65f) : color);
-            m.SetShaderParameter("strength", fan.On * dim * beam.Intensity / LightTuning.BeamIntensity);
+            // In the colour her pearls give this ray (PlaneColour.cs).
+            var rayHue = world.RayHue(beam);
+            m.SetShaderParameter("tint", OctoShoots.Game.Fx.LightColour.Beam(rayHue, TopDownMain.ShowcaseOn));
+            // (A coloured ray's haze a little thicker, so its colour shows.)
+            m.SetShaderParameter("strength", fan.On * dim * beam.Intensity / LightTuning.BeamIntensity * (rayHue is LightHue.None or LightHue.White ? 1f : ColouredHaze));
             m.SetShaderParameter("origin", origin);
             m.SetShaderParameter("axis", dir);
             m.SetShaderParameter("half_angle", beam.HalfAngle);
@@ -293,7 +298,7 @@ public partial class BeamView : Node3D
             }
             if (!main) continue;
             // Where her beam's axis lands, in the colour the stones on its way give it.
-            var hue = world.HueAlong(beam.Position, world.BeamEnd);
+            var hue = world.HueAlong(beam.Position, world.BeamEnd) | rayHue;
             if (hue != LightHue.None)
             {
                 _tintLight.Visible = true;
@@ -305,7 +310,7 @@ public partial class BeamView : Node3D
             // Her own beam's spotlight: from her heart, along the beam and a little down onto the reef.
             var look = (dir + Vector3.Down * SpotTilt).Normalized();
             _spot.GlobalTransform = new Transform3D(Basis.LookingAt(look, Vector3.Up), heart);
-            _spot.LightColor = TopDownMain.ShowcaseOn ? color.Lerp(new Color(0.9f, 0.96f, 1f), 0.65f) : color;
+            _spot.LightColor = OctoShoots.Game.Fx.LightColour.Beam(rayHue, TopDownMain.ShowcaseOn);
             _spot.LightEnergy = SpotEnergy * fan.On * dim;
             _spot.SpotRange = range * 1.25f;
             _spot.SpotAngle = Mathf.RadToDeg(beam.HalfAngle);

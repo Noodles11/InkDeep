@@ -38,6 +38,9 @@ uniform float charge_seen = 0.0;
 uniform float core_seen = 0.0;
 // A sealed leak's wave of light passing over it (BlightView: 1 as its front touches it, fading after): all of it shows.
 uniform float wave_seen = 0.0;
+// Her light's colours on it (PlaneColour.cs): the colour on it (rgb) and how strongly (a), and frost's chill (0..1).
+uniform vec4 colour_lit = vec4(0.0);
+uniform float chill = 0.0;
 /// The adventure's murklings: short blowfish spikes all over (a spiked one, from a blue tang); a short wiggling tadpole
 /// tail out behind it along swim (a tadpole one, from a clownfish).
 instance uniform float spikes = 0.0;
@@ -225,6 +228,20 @@ void fragment() {
 		float rough = ROUGHNESS;
 		her_burn_paint((INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz, n, seed, 1.0, ALBEDO, EMISSION, rough);
 		ROUGHNESS = rough;
+		// Her light's colour on it: its rim kindled in it, a glow through the ink.
+		if (colour_lit.a > 0.0) {
+			float kindled = smoothstep(0.3, 0.95, 1.0 - facing);
+			float lick = 0.75 + 0.25 * sin(TIME * 9.0 + around * 5.0 + seed * 7.0);
+			EMISSION += colour_lit.rgb * colour_lit.a * (0.25 + 1.8 * kindled * lick);
+		}
+		// Frost's rime: pale and glassy as it is stilled, crystals glinting on it.
+		if (chill > 0.0) {
+			float crystal = smoothstep(0.72, 0.8, noise2(vec2(lon * 22.0 + seed, p.y * 22.0)));
+			ALBEDO = mix(ALBEDO, vec3(0.5, 0.7, 0.9), 0.5 * chill);
+			ROUGHNESS = mix(ROUGHNESS, 0.15, chill);
+			SPECULAR = mix(SPECULAR, 0.7, chill);
+			EMISSION += vec3(0.6, 0.85, 1.0) * (0.12 * chill + crystal * chill * chill * 1.2);
+		}
 	}
 #ifdef OVER
 	// Drawn after the water's pass (and her), so hazed by hand to match it: matte (no sun glint the water would

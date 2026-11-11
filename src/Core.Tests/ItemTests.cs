@@ -18,7 +18,7 @@ public class ItemTests
     public void CatalogLoadsTheFullSet()
     {
         Assert.Equal(76, Catalog.Items.Count);
-        Assert.Equal(20, Catalog.Synergies.Count);
+        Assert.Equal(23, Catalog.Synergies.Count);
         Assert.Equal(5, Catalog.Transformations.Count);
         Assert.Equal(13, Catalog.Items.Count(i => i.Kind == ItemKind.Active));
     }
@@ -119,7 +119,7 @@ public class ItemTests
     [InlineData("shark_tooth", "+14% damage")]
     [InlineData("squid_ink_espresso", "+30% swim speed")]
     [InlineData("coral_crown", "+20 max HP")]
-    [InlineData("frost_kelp", "12% chance to freeze foes for 1.6s")]
+    [InlineData("frost_kelp", "Her light turns to frost: what it lights slows, and stands still after 2 s")]
     [InlineData("conch_horn", "Recharges in 30s")]
     [InlineData("lamprey_mouth", "Kills heal 3 HP")]
     [InlineData("whale_lung", "+30% shot size")]

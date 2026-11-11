@@ -135,23 +135,6 @@ public class BeamPearlTests
     }
 
     [Fact]
-    public void Frost_Kelp_now_and_then_holds_what_the_beam_keeps_burning()
-    {
-        var w = World("frost_kelp", "frost_kelp", "frost_kelp");
-        var d = Line(w, 6f);
-        var at = w.Map.Start.Position + d * 4f;
-        var m = Pinned(w, at, 10000f);
-        int frozenLate = 0;
-        // (A roll a second at its chance: a minute of it.)
-        for (int i = 0; i < 60 * PlaneWorld.TickRate; i++)
-        {
-            Step(w, d, true, (m, at));
-            if (i > 2 * PlaneWorld.TickRate && w.Dazzled(m)) frozenLate++;
-        }
-        Assert.True(frozenLate > 0);
-    }
-
-    [Fact]
     public void Siren_Song_charms_and_Stingray_Barb_slows()
     {
         var w = World("siren_song", "siren_song", "siren_song", "stingray_barb", "stingray_barb", "stingray_barb");

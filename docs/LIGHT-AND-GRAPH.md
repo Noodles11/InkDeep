@@ -373,3 +373,39 @@ below it (`Stamp`, the stamp seeds), which the levels no longer shared. The rest
 | 9 | What nothing uses any more goes (the line of levels, the shared stamps); the rest reviewed (§9) — built | no |
 
 Each stage ends with the build, the tests and a play check in the game, and is committed on its own.
+
+## 10. Her light's colours (built)
+
+The first words of the light grammar (docs/proposals/LIGHT-GRAMMAR.md §5). Three pearls tint her light
+(`ShotSpec.Ember`, `Bloom`, `Frost`; `PlaneColour.cs`, `ColourTuning`), each copy deepening its tint:
+
+| Pearl | Colour | What it does to the corrupted it lights |
+|---|---|---|
+| Fire Coral | **ember** (red) | keeps burning 2.5 s after the light has left it (+1.5 s a copy) |
+| Glowing Moss | **bloom** (green) | ink and ash clear ×2 as fast in it (+0.5 a copy); a murkling it frees leaves ×1.5 the light (+0.5 a copy) |
+| Frost Kelp | **frost** (blue) | slows the longer it is lit (up to 85%), standing still after 2 s (sooner with copies); thaws over 1.5 s out of it |
+
+- **Dealt across her rays** (`PlaneWorld.DealHues`): one ray takes all her colours mixed; a split beam deals them in
+  turn from its left (Triple Tentacle with ember and frost: ember, frost, ember), Kraken Form's rays round her after
+  it. Rear Fin's and Lighthouse's beams take them all.
+- **Mixed on the creature, as light mixes** (`ApplyColour`): the colours of every ray lighting it, of the prism
+  stones each passed through, and of a charge stone lit in colour near it. A mix does what its colours do, and more:
+
+  | Mix | Also |
+  |---|---|
+  | **sunfire** (ember + bloom, gold) | what it frees bursts in a ring of her light 3 m wide (a light burst of one shot's damage) |
+  | **shatter** (ember + frost, magenta) | a creature frost has stilled takes the ember all at once: a burst of steam 2.5 m wide (two shots' damage), its chill gone |
+  | **lull** (bloom + frost, cyan) | it forgets her (it does not see her) while lit and 1.5 s after |
+  | **daybreak** (all three, white) | all of the above, and her burn × 1.5 |
+
+- **Seals**: a coloured ray opens a coloured seal of its colour with no prism stone; through a stone it mixes with the
+  stone's colour.
+- **Charge stones**: charged by coloured light, a stone glows in that colour and lends it to what is in its light
+  (`ChargeStone.Lent`): a lamp of ember, a pool of frost.
+- **Named when they meet** (synergies, with the banner): Shatter, Sunfire, Lull, Daybreak.
+- **Not on bosses**: a boss takes no colours. Frost stills the creatures a dazzle holds (murklings, Inkwardens,
+  Hearthguards) and slows murklings; the rooted and leaping creatures it only marks.
+- **Drawn** (`LightColour`): each ray's haze, its spotlight and her light on the reef in its colour (thicker, so it
+  shows); a murkling kindled at its rim in the colour on it, frosted and glinting as frost stills it; shatter a burst
+  of steam and a snap, sunfire a ring of light and a chime; a charge stone lit in colour glows in it.
+- Tests: `ColourTests`.

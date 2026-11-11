@@ -81,6 +81,11 @@ public sealed class ShotSpec
     public float SizeMult { get; set; } = 1f;
     public float DamageMult { get; set; } = 1f;
 
+    /// <summary>Her light's colours (docs/LIGHT-AND-GRAPH.md §10): ember (red), bloom (green), frost (blue); copies deepen them.</summary>
+    public int Ember { get; set; }
+    public int Bloom { get; set; }
+    public int Frost { get; set; }
+
     public ShotSpec Clone() => (ShotSpec)MemberwiseClone();
 
     public void MergeFrom(ShotSpec o)
@@ -117,6 +122,9 @@ public sealed class ShotSpec
         CritMult = System.MathF.Max(CritMult, o.CritMult);
         SizeMult *= o.SizeMult;
         DamageMult *= o.DamageMult;
+        Ember += o.Ember;
+        Bloom += o.Bloom;
+        Frost += o.Frost;
     }
 
     static float Combine(float a, float b) => 1f - (1f - a) * (1f - b);

@@ -163,6 +163,13 @@ public partial class BlightView : Node3D
             if (Wave is { } wave && Mathf.Abs(System.Numerics.Vector2.Distance(m.Position, wave.At) - wave.Radius) < WaveTouch) body.Waved = 1f;
             else body.Waved = Mathf.MoveToward(body.Waved, 0f, dt / WaveShows);
             body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("wave_seen"), body.Waved);
+            // Her light's colour on it, and frost's chill (docs/LIGHT-AND-GRAPH.md §10).
+            var colourOn = world.ColourOn(m);
+            body.Colour = Mathf.MoveToward(body.Colour, colourOn != LightHue.None ? 1f : 0f, dt * (colourOn != LightHue.None ? 8f : 2f));
+            if (colourOn != LightHue.None) body.ColourHue = colourOn;
+            var tint = OctoShoots.Game.Fx.LightColour.Of(body.ColourHue);
+            body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("colour_lit"), new Color(tint.R, tint.G, tint.B, body.Colour));
+            body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("chill"), world.ChillOf(m));
             float auraReach = world.Aura.Shining ? world.Aura.Range * 0.9f + m.Radius : 0f;
             body.Shown = !m.Budding && (body.Core > 0.3f || body.Waved > 0.15f || chargeSees > 0.3f
                 || System.Numerics.Vector2.Distance(m.Position, world.Aura.Position) < auraReach || beamSees);

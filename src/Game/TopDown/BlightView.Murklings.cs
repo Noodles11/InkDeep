@@ -35,6 +35,9 @@ public partial class BlightView
         public float Waved;
         /// <summary>Whether it showed at all this frame (her light, a charge stone's, the wave): its health bar is drawn only then.</summary>
         public bool Shown;
+        /// <summary>Her light's colour on it as drawn (eased), and the colour it was last.</summary>
+        public float Colour;
+        public LightHue ColourHue;
         /// <summary>Unseen but near her: till its next ripple on the water (s), and whether its coming has been heard.</summary>
         public float Ripple;
         public bool Heard;

@@ -9,7 +9,7 @@
 | | Passive | Active | All |
 |---|---|---|---|
 | Pearls | 59 | 13 | 72 |
-| Built | 37 | 4 | 41 |
+| Built | 40 | 4 | 44 |
 
 - **Passive** pearls work on their own from the moment she absorbs one: her stats, her bubbles, or something that
   happens when she is hit or frees a creature. They stack.
@@ -44,7 +44,7 @@ max HP leaves it all red).
 | Pale lemon | Glow |
 | Bronze | Knockback |
 | Silver | Defence: foam, slower enemy shots, shields |
-| Ice, ember, lime, pink, lilac | Freeze, burn, poison, charm, slow |
+| Ice, ember, lime, pink, lilac | Freeze, burn, poison, charm, slow; her light's colours: frost ice, ember ember, bloom green (docs/LIGHT-AND-GRAPH.md §10) |
 | Lavender | Active recharge |
 
 The icon engraved on it is the kind of effect that weighs most (`PearlIcon`, `pearl_engraving.gdshaderinc`), cut dark
@@ -132,8 +132,8 @@ comes to it (the level below is laid out while she plays the one above); a run w
 | Yes | ✅ | **Anglerfish Lure** | *Follow the light* | Shots home onto foes | ★★★ | treasure |  |
 | Yes | ✅ | **Swordfish Bill** | *En garde* | Shots pierce foes | ★★ | treasure |  |
 | Yes | ✅ | **Mitosis** | *One becomes two* | Bubbles split in two when they pop on a foe or rock | ★★ | treasure | bubble_bath |
-| Yes |  | **Frost Kelp** | *Grown in the cold seep* | 12% chance to freeze foes for 1.6s | ★★ | treasure |  |
-| Yes |  | **Fire Coral** | *Don't touch* | 25% chance to burn foes for 3s | ★★ | treasure |  |
+| No | ✅ | **Frost Kelp** | *Grown in the cold seep* | Her light turns to frost: what it lights slows, and stands still after 2 s | ★★ | treasure, shop |  |
+| No | ✅ | **Fire Coral** | *Don't touch* | Her light turns ember: what it lights keeps burning 2.5 s after it leaves | ★★ | treasure, shop |  |
 | Yes |  | **Sea Nettle Sting** | *It lingers* | 30% chance to poison foes for 4s | ★★ | treasure, curse |  |
 | Yes | ✅ | **Boomerang Shrimp** | *Always comes back* | Shots return to you | ★★ | treasure |  |
 | Yes | ✅ | **Pearl Diver** | *Patience makes pearls* | Hold to charge a pearl (up to ×3 damage) | ★★★ | treasure, boss |  |
@@ -167,7 +167,7 @@ comes to it (the level below is laid out while she plays the one above); a run w
 | Yes | ✅ | **Hammerhead** | *Wide-angle view* | Opens the beam into a 5-ray floodlight, each 32% of the beam | ★★★ | treasure, boss |  |
 | Yes |  | **Rear Fin** | *Eyes in the back of your mantle* | Also fires backwards | ★ | treasure, shop |  |
 | No | ✅ | **Abyssal Glow** | *Light from below the light* | +0.4 damage; ×1.3 glow radius | ★★ | treasure, curse |  |
-| No (+x1.5 glow, +0.1HP regen) |  | **Glowing Moss** | *Soft and luminous* | ×1.5 glow radius; +0.1 HP regeneration per second | ★ | treasure, shop |  |
+| No (+x1.5 glow, +0.1HP regen) | ✅ | **Glowing Moss** | *Soft and luminous* | ×1.5 glow radius; +0.1 HP regeneration per second; her light turns to bloom: ink and ash clear ×2 as fast in it, and a murkling it frees leaves ×1.5 the light | ★ | treasure, shop |  |
 | Yes |  | **Fire Urchin Spine** | *Pass it on* | Freed creatures burst into 6 spines | ★★★ | treasure, curse | jesters |
 | No |  | **Oyster Pearl** | *A little grit, a little shine* | +1 luck; +10 max HP; +5 sand dollars | ★ | treasure, goldenClam |  |
 | No | ✅ | **Dolphin Fin** | *Born to sprint* | +0.25 speed; ×0.85 dash cooldown | ★★ | treasure |  |
@@ -211,7 +211,10 @@ caption reads "Synergy!" with its name, a chime plays and a ring of her light go
 |  | **Lighthouse** | Sunbeam + Nautilus Spiral | The beam sweeps in a rotating spiral |
 |  | **Cell Bloom** | Mitosis + Starfish Arm | Split shots also grow |
 |  | **Guided Inkfish** | Ink Sac + Anglerfish Lure | Homing bombs; explosions leave slowing ink clouds |
-|  | **Steam Vent** | Frost Kelp + Fire Coral | Frozen foes hit with fire explode into steam |
+| ✅ | **Shatter** | Frost Kelp + Fire Coral | Ember and frost mix to magenta: what frost has stilled, ember shatters in a burst of steam |
+| ✅ | **Sunfire** | Fire Coral + Glowing Moss | Ember and bloom mix to gold: what it frees bursts in a ring of light |
+| ✅ | **Lull** | Glowing Moss + Frost Kelp | Bloom and frost mix to cyan: what it lights forgets you |
+| ✅ | **Daybreak** | all three | All three mix to white: every colour at once, and her light burns half again as hard |
 |  | **Tuna Rang** | Boomerang Shrimp + Swordfish Bill | Piercing boomerang hits twice and grows on the way back |
 | ✅ | **Pearl Necklace** | Pearl Diver + Mitosis | A full-charge pearl bursts into a ring of 8 pearls |
 |  | **Prism Pearl** | Sunbeam + Pearl Diver | A full-charge pearl fires lasers in 4 directions when it pops |

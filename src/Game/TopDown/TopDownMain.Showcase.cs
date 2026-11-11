@@ -90,6 +90,8 @@ public partial class TopDownMain
         RenderingServer.GlobalShaderParameterSet(SN.Of("reef_wave"), new Vector4(_waveAt.X, _waveAt.Y, _waveRadius, _waveTo));
         // Her light on the reef nearly white (a little of her own colour): on blue rock her warm light would turn it magenta.
         var white = HerColor.Light.Lerp(new Color(0.92f, 0.96f, 1f), 0.7f);
+        // (In her pearls' colours, mixed, when she has any: docs/LIGHT-AND-GRAPH.md §10.)
+        if (_world is not null && _world.HerHue != OctoShoots.Core.Plane.LightHue.None) white = white.Lerp(LightColour.Of(_world.HerHue), 0.6f);
         RenderingServer.GlobalShaderParameterSet(SN.Of("her_show_light"), new Vector3(white.R, white.G, white.B));
     }
 }

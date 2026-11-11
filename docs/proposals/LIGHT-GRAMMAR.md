@@ -1,7 +1,9 @@
 # The light grammar (proposal)
 
-Step 4 of the project review (MASTERPIECE-REVIEW.md §3.2, §9): the pearls re-founded on her light. **Nothing here is
-built** beyond what §9 marks as built. It replaces BEAM-PEARLS-PLAN.md once approved, keeping everything that plan
+Step 4 of the project review (MASTERPIECE-REVIEW.md §3.2, §9): the pearls re-founded on her light. Approved. **Step 1,
+colour, is built** (docs/LIGHT-AND-GRAPH.md §10, where its rules now live); the rest is to come. Built differently from
+this page: Sea Nettle Sting, Stingray Barb and Siren Song stay in the catalogue until step 8; frost stills only the
+creatures a dazzle holds; the colour on a creature is drawn on murklings. It replaces BEAM-PEARLS-PLAN.md once approved, keeping everything that plan
 already built (the split beams, tick rate, carry, light pressure).
 
 ## 1. In one breath

@@ -134,7 +134,8 @@ public sealed partial class PlaneWorld
             bool lit = !Defeated && (Vector2.DistanceSquared(a.Wall, her) + a.Height * a.Height <= reach * reach && LineOfSight(her, a.At)
                 || BeamReaches(a.At, a.Height, 0.3f));
             if (!lit) continue;
-            a.Cover -= Dt / AshTuning.LightClear;
+            // (Bloom-coloured light clears it the faster.)
+            a.Cover -= Dt / AshTuning.LightClear * (BloomReaches(a.At, a.Height) ? ColourTuning.Bloom(ColourTuning.BloomClear, Run.Loadout.Shot.Bloom) : 1f);
             if (a.Cover > 0f) continue;
             ClearPatch(a);
             AshWashed++;

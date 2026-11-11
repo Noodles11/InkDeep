@@ -649,6 +649,8 @@ public sealed partial class PlaneWorld
         }
         for (int k = layout.Count - 1; k < _rays.Count; k++) _rays[k].Active = false;
         BeamSpread = spread;
+        // Her colours dealt across the rays (the fan first, the Kraken's rays round her after it).
+        DealHues(layout, shape.Pattern == ShotPattern.Kraken8 ? layout.Count - (LightTuning.KrakenRays - 1) : layout.Count);
         // Rear Fin: a fainter beam out of her back while her beam shines.
         var rear = RearBeam;
         rear.Position = beam.Position;

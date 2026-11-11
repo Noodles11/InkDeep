@@ -25,6 +25,7 @@ public sealed class PlaneRun
         "squid_ink_espresso", "whale_lung", "pufferfish_pout", "cuttlebone", "cannonball", "dolphin_fin", "coral_polyp",
         "abyssal_glow", "glass_squid", "sea_cucumber", "sardine_run", "pistol_shrimp", "brass_compass", "sea_chart_nautilus",
         "bubble_shield", "whale_song", "firefly_squid", "prism_pearl", "ink_cloud", "conch_horn", StartingPearl,
+        "fire_coral", "glowing_moss", "frost_kelp",
     };
 
     /// <summary>The pearls found only in a Crab Deal (never offered anywhere else).</summary>

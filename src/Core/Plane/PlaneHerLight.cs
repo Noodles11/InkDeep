@@ -46,6 +46,13 @@ public sealed partial class PlaneWorld
         /// does not see her), a crit (her burn × CritMult).
         /// </summary>
         public float BeamTime, Afterglow, Slow, Charm, Crit;
+        /// <summary>
+        /// Her light's colours on it (PlaneColour.cs): the mix on it this step, frost's chill (1: stilled), how lately bloom
+        /// and sunfire lit it, and whether its afterglow is the ember's.
+        /// </summary>
+        public LightHue Hue;
+        public float Chill, Bloom, Sun;
+        public bool Ember;
     }
 
     /// <summary>What her beam burned last step (for Electric Eel Tail's arcs), the arcs this step, and her beam's dice.</summary>
@@ -126,6 +133,7 @@ public sealed partial class PlaneWorld
             if (n == 0 || Guarded(m.Position) || !m.Corruption.Sear(burn * n)) continue;
             Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, m.Position, Vector2.Zero, burn));
             BurstMurkling(m, ember: true);
+            FreedInColour(m, m.Position);
         }
         for (int i = 0; i < Inkwardens.Count; i++)
         {
@@ -135,6 +143,7 @@ public sealed partial class PlaneWorld
             if (n == 0 || !w.Corruption.Sear(burn * n)) continue;
             Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, w.Position, Vector2.Zero, burn));
             FreeWarden(w);
+            FreedInColour(w, w.Position);
         }
         foreach (var f in Flounders)
         {
@@ -144,6 +153,7 @@ public sealed partial class PlaneWorld
             if (n == 0 || Guarded(f.Position) || !f.Corruption.Sear(burn * n)) continue;
             Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, FlounderSeen(f), Vector2.Zero, burn));
             FreeFlounder(f);
+            FreedInColour(f, f.Position);
         }
         if (Corruption is { } field)
         {
@@ -156,6 +166,7 @@ public sealed partial class PlaneWorld
                 if (n == 0 || Guarded(b.Position) || !b.Corruption.Sear(burn * n)) continue;
                 Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, b.Position, Vector2.Zero, burn));
                 BurstBlotter(b, field);
+                FreedInColour(b, b.Position);
             }
             for (int i = 0; i < Thumpsquirts.Count; i++)
             {
@@ -165,6 +176,7 @@ public sealed partial class PlaneWorld
                 if (n == 0 || Guarded(t.Position) || !t.Corruption.Sear(burn * n)) continue;
                 Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, t.Position, Vector2.Zero, burn));
                 BurstThump(t);
+                FreedInColour(t, t.Position);
             }
             foreach (var l in Lashjaws)
             {
@@ -183,6 +195,8 @@ public sealed partial class PlaneWorld
         // her beam (PlaneBossLight.cs), and is never dazzled.
         if (Boss is { Stage: BossStage.Fight } boss) StepBossLight(boss, burn);
         else if (Boss is { } after) StepLamps(after);
+        // Her colours' bursts (sunfire, shatter), once every creature has had its turn.
+        StepColourBursts();
         // Creatures gone (freed, or the level left) are forgotten.
         if (Tick % 60 == 0)
         {
@@ -225,6 +239,7 @@ public sealed partial class PlaneWorld
                 }
             }
         bool beamed = false;
+        var hue = LightHue.None;
         if (!Defeated && beams)
             foreach (var (beam, worth) in HerBeams)
             {
@@ -232,6 +247,8 @@ public sealed partial class PlaneWorld
                 float light = BeamLight(beam, at, height, radius, kin);
                 if (light <= 0f) continue;
                 n += worth * light;
+                // In the colour her pearls give that ray, and the prism stones it passed through (mixed on it with the others').
+                hue |= RayHue(beam) | HueAlong(beam.Position, at);
                 beamed = true;
                 BeamBurns = true;
                 float d = Vector2.Distance(beam.Position, at);
@@ -261,6 +278,10 @@ public sealed partial class PlaneWorld
         g.Slow = MathF.Max(0f, g.Slow - Dt);
         g.Charm = MathF.Max(0f, g.Charm - Dt);
         g.Crit = MathF.Max(0f, g.Crit - Dt);
+        // Her colours on it (a charge stone lit in colour lends its colour to what is in its light).
+        if (!Defeated && ChargeStones.Count > 0) hue |= LentAt(at);
+        ApplyColour(g, hue, at);
+        if (hue == LightHue.White && n > 0f) n *= ColourTuning.WhiteBurn;
         if (from == default && n > 0) from = at;
         g.Lit = n > 0;
         g.From = from;
@@ -280,8 +301,9 @@ public sealed partial class PlaneWorld
     }
 
     /// <summary>
-    /// Her beam on what is not a creature: the seal its axis falls on gains BeamShots shots' light a second, and the ink
-    /// dots along its axis clear (the ash it lights clears in StepAsh).
+    /// Her beam on what is not a creature: the seal its axis falls on gains BeamShots shots' light a second (a coloured
+    /// seal only from light of its colour: her pearls' or the prism stones'), and the ink dots along its axis clear (bloom:
+    /// a wider swath; the ash it lights clears in StepAsh).
     /// </summary>
     void StepBeam()
     {
@@ -293,8 +315,12 @@ public sealed partial class PlaneWorld
             var from = ray.Position;
             var end = ray == Beam ? BeamEnd : StopOf(ray);
             // (In the colour the prism stones on its way give it.)
-            if (_rocks.Exists(r => r.Contains(end))) StrikeSeal(end, worth * Dt * BeamFalloff(ray, Vector2.Distance(from, end)), quiet: true, hue: HueAlong(from, end));
-            if (Dots is not null) ClearAlong(from, end, HerLightTuning.BeamDots);
+            // (In its pearls' colour and the colour the prism stones on its way give it.)
+            var hue = RayHue(ray) | HueAlong(from, end);
+            if (_rocks.Exists(r => r.Contains(end))) StrikeSeal(end, worth * Dt * BeamFalloff(ray, Vector2.Distance(from, end)), quiet: true, hue: hue);
+            // (Bloom clears a wider swath of ink.)
+            float bloom = (hue & LightHue.Green) != 0 ? ColourTuning.Bloom(ColourTuning.BloomClear, Run.Loadout.Shot.Bloom) : 1f;
+            if (Dots is not null) ClearAlong(from, end, HerLightTuning.BeamDots * bloom);
         }
     }
 

@@ -798,7 +798,7 @@ public sealed partial class PlaneWorld
             m.ScanTimer = LightTuning.ScanEvery;
             light = m.Light = SeekLight(m.Position, blind: blind);
         }
-        float pace = (BlightTuning.MurkSpeed + BlightTuning.MurkSpeedPerMenace * Menace) * (Slowed(m) ? StatusRules.SlowFactor : 1f);
+        float pace = (BlightTuning.MurkSpeed + BlightTuning.MurkSpeedPerMenace * Menace) * PaceOf(m);
         Vector2 wish;
         if (light is null)
         {
@@ -981,7 +981,7 @@ public sealed partial class PlaneWorld
             // A wobble off the line, as if the dark were reluctant.
             wish += new Vector2(MathF.Sin(Time * 1.7f + m.Seed), MathF.Cos(Time * 1.3f + m.Seed * 2f)) * 0.35f;
             float pace = (BlightTuning.MurkSpeed + BlightTuning.MurkSpeedPerMenace * Menace) * (m.Windup > 0f ? BlightTuning.WindupSlow : 1f) * (m.Prime ? BlightTuning.PrimeSpeed : 1f)
-                * (Slowed(m) ? StatusRules.SlowFactor : 1f);
+                * PaceOf(m);
             m.Velocity = MoveToward(m.Velocity, SafeNormalize(wish) * pace, 4f * Dt);
             Move(ref m.Position, ref m.Velocity, m.Body, report: false);
 

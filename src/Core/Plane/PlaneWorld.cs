@@ -87,6 +87,8 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     BattleBegan, BossLanded, BossVolley, BossTelegraph, BossPulse, BossSacBurst, BossExposed, BossMutates, BossClosed, BossHit, BossStagger, BossSnapWarning, BossSnap, BossDefeated, BossFreed, BossReach, BossBloom,
     /// <summary>Experience: gained (Size: how much), and a level reached (Size: the new level).</summary>
     XpGained, LevelUp,
+    /// <summary>Her colours (PlaneColour.cs): a frost-stilled creature shattered by ember, a creature freed in sunfire bursting (Size: the reach).</summary>
+    ColourShatter, ColourSunfire,
     /// <summary>A trio of charge stones all glowing at once: its cache of shells bursts up between them (Size: how many).</summary>
     TrioOpened,
     /// <summary>

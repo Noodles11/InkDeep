@@ -2649,6 +2649,23 @@ public partial class TopDownMain : Node3D
                 }
                 else if (e.Type is PlaneEventType.MobHit or PlaneEventType.BossHit) _damage.Show(e);
                 else if (e.Type == PlaneEventType.ShotPopped) _combat.Pop(e.Position, e.Size * 1.7f, e.Direction);
+                else if (e.Type == PlaneEventType.ColourShatter)
+                {
+                    // Ember on what frost stilled: it shatters in a burst of steam (docs/LIGHT-AND-GRAPH.md §10).
+                    var at3 = new Vector3(e.Position.X, LevelMap.SwimBand, e.Position.Y);
+                    _combat.Steam(at3, Vector3.Up, 1f);
+                    _combat.Steam(at3, Vector3.Down, 0.7f);
+                    _combat.Shockwave(e.Position, e.Size, 0.32f);
+                    _sfx.PlayAt("snap", at3, -4f);
+                    _sfx.PlayAt("hiss", at3, -3f);
+                    if (_view.CameraShake && !_view.ReducedMotion) _camera.Shake(0.25f);
+                }
+                else if (e.Type == PlaneEventType.ColourSunfire)
+                {
+                    // Freed in sunfire: a ring of her light out from it.
+                    _combat.Shockwave(e.Position, e.Size, 0.5f);
+                    _sfx.PlayAt("chime", new Vector3(e.Position.X, LevelMap.SwimBand, e.Position.Y), -6f, 0.1f);
+                }
                 else if (e.Type == PlaneEventType.LightBurst)
                 {
                     _combat.LightBurst(e.Position, e.Size);
