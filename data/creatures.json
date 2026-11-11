@@ -1,5 +1,5 @@
 {
-  // Depth 1 den creatures (docs/DEPTH1-BESTIARY.md). Telegraph is never under 0.45 s.
+  // Depth 1 den creatures (docs/archive/DEPTH1-BESTIARY.md). Telegraph is never under 0.45 s.
   // hp/damage: bestiary table. noticeRange/giveUpRange: bestiary §2. noticeRangeAlt is the crabby's sight range away from surfaces.
   "SpanishDancer": { "hp": 28, "radius": 0.7, "speed": 2, "sense": "Water", "noticeRange": 15, "noticeRangeAlt": 15, "giveUpRange": 45,
     "damage": 10, "attackRange": 5, "telegraph": 0.9, "cooldown": 3, "recover": 1.2,

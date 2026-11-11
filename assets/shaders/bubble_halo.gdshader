@@ -1,5 +1,5 @@
 // A light bubble's glow in the water: a soft additive disc that always faces the camera, drawn round each of
-// Clementine's bubbles (docs/LIGHT-BUBBLES.md). Its size is fixed by the quad (about 0.8 m radius, never grown by
+// Clementine's bubbles (docs/archive/LIGHT-BUBBLES.md). Its size is fixed by the quad (about 0.8 m radius, never grown by
 // merging); `strength` (≤ 0.4 of her halo) and `color` carry the bubble's brightness and warmth.
 shader_type spatial;
 render_mode blend_add, unshaded, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;

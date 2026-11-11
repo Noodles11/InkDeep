@@ -6,7 +6,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>The cave round its route (docs/CAVEGEN.md): side chambers close to it, quick detours, and shortcuts: tunnels through the rock.</summary>
+/// <summary>The cave round its route (docs/archive/CAVEGEN.md): side chambers close to it, quick detours, and shortcuts: tunnels through the rock.</summary>
 public class RouteTests
 {
     [Fact]

@@ -7,7 +7,7 @@ using OctoShoots.Core.Gen.TopDown;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// A woven reef's coral (WovenReef, docs/REEF-REDO-PROPOSAL.md, the look prototype): every piece drawn from a small kit
+/// A woven reef's coral (WovenReef, docs/proposals/REEF-REDO-PROPOSAL.md, the look prototype): every piece drawn from a small kit
 /// of procedural meshes (three variants of each), instanced by 32 m tile, in the reef's paint (woven_reef.gdshaderinc).
 /// Each mesh is built at unit size (its foot at 0, its top at 1, its radius 1) and stretched to the piece.
 /// </summary>

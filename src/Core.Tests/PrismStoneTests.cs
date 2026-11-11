@@ -10,7 +10,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>Prism stones and coloured seals, and the charge stones' trio (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.5, §2.6).</summary>
+/// <summary>Prism stones and coloured seals, and the charge stones' trio (docs/LIGHT-AND-GRAPH.md §2.5, §2.6).</summary>
 public class PrismStoneTests
 {
     static readonly Lazy<ItemCatalog> Catalog = new(() =>

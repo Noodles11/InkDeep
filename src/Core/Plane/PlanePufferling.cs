@@ -6,7 +6,7 @@ using OctoShoots.Core.Gen.TopDown;
 
 namespace OctoShoots.Core.Plane;
 
-/// <summary>The Pufferling's numbers (docs/PUFFERLING-PROPOSAL.md §3); first guesses, tuned in play.</summary>
+/// <summary>The Pufferling's numbers (docs/archive/PUFFERLING-PROPOSAL.md §3); first guesses, tuned in play.</summary>
 public static class PufferlingTuning
 {
     /// <summary>Its body for collision and for her bubbles: calm, and blown up into a ball about 2.2 m across.</summary>
@@ -146,7 +146,7 @@ public sealed partial class PlaneWorld
     float MobSpeedScale => 1f + 0.5f * Menace;
 
     /// <summary>
-    /// A corrupted pufferling's turn (docs/PUFFERLING-PROPOSAL.md §3.2): wander; in sight, turn to face her and drift
+    /// A corrupted pufferling's turn (docs/archive/PUFFERLING-PROPOSAL.md §3.2): wander; in sight, turn to face her and drift
     /// closer; within reach, blow up (the telegraph), fire 8 needles round itself with a random turn, stay round a
     /// moment, then cool down — back away, shrink, regrow the spines — and go again.
     /// </summary>

@@ -133,7 +133,7 @@ public sealed record ReefLook
     };
 
     /// <summary>
-    /// Lantern Bay (docs/RPG-PROPOSAL.md §3): the Sunlit Shallows themselves at the soft end of a summer day, safe and
+    /// Lantern Bay (docs/archive/RPG-PROPOSAL.md §3): the Sunlit Shallows themselves at the soft end of a summer day, safe and
     /// joyful. The same turquoise over sand, pink coral and saturated life, the same caustics and shafts, all of it
     /// gentler and dimmed, the sun low and pale gold; so Clementine's tangerine is the brightest thing in it, her light
     /// pooling round her wherever she swims. No menace: the dusk here is warm, never gloomy.

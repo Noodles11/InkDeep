@@ -13,7 +13,7 @@ namespace OctoShoots.Core.Gen.TopDown;
 /// boss arena with the Crack across its floor. ShellCache: a guarded clearing of shells.
 /// </summary>
 /// <summary>A level's places. LeakCave: a leak cave's mouth in the rock (docs/DIVE.md §6), where a curse den once was.
-/// Hole: one of a reef's further holes down (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6.3), a sunken chamber as its Exit's.</summary>
+/// Hole: one of a reef's further holes down (docs/LIGHT-AND-GRAPH.md §6.3), a sunken chamber as its Exit's.</summary>
 public enum PoiKind { Start, ShellCache, Exit, Shop, Secret, CurseDen, TreasureCave, CrabDeal, LeakCave, Hole }
 
 public sealed class Poi
@@ -103,7 +103,7 @@ public readonly record struct Shaft(Vector2 Center, Vector2 Axis, float HalfLeng
 }
 
 /// <summary>
-/// One of a reef's holes down (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6.3): its shaft, the reef of the dive's graph it leads
+/// One of a reef's holes down (docs/LIGHT-AND-GRAPH.md §6.3): its shaft, the reef of the dive's graph it leads
 /// to (Run.DiveGraph), and what that reef is (its rim shows it).
 /// </summary>
 public sealed class MapHole
@@ -230,7 +230,7 @@ public readonly record struct DecorSpot(DecorKind Kind, Vector2 Position, float 
 public readonly record struct SealedPocket(Vector2 Position, float Radius);
 
 /// <summary>
-/// A cave's opening in a wall (docs/RPG-PROPOSAL.md §2.3): a passage cut into the rock where it stands tall at a
+/// A cave's opening in a wall (docs/DIVE.md §6): a passage cut into the rock where it stands tall at a
 /// chamber's edge, roofed by the rock that stood there (LevelMap.Roof). At is its threshold, under the arch of its
 /// face; Into, the way into the rock; its back lies Depth in, in the dark. A notch leads up to it through the wall's
 /// foot from the water.

@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 namespace OctoShoots.Core.Gen.TopDown;
 
 /// <summary>
-/// A static map drawn by hand (docs/RPG-PROPOSAL.md §2): Lantern Bay and the key areas. It names the cave's chambers,
+/// A static map drawn by hand (docs/archive/RPG-PROPOSAL.md §2): Lantern Bay and the key areas. It names the cave's chambers,
 /// the tunnels between them and its places in the generator's own terms; <see cref="TopDownGenerator.FromHand"/> builds the
 /// level from it with the same stages as a seeded one (the rock, arches and passes, the decoration), so it is drawn
 /// unchanged. Its seed shapes only the details (the chambers' craggy outlines, the tunnels' bends, the rock).
@@ -33,11 +33,11 @@ public sealed class HandLayout
     public List<HandRoom> Rooms { get; set; } = new();
     /// <summary>Open places: clearings in the water.</summary>
     public List<HandPlace> Places { get; set; } = new();
-    /// <summary>The bay's mirror (docs/RPG-PROPOSAL.md §8): a still pool of nacre where she changes her look.</summary>
+    /// <summary>The bay's mirror (docs/GAME.md §9): a still pool of nacre where she changes her look.</summary>
     public HandPoint? Mirror { get; set; }
-    /// <summary>The bay's Tide Fan (docs/QUESTS-PROPOSAL.md §2): the great sea fan where the bay ties its requests.</summary>
+    /// <summary>The bay's Tide Fan (docs/archive/QUESTS-PROPOSAL.md §2): the great sea fan where the bay ties its requests.</summary>
     public HandPoint? Fan { get; set; }
-    /// <summary>The bay's folk at home (docs/NPC-BOSSES-PROPOSAL.md): where each lives once she is freed (Folk names her).</summary>
+    /// <summary>The bay's folk at home (docs/FOLK.md): where each lives once she is freed (Folk names her).</summary>
     public List<HandPoint> Homes { get; set; } = new();
     /// <summary>Its square, metres a side (a seeded level's unless it asks for more).</summary>
     public int Size { get; set; } = LevelMap.Seeded;
@@ -114,7 +114,7 @@ public sealed class HandPoint
     /// <summary>What the bay calls it (a region's cave mouth: "the east mouth"), if anything.</summary>
     public string Name { get; set; } = "";
     /// <summary>
-    /// A great cave's mouth: the neighbour waiting at its bottom (Folk, docs/NPC-BOSSES-PROPOSAL.md), whose cave's level
+    /// A great cave's mouth: the neighbour waiting at its bottom (Folk, docs/FOLK.md), whose cave's level
     /// and floors are her own. A bay home: the neighbour who lives there.
     /// </summary>
     public string? Folk { get; set; }

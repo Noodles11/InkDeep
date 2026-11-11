@@ -75,7 +75,7 @@ uniform float peak_blur = 2.2;
 uniform vec3 player_pos = vec3(0.0);
 /// The bubbles' halos' strength (her own glow in the water is light_field's in-scatter).
 uniform float halo_strength = 0.16;
-/// Light bubbles (docs/LIGHT-BUBBLES.md): up to 16 small halos on the swim layer, from her bubbles and the blooms they
+/// Light bubbles (docs/archive/LIGHT-BUBBLES.md): up to 16 small halos on the swim layer, from her bubbles and the blooms they
 /// leave where they pop: x, z (world), radius (metres), strength (a share of her halo's, ≤ 0.4).
 uniform vec4 bubble_lights[16];
 // Pearls' glows (xz, radius, strength): a clam room's filling the room and spilling from its mouth (ClamRoomView), and

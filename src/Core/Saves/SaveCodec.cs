@@ -34,7 +34,7 @@ public static class SaveCodec
                 root.Remove("run");
                 return root;
             },
-            // 2 → 3: the dive is a graph of reefs (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6). A run or dive saved before it
+            // 2 → 3: the dive is a graph of reefs (docs/LIGHT-AND-GRAPH.md §6). A run or dive saved before it
             // takes up on lane 0 of its row (SuspendedRun.Reef), at that reef's start: the moment it kept was of a level
             // no longer made the same, so it goes (put back on the new reef, it would put her and its creatures in the
             // rock). All else it carried stays.

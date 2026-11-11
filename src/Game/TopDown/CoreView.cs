@@ -6,7 +6,7 @@ using OctoShoots.Core.Plane;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// Freed murklings' cores (docs/LIGHT-AND-GRAPH-PROPOSAL.md §4.2; PlaneWorld.Cores): each a soft ball of her light where
+/// Freed murklings' cores (docs/LIGHT-AND-GRAPH.md §4.2; PlaneWorld.Cores): each a soft ball of her light where
 /// it was freed (light_core.gdshader), swelling and thinning out over its second.
 /// </summary>
 public partial class CoreView : Node3D

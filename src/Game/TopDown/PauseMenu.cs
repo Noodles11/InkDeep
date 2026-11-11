@@ -51,7 +51,7 @@ public partial class PauseMenu : Control
     PanelContainer _panel = null!;
     ScrollContainer _scroll = null!;
     VBoxContainer _levelUp = null!, _rows = null!, _pearls = null!, _achievements = null!, _requests = null!;
-    /// <summary>The dive's chart (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6.3).</summary>
+    /// <summary>The dive's chart (docs/LIGHT-AND-GRAPH.md §6.3).</summary>
     ChartView _chart = null!;
     GridContainer _stats = null!;
     readonly Button[] _tabs = new Button[Tabs];
@@ -317,7 +317,7 @@ public partial class PauseMenu : Control
     }
 
     /// <summary>
-    /// The Requests tab (docs/QUESTS-PROPOSAL.md §6): the requests she carries off the Tide Fan, each its poster's line,
+    /// The Requests tab (docs/archive/QUESTS-PROPOSAL.md §6): the requests she carries off the Tide Fan, each its poster's line,
     /// what it asks and how far along, what it pays, and Let go; and whether the HUD shows them as ribbons. On a run,
     /// only a line saying there are none.
     /// </summary>

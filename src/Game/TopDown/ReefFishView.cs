@@ -7,7 +7,7 @@ using OctoShoots.Game.Fx;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// The reef fish on screen (docs/REEF-FISH-PROPOSAL.md §4), presentation only: a MultiMesh per school, per anemone's
+/// The reef fish on screen (docs/archive/REEF-FISH-PROPOSAL.md §4), presentation only: a MultiMesh per school, per anemone's
 /// clownfish and for the tangs (ReefFishMeshes in reef_fish.gdshader), bounded to where its fish are so a group off the
 /// screen is not drawn. Each fish swum from the sim's position, heading and speed — its stroke quickening with its pace,
 /// a bank into turns, a slow bob, a tang dipping its nose to graze — at its kind's depth in the water: clownfish low over

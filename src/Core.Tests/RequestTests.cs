@@ -12,7 +12,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>The Tide Fan's requests (docs/QUESTS-PROPOSAL.md): tied from her seed, taken, done, untied.</summary>
+/// <summary>The Tide Fan's requests (docs/archive/QUESTS-PROPOSAL.md): tied from her seed, taken, done, untied.</summary>
 public class RequestTests
 {
     static readonly Lazy<ItemCatalog> Catalog = new(() =>

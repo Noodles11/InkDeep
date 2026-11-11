@@ -24,7 +24,7 @@ public sealed class TuneAttribute : Attribute
 
 public enum AimAssistLevel { Off, Low, Medium, High }
 
-/// <summary>Every simulation number in one place. Defaults follow DESIGN-3D.md.</summary>
+/// <summary>Every simulation number in one place. Defaults follow docs/archive/DESIGN-3D.md.</summary>
 public sealed class Tuning
 {
     // Movement (§2)

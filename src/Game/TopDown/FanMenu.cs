@@ -8,7 +8,7 @@ using OctoShoots.Game.Ui;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// The Tide Fan's drawer (docs/QUESTS-PROPOSAL.md §2.3), as the pause menu's and the mirror's are: at the fan's foot it
+/// The Tide Fan's drawer (docs/archive/QUESTS-PROPOSAL.md §2.3), as the pause menu's and the mirror's are: at the fan's foot it
 /// slides in from the right, the camera drawn in and the sea held. It lists the ribbons tied on the fan (each its
 /// poster's line, what it asks, what it pays, and Take) and the requests she carries (Untie once done).
 /// </summary>

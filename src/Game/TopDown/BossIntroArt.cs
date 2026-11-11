@@ -6,10 +6,10 @@ using OctoShoots.Core.Bosses;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// The boss intro's cast, drawn as chibi anime characters (DESIGN-TOPDOWN §6.4, THEME-BIBLE §6.8): thick soft
-/// outlines, flat cel colour with one highlight, big glossy eyes. Clementine, and a boss for each body form in its own
-/// generated colours, goofy at Depth 1 and menacing by Depth 6 (round eyes to slit pupils, a smile to teeth, colour
-/// drained, a cold rim). Everything is drawn round (0, 0) at a size s (about the body's radius); the caller places it.
+/// The folk's portraits in their speech bubbles (FolkPortrait), drawn as chibi characters: thick soft outlines, flat
+/// cel colour with one highlight, big glossy eyes. (The drawings of the boss cut-in, which is gone; its moods and the
+/// other body forms are kept here unused.) Everything is drawn round (0, 0) at a size s (about the body's radius); the
+/// caller places it.
 /// </summary>
 public static class BossIntroArt
 {

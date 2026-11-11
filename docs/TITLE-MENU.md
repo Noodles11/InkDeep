@@ -119,10 +119,9 @@ In the drawers (`DrawerStyle`, shared with the game's pause menu and the bay's m
   - **Sea-pedia:** how much you have found.
   - **Statistics:** your best room.
 - **The focused item** turns coral and moves 12 px right.
-- **Continue** wakes the jelly played last (`SaveFile.Chosen`) in Lantern Bay; it shows only when there is one, and
-  is then first and focused. **Play** shows her save slots, the jellies floating side by side in the sea with a card
-  under each (no drawer: docs/RPG-PROPOSAL.md, "Jellies").
-  A suspended run of the old mode is continued from Save & load.
+- **Continue** goes on with the jelly played last (`SaveFile.Chosen`), where her dive stands; it shows only when there
+  is one, and is then first and focused. **Play** shows her save slots, the jellies floating side by side in the sea
+  with a card under each (no drawer: docs/DIVE.md §1, docs/GAME.md §9).
 
 **Sub-screens** open as drawers, as the game's pause menu does (`DrawerStyle`):
 - the screen's height, against its right edge, sliding in from the right in 0.35 s and back out the same way;

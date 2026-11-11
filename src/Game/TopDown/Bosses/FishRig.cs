@@ -7,7 +7,7 @@ using OctoShoots.Game.Fx;
 namespace OctoShoots.Game.TopDown.Bosses;
 
 /// <summary>
-/// A fish (docs/NPC-BOSSES-PROPOSAL.md). A cleaner wrasse (Kip): slender, pale, a black band along each flank under an
+/// A fish (docs/FOLK.md). A cleaner wrasse (Kip): slender, pale, a black band along each flank under an
 /// electric-blue stripe, a long low dorsal and anal fin, small pectorals, a rounded tail. It hangs in the water over its
 /// station and bobs there (the cleaner's dance); on the dart's warning its fins tuck in flat, it shoots off with its
 /// tail thrashing, and waiting after it it rolls a little onto its side, the stripe toward the light. The Leak's mutation

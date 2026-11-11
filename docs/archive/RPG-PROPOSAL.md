@@ -46,7 +46,7 @@ it, and the reef remembers.**
   - The shell shop, which buys and sells pearls.
   - The **stash**, where she keeps her pearls (§5.2).
   - The **Tide Fan**, a great sea fan in the commune where the bay ties its requests as kelp ribbons (§6;
-    docs/QUESTS-PROPOSAL.md). No signboard: no human things in the reef before Depth 4.
+    docs/archive/QUESTS-PROPOSAL.md). No signboard: no human things in the reef before Depth 4.
   - The **mirror**, where she changes her look (§8).
   - A **home for each NPC** she has freed (§7).
   - Its **gates** out onto the reef.
@@ -113,7 +113,7 @@ This covers ideas 2, 9 and 12.
 
 - **The sources.** Experience comes from sealing leaks and from the Tide Fan's requests. A minor leak is worth
   `25 × caveLevel^0.8`; a great leak is worth ten times that. An untied request pays as much as a leak of its level,
-  on top of whatever leak it took her to (docs/QUESTS-PROPOSAL.md §4.2). Freeing creatures and bosses gives none, and
+  on top of whatever leak it took her to (docs/archive/QUESTS-PROPOSAL.md §4.2). Freeing creatures and bosses gives none, and
   key quests pay in shells, pearls or NPCs.
 - **What levels do.** Levels are **the only way her stats change** (shot speed, swim speed, damage, max HP, glow, dash
   cooldown, bubbles). Each level gives skill points to spend in the existing skill screen, and each point still adds
@@ -164,7 +164,7 @@ Silver shells are the one currency: the shells of today, renamed.
 - **Key quests.** An authored chain, one per region, given by the NPCs freed there. They lead to the region's great
   leak, and their steps reward active pearls. Quest steps are small: chart a chamber, free a named creature, seal a
   minor leak, bring back a pearl.
-- **Requests** (docs/QUESTS-PROPOSAL.md). Repeatable side quests tied to the Tide Fan by the bay's folk, seeded from
+- **Requests** (docs/archive/QUESTS-PROPOSAL.md). Repeatable side quests tied to the Tide Fan by the bay's folk, seeded from
   her jelly's seed and a count: seal the leak behind a named mouth (which reopens it if shut), free a murkling prime
   (its swallowed school swims home), brave a cave's curse den, wash the ash off the caves' walls. Each pays shells and
   as much experience as a leak of its level, and most offer a passive pearl shown on its ribbon. She carries two at a
@@ -278,7 +278,7 @@ Each step is playable on its own:
    - Death and lost light.
 4. **Character creation and the mirror.**
 5. **NPCs and quests:**
-   - First, the Tide Fan and its repeatable requests (docs/QUESTS-PROPOSAL.md).
+   - First, the Tide Fan and its repeatable requests (docs/archive/QUESTS-PROPOSAL.md).
    - Then named creatures, the go-home cutscene, and the first key-quest chain (Shallows).
 6. **Regions.**
    - Static maps for the other five biomes.
@@ -429,7 +429,7 @@ Each step is playable on its own:
   actives and name are kept, and she wakes at the lantern post. Swimming into it gives everything back. Dimming again
   first, it is gone (only the newest is kept). In a cave she had already sealed, it waits at that cave's mouth in the
   region instead.
-- **Requests** (docs/QUESTS-PROPOSAL.md): the Tide Fan in the commune and its drawer, seeded ribbons for each region,
+- **Requests** (docs/archive/QUESTS-PROPOSAL.md): the Tide Fan in the commune and its drawer, seeded ribbons for each region,
   two carried at a time, their progress from the caves, untying for a pearl, shells and experience, the HUD's kelp
   ribbons under the minimap (toggled in the pause menu's Requests tab), and named mouths ringed on the maps.
 - **Verification starts:** `--reef=bay|shallows|cave` starts there with a jelly that is never saved (`bay` and `shallows`: the reef map, at the lantern post), `--at=x,y` sets her down at a point, `--at=mouth`

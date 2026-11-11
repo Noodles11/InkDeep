@@ -6,7 +6,7 @@ using OctoShoots.Game.Fx;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// Her light painted on the water (docs/LIGHT-BUBBLES.md, light_stroke.gdshader): the afterlight her shots leave, and
+/// Her light painted on the water (docs/archive/LIGHT-BUBBLES.md, light_stroke.gdshader): the afterlight her shots leave, and
 /// the lightning that crackles off whatever her light hits. Every stroke is laid in three passes — a wide warm wash, a
 /// ragged dry-brushed body, a broken white-hot core.
 /// <para>

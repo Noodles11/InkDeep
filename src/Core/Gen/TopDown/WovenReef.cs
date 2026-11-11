@@ -4,7 +4,7 @@ using System.Numerics;
 
 namespace OctoShoots.Core.Gen.TopDown;
 
-/// <summary>What a woven reef is built of (docs/REEF-REDO-PROPOSAL.md §3).</summary>
+/// <summary>What a woven reef is built of (docs/proposals/REEF-REDO-PROPOSAL.md §3).</summary>
 public enum PieceKind
 {
     /// <summary>A coral pinnacle rising from the reef bank through her plane: a column she swims round.</summary>
@@ -34,7 +34,7 @@ public enum PieceKind
 public readonly record struct ReefPiece(PieceKind Kind, Vector2 At, float Base, float Top, float Size, float Yaw, uint Seed);
 
 /// <summary>
-/// The woven reef (docs/REEF-REDO-PROPOSAL.md, the look prototype): the level's walls give way to a reef of coral
+/// The woven reef (docs/proposals/REEF-REDO-PROPOSAL.md, the look prototype): the level's walls give way to a reef of coral
 /// pieces over open water. The lanes (the water the level's cave already had) keep their deep floor; where the rock
 /// stood, a reef bank rises under her plane and the coral grows on it: pinnacles, arches and rings through her plane,
 /// thickets, tables, heads, fans and sponges under it. Only what crosses her plane blocks her (<see cref="LevelMap.Blocks"/>),

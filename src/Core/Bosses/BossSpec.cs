@@ -11,7 +11,7 @@ public enum BodyPlan { Bivalve, Echinoderm, Cnidarian, Gastropod, Ink, Reptile, 
 
 /// <summary>
 /// The real animal a plan is drawn as (Murkling: Drippus Prime's body, a murkling prime grown huge; Turtle: Grandmother
-/// Tull's, Wrasse: Kip's, Seadragon: Fennel's, Octopus: Ottilie's, Dragonet: Bubbles's, docs/NPC-BOSSES-PROPOSAL.md,
+/// Tull's, Wrasse: Kip's, Seadragon: Fennel's, Octopus: Ottilie's, Dragonet: Bubbles's, docs/FOLK.md,
 /// authored, never rolled).
 /// </summary>
 public enum BodyForm { GiantClam, SeaStar, Urchin, MoonJelly, Siphonophore, SeaHare, Snail, Murkling, Turtle, Wrasse, Seadragon, Octopus, Dragonet }
@@ -165,7 +165,7 @@ public sealed class BossSpec
     public BossSpice Spice { get; set; }
 
     // ── an authored boss's own ──
-    /// <summary>The bay's neighbour this boss is (docs/NPC-BOSSES-PROPOSAL.md), by her id; null for any other boss.</summary>
+    /// <summary>The bay's neighbour this boss is (docs/FOLK.md), by her id; null for any other boss.</summary>
     public string? Folk { get; set; }
     /// <summary>
     /// Its acts written out, by phase (the last for every phase after): each act's volleys in order, its window after the

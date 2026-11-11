@@ -7,7 +7,7 @@ using OctoShoots.Game.Fx;
 namespace OctoShoots.Game.TopDown.Bosses;
 
 /// <summary>
-/// An octopus (Ottilie, docs/NPC-BOSSES-PROPOSAL.md §7): a soft bulbous mantle behind a broad web, and eight arms
+/// An octopus (Ottilie, docs/FOLK.md §7): a soft bulbous mantle behind a broad web, and eight arms
 /// radiating from it, each a chain of tapering segments that curls and sways, pale suckers along its underside (no eyes
 /// drawn: the arms tell it). Her pearl is held behind her; on the hoard throw's warning three arms curl back, on the
 /// reach's two arms turn to their lit lines and shoot out along them, and after each act she lifts the pearl up high to

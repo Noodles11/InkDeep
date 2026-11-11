@@ -9,7 +9,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>the charge stones in the walls (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.5; PlaneChargeStones.cs).</summary>
+/// <summary>the charge stones in the walls (docs/LIGHT-AND-GRAPH.md §2.5; PlaneChargeStones.cs).</summary>
 public class ChargeStoneTests
 {
     static readonly Lazy<ItemCatalog> Catalog = new(() =>

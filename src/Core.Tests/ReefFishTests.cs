@@ -7,7 +7,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>The reef's background fish (docs/REEF-FISH-PROPOSAL.md): clownfish, blue tangs, chromis schools.</summary>
+/// <summary>The reef's background fish (docs/archive/REEF-FISH-PROPOSAL.md): clownfish, blue tangs, chromis schools.</summary>
 public class ReefFishTests
 {
     static readonly Lazy<LevelMap> Level = new(() => TestLevels.Get(TestLevels.Find(p => p.Id.Depth == 1 && !p.HasBoss)));

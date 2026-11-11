@@ -30,7 +30,7 @@ public sealed class LevelShape
     public List<Transform3D> Rocks { get; } = new();
     public List<Transform3D> Glows { get; } = new();
     /// <summary>
-    /// Its sub-levels (docs/LIGHT-AND-GRAPH-PROPOSAL.md §7), made with it: the leak cave behind each of its mouths, in
+    /// Its sub-levels (docs/LIGHT-AND-GRAPH.md §7), made with it: the leak cave behind each of its mouths, in
     /// order (none of their own).
     /// </summary>
     public IReadOnlyList<LevelShape> Caves { get; set; } = Array.Empty<LevelShape>();
@@ -907,7 +907,7 @@ public partial class LevelView : Node3D
     public static float DoorArch(float off) => DoorSpring + Mathf.Sqrt(Mathf.Max(DoorArchHalf * DoorArchHalf - off * off, 0f));
 
     /// <summary>
-    /// A cave opening's rock (docs/RPG-PROPOSAL.md §2.3), worked out in the opening's own frame (in along Into, off
+    /// A cave opening's rock (docs/DIVE.md §6), worked out in the opening's own frame (in along Into, off
     /// across it): its roof, the rock that stood over the passage (LevelMap.Roof) from its face back; its face, the
     /// rock standing at its threshold from the ground (or the arch) up to the roof's edge, with the round-topped
     /// arch cut in it; and its plug, rock filling the arch, for a mouth shut once its cave is sealed.

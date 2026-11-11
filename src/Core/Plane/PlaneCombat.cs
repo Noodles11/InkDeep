@@ -20,7 +20,7 @@ public static class PlaneCombatTuning
     public const float PlayerHurtGrace = 0.6f;
 
     /// <summary>
-    /// Her shots are light (docs/LIGHT-BUBBLES.md; the rules still call them bubbles), each a small lantern lighting the
+    /// Her shots are light (docs/archive/LIGHT-BUBBLES.md; the rules still call them bubbles), each a small lantern lighting the
     /// water round it (docs/ADVENTURE.md §8). Thrown at ShotSpeed the way she aims, it eases out: it slows steadily, as
     /// if to stop at the end of her range (how near the pointer is to her does not matter: what is in the way is hit
     /// anyway), then gentler in the water's drag (LingerDrag), floats a moment (PopHoverMin–Max seconds × her bubble
@@ -138,7 +138,7 @@ public static class PlaneCombatTuning
 }
 
 /// <summary>
-/// A corrupted pufferling (docs/PUFFERLING-PROPOSAL.md): the plane's mob. Freed when its health runs out, it carries on
+/// A corrupted pufferling (docs/archive/PUFFERLING-PROPOSAL.md): the plane's mob. Freed when its health runs out, it carries on
 /// as a healthy pufferling (a <see cref="PlaneFish"/>); the mob itself never comes back.
 /// </summary>
 public sealed class PlaneMob : PlaneSwimmer

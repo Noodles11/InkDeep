@@ -6,7 +6,7 @@ using System.Numerics;
 namespace OctoShoots.Core.Gen.TopDown;
 
 /// <summary>
-/// The level's cave (docs/CAVEGEN.md, ported from tools/cavegen/cavegen.js): a chain of chambers from the start to the
+/// The level's cave (docs/archive/CAVEGEN.md, ported from tools/cavegen/cavegen.js): a chain of chambers from the start to the
 /// way down (the main route), side chambers kept close round it (quick detours, at most two deep) and the odd loop,
 /// joined by winding tunnels, rasterised as craggy open water on the 1 m grid and grown until the water she can reach
 /// covers the area rule. (Its shortcuts are tunnels through the rock, bored once the rock stands: TopDownGenerator's

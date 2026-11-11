@@ -3,11 +3,11 @@ using System.Collections.Generic;
 
 namespace OctoShoots.Core.Gen.TopDown;
 
-/// <summary>A place's sort (docs/LIGHT-AND-GRAPH-PROPOSAL.md §7): a spot on the reef, or a way into a sub-level.</summary>
+/// <summary>A place's sort (docs/LIGHT-AND-GRAPH.md §7): a spot on the reef, or a way into a sub-level.</summary>
 public enum PlaceSort { Spot, SubLevel }
 
 /// <summary>
-/// One rule for each kind of place in a reef (docs/LIGHT-AND-GRAPH-PROPOSAL.md §7): its sort, the first row of a depth it
+/// One rule for each kind of place in a reef (docs/LIGHT-AND-GRAPH.md §7): its sort, the first row of a depth it
 /// may stand in, how often a reef holds one (the chance its plan rolls; 0: it comes another way, named in Comes), and how
 /// far it keeps from any other place (two caves, or two holes, keep further: CaveApart, HoleApart). Every place keeps
 /// FromStart from the start and FromExit from the exit. LevelPlan rolls them; CaveLayout spaces them; LevelValidator

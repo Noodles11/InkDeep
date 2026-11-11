@@ -6,7 +6,7 @@ using OctoShoots.Core.Gen.TopDown;
 namespace OctoShoots.Core.Plane;
 
 /// <summary>
-/// The level template's say over the world (docs/LEVEL-TEMPLATES-PROPOSAL.md): which corrupted kinds it casts, how many
+/// The level template's say over the world (docs/archive/LEVEL-TEMPLATES-PROPOSAL.md): which corrupted kinds it casts, how many
 /// and where (each kind's own placement keeps its checks and asks here whether a spot holds its anchor), and its extra
 /// rules: a prime waiting by a place, guardians budding round a place, budding faster or slower, more ink, springs,
 /// fish, quiet. With no template (the tutorial) or no rule for a kind, the general rules alone apply.

@@ -1,4 +1,4 @@
-// The pufferling (docs/PUFFERLING-PROPOSAL.md §2): one body for the healthy fish and the corrupted one. The mesh
+// The pufferling (docs/archive/PUFFERLING-PROPOSAL.md §2): one body for the healthy fish and the corrupted one. The mesh
 // (PufferlingMesh) carries both its calm shape and the ball it blows up into; this shader blends them, swims it (the
 // tail stem wiggling with the dorsal and anal fins, the pectorals fluttering, the tail sweeping and bending into
 // turns), raises, fires and regrows the spines, and paints it.

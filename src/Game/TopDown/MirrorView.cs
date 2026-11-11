@@ -5,10 +5,10 @@ using OctoShoots.Core.Plane;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// The bay's mirror (docs/RPG-PROPOSAL.md §8): a still pool of polished nacre on the floor in a low pearl rim. Its face
+/// The bay's mirror (docs/GAME.md §9): a still pool of polished nacre on the floor in a low pearl rim. Its face
 /// shows the water above as a pale sheen, and her as she swims over it: her glow mirrored under her, rings spreading from it
 /// (mirror_pool.gdshader). Swimming onto it opens the mirror's drawer (MirrorMenu). Till Kip is home to clean it
-/// (docs/NPC-BOSSES-PROPOSAL.md §5.3), silt lies over it and it shows nothing.
+/// (docs/FOLK.md §5.3), silt lies over it and it shows nothing.
 /// </summary>
 public partial class MirrorView : Node3D
 {

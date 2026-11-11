@@ -1,4 +1,4 @@
-// A freed murkling's core (docs/LIGHT-AND-GRAPH-PROPOSAL.md §4.2; CoreView.cs): the light it had drunk, hanging where
+// A freed murkling's core (docs/LIGHT-AND-GRAPH.md §4.2; CoreView.cs): the light it had drunk, hanging where
 // its ink shell splashed apart. Not fire: a soft ball of her light, brightest at its heart, its edge melting into the
 // water, swelling and thinning as it spreads out over its second.
 //   tint  her light's colour

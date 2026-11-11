@@ -18,7 +18,7 @@ using OctoShoots.Game.TopDown;
 namespace OctoShoots.Game.Title;
 
 /// <summary>
-/// The title screen (docs/TITLE-MENU-PROPOSAL.md): a menu over the live sea. Clementine swims slowly up and down the longest
+/// The title screen (docs/TITLE-MENU.md): a menu over the live sea. Clementine swims slowly up and down the longest
 /// straight channel of a fixed seed's reef in the middle of the screen, the camera following her, and the menu's items stand
 /// in a ring round her:
 /// Play, Seeded run, Sea-pedia, Statistics, Save &amp; load, Settings and Quit. She turns to face the
@@ -706,7 +706,7 @@ public partial class TitleMain : Node3D
         GameSave.Write();
     }
 
-    /// <summary>The jelly wakes in Lantern Bay (the open reef, docs/RPG-PROPOSAL.md).</summary>
+    /// <summary>The jelly wakes in Lantern Bay (the open reef, docs/archive/RPG-PROPOSAL.md).</summary>
     void PlayJelly(int index)
     {
         var save = GameSave.Current;

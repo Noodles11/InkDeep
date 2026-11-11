@@ -8,7 +8,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>The dive as a graph of reefs (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6; Run.DiveGraph) and its reefs' holes.</summary>
+/// <summary>The dive as a graph of reefs (docs/LIGHT-AND-GRAPH.md §6; Run.DiveGraph) and its reefs' holes.</summary>
 public class DiveGraphTests
 {
     public static IEnumerable<object[]> Seeds => new[] { "KELP7Q2Z", "ABCD2345", "HAVENS23", "QQQQ2222", "REEF5TAR", "ZZZZ9999" }.Select(s => new object[] { s });

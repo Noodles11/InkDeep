@@ -6,7 +6,7 @@ using OctoShoots.Core.Gen.TopDown;
 namespace OctoShoots.Core.Plane;
 
 /// <summary>
-/// The reef's charge stones (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.5): small clusters of coloured crystal shards set in the walls,
+/// The reef's charge stones (docs/LIGHT-AND-GRAPH.md §2.5): small clusters of coloured crystal shards set in the walls,
 /// each its own colour. Her beam charges one (the more of its light reaches it, the faster: PlaneWorld.BeamLight); charged,
 /// it glows on its own, full while it holds more than FadeSeconds of glow, then dimming as the last of it runs out, and
 /// out. Its light is round it, as her glow is, fainter even at full charge, and harms nothing; it shows the murklings in

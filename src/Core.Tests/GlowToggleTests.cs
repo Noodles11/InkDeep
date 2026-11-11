@@ -8,7 +8,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>Her glow put out (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.4): dark, and her beam dark, she is hidden.</summary>
+/// <summary>Her glow put out (docs/LIGHT-AND-GRAPH.md §2.4): dark, and her beam dark, she is hidden.</summary>
 public class GlowToggleTests
 {
     static readonly Lazy<ItemCatalog> Catalog = new(() =>

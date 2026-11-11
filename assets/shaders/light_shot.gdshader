@@ -1,4 +1,4 @@
-// Clementine's shot (docs/LIGHT-BUBBLES.md): light itself, no bubble. A small hot mote on a camera-facing quad: a
+// Clementine's shot (docs/archive/LIGHT-BUBBLES.md): light itself, no bubble. A small hot mote on a camera-facing quad: a
 // white-hot core, a warm glow (her gold, whitening as it merges: warmth), and a faint twinkle that turns.
 // lantern is its brightness (merging, pulses, dimming); ink (Ink Sac) sinks a violet heart into it.
 // Its pearls show in it (CombatView): motion (xyz its heading in the world, w how far it is drawn out along it: Swordfish

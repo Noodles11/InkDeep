@@ -7,7 +7,7 @@ using OctoShoots.Core.Plane;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// The bay's folk in the game (docs/NPC-BOSSES-PROPOSAL.md): a great cave's boss is a neighbour, named for its world
+/// The bay's folk in the game (docs/FOLK.md): a great cave's boss is a neighbour, named for its world
 /// while she is still corrupted; freed, she goes home to Lantern Bay (the caption as she swims off), lives at her home
 /// there, talks when Clementine swims up, and opens her service in the bay (a drawer at her home, for the services
 /// that have one: Fennel's Brood Bed).

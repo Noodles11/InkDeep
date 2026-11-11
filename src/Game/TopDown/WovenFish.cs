@@ -7,7 +7,7 @@ using OctoShoots.Core.Gen.TopDown;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// Small fish schooling through a woven reef's under-reef (docs/REEF-REDO-PROPOSAL.md §3, the look prototype), a
+/// Small fish schooling through a woven reef's under-reef (docs/proposals/REEF-REDO-PROPOSAL.md §3, the look prototype), a
 /// metre or several under her plane: each school wanders, turning off the coral that stands across its way; near her
 /// it bolts and scatters, then draws together again. Cosmetic only (the sim's reef fish swim at her plane).
 /// </summary>

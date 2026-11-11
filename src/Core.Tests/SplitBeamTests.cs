@@ -8,7 +8,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>Her beam split into rays by her shot pearls (docs/BEAM-PEARLS-PLAN.md, step 1).</summary>
+/// <summary>Her beam split into rays by her shot pearls (docs/proposals/BEAM-PEARLS-PLAN.md, step 1).</summary>
 public class SplitBeamTests
 {
     static readonly Lazy<ItemCatalog> Catalog = new(() =>

@@ -5,7 +5,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>How bright an emitter is at a point, and which is brightest (PlaneLight.cs; docs/LIGHT-AND-GRAPH-PROPOSAL.md §1).</summary>
+/// <summary>How bright an emitter is at a point, and which is brightest (PlaneLight.cs; docs/LIGHT-AND-GRAPH.md §1).</summary>
 public class LightQueryTests
 {
     static LightEmitter Point(Vector2 at, float intensity = 1f, float range = 10f, float energy = 100f) =>

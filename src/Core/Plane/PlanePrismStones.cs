@@ -6,7 +6,7 @@ using OctoShoots.Core.Gen.TopDown;
 namespace OctoShoots.Core.Plane;
 
 /// <summary>
-/// Prism stones (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.6): great standing stones, each in a bed of sand before a sealed
+/// Prism stones (docs/LIGHT-AND-GRAPH.md §2.6): great standing stones, each in a bed of sand before a sealed
 /// wall whose X is carved in a colour. She pushes one by swimming into it (heavy: it gives slowly, and never leaves its
 /// bed). Her light passes through a stone and comes out of it in the stone's colour, red, green or blue; through more
 /// than one it takes on each one's colour as light mixes (red and blue: magenta; all three: white). A coloured seal takes

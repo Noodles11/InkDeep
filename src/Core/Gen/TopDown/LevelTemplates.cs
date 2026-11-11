@@ -75,7 +75,7 @@ public sealed class TemplateRules
 }
 
 /// <summary>
-/// A level template (docs/LEVEL-TEMPLATES-PROPOSAL.md, DESIGN-TOPDOWN §4.1): what a level is about. It names the places
+/// A level template (docs/archive/LEVEL-TEMPLATES-PROPOSAL.md, DESIGN-TOPDOWN §4.1): what a level is about. It names the places
 /// a level must hold or may hold (with what chance) or must not; the cave's shape; which corrupted kinds it casts, how
 /// many and where; and its extra rules. The general rules stay underneath and win: the validator, the place cap, the
 /// treasure rooms per depth, the kinds' depth gates and Menace.

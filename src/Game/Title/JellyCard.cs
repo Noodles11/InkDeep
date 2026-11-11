@@ -10,7 +10,7 @@ using OctoShoots.Game.Ui;
 namespace OctoShoots.Game.Title;
 
 /// <summary>
-/// The jellies of this machine (docs/RPG-PROPOSAL.md §8, §11), each a save slot, at most JellyNames.MaxJellies, side by
+/// The jellies of this machine (docs/GAME.md §9), each a save slot, at most JellyNames.MaxJellies, side by
 /// side in the title's sea: the title draws each jelly as herself, floating where her slot is (TitleMain.SyncSlots,
 /// a BellView wearing her look), and this lays out what goes with them — a card under each with her details, and over an
 /// empty slot a round, see-through (+) button. The slot chosen lights up (its jelly shines; the others are switched off

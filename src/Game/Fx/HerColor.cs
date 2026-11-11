@@ -37,7 +37,7 @@ public static class HerColor
     public static int Gonads { get; private set; }
 
     /// <summary>
-    /// A jelly's look (docs/RPG-PROPOSAL.md §8), applied at once: her bell and arms, her glow, her tips and her gonads'
+    /// A jelly's look (docs/GAME.md §9), applied at once: her bell and arms, her glow, her tips and her gonads'
     /// shape. Load (forced) goes back to Clementine's own.
     /// </summary>
     public static void SetLook(OctoShoots.Core.Saves.JellyLook look)

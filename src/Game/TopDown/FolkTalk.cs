@@ -5,8 +5,8 @@ using OctoShoots.Core.Plane;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// A neighbour talking (docs/RPG-PROPOSAL.md §7): a speech bubble low on the screen while Clementine is near her home,
-/// her portrait (the cut-in's drawing of her, freed) beside her name and one line. Clementine never answers in words.
+/// A neighbour talking (docs/FOLK.md): a speech bubble low on the screen while Clementine is near her home,
+/// her portrait (her drawing, freed: BossIntroArt) beside her name and one line. Clementine never answers in words.
 /// Each time she swims up, the next line.
 /// </summary>
 public partial class FolkTalk : Control

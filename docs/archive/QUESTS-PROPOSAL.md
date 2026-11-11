@@ -1,6 +1,6 @@
 # Requests: repeatable side quests
 
-Step 5 of docs/RPG-PROPOSAL.md (§13), its first part: a few **repeatable side quests** for the open reef, so
+Step 5 of docs/archive/RPG-PROPOSAL.md (§13), its first part: a few **repeatable side quests** for the open reef, so
 Clementine has reasons to go back out into the caves and comes home with new pearls and more experience. The named
 creatures, the go-home cutscene and the first key-quest chain are the rest of step 5 and are not covered here.
 

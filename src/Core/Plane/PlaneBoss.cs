@@ -25,8 +25,7 @@ public static class PlaneBossTuning
     public const float LeapSeconds = 0.7f;
 
     /// <summary>
-    /// The arena intro: the boss's cut-in plays with the game held (the view's BossIntro, before any of this time runs),
-    /// then a beat, then her shadow grows and she lands.
+    /// The arena intro: a beat, then her shadow grows and she lands.
     /// </summary>
     public const float DropDelay = 0.5f, ShadowSeconds = 0.8f;
     /// <summary>The landing wave reaches the rim in this long; it nudges her outward.</summary>

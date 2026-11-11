@@ -21,7 +21,7 @@ public static class HerLightTuning
 {
     public const float ShotReach = 3.4f, Burn = 3f;
     /// <summary>
-    /// Her beam (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.3) burns as BeamShots plain shots would, and strikes a seal it falls on
+    /// Her beam (docs/LIGHT-AND-GRAPH.md §2.3) burns as BeamShots plain shots would, and strikes a seal it falls on
     /// with that many shots' light a second. Along its axis it clears the ink dots within BeamDots metres.
     /// </summary>
     public const int BeamShots = 2;

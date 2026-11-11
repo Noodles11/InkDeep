@@ -1,4 +1,4 @@
-// The Tide Fan (FanView; docs/QUESTS-PROPOSAL.md §2.2): a great old gorgonian sea fan, a lacy lattice of red-orange
+// The Tide Fan (FanView; docs/archive/QUESTS-PROPOSAL.md §2.2): a great old gorgonian sea fan, a lacy lattice of red-orange
 // branches spreading up from its stem in a broad fan, its polyps tiny pale stars along them. It sways in the bay's
 // gentle current, more toward its top. Only the lattice is drawn; the water shows through its holes.
 //   UV: the upright quad (x across, y 0 at the top → 1 at its foot).

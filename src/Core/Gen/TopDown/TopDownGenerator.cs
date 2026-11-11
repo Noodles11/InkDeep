@@ -88,7 +88,7 @@ public static partial class TopDownGenerator
         Generate(streams, LevelPlan.For(streams.Seed, id, luck), log, cosmeticSalt, luck);
 
     /// <summary>
-    /// A leak cave (docs/RPG-PROPOSAL.md §2.3): a seeded level from its own plan (LevelPlan.ForCave), its leak at the dead
+    /// A leak cave (docs/DIVE.md §6): a seeded level from its own plan (LevelPlan.ForCave), its leak at the dead
     /// end of the main path where the way down would be.
     /// </summary>
     /// <param name="into">
@@ -313,7 +313,7 @@ public static partial class TopDownGenerator
     }
 
     /// <summary>
-    /// A map drawn by hand (<see cref="HandLayout"/>, docs/RPG-PROPOSAL.md §2): its cave as drawn, then the seeded level's
+    /// A map drawn by hand (<see cref="HandLayout"/>, docs/archive/RPG-PROPOSAL.md §2): its cave as drawn, then the seeded level's
     /// own stages on it — the rock, its rooms, arches and passes, the decoration and the kelp — but no seals, pickups or
     /// spawns. A haven has no shaft, but a dive's haven its hole (HandLayout.Hole). One attempt: a map that cannot be built
     /// is a mistake in the map. <paramref name="asLevel"/>: the level it counts as, when not its own (a dive's haven, the
@@ -521,7 +521,7 @@ public static partial class TopDownGenerator
         Poi.IsCaveHosted(kind) ? (kind is PoiKind.TreasureCave or PoiKind.CurseDen or PoiKind.LeakCave ? ChamberRadius : PocketRadius) : ClearingRadius;
 
     /// <summary>
-    /// Lays out the level's cave (<see cref="CaveLayout"/>, docs/CAVEGEN.md) and records it: the start and the way down,
+    /// Lays out the level's cave (<see cref="CaveLayout"/>, docs/archive/CAVEGEN.md) and records it: the start and the way down,
     /// every place of the plan, the tunnels as corridors (a room's own tunnel as its spur) and the chambers as plazas.
     /// </summary>
     static string? LayCave(LevelMap map, Rng rng, LevelPlan plan, Dictionary<int, Vector2> spurDirs, out bool[] open)
@@ -1438,7 +1438,7 @@ public static partial class TopDownGenerator
     }
 
     /// <summary>
-    /// A reef's further holes (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6.3): each Hole place's chamber sunk as the exit's, its
+    /// A reef's further holes (docs/LIGHT-AND-GRAPH.md §6.3): each Hole place's chamber sunk as the exit's, its
     /// place moved to the hole's middle. Every hole (the Exit's first) goes on the map's list of holes.
     /// </summary>
     static void SinkHoles(LevelMap map)

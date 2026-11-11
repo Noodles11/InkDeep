@@ -5,7 +5,7 @@ using OctoShoots.Core.Gen.TopDown;
 
 namespace OctoShoots.Core.Run;
 
-/// <summary>What a reef of the dive's graph is (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6.2): its hole's rim shows it.</summary>
+/// <summary>What a reef of the dive's graph is (docs/LIGHT-AND-GRAPH.md §6.2): its hole's rim shows it.</summary>
 public enum ReefKind
 {
     /// <summary>An ordinary seeded reef.</summary>
@@ -20,7 +20,7 @@ public enum ReefKind
     Den,
 }
 
-/// <summary>The shape of the dive's graph (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6.1). All of it tunable.</summary>
+/// <summary>The shape of the dive's graph (docs/LIGHT-AND-GRAPH.md §6.1). All of it tunable.</summary>
 public static class DiveTuning
 {
     /// <summary>Reefs across a row (a depth's first row of the whole dive is one wide: where every dive begins).</summary>
@@ -40,7 +40,7 @@ public static class DiveTuning
 }
 
 /// <summary>
-/// The rules for the places that make a reef's kind (docs/LIGHT-AND-GRAPH-PROPOSAL.md §7): where in a depth each may
+/// The rules for the places that make a reef's kind (docs/LIGHT-AND-GRAPH.md §7): where in a depth each may
 /// stand (its rows), how often, and how far from another of its kind (never straight after one on a route). The spots
 /// within a reef (a secret, a shop, a shell cache, a Crab Deal) are rolled by its plan (LevelPlan, LevelStocking).
 /// </summary>
@@ -65,7 +65,7 @@ public sealed class DiveNode
 }
 
 /// <summary>
-/// The dive as a layered graph of reefs (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6), from the dive's seed alone. The tutorial
+/// The dive as a layered graph of reefs (docs/LIGHT-AND-GRAPH.md §6), from the dive's seed alone. The tutorial
 /// is two reefs one wide; below it each depth has four rows of 2–4 reefs (the very first row of the dive one wide), each
 /// reef 2–4 holes down into the row below (now and then a shortcut into the row after), and ends in its boss's reef,
 /// one wide, whose holes lead to every reef of the next depth's first row. Past the last depth the loop begins again

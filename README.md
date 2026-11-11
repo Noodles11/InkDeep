@@ -1,8 +1,8 @@
 # Ink Deep
 
 A top-down action roguelite in a darkening ocean.
-- **Design:** [`docs/DESIGN-TOPDOWN.md`](docs/DESIGN-TOPDOWN.md) is authoritative. It builds on
-  [`docs/DESIGN-3D.md`](docs/DESIGN-3D.md) and [`docs/DESIGN-2D.md`](docs/DESIGN-2D.md), whose rules it inherits.
+- **Design:** [`docs/GAME.md`](docs/GAME.md) is the one current design; it lists the system documents that hold the
+  details. Superseded designs are in [`docs/archive/`](docs/archive/), ideas not built in [`docs/proposals/`](docs/proposals/).
 - **Theme guideline:** [`docs/THEME-BIBLE.md`](docs/THEME-BIBLE.md). It covers the pillars, palettes, corruption
   and freeing, audio, tone of voice, and the theme tests every feature must pass.
 
@@ -78,7 +78,7 @@ src/Game/Fx/      reusable art: flora, creature, clam and reef meshes, pearl mat
 src/Game/         controls (InputSetup), settings and save store, conversions
 assets/fonts/     Baloo 2, Nunito and IBM Plex Mono (SIL Open Font License, licences beside them; see TitleStyle)
 assets/shaders/   the reef's skin (reef_surface), each level's frame and the dive's portal (level_frame), the water pass (topdown_post), Clementine's bell and tentacles, bubble, pearl, boss, map and art shaders
-docs/             design documents, the Depth 1 bestiary and milestone checklists
+docs/             the design (GAME.md first), the Theme Bible and the system documents; proposals/ and archive/
 ```
 
 ## Requirements

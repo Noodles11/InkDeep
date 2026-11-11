@@ -58,7 +58,7 @@ A red-orange sea slug with a white-edged ruffled mantle and two feathery gills, 
 - **Contact** also hurts (10). After the burst it spins for 1.2 s: free hits.
 - **Why:** the first time the player meets a ring pattern, from a slow, forgiving enemy.
 
-### Pufferling — swimmer (built for the top-down game; the full design is docs/PUFFERLING-PROPOSAL.md)
+### Pufferling — swimmer (built for the top-down game; the full design is docs/archive/PUFFERLING-PROPOSAL.md)
 A plump pufferfish about 1.1 m long: a blunt head with a small beak, big domed eyes, fluttering pectoral fins, a
 dorsal and an anal fin set far back, a rounded tail fan, and spines lying flat on its skin. Healthy ones are sand-olive
 with dark spots; corrupted ones are starfire red with lime spots and a price tag on the tail.
@@ -244,7 +244,7 @@ Freed creatures replace today's death burst, sound and despawn. Bosses free the 
   reef feels sadder the deeper she goes (DESIGN-2D §5.3): roughly 2 : 1 at Depth 1, 1 : 1 at Depth 3,
   1 : 3 at Depth 6.
 - **Reef fish.** Clownfish in their anemones, blue tangs and schools of blue-green chromis live on the reef as
-  background life only: never corrupted, never targets (docs/REEF-FISH-PROPOSAL.md, DESIGN-TOPDOWN §12.2).
+  background life only: never corrupted, never targets (docs/archive/REEF-FISH-PROPOSAL.md, DESIGN-TOPDOWN §12.2).
 - **Healthy urchins are prickly** on touch: a small hazard, the reef defending itself (THEME-BIBLE §13).
 - **Not targets.** Bubbles pass through healthy creatures, aim assist ignores them, they never show on the
   minimap and they never attack. Like the neutral clownfish, they keep clear of Clementine's bubbles.

@@ -1,80 +1,56 @@
-# The bay's folk: five bosses who come home (proposal)
+# The bay's folk: five neighbours who come home
 
-The second half of step 5 of docs/RPG-PROPOSAL.md (§13): named creatures, their homecoming and the key quests, built
-on one rule. **Every NPC is a boss first.** Each great cave on the reef holds one of the bay's own folk, corrupted.
-Freeing them brings them home to Lantern Bay, and each one who comes home opens something in the bay. Nothing here is
-built. It follows the boss rules of docs/BOSS-GENERATOR.md §0 and the Theme Bible's tests (§12).
+The five neighbours of Lantern Bay, as the Leak made them and as they are at home. **Every neighbour is a boss first:**
+each is the boss of one depth of the dive (docs/DIVE.md §5) until she is freed; freed, she goes home to Lantern Bay (the
+havens, docs/DIVE.md §4) and opens something there. This page holds each one's design; §12 is how they are built. They
+keep the boss rules of docs/BOSS-GENERATOR.md §0 and the Theme Bible's tests (§12).
 
 ## 1. The rule
 
-- **Bosses are the bay's folk.** Each depth of the dive ends in its neighbour's boss fight, till she is freed (docs/DIVE.md
-  §5). A leak cave ends in its leak. Every boss added later follows the same rule: a new boss is a new neighbour.
-- **They are authored.** These bosses are written as Drippus Prime is (docs/CORRUPTION.md), not rolled: each has its
-  own body, fight and cave, the same for every jelly.
-- **Once each.** Freeing one seals its great leak for good (RPG-PROPOSAL §2.3). If she dims in the fight, the boss
-  waits there, whole again, for her next try.
+- **Bosses are the bay's folk.** Each depth of the dive ends in its neighbour's boss fight, till she is freed. Every
+  boss added later follows the same rule: a new boss is a new neighbour.
+- **They are authored**, as Drippus Prime is (docs/CORRUPTION.md), not rolled: each has its own body and fight, the
+  same for every jelly.
+- **Once each.** Freeing one saves her as freed on the jelly for good; from then on her depth's boss is the Leak's own,
+  Drippus Prime. If Clementine dims in the fight, the neighbour waits there, whole again, for her next dive.
 - **The homecoming.** The freeing plays as every boss's does (Bible §6.5): the pearl bursts white, the mutations melt,
   the drip turns gold, true colours flood the arena. Then the camera holds while the true body turns, looks at her
   and swims up and away, trailing gold. The caption reads "Grandmother Tull has gone home to Lantern Bay". Her
   cleansed pearl stays where it sat, as every boss's does.
-- **In the bay.** Each has a home there and is always in it. She swims close to talk: a speech bubble with a
+- **In the haven.** Each has a home there and is always in it. She swims close to talk: a speech bubble with a
   portrait. Clementine never speaks; she bobs for yes and turns away for no (Bible §5.3).
-- **Each one opens something.** The bay starts empty: the last clean water, with nobody left in it. The Tide Fan
+- **Each one opens something.** Lantern Bay starts empty: the last clean water, with nobody left in it. The Tide Fan
   hangs bare, the mirror is clouded with silt, the shell shop's cave is dark. Each freed neighbour brings one of them
-  back to life (§3). What the bay always has: the lantern post where she wakes, the homeward current, healing on
-  entering, and changing which actives sit in her slots (her own body, not a service).
-- **Each gives a key quest chain** that leads to the next one, a few small steps (chart a place, free a prime, seal a
-  minor leak), ending at the next great cave's mouth. A chain's last step pays one active pearl (RPG-PROPOSAL §5.2).
-  The chains suggest an order. The map does not enforce it: a great cave can be entered as soon as she finds its mouth.
-- **Each knows a piece of what happened to the bloom.** The pieces come nearer the truth the farther out the
-  neighbour was found, and none goes past the foreshadowing the Bible allows for its depth (§4.4).
-- **Not fighters.** Freed folk never fight for her (RPG-PROPOSAL §11).
+  back to life (§3). What a haven always has: healing her whole and banking what she carries (docs/DIVE.md §4).
+- **Each gives a key quest chain**, a few small steps naming depths (dive to a depth, free primes or seal leaks in it,
+  untie a request, find something in a leak cave, bring it home), its last step paying an active pearl
+  (docs/DIVE.md §7).
+- **Each knows a piece of what happened to the bloom,** and of the old tale of the jellyfish's errand (Bible §4). The
+  pieces come nearer the truth the deeper the neighbour was found, and none goes past the foreshadowing the Bible
+  allows for its depth (§4.4).
+- **Not fighters.** Freed folk never fight for her.
 
 ## 2. Where they lie
 
-```
-  0 m                        420 m                       840 m
-  ┌────────────────────────────┬───────────────────────────┐
-  │ KELP JUNGLE (4–6)          │ CORAL CARNIVAL (10–12)    │
-  │ ③ The Still Bed            │        ⑤ The Empty Stage  │
-  │   far north-west, Lv 6     │   far north-east, Lv 12   │
-  │                            │                           │
-  ├────────────────────────────┼───────────────────────────┤
-  │ SUNLIT SHALLOWS (1–3)      │ SUNKEN GALLEON (7–9)      │
-  │          ② The Cleaning    │   ④ The Captain's Hold    │
-  │            Station, Lv 3 → │     in the wreck, Lv 9    │
-  │ ① The Sleeping Ledge, Lv 2 │                           │
-  │ ┌─────────┐                │                           │
-  │ │LANTERN  │                │                           │
-  │ │BAY      │                │                           │
-  └─┴─────────┴────────────────┴───────────────────────────┘ 840 m
-```
+| Depth | Reef | Neighbour | Her arena | Her level |
+|---|---|---|---|---|
+| 1 | Kelp Jungle | Grandmother Tull, green sea turtle | The Sleeping Ledge | 2 |
+| 2 | Sunken Galleon | Kip, cleaner wrasse | The Cleaning Station | 3 |
+| 3 | Coral Carnival | Fennel, leafy seadragon | The Still Bed | 6 |
+| 4 | Twilight Trench | Ottilie, common octopus | The Captain's Hold | 9 |
+| 5 | The Abyss | Bubbles, mandarin dragonet | The Empty Stage | 12 |
 
-| # | Neighbour | Great cave | Where | Level | Floors |
-|---|---|---|---|---|---|
-| 1 | Grandmother Tull, green sea turtle | The Sleeping Ledge | Shallows, just north-east of the bay's gate: the first mouth she sees | 2 | 1 |
-| 2 | Kip, cleaner wrasse | The Cleaning Station | Shallows' east, near the pass to the Galleon | 3 | 3 |
-| 3 | Fennel, leafy seadragon | The Still Bed | Kelp Jungle's far north-west corner, deepest in the kelp | 6 | 3 |
-| 4 | Ottilie, common octopus | The Captain's Hold | Sunken Galleon's middle, inside the great wreck | 9 | 3 |
-| 5 | Bubbles, mandarin dragonet | The Empty Stage | Coral Carnival's far north-east corner, farthest from the bay | 12 | 3 |
-
-- **Great caves are fixed:** a fixed mouth in `reef.json` (beside the 22 minor ones), a fixed layout and a fixed seed,
-  so every jelly meets the same cave. Each floor is darker and tighter than the last, as a minor cave's is. The boss
-  arena is the deepest floor's dead end, where a minor cave's leak would be: it is either a boss or a leak, and here the
-  boss is the leak.
-- **Its mouth reads from far off:** a great mouth weeps more ink than any danger 2 mouth, and its label shows its name
-  and level from 20 m.
-- **The Shallows has two,** so the first boss is close and short (one floor, near the gate) and the region still has
-  a proper great cave of three floors.
+Each fight is in the arena of her depth's boss reef, round the Crack (`Dives.FolkBossOf`, `FolkBosses`). The arenas'
+names and looks below are their design; as built, each fight is in her depth's boss arena.
 
 ## 3. What each one opens
 
 | Neighbour | Opens | What it does |
 |---|---|---|
-| Grandmother Tull | **The Tide Fan** | Requests (docs/QUESTS-PROPOSAL.md): she ties the bay's troubles to it. Before her the fan hangs bare. |
-| Kip | **The mirror** | Changing her look (RPG-PROPOSAL §8). Kip cleans the silt off it and tends it. |
+| Grandmother Tull | **The Tide Fan** | Requests (docs/DIVE.md §7): she ties the reef's troubles to it. Before her the fan hangs bare. |
+| Kip | **The mirror** | Changing her look (docs/GAME.md §9). Kip cleans the silt off it and tends it. |
 | Fennel | **The Brood Bed** | A shell keeper: shells left with him are never lost when she dims. New. |
-| Ottilie | **The pearl collector** | The shell shop: buying and selling pearls (RPG-PROPOSAL §5.3). Her den is the market's cave. |
+| Ottilie | **The pearl collector** | The shell shop: buying pearls. Her den is the market's cave. |
 | Bubbles | **The Dusk Dance** | Re-laying her skill points: Bubbles teaches her to move anew. New. |
 
 ---
@@ -93,7 +69,7 @@ built. It follows the boss rules of docs/BOSS-GENERATOR.md §0 and the Theme Bib
 
 ### 4.2 The boss
 
-- **The cut-in:** CLEMENTINE VS SLEEPY OLD TULL. Warm and big, round-eyed: the Shallows' tone. She yawns.
+
 - **Body:** the turtle 5 m long, her flippers 2 m. True form 3.2 m.
 - **Mutation, an overgrown shell:** plate upon plate piled past her, crusted over her garden, so heavy she can barely
   lift it. Ink stains spread from the plates' seams; her flippers and head are drained to ash. The drip rises from the
@@ -121,8 +97,8 @@ built. It follows the boss rules of docs/BOSS-GENERATOR.md §0 and the Theme Bib
 
 - **Home:** the commune, her shell against the Tide Fan's foot.
 - **Opens:** the Tide Fan's requests. She ties the ribbons with her beak.
-- **Her chain, "Find Kip":** chart the Shallows' east; free two murkling primes there; open the Cleaning Station.
-  Pays **Bubble Shield**: *"Every turtle knows: carry your house with you."*
+- **Her chain, "Find Kip":** dive down to Depth 2; free two murkling primes there; find Kip's lost comb in a Depth 2
+  leak cave. Pays **Bubble Shield**: *"Every turtle knows: carry your house with you."*
 - **Lines:**
   - *"I watched your whole bloom go down in one breath. I'm too wide for the Crack, little lamp. You aren't."*
   - *"You found me asleep under all that. Don't tell the others how long it took."*
@@ -144,7 +120,7 @@ built. It follows the boss rules of docs/BOSS-GENERATOR.md §0 and the Theme Bib
 
 ### 5.2 The boss
 
-- **The cut-in:** CLEMENTINE VS NINE-FIN KIP. She bobs up and down in her cleaning dance.
+
 - **Body:** the wrasse 4 m long. True form 2.4 m.
 - **Mutation, extra fins:** fins crowding along her back and belly, each sprouting another, so she is a ragged fan of
   them. Ink spreads from her blue stripe; the rest of her is ash. The drip rises from the fins' roots.
@@ -170,8 +146,8 @@ built. It follows the boss rules of docs/BOSS-GENERATOR.md §0 and the Theme Bib
 
 - **Home:** the lagoon, beside the mirror.
 - **Opens:** the mirror. She cleans the silt off it, and she is there each time Clementine uses it.
-- **Her chain, "My kelp clients stopped coming":** reach the Kelp Jungle; untie one request there; free a prime in a
-  Kelp cave; find the Still Bed's mouth. Pays **Whale Song**: *"Hold still. This is the good part."*
+- **Her chain, "My kelp clients stopped coming":** untie a request at the Tide Fan; dive down to Depth 3; free a
+  murkling prime there. Pays **Whale Song**: *"Hold still. This is the good part."*
 - **Lines:**
   - *"Hold still. You've got Leak in your frills. …There. Family colour, all the way through."*
   - *"Your sister glowed just like that. I did her rim twice, she was so proud of it."*
@@ -190,7 +166,7 @@ built. It follows the boss rules of docs/BOSS-GENERATOR.md §0 and the Theme Bib
 
 ### 6.2 The boss
 
-- **The cut-in:** CLEMENTINE VS PAPA FENNEL. He curls his tail tighter around his eggs.
+
 - **Body:** the seadragon 5 m long. True form 3 m. The eggs glow faintly pink on his tail, untouched.
 - **Mutation, fronds grown inward:** his leafy fronds have hardened into thorns curling back into his body. Ink stains
   spread from their roots; the rest is ash. The drip rises from the thorns.
@@ -218,10 +194,10 @@ built. It follows the boss rules of docs/BOSS-GENERATOR.md §0 and the Theme Bib
 - **Home:** a quiet weed bed in the lagoon's far corner.
 - **Opens:** the Brood Bed. She can leave shells with him, and those are never lost when she dims: *"I'll keep them the
   way I keep these."* The shells she carries are lost as today (her lost light).
-- **Later:** after her next great cave is sealed, the eggs hatch. Dozens of tiny seadragons drift in the bay from then
+- **Later:** once the next neighbour is freed, the eggs hatch. Dozens of tiny seadragons drift in the bay from then
   on: the bay filling up with life.
-- **His chain, "The wreck has gone quiet":** reach the Galleon; seal a minor leak there; free a prime in the wreck's
-  field; find the Captain's Hold. Pays **Ink Cloud**: *"Be the weed. Nobody looks at weed."*
+- **His chain, "The wreck has gone quiet":** dive down to Depth 4; seal a leak there; free a murkling prime there.
+  Pays **Ink Cloud**: *"Be the weed. Nobody looks at weed."*
 
 ## 7. Ottilie: Many-Armed Ottilie
 
@@ -238,8 +214,7 @@ built. It follows the boss rules of docs/BOSS-GENERATOR.md §0 and the Theme Bib
 
 ### 7.2 The boss
 
-- **The cut-in:** CLEMENTINE VS MANY-ARMED OTTILIE. Thinner and colder than the Shallows' cut-ins. She lifts the black
-  pearl to admire it.
+
 - **Body:** the octopus 5.5 m across her arms. True form 3.3 m.
 - **Mutation, extra arms:** fourteen arms crowding over each other, ink sacs swelling between them. Ink stains spread
   from the arms' roots; the rest of her is ash. The drip rises from the sacs.
@@ -265,9 +240,8 @@ built. It follows the boss rules of docs/BOSS-GENERATOR.md §0 and the Theme Bib
 ### 7.3 In the bay
 
 - **Home:** the market's cave, heaped with her hoard.
-- **Opens:** the pearl collector. She buys and sells pearls: the shell shop (RPG-PROPOSAL §5.3).
-- **Her chain, "My best glint":** go back to the Captain's Hold (sealed and safe now); find her old hoard on its middle
-  floor; bring back the glint. She gives it to Clementine: *"I don't keep things that are someone's."* Pays **Prism
+- **Opens:** the pearl collector. She sells pearls: the shell shop.
+- **Her chain, "My best glint":** find her old hoard in a Depth 5 leak cave; bring her glint to a haven. Pays **Prism
   Pearl**: *"One light, three colours. Your family's, I think."*
 - **A thread to the next:** *"The brightest fish I ever saw swam through my wreck going north-east. All the wrong
   colours, darling. Or all the right ones."*
@@ -280,7 +254,7 @@ built. It follows the boss rules of docs/BOSS-GENERATOR.md §0 and the Theme Bib
   blue, so vivid the bay half-suspects she is still corrupted. Natural brilliance next to the Leak's wrong brightness.
 - **Her story.** She is one of the tank's escapees, who came out already changed, and she doesn't know it. To her it's
   half a dream: *"Before the sea I lived somewhere small. The sun never moved. Food fell like snow."*
-- **Her name:** the reef doesn't know her, so the cut-in can only name her species. She names herself in the bay:
+- **Her name:** the reef doesn't know her, so it can only name her species. She names herself in the bay:
   *"Bubbles. That's the sound the sky made when it looked at me."* Played straight and sad, never as a joke (the
   Never-Wink test).
 - **Her voice:** dreamy and gentle, happiest at dusk. Mandarins dance at dusk, rising in pairs.
@@ -289,8 +263,7 @@ built. It follows the boss rules of docs/BOSS-GENERATOR.md §0 and the Theme Bib
 
 ### 8.2 The boss
 
-- **The cut-in:** CLEMENTINE VS THE PALE DRAGONET. The thin cold VS of the deep band. She doesn't look at Clementine at
-  all: she looks up.
+
 - **Body:** the dragonet 4.5 m long, her fins spread to 5 m. True form 2.7 m.
 - **Mutation, ink sacs where her colours were:** her whole pattern is drowned. Each swirl of it has swollen into a
   glossy ink sac; between them she is pale ash. The drip rises from the sacs.
@@ -312,7 +285,7 @@ built. It follows the boss rules of docs/BOSS-GENERATOR.md §0 and the Theme Bib
 - **Phases (3):** at 33% and 66% the sacs grow back, one fewer each time (Boil Heart's rule), her restored swirls
   staying where they were.
 - **The arena:** a round stage ringed by tall reef, its neon flickering like footlights with no sun behind them. As
-  the cut-in ends, the first muffled glass thump is heard, far off (Bible §4.4, Depth 4's first).
+  her battle begins, the first muffled glass thump is heard, far off (Bible §4.4).
 - **Freed:** the last sac goes, her whole pattern floods back, and she hops away on her fins, slowly, looking up.
   Caption: "The dragonet has gone home to Lantern Bay". She gives her name only in the bay.
 
@@ -321,8 +294,7 @@ built. It follows the boss rules of docs/BOSS-GENERATOR.md §0 and the Theme Bib
 - **Home:** the lagoon's brightest corner, where the evening light falls longest.
 - **Opens:** the Dusk Dance. She teaches Clementine to move anew: all her skill points come back to lay again. *"You
   don't have to keep swimming the way you learned."*
-- **Her chain, "Where the reef goes down":** reach the shelf's edge beyond the Carnival; follow the water that pulls
-  downward; find the way below the shelf (the second map, Twilight Trench and Abyss, when it is built). The first chain
+- **Her chain, "Where the reef goes down":** dive on past Depth 5, where the reef goes down again. The first chain
   that points down toward the Crack. Pays **Conch Horn**: *"The sea answers. It always did, down here."*
 
 ---
@@ -339,58 +311,35 @@ built. It follows the boss rules of docs/BOSS-GENERATOR.md §0 and the Theme Bib
 | Two-Breaks | Only the boss-awakening dip. The homecoming holds the camera still. |
 | Sadness | The bay starts empty and fills one neighbour at a time; the folk get stranger and sadder the farther out. |
 
-## 10. What this changes elsewhere
+## 10. How it is built
 
-- **The bay's built services become unlocks.** The Tide Fan, the mirror and the shell shop all exist today and work
-  from the start. Under this proposal a jelly starts with all three closed; existing jellies start with nobody freed.
-- **The boss roster.** On the reef, `BossRoster`'s Drippus Prime gives way to the five authored bosses. The seeded runs
-  keep it.
-- **New bodies.** None of the five fits a built body plan: they need a turtle, two Fish-plan rigs (wrasse, seadragon,
-  dragonet) and a Cephalopod rig (BOSS-GENERATOR §3.2). Each is a new rig, the biggest cost here.
-- **Bible §6.5 and §13** (freed creatures leave and are gone) already give way to RPG-PROPOSAL §7 for named creatures.
-
-## 11. Pacing risk
-
-**Shells have nothing to buy until the Galleon.** With the pearl collector fourth, the early reef pays in shells she
-can only carry (and, after Fennel, keep). Early pearls come from requests and caves. If that feels flat in play, the
-fallback is a small trade at Tull's fan: a pearl or two for shells, until Ottilie comes home.
-
-## 12. What is built so far
-
-- **The folk and their great caves** (`PlaneFolk.cs`: `Folk`, `Neighbour`, `BayService`): all five of the bay's folk
-  are in the game. A great mouth names its neighbour (`HandPoint.Folk`) and comes after every minor mouth in `reef.json`
-  (`OpenReef.MinorMouths`: the Tide Fan names only those). Its cave's level and floors are hers (`OpenReef.CaveLevel`,
-  `CaveFloors`), its number is its own past every minor cave's (`OpenReef.GreatCave`), it is grown from the region's
-  seed, and its deepest floor's dead end is a boss's arena (`LevelPlan.ForCave`'s `boss`), named "The arena" on the
-  maps.
-- **The arena:** its walls stand open and rise behind her only while its boss fights (`PlaneWorld.PlaceSeals`). No
-  prime waits there and no murkling buds in the cave while the fight runs. **The boss is the cave's leak**
-  (`PlaneLeak.Hidden`): no leak is drawn, on the HUD's dots, in the hot water or on the maps, and there is nothing to
-  tie; freeing the boss seals it, with all a seal brings: its experience, the ink and ash dissolving, its upwelling
-  where the boss lay, and the great cave closed for good (`OpenReef.SealedGreat`, `Jelly.GreatLeaks`,
-  `OpenReef.ShutMouths`). Its pearl and its shells land at least 3 m from the upwelling, so taking them never carries
-  her out (every leak cave's sealed leak bursts its shells out in that ring, `AdventureTuning.ShellsClear`).
+- **The folk** (`PlaneFolk.cs`: `Folk`, `Neighbour`, `BayService`): all five are in the game, in depth order
+  (`Folk.All`). A depth's boss reef holds its neighbour till she is freed (`Dives.FolkBossOf`, `TopDownMain.DiveBoss`),
+  then Drippus Prime.
+- **The arena** is the boss reef's, round the Crack: its walls rise behind her while the fight runs. **The boss is the
+  reef's leak**: freeing her seals it, with all a seal brings (its experience, the ink and ash dissolving, its
+  upwelling where she lay, the holes opening). Her pearl and her shells land at least 3 m from the upwelling, so
+  taking them never carries her out (`AdventureTuning.ShellsClear`).
 - **Her boss** (`FolkBosses`): authored, its meter `700 × (1 + 0.25 × (level − 1))`. Its acts are written out by phase
   (`BossSpec.Acts`); it holds still while it warns and acts (`BossSpec.ActsStill`). Tull: the flipper sweep (a fan of
   five big drops at where she last felt Clementine), then the slam (a ring of sixteen drops with a gap of three), then
   the sigh (her throat open for 2 s); from half her meter, a seam cracks and the slams come in pairs. Her body is
-  `TurtleRig`; her cut-in yawns (`BossIntroArt.Turtle`).
-- **Kip** (The Cleaning Station, east of the spur, three floors, level 3): she keeps to her station in the arena's middle
+  `TurtleRig`.
+- **Kip** (Depth 2, level 3): she keeps to her station in the arena's middle
   (`BossMove.Station`), flicks a ring of fourteen drops with a gap of three, then darts 14 m along her aim at 16 m/s
   (`BossAttack.Dart`) and waits side-on for 1.4 s, the pearl on her flank turned toward Clementine. Past half her
   meter her rests quicken, she darts twice, and six of her old clients come, blue tangs turned to lesser murklings
   (`BossSpec.Clients`). Her body is `FishRig`: it bobs at her station, tucks its fins on the dart's warning, and rolls
-  onto its side in the wait. Her cut-in dances (`BossIntroArt.Wrasse`).
-- **Fennel** (The Still Bed, past the moss bank in the Kelp Jungle's north-west corner, three floors, level 6): he
+  onto its side in the wait.
+- **Fennel** (Depth 3, level 6): he
   drifts between five stands of kelp round the arena (`BossMove.Hide`, `PlaneBoss.Stands`) and hides in one, half
   seen, his drip rising out of it. She finds him by swimming within 5 m or when her light reaches him (no harm to
   him); then he lashes nine drops across 90° at where he last felt her (`BossSpec.SweepCount`, `SweepArc`) and his
   chest is open for 1.6 s, before he drifts to another stand. Left unfound for 6 s, he strikes from hiding with the
   tangle, a wall of fourteen drops with a gap of two, and opens nothing after. From half his meter two other stands
   drip too (`PlaneBoss.Decoys`). His body is `FishRig`'s seadragon: lobed fronds that sway, stiffen and rattle on the
-  lash's warning, his pink eggs under his tail in their own colour; the stands are `BossView.Stands`. His cut-in curls
-  his tail round his eggs (`BossIntroArt.Seadragon`).
-- **Ottilie** (The Captain's Hold, east of the keel in the wreck's field, three floors, level 9): her pearl is held
+  lash's warning, his pink eggs under his tail in their own colour; the stands are `BossView.Stands`.
+- **Ottilie** (Depth 4, level 9): her pearl is held
   behind her (`BossSpec.Shielded`): she turns at 0.5 rad/s to keep her body between it and Clementine, and a shot
   coming through her body to it is stopped, so circling round her finds it. She hurls three glints of ink at her (arc
   bombs), then two arms shoot 12 m out along lines lit on the floor through the second before (`BossAttack.Reach`,
@@ -398,16 +347,15 @@ fallback is a small trade at Tull's fan: a pearl or two for shells, until Ottili
   anywhere. From half her meter an ink bloom joins: a cloud 7 m across toward her for 5 s (`BossAttack.Bloom`,
   `PlaneBoss.Blooms`). Her body is `OctopusRig` (eight segmented arms that sway, curl back on the throw's warning and
   reach along the lines, six thinner inked ones crowding between, ink sacs at her back); the lit lines and the clouds
-  are `BossView.Reach`; her cut-in lifts her treasure (`BossIntroArt.Octopus`).
-- **Bubbles** (The Empty Stage, east of the lanterns in the Coral Carnival's far north-east, three floors, level 12):
+  are `BossView.Reach`.
+- **Bubbles** (Depth 5, level 12):
   Boil Heart. Five ink sacs where her swirls were, each a small meter; her pearl is buried at her heart till all are
   burst. Blind to Clementine, she circles slowly; her dusk rise lifts her off the plane through its warning (not solid,
   her light passing under her) to come down where her shadow is, in a ring of eighteen drops (`BossAttack.Rise`,
   `PlaneBoss.RiseTo`), then her sacs fire their rings. A spiral joins at a third of her meter; at each third her sacs
   grow back, one fewer each time. Her body is `FishRig`'s dragonet: great fan fins, a sail, her sacs riding on her;
   each sac burst gives back a swirl of her true orange and blue, and it stays. The reef calls her "the dragonet"
-  (`Neighbour.Called`) till she names herself in the bay. Her cut-in looks up, never at Clementine
-  (`BossIntroArt.Dragonet`).
+  (`Neighbour.Called`) till she names herself in the bay.
 - **The homecoming:** freed, she swims off, and the caption reads "Grandmother Tull has gone home to Lantern Bay"
   (`Jelly.Freed`).
 - **At home** (`FolkView`, `FolkTalk`, `FolkPortrait`; `HandLayout.Homes`): her true body at her home by the Tide Fan,
@@ -420,18 +368,9 @@ fallback is a small trade at Tull's fan: a pearl or two for shells, until Ottili
   Pearls tab sells nothing (`PauseMenu.Sells`), though her slots can still be changed in the bay. Bubbles's corner of
   the lagoon is the Dusk Dance: its drawer gives back every skill point spent, to lay again (`PlaneRun.Relearn`).
 - **The key quest chains** (`PlaneChains.cs`: `Chains`, `Jelly.Chains`): each freed neighbour's begins once she is home,
-  its steps in turn, shown as gold kelp ribbons on the HUD with their places marked on the maps; the last pays her
-  active pearl with her line for it. Tull's "Find Kip": chart the Shallows' east, free two primes in the Shallows, find
-  the Cleaning Station (Bubble Shield). Kip's "My kelp clients stopped coming": swim into the Kelp Jungle, untie a
-  request, free a prime there, find the Still Bed (Whale Song). Fennel's "The wreck has gone quiet": swim into the
-  Sunken Galleon, seal a leak there, free a prime there, find the Captain's Hold (Ink Cloud). Ottilie's "My best
-  glint": find her old hoard in the wreck's debris, bring her glint home (Prism Pearl; on the reef, not in her sealed
-  cave). Bubbles's "Where the reef goes down": find where it goes down past the Carnival's mirrors (Conch Horn; the
-  way below the shelf comes with the second map). Ink Cloud and Conch Horn work on the plane for this
-  (docs/PEARLS.md).
+  its steps in turn (as in §4.3–§8.3), shown as gold kelp ribbons on the HUD; the last pays her active pearl with her
+  line for it. Steps name depths, never places (`Chains.DepthZone`, `CycleZone`).
 - **Tull's late line** (`Neighbour.Late`): once Bubbles is home, the shore's lights that don't move like stars.
-- **Verification:** `--reef=cave:22` starts in Tull's cave, and `--reef=cave:23` to `26` with `--floor=3` on Kip's,
-  Fennel's, Ottilie's and Bubbles's deepest floors (`--at=boss-near` near the boss);
-  `--dbg-freed=tull,kip,fennel,ottilie,bubbles` has them freed and home, and `--reef=bay --at=103,775`,
-  `--at=57,777.5`, `--at=81,785.5`, `--at=28,782` or `--at=62,766.5` sets Clementine down by Tull, Kip, Fennel,
-  Ottilie or Bubbles (`--at=81,782` on Fennel's bed, its drawer open). Tests: `FolkTests`.
+- **Verification:** `--dbg-dive --depth=N --level=5 --at=boss-near` starts by a depth's boss (code depths count the
+  tutorial as 1: Tull's is `--depth=2`, Bubbles's `--depth=6`); `--dbg-haven --dbg-freed=tull,kip,fennel,ottilie,bubbles`
+  starts in a haven with them home. Tests: `FolkTests`.

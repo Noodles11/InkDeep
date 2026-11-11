@@ -9,7 +9,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>The basic murkling: it seeks the brightest light, drinks it, and is shaken off (docs/LIGHT-AND-GRAPH-PROPOSAL.md §3.1).</summary>
+/// <summary>The basic murkling: it seeks the brightest light, drinks it, and is shaken off (docs/LIGHT-AND-GRAPH.md §3.1).</summary>
 public class SeekerTests
 {
     static readonly Lazy<ItemCatalog> Catalog = new(() =>

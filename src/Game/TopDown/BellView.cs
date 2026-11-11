@@ -516,7 +516,7 @@ public partial class BellView : Node3D
         float deep = Mathf.Clamp((Lantern - 1f) / 0.85f, 0f, 1f);
         _light.OmniRange = BulbRange * Mathf.Sqrt(glow * Lantern);
         if (!_dbgFalloff) _light.OmniAttenuation = Mathf.Lerp(Falloff, FalloffDeep, deep);
-        // Her light is her life (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.1): it dims as her HP falls, and goes out with it.
+        // Her light is her life (docs/LIGHT-AND-GRAPH.md §2.1): it dims as her HP falls, and goes out with it.
         float life = world.Defeated ? 0f : Mathf.Clamp(world.Player.Hp / Mathf.Max(world.Run.MaxHp, 1f), 0f, 1f);
         _life = Mathf.Lerp(_life, LifeGlow(life), 1f - Mathf.Exp(-(world.Defeated ? 1.5f : 6f) * h));
         _light.OmniRange *= 0.7f + 0.3f * _life;

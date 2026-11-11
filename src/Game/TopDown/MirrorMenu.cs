@@ -8,7 +8,7 @@ using OctoShoots.Game.Ui;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// The bay's mirror (docs/RPG-PROPOSAL.md §8): over its pool, a drawer slides in from the right as the pause menu's
+/// The bay's mirror (docs/GAME.md §9): over its pool, a drawer slides in from the right as the pause menu's
 /// does, the camera closing in on her at the left and the sea held. In it her look as a form (LookForm): her gonads'
 /// shape and her glow, arm and tip colours, shown on her as they change. Her name stays as it is. Keep this look keeps
 /// it on her jelly; As she was (or Esc, or B) puts back the look she came with.

@@ -98,7 +98,7 @@ Taking a pearl is a moment of its own. It plays round Clementine while she swims
 ### Stats
 
 Every stat counts on the plane: damage, max HP, fire rate, shot speed, range, shot size, swim speed, dash cooldown,
-HP regeneration (her corruption ebbing), luck, glow and knockback. On her beam (docs/BEAM-PEARLS-PLAN.md) her fire rate
+HP regeneration (her corruption ebbing), luck, glow and knockback. On her beam (docs/proposals/BEAM-PEARLS-PLAN.md) her fire rate
 is its **tick rate** (it burns, seals and charges faster), her shot speed its **carry** (the light it keeps far out) and
 her knockback its **light pressure** (what is in it is pushed away from her). Stat pearls are never unique, so each copy stacks
 (including the drawbacks: Glass Squid, Sea Cucumber, Pufferfish Pout and Cannonball all trade something away).

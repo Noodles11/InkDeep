@@ -5,11 +5,11 @@ using OctoShoots.Core.Saves;
 
 namespace OctoShoots.Core.Plane;
 
-/// <summary>What a neighbour brings back to life in Lantern Bay once she is home (docs/NPC-BOSSES-PROPOSAL.md §3).</summary>
+/// <summary>What a neighbour brings back to life in Lantern Bay once she is home (docs/FOLK.md §3).</summary>
 public enum BayService { TideFan, Mirror, BroodBed, PearlCollector, DuskDance }
 
 /// <summary>
-/// One of the bay's folk (docs/NPC-BOSSES-PROPOSAL.md): who she is, the boss the Leak made of her and the great cave she
+/// One of the bay's folk (docs/FOLK.md): who she is, the boss the Leak made of her and the great cave she
 /// waits at the bottom of (its level and floors fixed, the same for every jelly), and what she opens in the bay.
 /// </summary>
 /// <remarks>
@@ -20,7 +20,7 @@ public sealed record Neighbour(
     string Id, string Name, string Species, string Boss, string Cave, int Level, int Floors, BayService Opens, string[] Lines, string? Called = null, string? Late = null);
 
 /// <summary>
-/// The bay's folk (docs/NPC-BOSSES-PROPOSAL.md): every NPC is a boss first. Each waits, corrupted, at the bottom of a great
+/// The bay's folk (docs/FOLK.md): every NPC is a boss first. Each waits, corrupted, at the bottom of a great
 /// cave; freed, she goes home to Lantern Bay and opens one of its services. A service whose neighbour has no boss yet is
 /// open from the start, as before.
 /// </summary>
@@ -90,7 +90,7 @@ public static class Folk
 }
 
 /// <summary>
-/// Fennel's Brood Bed (docs/NPC-BOSSES-PROPOSAL.md §6.3): shells she leaves with him are kept, never lost when she
+/// Fennel's Brood Bed (docs/FOLK.md §6.3): shells she leaves with him are kept, never lost when she
 /// dims (the shells she carries go with her lost light, as ever).
 /// </summary>
 public static class BroodBed

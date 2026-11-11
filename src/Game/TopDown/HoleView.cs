@@ -6,7 +6,7 @@ using OctoShoots.Core.Run;
 
 namespace OctoShoots.Game.TopDown;
 
-/// <summary>What a reef of the dive's graph looks like on a hole's rim and the chart (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6.3).</summary>
+/// <summary>What a reef of the dive's graph looks like on a hole's rim and the chart (docs/LIGHT-AND-GRAPH.md §6.3).</summary>
 public static class ReefKinds
 {
     public static Color Colour(ReefKind kind) => kind switch
@@ -40,7 +40,7 @@ public static class ReefKinds
 }
 
 /// <summary>
-/// The rims of a reef's holes (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6.3): a ring of light on each hole's floor and a glow
+/// The rims of a reef's holes (docs/LIGHT-AND-GRAPH.md §6.3): a ring of light on each hole's floor and a glow
 /// down in it, in the colour of the reef it leads to (ReefKinds). None while a hole lies shut under its leak's sand;
 /// once its leak is sealed and it opens, its rim lights and breathes. A boss arena's Crack has its own light and gets none.
 /// </summary>

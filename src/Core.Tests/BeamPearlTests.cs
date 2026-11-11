@@ -8,7 +8,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>Her pearls on the beam (docs/LIGHT-AND-GRAPH-PROPOSAL.md §5.1).</summary>
+/// <summary>Her pearls on the beam (docs/LIGHT-AND-GRAPH.md §5.1).</summary>
 public class BeamPearlTests
 {
     static readonly Lazy<ItemCatalog> Catalog = new(() =>

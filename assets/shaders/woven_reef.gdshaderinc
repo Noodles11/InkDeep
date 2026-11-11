@@ -1,4 +1,4 @@
-// The woven reef's paint (docs/REEF-REDO-PROPOSAL.md §4, the look prototype): a living illustration. Each coral is
+// The woven reef's paint (docs/proposals/REEF-REDO-PROPOSAL.md §4, the look prototype): a living illustration. Each coral is
 // laid in two or three soft flat tones of its own colour, held back toward stone and the water, broken by a faint
 // brush stroke; its edges, turned from the eye, dissolve into the water. Depth reads from colour alone: the deeper a
 // piece lies under her plane, the more of the water's colour it takes, in soft steps (2.2 m layers, as the floor's);

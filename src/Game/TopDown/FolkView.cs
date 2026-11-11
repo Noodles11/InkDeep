@@ -9,7 +9,7 @@ using OctoShoots.Game.TopDown.Bosses;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// The bay's folk at home (docs/NPC-BOSSES-PROPOSAL.md §1): each neighbour she has freed lives at her home in Lantern
+/// The bay's folk at home (docs/FOLK.md §1): each neighbour she has freed lives at her home in Lantern
 /// Bay, her true body (the boss's rig with its mutations melted away, at its freed size) drifting there, turning to
 /// Clementine as she comes near. Who is near enough to talk to is the game's to show (FolkTalk).
 /// </summary>

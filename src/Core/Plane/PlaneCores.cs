@@ -5,7 +5,7 @@ using System.Numerics;
 namespace OctoShoots.Core.Plane;
 
 /// <summary>
-/// A freed murkling's core (docs/LIGHT-AND-GRAPH-PROPOSAL.md §4.2): when its meter runs out, its ink shell splashes apart
+/// A freed murkling's core (docs/LIGHT-AND-GRAPH.md §4.2): when its meter runs out, its ink shell splashes apart
 /// and the light it had drunk hangs where it was, fading over Life seconds. Touching it (within Reach of her) gives her
 /// Light HP (PrimeLight for a prime's, LesserLight for a turned fish's), never past her max. Her Remora Sucker (the
 /// magnet) draws cores to her from as far as it draws shells.

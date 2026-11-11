@@ -1,5 +1,5 @@
 {
-  // Achievements (docs/ACHIEVEMENTS-PROPOSAL.md, DESIGN-TOPDOWN §8): each unlocks one pearl, which joins the offers
+  // Achievements (docs/archive/ACHIEVEMENTS-PROPOSAL.md, DESIGN-TOPDOWN §8): each unlocks one pearl, which joins the offers
   // from then on. Earned once per profile; a run on a custom seed never earns one. Checked on load: every pearl exists,
   // names this achievement as its unlock, and no pearl is unlocked twice.
   //   tone: the line's flavour on the banner (candy or dark); hint: how to earn it (the pause menu, while unearned).

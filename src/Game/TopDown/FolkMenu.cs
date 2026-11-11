@@ -7,7 +7,7 @@ using OctoShoots.Game.Ui;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// A neighbour's service in the bay (docs/NPC-BOSSES-PROPOSAL.md §3), as the Tide Fan's and the mirror's drawers are:
+/// A neighbour's service in the bay (docs/FOLK.md §3), as the Tide Fan's and the mirror's drawers are:
 /// at her home it slides in from the right, the camera drawn in and the sea held. Her service's name, a line of what it
 /// does and how things stand, and its actions (Fennel's Brood Bed: leave the shells she carries, take them back).
 /// </summary>

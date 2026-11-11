@@ -214,8 +214,8 @@ marked **Beam** or **Beam too** work as written.
 | Rear Fin | a shot out of her back too | **Beam too**: a second beam behind her at half its strength (a murkling sees it too). |
 | Frost Kelp, Fire Coral, Sea Nettle Sting, Stingray Barb, Siren Song, Giant Squid Eye | a chance per hit (freeze, burn, poison, slow, charm, crit) | **Beam too**: rolled once a second for each creature the beam keeps burning. |
 | Anglerfish Lure | shots home | **Shot, and the decoy**: her shots still home, and a shot of hers left hanging shines 2.5 × as bright and can be drunk: murklings go for it instead of her. (Guided Inkfish and Will-o'-Wisp keep working.) |
-| Plankton Swarm, Triple Tentacle, Double Helix, Hammerhead, Kraken Form | more shots, patterns | **Beam**: her beam splits into rays (docs/BEAM-PEARLS-PLAN.md) |
-| Squid Ink Espresso, Plankton Swarm | fire rate | **Beam**: its tick rate (docs/BEAM-PEARLS-PLAN.md) |
+| Plankton Swarm, Triple Tentacle, Double Helix, Hammerhead, Kraken Form | more shots, patterns | **Beam**: her beam splits into rays (docs/proposals/BEAM-PEARLS-PLAN.md) |
+| Squid Ink Espresso, Plankton Swarm | fire rate | **Beam**: its tick rate (docs/proposals/BEAM-PEARLS-PLAN.md) |
 | Cuttlebone; Pufferfish Pout, Cannonball (drawbacks) | shot speed | **Beam**: its carry, the light kept far out |
 | Nautilus Spiral, Mirror Scale, Swordfish Bill, Ghost Jelly, Mitosis, Boomerang Shrimp, Starfish Arm, Sardine Run | the shot's path or body | **Shot** |
 | Pearl Diver, Starburst Gland | a charged pearl; a burst where it pops | **Shot** |
@@ -234,7 +234,7 @@ The new effects go on existing pearls:
 
 ### 5.2 One light rule per folk boss (built)
 
-Each folk boss keeps its fight (docs/NPC-BOSSES-PROPOSAL.md) and gains one rule that asks more of the beam than
+Each folk boss keeps its fight (docs/FOLK.md) and gains one rule that asks more of the beam than
 holding it on the pearl:
 
 | Boss | Its rule |

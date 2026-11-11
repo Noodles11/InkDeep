@@ -30,7 +30,7 @@ public sealed class PlaneOptions
     public bool DiveCave;
     /// <summary>
     /// Her shots (PlaneInput.Fire: the thrown bubbles of light, the charged pearl, Firefly Squid's surge). Off in the game:
-    /// her beam is her one attack (docs/LIGHT-AND-GRAPH-PROPOSAL.md §5). On here by default, for what is still built on
+    /// her beam is her one attack (docs/LIGHT-AND-GRAPH.md §5). On here by default, for what is still built on
     /// shots (the sim's tests, an active pearl's own).
     /// </summary>
     public bool Shots = true;

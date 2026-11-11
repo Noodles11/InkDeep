@@ -8,7 +8,7 @@ using OctoShoots.Game.Title;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// The achievement banner (docs/ACHIEVEMENTS-PROPOSAL.md §4): a ticket at the bottom centre — the main card (eyebrow,
+/// The achievement banner (docs/archive/ACHIEVEMENTS-PROPOSAL.md §4): a ticket at the bottom centre — the main card (eyebrow,
 /// title, the achievement's line) joined by a perforated seam to a stub holding the pearl it unlocked (live, in its
 /// socket, with its name, tagline and effects). A bubble rises and pops into it; the card springs in, its title drops
 /// in letter by letter; it holds while a timer line drains; then it leaves in a puff of pastel smoke as the pearl rises

@@ -34,7 +34,7 @@ public sealed class SecretSeal
     public float Credit;
     public bool Open;
     /// <summary>
-    /// The colour its X is carved in (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.6): it takes only her light of that colour, come
+    /// The colour its X is carved in (docs/LIGHT-AND-GRAPH.md §2.6): it takes only her light of that colour, come
     /// through the prism stones out before it (None: any of her light).
     /// </summary>
     public LightHue Hue;

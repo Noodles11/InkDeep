@@ -7,7 +7,7 @@ using OctoShoots.Core.Run;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// The chart (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6.3): the pause menu's map of the dive's graph through the depth she is
+/// The chart (docs/LIGHT-AND-GRAPH.md §6.3): the pause menu's map of the dive's graph through the depth she is
 /// in, and the first row of the one below. The reefs she has been on, filled; the one she is on, ringed in gold; the
 /// reefs she can see from here (down to Sight rows below her, and every hole's of a reef she has been on) in the colour
 /// of their kind; the rest unknown, a faint ring. The holes between them as lines, brighter where both ends are known.

@@ -6,7 +6,7 @@ using OctoShoots.Core.Gen.TopDown;
 
 namespace OctoShoots.Core.Plane;
 
-/// <summary>The reef fish's numbers (docs/REEF-FISH-PROPOSAL.md): first guesses, tuned in play.</summary>
+/// <summary>The reef fish's numbers (docs/archive/REEF-FISH-PROPOSAL.md): first guesses, tuned in play.</summary>
 public static class ReefFishTuning
 {
     /// <summary>A freed fish swims off and is gone, never to be turned again: once this far from her, or after this long wherever it is.</summary>
@@ -126,7 +126,7 @@ public sealed class PlaneReefFish : PlaneSwimmer
 
 public sealed partial class PlaneWorld
 {
-    /// <summary>The reef's background fish (docs/REEF-FISH-PROPOSAL.md), their anemones and their schools.</summary>
+    /// <summary>The reef's background fish (docs/archive/REEF-FISH-PROPOSAL.md), their anemones and their schools.</summary>
     public List<PlaneReefFish> ReefFish { get; } = new();
     public List<PlaneAnemone> Anemones { get; } = new();
     public List<PlaneSchool> Schools { get; } = new();

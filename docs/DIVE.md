@@ -3,15 +3,15 @@
 The game is a dive: generated levels, one after another, deeper and deeper. Each level's hole opens when its leak is
 sealed, and swimming over it sinks her into the next level. There is no open map. Lantern Bay's folk are met in havens,
 calm levels that come now and then between the others. This replaces the open reef and the region maps of
-docs/RPG-PROPOSAL.md: its bay, folk, mirror, Tide Fan and leak caves live on here, as this document describes, and the
+docs/archive/RPG-PROPOSAL.md: its bay, folk, mirror, Tide Fan and leak caves live on here, as this document describes, and the
 reef's map, zones, cave mouths in regions, homeward current, charts, lost light and three active slots are gone.
 
 ## 1. Jellies and dives
 
-- **A jelly is a save slot.** The title's jellyfish cards (docs/TITLE-MENU-PROPOSAL.md) are the three slots. Choosing
+- **A jelly is a save slot.** The title's jellyfish cards (docs/TITLE-MENU.md) are the three slots. Choosing
   one continues her dive where it stands, or starts a new one.
 - **A dive** (`Jelly.Dive`, a `SuspendedRun`) runs Depth 1 to Depth 5 down a graph of reefs (`DiveGraph`,
-  docs/LIGHT-AND-GRAPH-PROPOSAL.md §6): five rows a depth, the boss alone on the fifth, each reef 2–4 holes down to
+  docs/LIGHT-AND-GRAPH.md §6): five rows a depth, the boss alone on the fifth, each reef 2–4 holes down to
   reefs of the row below, then loops to the next cycle. It is saved at the start of every reef, with the reef she is
   on (its lane) and the reefs she has been on (`SuspendedRun.Lane`, `Reefs`).
 - **Its seed** comes from the jelly's own seed and how many dives she has ended (`Dives.SeedOf`), so every dive is a
@@ -57,7 +57,7 @@ stays floor), all open from the start.
   none would reach them, until from every reef of a depth's first two rows a haven of the depth can be reached. Never a
   whole row of them. A haven is a choice, shown on the holes' rims and the chart, never a toll.
 - **Who is there:** a home round the lagoon for every neighbour she has freed, each with their service
-  (docs/NPC-BOSSES-PROPOSAL.md): Tull's Tide Fan, Kip's mirror, Fennel's brood bed, Ottilie's pearl collector, Bubbles's
+  (docs/FOLK.md): Tull's Tide Fan, Kip's mirror, Fennel's brood bed, Ottilie's pearl collector, Bubbles's
   dusk dance. The mirror stays silted until Kip is home.
 - **Always:** the shop off the market. Arriving heals her whole and banks all she carries (`BankDive`): her pearls and
   shells are hers for good from then on.

@@ -1,4 +1,4 @@
-// The reef fish (docs/REEF-FISH-PROPOSAL.md §4): one shader for the three kinds' bodies (ReefFishMeshes), drawn as a
+// The reef fish (docs/archive/REEF-FISH-PROPOSAL.md §4): one shader for the three kinds' bodies (ReefFishMeshes), drawn as a
 // MultiMesh per kind. It swims them — a body wave growing toward the tail, the tail sweeping and bending into turns,
 // the pectorals rowing, the dorsal and anal fins rippling — and paints each species' natural colours:
 //   0 Clownfish:  warm orange, three white bars edged in black, black-rimmed fins.

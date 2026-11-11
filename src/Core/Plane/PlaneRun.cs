@@ -36,7 +36,7 @@ public sealed class PlaneRun
     /// <summary>What every run starts with; never offered, since she always has it.</summary>
     public static readonly string[] StartingPearls = { StartingPearl, "sea_chart_nautilus" };
 
-    /// <summary>The open reef's active slots (docs/RPG-PROPOSAL.md §5.2): three, each its own button.</summary>
+    /// <summary>The open reef's active slots (docs/archive/RPG-PROPOSAL.md §5.2): three, each its own button.</summary>
     public const int SlotCount = 3;
 
     public PlaneRun(ItemCatalog? catalog, Tuning tuning)
@@ -157,7 +157,7 @@ public sealed class PlaneRun
     }
 
     /// <summary>
-    /// The Dusk Dance (Bubbles's, docs/NPC-BOSSES-PROPOSAL.md §8.3): every skill point she has spent comes back to lay
+    /// The Dusk Dance (Bubbles's, docs/FOLK.md §8.3): every skill point she has spent comes back to lay
     /// again (and the max HP they gave goes with them). Returns how many.
     /// </summary>
     public int Relearn()

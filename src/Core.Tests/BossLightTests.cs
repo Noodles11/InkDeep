@@ -11,7 +11,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>Each folk boss's rule for her beam (docs/LIGHT-AND-GRAPH-PROPOSAL.md §5.2; PlaneBossLight.cs).</summary>
+/// <summary>Each folk boss's rule for her beam (docs/LIGHT-AND-GRAPH.md §5.2; PlaneBossLight.cs).</summary>
 public class BossLightTests
 {
     static readonly Lazy<ItemCatalog> Catalog = new(() =>

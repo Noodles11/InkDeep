@@ -5,7 +5,7 @@ using OctoShoots.Game.Fx;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// The requests she carries off the Tide Fan (docs/QUESTS-PROPOSAL.md §6), on the HUD under the minimap: each a ribbon of
+/// The requests she carries off the Tide Fan (docs/archive/QUESTS-PROPOSAL.md §6), on the HUD under the minimap: each a ribbon of
 /// kelp drifting from a knot, the knot holding its token (the pearl in its colour, or gold for shells) and coloured by its
 /// kind, what it asks written along it in a few words with how far along it is. A done one glints gold. The pause
 /// menu's Requests tab hides them.
@@ -105,7 +105,7 @@ public partial class RequestRibbons : Control
         }
     }
 
-    /// <summary>A request kind's ribbon colour (docs/QUESTS-PROPOSAL.md §3).</summary>
+    /// <summary>A request kind's ribbon colour (docs/archive/QUESTS-PROPOSAL.md §3).</summary>
     public static Color KindColour(string kind) => kind switch
     {
         OctoShoots.Core.Plane.Requests.Seal => new Color(0.62f, 0.3f, 0.95f),

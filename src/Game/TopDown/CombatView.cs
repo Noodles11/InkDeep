@@ -38,7 +38,7 @@ public partial class CombatView : Node3D
     ShaderMaterial _clamPearl = null!, _royalPearl = null!, _inkDrop = null!;
     float _time;
 
-    // Light bubbles (docs/LIGHT-BUBBLES.md): every bubble of hers carries a lantern, glows in the water and lights the
+    // Light bubbles (docs/archive/LIGHT-BUBBLES.md): every bubble of hers carries a lantern, glows in the water and lights the
     // swim layer round it; where one pops it leaves a bloom of light; merges pulse and chime; kills flare by merge count.
     /// <summary>A bubble's core brightness: dim and warm alone, ×1.35 per bubble merged in, capped below her bell's.</summary>
     public static float CoreLight(int bubbles) => Mathf.Min(BaseLight * Mathf.Pow(MergeGain, bubbles - 1), MaxLight);

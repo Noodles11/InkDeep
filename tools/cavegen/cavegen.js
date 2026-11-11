@@ -1,4 +1,4 @@
-// Ink Deep cave generator (prototype for docs/CAVEGEN.md): organic cave levels in the manner of Watabou's Cave
+// Ink Deep cave generator (prototype for docs/archive/CAVEGEN.md): organic cave levels in the manner of Watabou's Cave
 // Generator, re-made from scratch for the game. A level is a chain of chambers from the start to the way down, with
 // side branches and the odd loop, joined by winding tunnels; it grows until its reachable water covers the area rule
 // (6000 m², ±15%). The result mirrors the game's LevelMap: a 1 m height grid (open water ≤ 0, rock above), places

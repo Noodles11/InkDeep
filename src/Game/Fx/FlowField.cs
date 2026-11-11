@@ -4,7 +4,7 @@ using Godot;
 namespace OctoShoots.Game.Fx;
 
 /// <summary>
-/// The water's motion round her (docs/REEF-REDO-PROPOSAL.md §5): a 128² grid, 0.5 m a cell, that follows the camera's
+/// The water's motion round her (docs/proposals/REEF-REDO-PROPOSAL.md §5): a 128² grid, 0.5 m a cell, that follows the camera's
 /// focus and holds how fast the water moves on her plane. Her swimming, her jets and her dashes stir it (Stir), and so
 /// do the creatures; each frame the stir is carried along by itself, spreads a little and fades. It is handed to the
 /// shaders as the `flow_tex` global (flow_field.gdshaderinc), so everything soft bends away from her wake and springs

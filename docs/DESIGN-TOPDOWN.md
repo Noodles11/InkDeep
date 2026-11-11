@@ -1,20 +1,13 @@
-# Ink Deep — Top-Down Redesign (v0.1, draft)
+# Ink Deep — the plane: rules and numbers
 
-> A top-down action roguelite set in a darkening ocean. You are a small
-> bioluminescent jellyfish, the last of your bloom, diving after your family
-> through a reef poisoned by the Leak. Pearls you gather are consumed by your
-> bell — each one a new glowing pattern on your body, each combination a new
-> build, each dive a step into darker water.
+> The detailed rules and numbers of the top-down game: movement, camera, the level generator, lighting, bosses,
+> progression and UI. **[GAME.md](GAME.md) comes first:** where this page disagrees with it or with a system document
+> it lists, they win. Parts of this page predate the beam and the dive and are out of date (GAME.md §13): bubbles as
+> her attack (§2.3), the old pickups and economy (§7), the depth count (§8). Where it says "inherited", the rule is in
+> `archive/` (DESIGN-3D, DESIGN-2D) and holds only where nothing current replaces it.
 >
-> This document defines the new game. **Everything not explicitly changed here
-> is inherited** from `DESIGN-3D.md` (current live rules) and, where noted,
-> `DESIGN-2D.md`. Inherited systems are referenced by section, not repeated.
->
-> **The theme guideline is [`THEME-BIBLE.md`](THEME-BIBLE.md):**
-> - the pillars, the palettes, the corruption and freeing language, the audio identity, the tone of voice;
-> - the theme tests (§12) that every new feature must pass.
->
-> This document stays authoritative for rules and numbers.
+> **The theme guideline is [`THEME-BIBLE.md`](THEME-BIBLE.md)**, with the theme tests (§12) every new feature must
+> pass.
 
 ---
 
@@ -343,7 +336,7 @@ of the corrupted (`PlaneExperience.cs`, `PlaneRun`).
   menace and light — never from map size.
 - The square is **ringed by an impassable reef wall** — cliffs and coral
   ramparts; the rim is scenery and collision, never a soft boundary.
-- **A depth is 5 rows of a graph of reefs** (§8; docs/LIGHT-AND-GRAPH-PROPOSAL.md
+- **A depth is 5 rows of a graph of reefs** (§8; docs/LIGHT-AND-GRAPH.md
   §6). **A level's ways out are its holes:** one for each reef below it it leads
   to (2–4), a blue hole each — on the depth's boss level the Crack in the boss
   arena is one, all of them opening when the boss is freed. Each hole's rim shows
@@ -363,7 +356,7 @@ water. Heights are measured from the **swim level (0)**: Clementine floats on
 it. Anything above 0 is an obstacle; anything at or below 0 is open water she
 floats over, however deep the floor lies beneath.
 
-**The feel has changed with the cave generator (docs/CAVEGEN.md):** a level
+**The feel has changed with the cave generator (docs/archive/CAVEGEN.md):** a level
 is one organic cave in the manner of Watabou's Cave Generator — craggy
 chambers joined by winding tunnels — rather than a labyrinth of canyons.
 
@@ -1045,40 +1038,9 @@ where hiding among identical fish is visual, not camera-based.
   close behind her for the fight and open once the boss is freed (§4.2). Queen Clam bars hers.
 - Patterns translate from "rings, spheres, sweeping planes" to 2D: rings, fans,
   sweeping lines, rotating beams, spawning adds. Every boss keeps 2–3 phases,
-  its anime cut-in (below), and **freed-not-killed** poofs.
-- **The boss intro** (`BossIntro`, `BossIntroArt`): as the battle begins, a
-  drawn anime cut-in covers the whole screen for about 5.4 s while the game
-  holds (the boss's drop waits for it). Any key, click or button skips to
-  its end. Five beats:
-  1. Speed lines wipe in, in the depth's tint (0–0.6 s).
-  2. Clementine's panel slides in from the left. She bobs in, spots
-     something, does a double-take with a sweat-drop, and gulps.
-  3. The boss's panel slams in from the right (1.8 s) in a white impact frame
-     with a burst of rays and a shake. The boss does its body form's gag:
-     - the giant clam snaps its shell and blows a bubble raspberry under a
-       pearl crown;
-     - the sea star spins in and poses with a wink;
-     - the urchin puffs its spines in angry huffs;
-     - the moon jelly wobbles in sparkles;
-     - the siphonophore's bells hop in a conga line;
-     - the sea hare chews a strand of weed, its ears twitching;
-     - the snail slides in, its eyestalks boinging;
-     - Drippus Prime jiggles in like a water balloon, a drop plips off its flank and wriggles into a tiny murkling,
-       and it pats it proudly.
-  4. A glowing **VS** punches in on the seam (3.2 s). Clementine sets her
-     face and the boss taunts.
-  5. The panels burst into bubbles that pop away into the game (4.6–5.4 s).
-
-  The cast is drawn as chibi characters: thick soft outlines, flat cel colour
-  with one highlight, big glossy eyes. Each boss wears its own generated
-  colours, with ink-sac mutations as dark bumps and its Count giving more
-  arms, spines, bells, flaps or whorls. The depth ramp (THEME-BIBLE §6.6):
-  at Depth 1 round eyes, a smile and warm colour; deeper, slit pupils, more
-  teeth, colour drained and a cold rim, and the VS thinner and icier.
-  "CLEMENTINE" rides on a ribbon at the lower left, the boss's name at the
-  lower right. Reactions are drawn shapes (a sweat-drop, sparkles), never
-  text. Each beat sounds (a whoosh, a snap, a bell, a pop). Reduced motion
-  keeps the beats without the shake, the flash or the overshoot.
+  and **freed-not-killed** poofs.
+- **No boss intro.** A boss is met in its arena alone: the battle begins as she comes in, and the boss rises or drops
+  into it (no cut-in, no VS screen; creatures and bosses never wear cartoon faces).
 - Roster inherited: Gus, Queen Clam, Kelpie, Sir Urchin, Rusty Admiral, Treasure
   Mimic, Ringmaster Octo, Jester Jellies, Mama Otter, Captain Sawtooth, Punchy,
   Mother Angler, Giant Squid, Siphonophore, Frilled Shark, Sea Spider, Hollow Maw.
@@ -1161,7 +1123,7 @@ The FP staging ("look up through the surface") is replaced:
 - **Menace** (§5.3) and the **sadness curve** (fewer healthy creatures, more
   empty dens, quieter reef) are systemic and inherited unchanged.
 - **Achievements unlock pearls** (`data/achievements.json`, `PlaneAchievements`;
-  the design is docs/ACHIEVEMENTS-PROPOSAL.md). A run starts with the **basic
+  the design is docs/archive/ACHIEVEMENTS-PROPOSAL.md). A run starts with the **basic
   set**: every ported pearl without an `unlock` (DESIGN docs/PEARLS.md). Each of
   the five achievements unlocks one pearl, which clam rooms, shops and
   Queen Clam offer from the moment it is earned — the rest of that run included
@@ -1391,7 +1353,7 @@ at mist distance (inherited fade rule).
   in one frame as the level is let go; the next level's life is drawn whole again on arrival.
 - **Combat** (`PlaneCombat.cs`; the Depth-1 bestiary is being ported onto the plane, the Pufferling first): Clementine has
   100 HP (shown by the gonad rings on her bell, §2.5; the run's play time, stopped while paused, §9) and shoots toward the mouse (held) or the
-  arrow keys — 10 damage, 4–5 volleys a second. Her shots are light (docs/LIGHT-BUBBLES.md), and a shot never stops
+  arrow keys — 10 damage, 4–5 volleys a second. Her shots are light (docs/archive/LIGHT-BUBBLES.md), and a shot never stops
   dead: thrown at 20 m/s, it slows steadily at first, as if to stop at the end of her range, then — once the water's
   drag (6 × its speed, per second) is the gentler — eases off exponentially. Slower than 0.9 m/s it floats, still
   drifting and slowing, each shot for its own time (0.12–0.22 s, rolled as it is thrown, times her **bubble hover**
@@ -1411,7 +1373,7 @@ at mist distance (inherited fade rule).
   grows by half the base per bubble merged in, so three bubbles make one twice the size and three times the damage.
   Growth stops at 15 bubbles: a full bubble still merges (taking the faster speed and heading and the longer life)
   but grows no bigger or stronger, and shines with a rainbow sheen. A mob flashes for 0.12 s on each hit. **The mobs are corrupted Pufferlings**
-  (docs/PUFFERLING-PROPOSAL.md, DEPTH1-BESTIARY): 60 HP; they wander about a home spot; one that sees her within 10 m
+  (docs/archive/PUFFERLING-PROPOSAL.md, DEPTH1-BESTIARY): 60 HP; they wander about a home spot; one that sees her within 10 m
   turns to face her and drifts closer; within 8 m it blows up (0.8 s), fires 8 needles in a ring turned at random (big
   hot-pink spikes, 20 m/s, 14 m, 8 damage; a needle pops any of her bubbles it meets and flies on), stays round 0.5 s (its spines sting
   for 4 on touch), then for 3 s backs away, shrinks and regrows its spines; past 16 m (or 2 s out of sight) it lets
@@ -1421,7 +1383,7 @@ at mist distance (inherited fade rule).
   is out of sight; it never comes back as a mob. **8–12 healthy pufferlings** live on each level, in ones, twos and
   threes by the plazas and dens: never targets, unbothered by her. Running out of HP ends the run (see the death
   splash below).
-- **Reef fish** (`PlaneReefFish.cs`, `ReefFishView`, `reef_fish.gdshader`; docs/REEF-FISH-PROPOSAL.md): reef life,
+- **Reef fish** (`PlaneReefFish.cs`, `ReefFishView`, `reef_fish.gdshader`; docs/archive/REEF-FISH-PROPOSAL.md): reef life,
   in the sim (seeded per level), never her targets, never in her way, off the minimap. The murklings hunt them and may
   turn them into lesser murklings, which she frees back into fish (docs/CORRUPTION.md, Lesser murklings); fish flee
   murklings. **Clownfish**, a pair or
@@ -1567,7 +1529,7 @@ at mist distance (inherited fade rule).
   first loop). The arena is the exit's flat 15 m disc, and it bars it (§6.4, §4.2). Queen Clam (below, her numbers at
   Depth 1) stays in the code as the boss generator's reference roll; no depth meets her.
   - **Entering.** The first time Clementine is wholly inside the disc, the battle begins: the sword walls rise behind
-    her (§4.2) and the boss intro plays (§6.4): **CLEMENTINE VS DRIPPUS PRIME**, the game held under it. Drippus Prime
+    her (§4.2). Drippus Prime
     then rises out of the arena's ink (docs/CORRUPTION.md); Queen Clam drops in:
   - **The drop.** 0.5 s later her shadow grows on the Crack for 0.8 s and she drops onto it, facing Clementine. The
     thump shakes the camera, puffs sand, and sends a wave out to the rim in 0.5 s that nudges Clementine outward.
@@ -1602,7 +1564,7 @@ at mist distance (inherited fade rule).
 - **Levels:** each level is generated from the run seed and its id (cycle, depth, level); diving down its shaft
   leads to the next (§4.6). She keeps her pearls, shells and HP through it; a new seed starts a fresh run. A new run
   starts on a random seed unless she types one on the title screen.
-- **Title screen** (docs/TITLE-MENU-PROPOSAL.md has the full layout and motion):
+- **Title screen** (docs/TITLE-MENU.md has the full layout and motion):
   - **One crosshair.** With the controller the left stick's crosshair is the mouse's own, at its own size whatever the
     window (not scaled with the menu), and the mouse pointer hides until the mouse is used again.
   - **The backdrop.** The game boots into a menu over the live sea. Clementine swims slowly back and forth along the

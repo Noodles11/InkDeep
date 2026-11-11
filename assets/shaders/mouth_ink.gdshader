@@ -1,4 +1,4 @@
-// A dangerous cave mouth weeping the Leak's ink (PortalView, docs/REEF-WORLD.md §3): the more dangerous its cave, the
+// A dangerous cave mouth weeping the Leak's ink (PortalView, docs/DIVE.md §6): the more dangerous its cave, the
 // more. Standing, a sheet over the mouth's face: dark violet runs dripping down the rock round its arch, slowly,
 // thickest at the top. Lying, a stain on the floor before its threshold where the runs have pooled, ragged, fading out.
 shader_type spatial;

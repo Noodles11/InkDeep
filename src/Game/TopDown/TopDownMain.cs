@@ -108,12 +108,7 @@ public partial class TopDownMain : Node3D
     CurseReward? _dbgCurse;
     /// <summary>Verification: `--dbg-goto=level` takes the debug menu's "Go to level" (this depth) a second into the run.</summary>
     int _dbgGoTo;
-    /// <summary>The boss's anime cut-in, played once as its battle begins (the game held meanwhile).</summary>
-    BossIntro _intro = null!;
-    /// <summary>Whether a boss's title screen plays as its battle begins.</summary>
-    const bool BossTitles = false;
     readonly BellView[] _prismBells = { new() { Part = 0 }, new() { Part = 1 } };
-    bool _introShown;
     float? _bossHp;
     /// <summary>Verification: fire at the nearest mob; start the run with these pearls.</summary>
     /// <summary>Verification (the adventure): a blue tang, a clownfish and a school brought round her, full of ink, so all three murklings show.</summary>
@@ -345,7 +340,7 @@ public partial class TopDownMain : Node3D
     int _dbgSeal;
     bool _autopilot, _autoDive, _calm;
     /// <summary>
-    /// Where on the open reef she is (docs/RPG-PROPOSAL.md §2): Lantern Bay, a region, or a leak cave behind one of a
+    /// Where on the open reef she is (docs/archive/RPG-PROPOSAL.md §2): Lantern Bay, a region, or a leak cave behind one of a
     /// region's mouths; Run is the old run of seeded levels. From the title's Lantern Bay, or `--reef=bay|shallows|cave`.
     /// </summary>
     /// <summary>The jelly she is (the save's, or a verification one that is never saved).</summary>
@@ -353,13 +348,13 @@ public partial class TopDownMain : Node3D
     bool _jellySaved;
     PortalView _portals = null!;
     Blackout _blackout = null!;
-    // The bay's mirror (docs/RPG-PROPOSAL.md §8): its pool, its drawer, the look she came to it with, and whether swimming
+    // The bay's mirror (docs/GAME.md §9): its pool, its drawer, the look she came to it with, and whether swimming
     // onto it opens it (only once she has swum off it since).
     MirrorView _mirrorView = null!;
     MirrorMenu _mirror = null!;
     JellyLook? _lookBefore;
     bool _mirrorArmed = true;
-    // The ride on a current (docs/RPG-PROPOSAL.md §3): she is swept off and up as the place dissolves round her, the next
+    // The ride on a current (docs/archive/RPG-PROPOSAL.md §3): she is swept off and up as the place dissolves round her, the next
     // being made meanwhile; then she comes down into it from above and settles in its water. Through a cave's opening
     // (a Doorway) she swims on into its dark instead, and comes out of the next place's opening.
     bool _riding, _arriving, _portalsArmed;
@@ -844,7 +839,7 @@ public partial class TopDownMain : Node3D
     static LevelMap Abyss(LevelMap map)
     {
         if (PlaneOptions.Default.Adventure) map = AbyssReef.Apply(map);
-        // The look prototype (--woven, docs/REEF-REDO-PROPOSAL.md): the walls give way to a woven reef of coral.
+        // The look prototype (--woven, docs/proposals/REEF-REDO-PROPOSAL.md): the walls give way to a woven reef of coral.
         return Woven ? WovenReef.Apply(map) : map;
     }
 
@@ -866,7 +861,7 @@ public partial class TopDownMain : Node3D
             return Task.Run(() => LevelShape.Prepare(TopDownGenerator.FromHand(hand, asLevel: id, exits: exits, kinds: exits.Select(graph.KindOf).ToList())));
         }
         var streams = new RunStreams(seed);
-        // Its sub-levels made with it (docs/LIGHT-AND-GRAPH-PROPOSAL.md §7).
+        // Its sub-levels made with it (docs/LIGHT-AND-GRAPH.md §7).
         return Task.Run(() =>
         {
             var shape = LevelShape.Prepare(Abyss(TopDownGenerator.Generate(streams, id, background: background, luck: luck)));
@@ -1127,22 +1122,6 @@ public partial class TopDownMain : Node3D
         var bannerLayer = new CanvasLayer { Layer = 3 };
         AddChild(bannerLayer);
         // A cave mouth's name over it as she nears it.
-        // The boss intro: over everything but the pointer and the pause menu.
-        _intro = new BossIntro();
-        bannerLayer.AddChild(_intro);
-        _intro.Cue += cue =>
-        {
-            switch (cue)
-            {
-                case "wipe": _sfx.PlayPitched("spout", 1.4f, -8f); break;
-                case "slam":
-                    _sfx.PlayPitched("snap", 0.6f, -2f);
-                    if (_view.CameraShake && !_view.ReducedMotion) _haptics.Pulse(0.7f, 0.5f, 0.25f);
-                    break;
-                case "vs": _sfx.PlayPitched("bell_ring", 0.8f, -4f); break;
-                case "pop": _sfx.PlayPitched("pop", 1.1f, -4f); break;
-            }
-        };
         _achievementBanner = new AchievementBanner { ReducedMotion = _view.ReducedMotion };
         bannerLayer.AddChild(_achievementBanner);
         // The pearl she is absorbing, as the pause menu lists it.
@@ -1331,8 +1310,6 @@ public partial class TopDownMain : Node3D
     void ShowLevel(LevelShape shape, bool keepRun, long ms, System.Numerics.Vector2? arriveAt = null)
     {
         ResetMenu();
-        _intro.Stop();
-        _introShown = false;
         DropBelow();
         _origin = Vector2.Zero;
         _camera.SetWorldOrigin(_origin);
@@ -2483,7 +2460,7 @@ public partial class TopDownMain : Node3D
         }
         // The pause menu holds the sea still (and the clock): only the views go on, so she still moves in place.
         StepMenu(dt);
-        bool held = Paused || _intro.Playing;
+        bool held = Paused;
         _accumulator += delta;
         if (held) _accumulator = 0;
         int steps = 0;
@@ -2864,12 +2841,6 @@ public partial class TopDownMain : Node3D
             _dbgSeal = 0;
         }
         SyncPearlGlows();
-        // The battle begun: the boss's cut-in plays (once), the game held under it. (Off for now: BossTitles.)
-        if (_world.Boss is { Stage: BossStage.Banner } introBoss && !_introShown)
-        {
-            _introShown = true;
-            if (BossTitles && !OS.GetCmdlineUserArgs().Contains("--dbg-nobanner")) _intro.Play(introBoss.Spec, _id.ShownDepth, _view.ReducedMotion);
-        }
         // The pause menu's close framing: nearer, and looking past her so she sits at the screen's left.
         float framing = _menuBlend * _menuBlend * (3f - 2f * _menuBlend);
         _camera.Zoom = Mathf.Lerp(1f, MenuZoom, framing);
@@ -3838,8 +3809,6 @@ public partial class TopDownMain : Node3D
 
     void HandleKeys()
     {
-        // During the boss intro, it takes the keys.
-        if (_intro.Playing) return;
         // Esc or Start pauses and resumes; B also resumes (and closes the debug menu).
         bool esc = Input.IsActionPressed(InputSetup.Pause);
         bool back = Input.IsActionPressed(InputSetup.MenuBack);
@@ -4077,14 +4046,6 @@ public partial class TopDownMain : Node3D
     /// </summary>
     public override void _Input(InputEvent e)
     {
-        // The boss intro: any key, click or button skips to its end (and does nothing else).
-        if (_intro.Playing && _intro.Elapsed > 0.3f && e.IsPressed() && !e.IsEcho() && e is InputEventKey or InputEventMouseButton or InputEventJoypadButton)
-        {
-            _intro.Skip();
-            _fireBlocked = true;
-            GetViewport().SetInputAsHandled();
-            return;
-        }
         if (e is InputEventJoypadButton or InputEventJoypadMotion) _haptics.Device = e.Device;
         bool pad = e switch
         {
@@ -4188,7 +4149,7 @@ public partial class TopDownMain : Node3D
     /// </summary>
     void SyncPointer()
     {
-        bool playing = _world is not null && !Paused && !_deathSplash && !_diving && _transition == Transition.None && !_autopilot && !_intro.Playing;
+        bool playing = _world is not null && !Paused && !_deathSplash && !_diving && _transition == Transition.None && !_autopilot;
         SyncCrosshair(playing);
         var mode = _pad ? Input.MouseModeEnum.Hidden : Input.MouseModeEnum.Visible;
         if (Input.MouseMode != mode) Input.MouseMode = mode;
@@ -4331,4 +4292,4 @@ public partial class TopDownMain : Node3D
     }
 }
 
-/// <summary>Where on the open reef she is (docs/RPG-PROPOSAL.md §2); Run: the old run of seeded levels.</summary>
+/// <summary>Where on the open reef she is (docs/archive/RPG-PROPOSAL.md §2); Run: the old run of seeded levels.</summary>

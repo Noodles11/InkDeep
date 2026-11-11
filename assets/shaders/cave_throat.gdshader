@@ -1,4 +1,4 @@
-// A cave opening's far end (PortalView, docs/RPG-PROPOSAL.md §2.3): a sheet across the back of its passage in its
+// A cave opening's far end (PortalView, docs/DIVE.md §6): a sheet across the back of its passage in its
 // arch's shape, plain dark (the passage darkens into it in the ground's own shader).
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;

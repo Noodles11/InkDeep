@@ -8,7 +8,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>Her stats on the beam (docs/BEAM-PEARLS-PLAN.md, step 2): tick rate, carry and light pressure.</summary>
+/// <summary>Her stats on the beam (docs/proposals/BEAM-PEARLS-PLAN.md, step 2): tick rate, carry and light pressure.</summary>
 public class BeamStatTests
 {
     static readonly Lazy<ItemCatalog> Catalog = new(() =>

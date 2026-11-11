@@ -10,7 +10,7 @@ uniform bool debug_normals = false;
 /// The see floor (LevelView.SeeThrough): a patch of seabed under her, drawn only inside the opening.
 instance uniform float see_floor = 0.0;
 
-// The level's cave openings (LevelView.AddDoors, docs/RPG-PROPOSAL.md §2.3): each one's threshold (xy, map metres) and
+// The level's cave openings (LevelView.AddDoors, docs/DIVE.md §6): each one's threshold (xy, map metres) and
 // the way into it (zw), and the passages' depth, open half-width and arch top. The deeper into one, the darker, until
 // its back is black: the dark of the cave beyond.
 uniform vec4 doors[8];

@@ -5,7 +5,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>One rule for each kind of place in a reef (docs/LIGHT-AND-GRAPH-PROPOSAL.md §7; PlaceRules).</summary>
+/// <summary>One rule for each kind of place in a reef (docs/LIGHT-AND-GRAPH.md §7; PlaceRules).</summary>
 public class PlaceRulesTests
 {
     [Fact]

@@ -7,7 +7,7 @@ using OctoShoots.Game.Fx;
 namespace OctoShoots.Game.TopDown.Bosses;
 
 /// <summary>
-/// A green sea turtle (Grandmother Tull, docs/NPC-BOSSES-PROPOSAL.md §4): a high domed shell of scutes over a pale
+/// A green sea turtle (Grandmother Tull, docs/FOLK.md §4): a high domed shell of scutes over a pale
 /// plastron, a blunt head on a short neck (no eyes drawn: the body tells it), two long front flippers and two short rear
 /// ones. Her tells come from the body: a front flipper draws back before it sweeps, the whole shell lifts before it
 /// drops, and in the sigh her head stretches out from under the lip. Creeping, her flippers paddle in turn; freed, they

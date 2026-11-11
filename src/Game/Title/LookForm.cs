@@ -7,7 +7,7 @@ using OctoShoots.Core.Saves;
 namespace OctoShoots.Game.Title;
 
 /// <summary>
-/// A jelly's look as a form (docs/RPG-PROPOSAL.md §8): the shape of her gonads and her glow, arm and tentacle-tip
+/// A jelly's look as a form (docs/GAME.md §9): the shape of her gonads and her glow, arm and tentacle-tip
 /// colours, laid as rows of a two-column grid. The title's jelly card makes a new jelly with it; the bay's mirror changes
 /// one's look with it.
 /// </summary>

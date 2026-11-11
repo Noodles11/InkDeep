@@ -4,7 +4,7 @@ using Godot;
 namespace OctoShoots.Game.Title;
 
 /// <summary>
-/// The title screen's look (docs/TITLE-MENU-PROPOSAL.md §3): pearl-white cards with a coral rim over the live sea, mint
+/// The title screen's look (docs/TITLE-MENU.md §3): pearl-white cards with a coral rim over the live sea, mint
 /// for good things, butter for records; Baloo 2 ExtraBold for display, Nunito for the UI (THEME-BIBLE §6.8), IBM Plex
 /// Mono for seeds and codes — bundled in assets/fonts (SIL Open Font License), with system fonts behind them for any
 /// glyph they lack. Nunito is also the game's default font (InstallDefaultFont), so every screen speaks it. Plus the

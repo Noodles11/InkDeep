@@ -5,7 +5,7 @@ using Godot;
 namespace OctoShoots.Game.Fx;
 
 /// <summary>
-/// The pufferling's body (docs/PUFFERLING-PROPOSAL.md §2), baked once: a plump fish with a blunt head, a small beak,
+/// The pufferling's body (docs/archive/PUFFERLING-PROPOSAL.md §2), baked once: a plump fish with a blunt head, a small beak,
 /// domed eyes, fluttering pectoral fins, a dorsal and an anal fin set far back, a rounded tail fan, and about 60 spines
 /// lying flat along the skin. Every vertex also carries where it goes when the fish blows up into a ball
 /// (pufferling.gdshader blends the two), so it inflates as a ball with its fins, eyes and beak where they belong.

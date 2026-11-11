@@ -5,7 +5,7 @@
 // own phase), livelier as it moves. `hole` pops it the way a real one goes: the film tears open at a point (xyz, a
 // unit direction from the centre, in world axes) and the hole's rim races across it (w: 0 whole → 1 gone), the
 // rim bright where the torn film gathers. `ink` (Ink Sac) fills it with a dark violet heart under a violet rim.
-// Light bubbles (docs/LIGHT-BUBBLES.md): each of hers carries a small warm lantern inside the film. `lantern` is the
+// Light bubbles (docs/archive/LIGHT-BUBBLES.md): each of hers carries a small warm lantern inside the film. `lantern` is the
 // lantern's brightness (0: a plain film, as the shield and other bubbles), `warmth` shifts it from her gold (#FFC46B,
 // the gonads' gold) toward white-gold as bubbles merge. `base_light` lights every instance at once (particles).
 // The core is capped below her bell's peak: she stays the warmest light on screen.

@@ -7,7 +7,7 @@
 // fading out — ever more transparent — as their quarters go, the last one pulsing slowly when it is all she has
 // left); the rim is her
 // active pearl's charge, a light sweeping clockwise from the top of the screen, breathing gold when ready.
-// She spends light to shoot (docs/LIGHT-BUBBLES.md): `breath` dims her a little as she throws bubbles and rekindles it
+// She spends light to shoot (docs/archive/LIGHT-BUBBLES.md): `breath` dims her a little as she throws bubbles and rekindles it
 // as she rests. Never dark: she is always the warm light.
 //   UV: x runs apex (0) → margin (1), y is the angle (0..1). UV2: the bell's plan, unit disk.
 // The contraction (`pulse`) is matched on the CPU by BellView.MarginAt, which anchors the tentacles to the margin.

@@ -1,6 +1,6 @@
 # Beam pearls: a plan
 
-Her beam is her one attack (docs/LIGHT-AND-GRAPH-PROPOSAL.md §5), so every pearl that only changed her shots does
+Her beam is her one attack (docs/LIGHT-AND-GRAPH.md §5), so every pearl that only changed her shots does
 nothing now. This plan carries each one over to the beam where light gives it a natural meaning, and drops the ones
 where it does not. Steps 1 (the split beams) and 2 (the stats) are built; the rest is to come.
 

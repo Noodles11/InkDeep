@@ -9,7 +9,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>Level templates (docs/LEVEL-TEMPLATES-PROPOSAL.md): rolled per depth, and what they make of a level.</summary>
+/// <summary>Level templates (docs/archive/LEVEL-TEMPLATES-PROPOSAL.md): rolled per depth, and what they make of a level.</summary>
 public class LevelTemplateTests
 {
     static readonly string[] Seeds = { "KELP7Q2Z", "REEF2345", "TANKHAND" };

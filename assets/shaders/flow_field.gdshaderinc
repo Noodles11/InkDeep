@@ -1,4 +1,4 @@
-// The water's motion round her (FlowField, docs/REEF-REDO-PROPOSAL.md §5): a small texture that follows the camera,
+// The water's motion round her (FlowField, docs/proposals/REEF-REDO-PROPOSAL.md §5): a small texture that follows the camera,
 // holding how fast the water moves at each point of her plane (metres a second, x and z). Her swimming, her jets and
 // her dashes stir it, and so do the creatures; it fades and spreads. Soft things read it and bend away.
 //   flow_rect: the texture's corner (world x, z), its size (metres), and whether it is on (w > 0).

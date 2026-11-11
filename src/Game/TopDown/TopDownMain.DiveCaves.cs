@@ -10,7 +10,7 @@ using OctoShoots.Core.Saves;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// A dive's leak caves (docs/DIVE.md §6; docs/LIGHT-AND-GRAPH-PROPOSAL.md §7): a level's cave mouth leads down into a
+/// A dive's leak caves (docs/DIVE.md §6; docs/LIGHT-AND-GRAPH.md §7): a level's cave mouth leads down into a
 /// sub-level half a level's size, where the Leak's water harms her till its leak is sealed. Each is made with its reef
 /// (LevelShape.Caves), so the ride in and out is short: the reef is kept, made, while she is below. She may leave by its
 /// way out at any time, or, once it is sealed, up its upwelling. The level waits as she left it: its state is kept as

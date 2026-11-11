@@ -8,7 +8,7 @@ using OctoShoots.Game.Fx;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// The pufferlings on screen (docs/PUFFERLING-PROPOSAL.md), presentation only: every corrupted one (the plane's mobs) and
+/// The pufferlings on screen (docs/archive/PUFFERLING-PROPOSAL.md), presentation only: every corrupted one (the plane's mobs) and
 /// every healthy or freed one (the world's fish) as the baked body (PufferlingMesh) in pufferling.gdshader, swum from the
 /// sim's position, heading and state — the stroke quickening with its speed, a bank into turns, a slow bob, the blow-up.
 /// The corrupted wear a pet-shop price tag clipped to the tail fin. Freed, a fish is in its own plain colours at once

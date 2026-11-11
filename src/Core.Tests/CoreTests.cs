@@ -8,7 +8,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>A freed murkling's core: it hangs a moment, and heals her when she takes it (docs/LIGHT-AND-GRAPH-PROPOSAL.md §4.2).</summary>
+/// <summary>A freed murkling's core: it hangs a moment, and heals her when she takes it (docs/LIGHT-AND-GRAPH.md §4.2).</summary>
 public class CoreTests
 {
     static readonly Lazy<ItemCatalog> Catalog = new(() =>

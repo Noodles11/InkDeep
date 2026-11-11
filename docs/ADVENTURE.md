@@ -37,7 +37,7 @@ All numbers are first guesses (`AdventureTuning`).
 - **No push:** a leak does not push the water. No creature comes nearer its disc than 2.5 m, that is all.
 - **The only thing that heals.** Every other creature's and boss's meter stays where her light leaves it.
 - **Sealing:** her light does it, no shots: her beam on its disc (from any distance, the more the nearer her), and her
-  inner light while she stays within 6 m of it (the faster the nearer, docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.3), which means coming in among
+  inner light while she stays within 6 m of it (the faster the nearer, docs/LIGHT-AND-GRAPH.md §2.3), which means coming in among
   its arms. Gold light-staples go in one every 0.5 s, evenly spaced every 0.6 m along an arm (at least three an arm),
   from the disc out, one arm after another; so longer arms take more staples and longer (about 10 s at Menace 0, 25 s
   at Menace 1). Each staple snaps in with a clear note rising as the leak fills. As each arm is stapled shut all along
@@ -120,7 +120,7 @@ Not a dot is left on the level afterwards.
 
 Switched off in the adventure (their code kept, to bring back one by one): pufferlings, Blightroots, Blotters,
 Lashjaws, Thumpsquirts, dens and murkling budding (except in the open reef's leak caves, whose only creatures are
-murklings and primes: docs/RPG-PROPOSAL.md). Every level has a light spring (docs/CORRUPTION.md: a god ray onto
+murklings and primes: docs/archive/RPG-PROPOSAL.md). Every level has a light spring (docs/CORRUPTION.md: a god ray onto
 the seabed, a store of healing she may come back to, too bright for any murkling), a second by her luck
 (docs/PEARLS.md, "Luck"); each keeps the seabed under it (§5).
 
@@ -208,7 +208,7 @@ what burn the corrupted. Caves are dark. The sim is in `src/Core/Plane/PlaneHerL
 `her_burn.gdshaderinc`, `BlightView.Burn`, `CombatView` (the shots' lamps), `ReefLook.Cave`, `GlowPlankton` and
 `AshView`. Tests: `HerLightTests`, `BeamTests`, `LightEmitterTests`, `LightQueryTests`, `CaveAshTests`.
 
-- **Light emitters** (`PlaneWorld.Lights`; docs/LIGHT-AND-GRAPH-PROPOSAL.md §1): her aura, her beam and each of her
+- **Light emitters** (`PlaneWorld.Lights`; docs/LIGHT-AND-GRAPH.md §1): her aura, her beam and each of her
   shots in flight are emitters in one registry. Brightness at a point is Intensity × (1 − d / Range)^1.6, × a cone's
   angle falloff, nothing through rock. Each emitter has an owner that pays when something drinks its light; her aura
   and her beam are both hers, so both drain her one pool of HP.

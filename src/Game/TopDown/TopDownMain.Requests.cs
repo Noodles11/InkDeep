@@ -10,7 +10,7 @@ using OctoShoots.Game.Settings;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// The Tide Fan's requests in the game (docs/QUESTS-PROPOSAL.md): the fan in the bay and its drawer, its ribbons tied
+/// The Tide Fan's requests in the game (docs/archive/QUESTS-PROPOSAL.md): the fan in the bay and its drawer, its ribbons tied
 /// afresh each time she comes home, what she does out in a region's caves carrying them forward, untying one done (its
 /// pearl absorbed at the fan, its shells spilled, its experience given), the pause menu's Requests tab and the HUD's
 /// kelp ribbons, and the named mouths ringed on the maps.

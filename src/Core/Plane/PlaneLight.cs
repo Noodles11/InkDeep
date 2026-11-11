@@ -7,7 +7,7 @@ using OctoShoots.Core.Items;
 namespace OctoShoots.Core.Plane;
 
 /// <summary>
-/// Light emitters (docs/LIGHT-AND-GRAPH-PROPOSAL.md §1): everything that shines in the sim, in one registry that every
+/// Light emitters (docs/LIGHT-AND-GRAPH.md §1): everything that shines in the sim, in one registry that every
 /// rule asking "what is lit here, and how brightly" asks. A point shines all round it; a cone shines along Direction
 /// within HalfAngle. Brightness at a point is Intensity × (1 − d / Range)^Falloff, × a cone's angle falloff (full
 /// within ConeSoft of its half-angle, easing to nothing at its edge), and nothing with rock between.
@@ -25,14 +25,14 @@ public static class LightTuning
     /// </summary>
     public const float NearLight = 2f, FarLight = 0.25f;
     /// <summary>
-    /// Her stats on the beam (docs/BEAM-PEARLS-PLAN.md, step 2): her fire rate is its tick rate (every beam's worth × her
+    /// Her stats on the beam (docs/proposals/BEAM-PEARLS-PLAN.md, step 2): her fire rate is its tick rate (every beam's worth × her
     /// fire rate against her base); her shot speed its carry (FarLight × her shot speed against her base, between
     /// LeastCarry and MostCarry); her knockback its light pressure (creatures in it pushed away from her at Pressure m/s
     /// for each × of knockback past her own, at full light, less as it falls off).
     /// </summary>
     public const float LeastCarry = 0.05f, MostCarry = 1.5f, Pressure = 1.2f;
     /// <summary>
-    /// Her pearls on the beam (docs/LIGHT-AND-GRAPH-PROPOSAL.md §5.1): her range stat lengthens it and her shot size
+    /// Her pearls on the beam (docs/LIGHT-AND-GRAPH.md §5.1): her range stat lengthens it and her shot size
     /// widens it (each × its square root; at most MaxHalfAngleDeg); Sunbeam makes it a searchlight (SunbeamReach × as
     /// long, SunbeamHalfAngleDeg wide). Rear Fin adds a beam behind her (RearIntensity, RearReach × as long), Lighthouse
     /// one turning round her at SweepTurn rad/s (SweepIntensity, SweepReach × as long); each burns as one shot. The
@@ -42,7 +42,7 @@ public static class LightTuning
     public const float RearIntensity = 0.6f, RearReach = 0.75f, SweepIntensity = 0.5f, SweepReach = 0.7f, SweepTurn = 0.6f;
     public const float LureBright = 2.5f;
     /// <summary>
-    /// Her beam split into rays (docs/BEAM-PEARLS-PLAN.md, step 1), by her merged shot shape: Multishot rays fanned
+    /// Her beam split into rays (docs/proposals/BEAM-PEARLS-PLAN.md, step 1), by her merged shot shape: Multishot rays fanned
     /// across her aim, FanStep × the shape's spread apart (a cone, Hammerhead's, ConeStep° apart and ConeReach × as
     /// long), each as narrow as 1/√ of their count (no narrower than RayNarrowest) and worth a volley's share of her burn
     /// (PlaneCombatTuning.VolleyShot × the shape's damage); a wave (Double Helix) weaves them across her aim, ±WaveDeg
@@ -245,7 +245,7 @@ public sealed partial class PlaneWorld
     float _beamWorth = HerLightTuning.BeamShots;
     float _wavePhase;
 
-    /// <summary>Every light emitter in the world (docs/LIGHT-AND-GRAPH-PROPOSAL.md §1).</summary>
+    /// <summary>Every light emitter in the world (docs/LIGHT-AND-GRAPH.md §1).</summary>
     public LightRegistry Lights { get; } = new();
 
     /// <summary>What pays for her light: her HP.</summary>
@@ -378,7 +378,7 @@ public sealed partial class PlaneWorld
     }
 
     /// <summary>
-    /// How much of a beam's light reaches a point (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.3), as shots' worth for one
+    /// How much of a beam's light reaches a point (docs/LIGHT-AND-GRAPH.md §2.3), as shots' worth for one
     /// shot's: nothing outside its cone or past rock, nor past a creature's body in the way (bodies block it as rock
     /// does, unless her shots pierce: Swordfish Bill); else FarLight at the end of its reach rising to NearLight at her
     /// bell, a little less toward the cone's edge. Damage, sealing and seals' wear all go by it.
@@ -597,7 +597,7 @@ public sealed partial class PlaneWorld
     }
 
     /// <summary>
-    /// Her glow put out (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.4): no aura round her. Dark, and her beam not shining, she
+    /// Her glow put out (docs/LIGHT-AND-GRAPH.md §2.4): no aura round her. Dark, and her beam not shining, she
     /// is hidden (Hidden): the Leak's creatures lose her, as in her Ink Cloud. But she sees little more than they do, and
     /// her inner light seals no leak.
     /// </summary>

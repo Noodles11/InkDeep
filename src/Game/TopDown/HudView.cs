@@ -87,7 +87,7 @@ public partial class HudView : Control
     ShaderMaterial _bellLook = null!;
     float _lastCharge = 1f, _used;
     /// <summary>
-    /// The open reef's second and third slots (docs/RPG-PROPOSAL.md §5.2): small pearls right of her bell, their charge
+    /// The open reef's second and third slots (docs/archive/RPG-PROPOSAL.md §5.2): small pearls right of her bell, their charge
     /// round each, their key under; an empty slot a faint ring.
     /// </summary>
 

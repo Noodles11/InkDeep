@@ -6,7 +6,7 @@ using OctoShoots.Core.Plane;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// The open reef's ways through (docs/RPG-PROPOSAL.md §2–3): a hand-drawn map's current station, a bright swirl of
+/// The open reef's ways through (docs/archive/RPG-PROPOSAL.md §2–3): a hand-drawn map's current station, a bright swirl of
 /// streaming water on the floor where the ride starts; and the plain dark at the back of each cave opening (its rock is
 /// LevelView's), none where a region's mouth is shut, its cave sealed (its plug of rock closes it).
 /// </summary>

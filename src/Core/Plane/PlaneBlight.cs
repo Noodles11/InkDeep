@@ -107,7 +107,7 @@ public static class BlightTuning
     /// <summary>A dash throws a clinging murkling off: one default shot's worth of light, flung this fast, dazed this long.</summary>
     public const float ShakeLight = 10f, ShakeSpeed = 9f, ShakeSeconds = 0.7f;
     /// <summary>
-    /// The murklings' kinds by depth (docs/LIGHT-AND-GRAPH-PROPOSAL.md §3.2): this share of those budding are variants
+    /// The murklings' kinds by depth (docs/LIGHT-AND-GRAPH.md §3.2): this share of those budding are variants
     /// (half throwers, half hunters), the rest basic; Depth 1 has basic murklings only, and no primes.
     /// </summary>
     public static float VariantShare(int depth) => depth switch { <= 1 => 0f, 2 => 0.2f, 3 => 0.35f, 4 => 0.45f, _ => 0.55f };
@@ -273,7 +273,7 @@ public sealed class Murkling
 }
 
 /// <summary>
-/// What a murkling is (docs/LIGHT-AND-GRAPH-PROPOSAL.md §3): a basic one only seeks light and drinks it; a thrower also
+/// What a murkling is (docs/LIGHT-AND-GRAPH.md §3): a basic one only seeks light and drinks it; a thrower also
 /// throws ink at her; a hunter hunts the reef's fish while she is away (its throws turn them). A prime (Murkling.Prime)
 /// does all of it, and a lesser murkling (a turned fish) keeps its own ways.
 /// </summary>
@@ -777,7 +777,7 @@ public sealed partial class PlaneWorld
         LightQuery.Brightest(Lights.All, at, scan, LightTuning.Threshold, LineOfSight, Unseen || blind ? e => e.Owner == Her : null);
 
     /// <summary>
-    /// A basic murkling (docs/LIGHT-AND-GRAPH-PROPOSAL.md §3.1): it holds still and scans the lights every ScanEvery;
+    /// A basic murkling (docs/LIGHT-AND-GRAPH.md §3.1): it holds still and scans the lights every ScanEvery;
     /// seeing one, it swims to the brightest (round the rock to her; straight to another, which it sees only in the
     /// open), rescanning as it goes, and takes hold on touch: on her it clings (no hit, only the drain), on another light it
     /// feeds. Shaken off, it scans at once and goes for whatever is brightest then.
@@ -1244,7 +1244,7 @@ public sealed partial class PlaneWorld
                 piece.ThrowTimer = BlightTuning.ThrowEvery * _blightRng.Range(0.6f, 1.2f);
             }
             Corruption?.Release(matter);
-            // In a leak cave, the school it swallowed comes out with it and swims home (docs/QUESTS-PROPOSAL.md §3.2).
+            // In a leak cave, the school it swallowed comes out with it and swims home (docs/archive/QUESTS-PROPOSAL.md §3.2).
             int school = Map.LeakCave ? ReleaseSchool(m.Position) : 0;
             Events.Add(new PlaneEvent(PlaneEventType.PrimeFreed, m.Position, Vector2.Zero, school));
             if (damage > 0f) Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, m.Position, Vector2.Zero, damage));

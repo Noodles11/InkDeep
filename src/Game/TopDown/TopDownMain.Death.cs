@@ -3,7 +3,7 @@ using Godot;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// Her light going out (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.1; the Theme Bible's freed, not killed): when her light is
+/// Her light going out (docs/LIGHT-AND-GRAPH.md §2.1; the Theme Bible's freed, not killed): when her light is
 /// spent, the reef holds still round her while her beams fold away and her aura draws in; her bell goes out like a
 /// lamp; then what light she had leaves her, motes of it rising off her as her bell fades to nothing. Then the dive's
 /// summary (BeginDeath).

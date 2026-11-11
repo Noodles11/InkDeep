@@ -6,7 +6,7 @@ using OctoShoots.Core.Bosses;
 namespace OctoShoots.Core.Plane;
 
 /// <summary>
-/// Her light on a boss (docs/LIGHT-AND-GRAPH-PROPOSAL.md §5.2). Her shots burn its pearl while it is open, as ever. Her
+/// Her light on a boss (docs/LIGHT-AND-GRAPH.md §5.2). Her shots burn its pearl while it is open, as ever. Her
 /// beams burn it too, and each folk boss asks one thing more of the beam:
 /// - Slam and Sigh (Tull): **hold it steady.** The beam burns her pearl only once it has stayed on it HoldSeconds.
 /// - Cleaning dance (Kip): **from the side.** The beam burns her pearl only meeting it within 45° of square-on to her

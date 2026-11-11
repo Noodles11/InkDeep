@@ -3,7 +3,7 @@
 // everything that blocks) is bold, a thin contour every `interval` metres, an index contour every 5 of them. Land is
 // white paper with soft hill shading; water is a light grey that darkens with depth.
 //
-// The minimap and the Tab map (edges_only) are a hand-inked cave chart instead (docs/CAVEGEN.md): the water in the
+// The minimap and the Tab map (edges_only) are a hand-inked cave chart instead (docs/archive/CAVEGEN.md): the water in the
 // depth's own colour, the rock in its stone tone, a soft shadow along the walls, a wavering fineliner outline, and
 // bundles of hatching in a band along the walls with the odd pebble past it. The heights texture carries the height
 // (r), the distance into the rock from the water (g) and into the water from the rock (b), in metres.

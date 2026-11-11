@@ -8,7 +8,7 @@ using OctoShoots.Game.Fx;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// A hider's stands (Fennel's, docs/NPC-BOSSES-PROPOSAL.md §6.2): clumps of kelp round the arena, swaying. Hidden in one
+/// A hider's stands (Fennel's, docs/FOLK.md §6.2): clumps of kelp round the arena, swaying. Hidden in one
 /// he hangs half seen among the stalks, and the Leak gives him away: his drip rises out of it. From his second phase
 /// two other stands drip too (his decoys).
 /// </summary>

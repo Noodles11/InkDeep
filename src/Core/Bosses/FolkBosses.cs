@@ -4,7 +4,7 @@ using System.Numerics;
 namespace OctoShoots.Core.Bosses;
 
 /// <summary>
-/// The bay's folk as the Leak made them (docs/NPC-BOSSES-PROPOSAL.md §4–8): authored bosses, each the same for every
+/// The bay's folk as the Leak made them (docs/FOLK.md §4–8): authored bosses, each the same for every
 /// jelly, waiting at the bottom of her great cave. Their meters grow with the cave's level as every creature's does on
 /// the open reef (ReefTuning.MeterPerLevel); her harm there grows with it too.
 /// </summary>

@@ -1,4 +1,4 @@
-// The bay's mirror (docs/RPG-PROPOSAL.md §8): a still pool of polished nacre on the floor. It mirrors the water and
+// The bay's mirror (docs/GAME.md §9): a still pool of polished nacre on the floor. It mirrors the water and
 // the sky above (the reef's own colours: by the bay's summer evening, a turquoise sheen with the low sun's ripples
 // sliding over it and a few early stars), thin-film nacre colours (rose, gold, sea green, lilac) round its lip and with the angle;
 // and over it she shows in it too, her own glow mirrored under her, rings spreading from it when she is near. Lighter

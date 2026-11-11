@@ -5,7 +5,7 @@ using OctoShoots.Core.Gen.TopDown;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// The bay's Tide Fan (docs/QUESTS-PROPOSAL.md §2.2): a great old sea fan on its rock in the commune, leaning into the
+/// The bay's Tide Fan (docs/archive/QUESTS-PROPOSAL.md §2.2): a great old sea fan on its rock in the commune, leaning into the
 /// current (sea_fan.gdshader), with a ribbon of kelp drifting from it for each request tied there — its knot holding its
 /// token (the pearl in its colour, or gold for shells), glowing softly in the bay's evening — and, for each request she
 /// carries done, a gold ribbon glinting at its top, waiting to be untied.

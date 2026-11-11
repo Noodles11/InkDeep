@@ -1,4 +1,4 @@
-// The open reef's current station (docs/RPG-PROPOSAL.md §2–3), on the floor: a bright swirl of streaming water.
+// The open reef's current station (docs/archive/RPG-PROPOSAL.md §2–3), on the floor: a bright swirl of streaming water.
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
 

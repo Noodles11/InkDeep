@@ -45,7 +45,7 @@ public partial class BlightView
         _kinWants.Clear();
         var her = world.Player.Position;
         float y = LevelMap.SwimBand + 0.4f;
-        // (Murklings give off no light of their own: they are seen only in hers. docs/LIGHT-AND-GRAPH-PROPOSAL.md §4.1)
+        // (Murklings give off no light of their own: they are seen only in hers. docs/LIGHT-AND-GRAPH.md §4.1)
         foreach (var f in world.Flounders)
             if (f.Corrupted) Want(new Vector3(f.Position.X, y - 0.8f, f.Position.Y), Kin.Tint(HearthSkin), 0.35f, 2.4f, her);
         foreach (var s in world.MurkShots)

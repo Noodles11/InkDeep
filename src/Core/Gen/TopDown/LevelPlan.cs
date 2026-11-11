@@ -6,7 +6,7 @@ using OctoShoots.Core.Run;
 namespace OctoShoots.Core.Gen.TopDown;
 
 /// <summary>
-/// Which reef of the dive (DESIGN-TOPDOWN §8, docs/LIGHT-AND-GRAPH-PROPOSAL.md §6): the loop through the depths, the
+/// Which reef of the dive (DESIGN-TOPDOWN §8, docs/LIGHT-AND-GRAPH.md §6): the loop through the depths, the
 /// depth (biome), the row within it (Level) and the reef across that row (Lane, from 0 at the left; Run.DiveGraph). A
 /// depth has 5 rows; its boss stands alone on the last. The first depth (Depth 1 here, the Sunlit
 /// Shallows) is the tutorial, Depth 0 to the player: two levels, no boss; runs start below it (Depth 2 here, Depth 1 to
@@ -93,7 +93,7 @@ public sealed class LevelPlan
     public int Floors { get; init; } = 1;
 
     public int Places => Treasures + Secrets + Curses + Shops + Caches + Crabs + (HasBoss ? 1 : 0);
-    /// <summary>The level's template (docs/LEVEL-TEMPLATES-PROPOSAL.md): null in the tutorial.</summary>
+    /// <summary>The level's template (docs/archive/LEVEL-TEMPLATES-PROPOSAL.md): null in the tutorial.</summary>
     public LevelTemplate? Template { get; init; }
 
     /// <summary>The level of this depth (in this loop) where its boss stands: the 5th (the tutorial's rift: its 2nd).</summary>
@@ -116,7 +116,7 @@ public sealed class LevelPlan
     }
 
     /// <summary>
-    /// A reef's Menace: by its depth alone (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6.1), never by how many reefs she has
+    /// A reef's Menace: by its depth alone (docs/LIGHT-AND-GRAPH.md §6.1), never by how many reefs she has
     /// crossed: 0 at the first real depth (and in the tutorial), one step a depth, on through every later loop.
     /// </summary>
     public static float MenaceOf(LevelId id) =>
@@ -259,13 +259,13 @@ public sealed class LevelPlan
     }
 
     /// <summary>
-    /// A leak cave's plan (docs/RPG-PROPOSAL.md §2.3): the general level's shape, no shop, no crab, no boss, no clam room
+    /// A leak cave's plan (docs/DIVE.md §6): the general level's shape, no shop, no crab, no boss, no clam room
     /// and no shell cache; now and then a secret or a curse den off its main path (and, as on any level, maybe a light
     /// spring); the Menace its region gives it.
     /// </summary>
     /// <param name="floor">Which of its floors (from 1; each its own layout), and how many it has: a floor above the last
     /// ends in a hole down instead of the leak, and each floor down is meaner (FloorMenace more).</param>
-    /// <param name="boss">A great cave (docs/NPC-BOSSES-PROPOSAL.md): its deepest floor's dead end is a boss's arena,
+    /// <param name="boss">A great cave (docs/FOLK.md): its deepest floor's dead end is a boss's arena,
     /// its leak in the middle.</param>
     public static LevelPlan ForCave(SeedCode seed, LevelId id, float menace, int floor = 1, int floors = 1, bool boss = false, float areaScale = 1f)
     {

@@ -1,8 +1,9 @@
 # OctoShoots / Ink Deep: working rules
 
 Godot 4 .NET (C#). The deterministic sim lives in `src/Core` (tested with xUnit in `src/Core.Tests`), presentation in
-`src/Game`, shaders in `assets/shaders`. Design docs are in `docs/` (THEME-BIBLE.md is the guideline; CORRUPTION.md
-and LIGHT-BUBBLES.md describe the current corruption war and her light).
+`src/Game`, shaders in `assets/shaders`. Design docs are in `docs/`: **GAME.md is the one current design** and lists
+the system documents; THEME-BIBLE.md is the guideline. `docs/proposals/` holds ideas not built, `docs/archive/`
+superseded designs (history only, never rules).
 
 ## Art direction (standing rules)
 
@@ -16,6 +17,7 @@ and LIGHT-BUBBLES.md describe the current corruption war and her light).
   that cleanses uses light. Avoid other accent colours (no red/green UI for damage or healing).
 - **Clementine stays the warm light in the scene.** Nothing else should out-glow her except a moment of cleansing
   (a burst, a freed creature).
+- **No boss cut-in, no faces in play.** Bosses are met in their arena alone.
 - **Creatures do not "see" in a cartoon way.** Bosses and mobs act from what they are (a clam throws from its
   opening and does not turn to face her); avoid behaviour that implies a face tracking her.
 
@@ -33,4 +35,5 @@ and LIGHT-BUBBLES.md describe the current corruption war and her light).
 ## Workflow
 
 - Run `dotnet build OctoShoots.csproj` and `dotnet test src/Core.Tests` before committing.
-- Bump `src/Game/GameVersion.cs` with each user-visible change and keep the docs in `docs/` in step with the code.
+- Bump `src/Game/GameVersion.cs` with each user-visible change and keep the docs in `docs/` in step with the code:
+  GAME.md and the system document the change touches. Never write rules into `docs/archive/`.

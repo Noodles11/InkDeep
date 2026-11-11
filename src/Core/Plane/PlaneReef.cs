@@ -7,7 +7,7 @@ using OctoShoots.Core.Saves;
 
 namespace OctoShoots.Core.Plane;
 
-/// <summary>The open reef's numbers (docs/RPG-PROPOSAL.md): first guesses, tuned in play.</summary>
+/// <summary>The open reef's numbers (docs/archive/RPG-PROPOSAL.md): first guesses, tuned in play.</summary>
 public static class ReefTuning
 {
     /// <summary>How far into a cave's opening (past its threshold, Doorway) she must swim to be taken through it.</summary>
@@ -71,7 +71,7 @@ public sealed partial class PlaneWorld
         else Events.Add(new PlaneEvent(PlaneEventType.HavenLeft, Player.Position, Vector2.Zero));
     }
 
-    /// <summary>She is over the bay's mirror, where she changes her look (docs/RPG-PROPOSAL.md §8).</summary>
+    /// <summary>She is over the bay's mirror, where she changes her look (docs/GAME.md §9).</summary>
     public bool AtMirror => Map.Mirror is { } mirror && !Defeated && Vector2.Distance(Player.Position, mirror) < ReefTuning.MirrorReach;
 
     /// <summary>

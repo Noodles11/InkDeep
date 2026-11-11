@@ -8,7 +8,7 @@ using OctoShoots.Core.Run;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// A reef's holes down (docs/LIGHT-AND-GRAPH-PROPOSAL.md §6.3): each leads to its own reef of the dive's graph. The
+/// A reef's holes down (docs/LIGHT-AND-GRAPH.md §6.3): each leads to its own reef of the dive's graph. The
 /// reefs below are made off the main thread one at a time, the hole nearest her first; the one under the hole she is
 /// nearest shows through it, and she dives into whichever she is over.
 /// </summary>

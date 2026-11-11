@@ -133,7 +133,7 @@ public static class LevelValidator
         return null;
     }
 
-    /// <summary>The playable area rule (docs/CAVEGEN.md): reachable water between these (m²).</summary>
+    /// <summary>The playable area rule (docs/archive/CAVEGEN.md): reachable water between these (m²).</summary>
     public const float AreaMin = CaveLayout.AreaMin, AreaMax = CaveLayout.AreaMax;
 
     /// <summary>The playable area: grid points under the swim level joined (4-way) to the start's, in m².</summary>

@@ -6,7 +6,7 @@ using OctoShoots.Core.Saves;
 
 namespace OctoShoots.Core.Plane;
 
-/// <summary>The Tide Fan's numbers (docs/QUESTS-PROPOSAL.md): first guesses, tuned in play.</summary>
+/// <summary>The Tide Fan's numbers (docs/archive/QUESTS-PROPOSAL.md): first guesses, tuned in play.</summary>
 public static class RequestTuning
 {
     /// <summary>Ribbons on the fan for each region, and the requests she may carry at once.</summary>
@@ -32,7 +32,7 @@ public static class RequestTuning
 }
 
 /// <summary>
-/// The Tide Fan's requests (docs/QUESTS-PROPOSAL.md): the ribbons tied for each region from her jelly's own seed, taking
+/// The Tide Fan's requests (docs/archive/QUESTS-PROPOSAL.md): the ribbons tied for each region from her jelly's own seed, taking
 /// them (two at most), letting them go, their progress from what she does out in the region's caves, and untying them
 /// when done. The game raises the progress from the sim's events; everything else lives on her jelly.
 /// </summary>
@@ -45,7 +45,7 @@ public static class Requests
     /// </summary>
     public const string Dive = "dive";
 
-    /// <summary>Who ties a request of each kind, and what they say (docs/QUESTS-PROPOSAL.md §3.5).</summary>
+    /// <summary>Who ties a request of each kind, and what they say (docs/archive/QUESTS-PROPOSAL.md §3.5).</summary>
     public static readonly Dictionary<string, (string Who, string Line)[]> Posters = new()
     {
         [Seal] = new[]

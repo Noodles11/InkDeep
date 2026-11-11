@@ -321,7 +321,7 @@ public sealed class PlaneLeak
     public bool Warded;
     public bool Sealed;
     /// <summary>
-    /// A great cave's leak (docs/NPC-BOSSES-PROPOSAL.md): its boss is all there is of it. Never drawn, never tied, never
+    /// A great cave's leak (docs/FOLK.md): its boss is all there is of it. Never drawn, never tied, never
     /// stinging; freeing the boss seals it, with all a seal brings (its experience, its upwelling, the cave closed).
     /// </summary>
     public bool Hidden;

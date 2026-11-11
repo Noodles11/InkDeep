@@ -4,7 +4,7 @@ using Godot;
 namespace OctoShoots.Game.Fx;
 
 /// <summary>
-/// The reef fish's bodies (docs/REEF-FISH-PROPOSAL.md §4), baked once per kind: a body of revolution flattened to the
+/// The reef fish's bodies (docs/archive/REEF-FISH-PROPOSAL.md §4), baked once per kind: a body of revolution flattened to the
 /// species' cross-section, domed eyes, fluttering pectoral and pelvic fins, dorsal and anal fins that ripple, and the
 /// species' tail (a clownfish's rounded fan, a tang's broad truncate tail, a chromis's deep fork). reef_fish.gdshader
 /// paints the patterns and swims them. Local frame: +X is the nose, +Y up, Z across.

@@ -6,7 +6,7 @@ using OctoShoots.Core.Plane;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// Ottilie's reach and ink blooms (docs/NPC-BOSSES-PROPOSAL.md §7.2): a reach's lines lit on the floor through its
+/// Ottilie's reach and ink blooms (docs/FOLK.md §7.2): a reach's lines lit on the floor through its
 /// warning (her suckers' pale light, brightening as it nears), and the clouds of the Leak's ink she blooms into the
 /// water, dark and light-drinking, thinning away as they age.
 /// </summary>

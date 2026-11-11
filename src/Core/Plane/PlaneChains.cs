@@ -6,7 +6,7 @@ using OctoShoots.Core.Saves;
 
 namespace OctoShoots.Core.Plane;
 
-/// <summary>What a step of a neighbour's chain asks (docs/NPC-BOSSES-PROPOSAL.md §1).</summary>
+/// <summary>What a step of a neighbour's chain asks (docs/FOLK.md §1).</summary>
 public enum StepKind
 {
     /// <summary>Find a thing: on a dive, at the bottom of a leak cave in its depth (going into one there); else a place on the reef (within ChainTuning.FindReach of it).</summary>
@@ -32,7 +32,7 @@ public sealed record ChainStep(StepKind Kind, string Text, string? Zone = null, 
 }
 
 /// <summary>
-/// A neighbour's key quest chain (docs/NPC-BOSSES-PROPOSAL.md §4.3–8.3): given once she is home, a few small steps that
+/// A neighbour's key quest chain (docs/FOLK.md §4.3–8.3): given once she is home, a few small steps that
 /// lead toward the next great cave, the last paying an active pearl, with her line for it.
 /// </summary>
 public sealed record Chain(string Folk, string Title, ChainStep[] Steps, string Pearl, string Line);

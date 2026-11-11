@@ -9,7 +9,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>Her beam: a cone along her aim while held, burning, dazzling, striking seals, costing her nothing (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2).</summary>
+/// <summary>Her beam: a cone along her aim while held, burning, dazzling, striking seals, costing her nothing (docs/LIGHT-AND-GRAPH.md §2).</summary>
 public class BeamTests
 {
     static readonly Lazy<ItemCatalog> Catalog = new(() =>

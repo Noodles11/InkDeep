@@ -13,7 +13,7 @@ using Xunit;
 namespace OctoShoots.Core.Tests;
 
 /// <summary>
-/// The bay's folk (docs/NPC-BOSSES-PROPOSAL.md): every neighbour is a boss first, waiting in her great cave; freed, she
+/// The bay's folk (docs/FOLK.md): every neighbour is a boss first, waiting in her great cave; freed, she
 /// goes home and opens a service in the bay.
 /// </summary>
 public class FolkTests

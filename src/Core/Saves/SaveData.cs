@@ -9,7 +9,7 @@ public sealed class SaveFile
     public int Version { get; set; } = SaveCodec.CurrentVersion;
     public Profile Profile { get; set; } = new();
     public SuspendedRun? Run { get; set; }
-    /// <summary>The jellies made on this machine (docs/RPG-PROPOSAL.md §8, §11: local profiles), each her own save.</summary>
+    /// <summary>The jellies made on this machine (docs/GAME.md §9: local profiles), each her own save.</summary>
     public List<Jelly> Jellies { get; set; } = new();
     /// <summary>Which of them was played last (an index into Jellies; −1: none yet).</summary>
     public int Chosen { get; set; } = -1;
@@ -19,7 +19,7 @@ public sealed class SaveFile
 }
 
 /// <summary>
-/// One jelly of the Clementine bloom, as the player made her (docs/RPG-PROPOSAL.md): her name and look, and everything
+/// One jelly of the Clementine bloom, as the player made her (docs/archive/RPG-PROPOSAL.md): her name and look, and everything
 /// she keeps between trips out of Lantern Bay. What she carries on a trip that death can take (her passive pearls and
 /// the shells on her) is kept here too, between trips.
 /// </summary>
@@ -46,7 +46,7 @@ public sealed class Jelly
     /// <summary>Her world's seed code: every leak cave is grown from it.</summary>
     public string Seed { get; set; } = "";
     /// <summary>
-    /// The Tide Fan's requests (docs/QUESTS-PROPOSAL.md): per region, the ribbons tied on it (a place each, null where
+    /// The Tide Fan's requests (docs/archive/QUESTS-PROPOSAL.md): per region, the ribbons tied on it (a place each, null where
     /// one was taken), the requests she carries, and how many ribbons have ever been tied for each region.
     /// </summary>
     public Dictionary<string, List<Request?>> Fan { get; set; } = new();
@@ -66,7 +66,7 @@ public sealed class Jelly
 }
 
 /// <summary>
-/// One request off the Tide Fan (docs/QUESTS-PROPOSAL.md §3): what it asks (Kind: seal, prime, den or ash), in which
+/// One request off the Tide Fan (docs/archive/QUESTS-PROPOSAL.md §3): what it asks (Kind: seal, prime, den or ash), in which
 /// region and (seal, den) behind which mouth, its level, who tied it (an index into its kind's posters), what it pays
 /// (a passive pearl or none, silver shells, experience), and how far along it is.
 /// </summary>
@@ -89,7 +89,7 @@ public sealed class Request
     public bool Done => Progress >= Goal;
 }
 
-/// <summary>How she looks (docs/RPG-PROPOSAL.md §8): every colour as #RRGGBB, any colour the player likes.</summary>
+/// <summary>How she looks (docs/GAME.md §9): every colour as #RRGGBB, any colour the player likes.</summary>
 public sealed class JellyLook
 {
     /// <summary>The shape her four gonads take (JellyNames.Symbols).</summary>

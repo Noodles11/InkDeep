@@ -6,7 +6,7 @@ using OctoShoots.Core.Plane;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// Her beams (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.2, §5.1; docs/VISUAL-SHOWCASE.md; PlaneWorld.HerBeams), each easing in and
+/// Her beams (docs/LIGHT-AND-GRAPH.md §2.2, §5.1; docs/VISUAL-SHOWCASE.md; PlaneWorld.HerBeams), each easing in and
 /// out rather than snapping. Each is a flashlight's beam in the water, lit as light is: a grid of rays over its round
 /// cone is cast in three dimensions each frame (BeamShadow), each stopped by the seabed, rock, or a creature's round
 /// body, and the water glows only where the light gets to (her_beam_volume.gdshader, marched along each pixel's line of
@@ -14,7 +14,7 @@ namespace OctoShoots.Game.TopDown;
 /// plane (PlaneWorld.LineReach, about one a degree) are cast as well, for how far it reaches and for prism stones'
 /// colours. Her own beam also has a spotlight from her bell tilted down along it, lighting the reef it falls on (its
 /// shadows keep it off what lies behind the walls and behind the creatures), and its shadow grid goes to the reef's own
-/// light (her_beam_shadow; reef_show's rs_beam). A split beam's other rays (docs/BEAM-PEARLS-PLAN.md) are cones of their
+/// light (her_beam_shadow; reef_show's rs_beam). A split beam's other rays (docs/proposals/BEAM-PEARLS-PLAN.md) are cones of their
 /// own; Rear Fin's and Lighthouse's are fainter. The corrupted show where any of them falls (her_beam_lit: the whole of
 /// her beam's fan, every ray of it within it; her_beam2_lit, her_beam3_lit Rear Fin's and Lighthouse's, with their _dir)
 /// and sear where her own burns (her_beam_at). Electric Eel Tail's arcs flicker between what her beam burns and what it

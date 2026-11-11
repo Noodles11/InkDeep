@@ -6,7 +6,7 @@ using OctoShoots.Core.Plane;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// Ottilie's lamp-shells (docs/LIGHT-AND-GRAPH-PROPOSAL.md §5.2; PlaneBoss.Lamps): mother-of-pearl shells in her hoard,
+/// Ottilie's lamp-shells (docs/LIGHT-AND-GRAPH.md §5.2; PlaneBoss.Lamps): mother-of-pearl shells in her hoard,
 /// lying low in the water. Dark, they hold a faint pearly sheen; lit by her beam, they hold her light a while, glowing
 /// in her colour (a soft light round them, never brighter than her own), and fade as it leaves them.
 /// </summary>

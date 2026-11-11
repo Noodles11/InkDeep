@@ -106,7 +106,7 @@ void hb_beam(vec3 world, vec3 n, float spot, inout float lit, inout float seam, 
 }
 
 // How much of her light falls on a point (0 none, 1 well within it), for the corrupted, seen only in her light
-// (docs/LIGHT-AND-GRAPH-PROPOSAL.md §4.1): her aura round her, her beam along its cone to the rock, a burning shot's.
+// (docs/LIGHT-AND-GRAPH.md §4.1): her aura round her, her beam along its cone to the rock, a burning shot's.
 float hb_within(vec4 light, vec3 world) {
 	return light.w > 0.0 ? 1.0 - smoothstep(light.w * 0.8, light.w, length(world - light.xyz)) : 0.0;
 }
