@@ -51,6 +51,8 @@ public partial class TopoMap : Control
     public bool EdgesOnly;
     /// <summary>Fog of war over everything not yet seen (null: no fog).</summary>
     public FogOfWar? Fog;
+    /// <summary>What is not yet seen is solid reef in the level's stone tone, not dark fog — the minimap.</summary>
+    public bool FogIsRock;
     /// <summary>What she has seen (the minimap's own fog).</summary>
     public FogOfWar? Seen;
     /// <summary>Light springs (docs/CORRUPTION.md), and whether she is bathing in one.</summary>
@@ -209,6 +211,7 @@ public partial class TopoMap : Control
         _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("band_px"), ppm > 4f ? Mathf.Clamp(ppm * 3.2f, 14f, 26f) : 16f);
         _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("use_fog"), Fog is not null);
         _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("cutout"), Cutout);
+        _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("fog_rock"), FogIsRock);
         if (Fog is not null) _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("fog"), Fog.Texture);
         QueueRedraw();
     }

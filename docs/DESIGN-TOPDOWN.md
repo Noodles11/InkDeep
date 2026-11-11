@@ -1329,7 +1329,8 @@ at mist distance (inherited fade rule).
    (`Tuning.PlaneCruiseSpeed`); the first-person `SwimSpeed` stays 4.5.
 2. **Minimap orientation:** §3 says north is always up and "the minimap and world agree"; §9 says the minimap
    "rotates so forward is up (inherited)". Built north-up, matching the fixed camera. The minimap (90 m across, a thin
-   outline) shows only the wall edges (the swim-level coastline) under fog of war: Clementine reveals the water within
+   outline) shows only the wall edges (the swim-level coastline) under fog of war, the unseen filled in the reef's own
+   stone tone as solid rock: Clementine reveals the water within
    15 m of her (a third of its radius, with a soft 10 m gradient centred on that edge), and it stays revealed for the
    level. A place shows on the maps (minimap and Tab) only once she has been there, always as its emblem (never a
    bare dot): a badge in its landmark colour with its sign — the start a pennant, the shop a "$", a clam room a
@@ -1553,9 +1554,10 @@ at mist distance (inherited fade rule).
   band of light sweeps across it about every 2 s and a pearly sheen breathes over it, inside a soft warm-white glow
   (0.75 m, breathing with it); the HUD's shell does not. The HUD counter sits bottom left: the same silver nautilus
   (in 3D, still, its coil to the eye) and the number. Each shell she picks up flies there itself, so a pickup
-  is never missed: in 0.55 s, from where she took it, the very shell — as big as it lay on screen, turned as it lay —
-  shrinking to the counter's size and righting itself to the counter's turn with a tumble on the way, a short wisp of
-  warm light behind it, on a slight arc (several at once bow alternately to either side); the counter counts it only
+  is never missed: the very shell — as big as it lay on screen, turned as it lay — first floats up a little (26 px in
+  0.22 s), swelling by a third, hangs there 0.14 s turning slowly, then flies in 0.55 s, shrinking to the counter's
+  size and righting itself to the counter's turn with a tumble on the way, on a slight arc and with nothing trailing
+  behind it (several at once bow alternately to either side); the counter counts it only
   as it lands, its shell swelling and a ring of light spreading from it. Shells carry down with her pearls and HP.
 - **Bosses are hardcoded, one per depth** (`BossRoster`, the fight in `PlaneBoss.cs`, the bodies in
   `src/Game/TopDown/Bosses`): the boss generator (docs/BOSS-GENERATOR.md) is parked until the hand-made roster grows.

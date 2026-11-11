@@ -8,7 +8,7 @@ namespace OctoShoots.Game.Fx;
 /// </summary>
 public static class GonadCursor
 {
-    static ImageTexture? _texture, _gold;
+    static ImageTexture? _texture;
 
     /// <summary>The crosshair for the arrow and the pointing hand (the menus' buttons) alike.</summary>
     public static void Use()
@@ -39,9 +39,6 @@ public static class GonadCursor
             if (arg.StartsWith("--dbg-crosshair=")) image.SavePng(arg["--dbg-crosshair=".Length..]);
         return _texture = ImageTexture.CreateFromImage(image);
     }
-
-    /// <summary>The same emblem large and in gold: the shop's top-up of health.</summary>
-    public static ImageTexture Gold() => _gold ??= ImageTexture.CreateFromImage(Draw(128, new Color(1f, 0.8f, 0.3f)));
 
     /// <summary>The emblem at this size (drawn on a 32-unit square, scaled to it).</summary>
     static Image Draw(int size, Color orange)

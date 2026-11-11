@@ -47,10 +47,10 @@ public partial class MinimapView : Control
 
         var viewport = new SubViewport { Size = new Vector2I((int)Diameter, (int)Diameter), TransparentBg = true, RenderTargetUpdateMode = SubViewport.UpdateMode.Always };
         AddChild(viewport);
-        // Wall edges, fog of war and places only: no contours, routes, area outlines, crosses or numbers.
+        // Wall edges, fog of war (the unseen filled as the reef's rock) and places only: no contours, routes, area outlines, crosses or numbers.
         _map = new TopoMap
         {
-            MetresAcross = Span, Size = new Vector2(Diameter, Diameter), ShowDetail = false, EdgesOnly = true,
+            MetresAcross = Span, Size = new Vector2(Diameter, Diameter), ShowDetail = false, EdgesOnly = true, FogIsRock = true,
             ArrowScale = 1.7f, ArrowColor = new Color(1f, 0.72f, 0.35f),
             // Her requests' places past the edge: arrows just inside the rim, as the north mark.
             Pointers = true, PointerRadius = Diameter * 0.5f - 2f,

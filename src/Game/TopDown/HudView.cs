@@ -10,9 +10,9 @@ namespace OctoShoots.Game.TopDown;
 /// <summary>
 /// The plane HUD, bottom left: her shells (the pearls she carries circle her bell: PearlOrbitView), counted beside a
 /// shell of their own — the same silver nautilus that lies in the reef (NautilusShell), still, its coil to the eye. Each shell she
-/// picks up flies itself from where she took it to the counter — the very shell, turned as it lay, shrinking and righting
-/// itself as it goes, a wisp of light behind it on a slight arc — and counts in there with a pulse, so a pickup is never
-/// missed. The shells are drawn in 3D over the HUD's own drawing (a transparent view of their own). (The pearl she is
+/// picks up flies itself from where she took it to the counter — the very shell, turned as it lay: it first floats up a
+/// little and swells, hangs there a moment, then flies on a slight arc, shrinking and righting itself as it goes, leaving
+/// nothing behind it — and counts in there with a pulse, so a pickup is never missed. The shells are drawn in 3D over the HUD's own drawing (a transparent view of their own). (The pearl she is
 /// absorbing shows on its own card, PearlBanner.) Over the shaft, a prompt: the dive's key (or button) to dive, or why
 /// she cannot yet.
 /// The top of the screen stays clear at rest: a level's title shows there for a moment as she arrives (ShowTitle), the
@@ -41,15 +41,15 @@ public partial class HudView : Control
     /// <summary>1 as a shell lands, easing to 0: a ring of light spreading from the counter.</summary>
     float _ring;
     /// <summary>
-    /// Shells on their way to the counter: where each set off (on screen), which way its arc bows, and how far along it is
-    /// (0 → 1). The counter shows them only once they land.
+    /// Shells on their way to the counter: where each set off (on screen), which way its arc bows, and how long since it
+    /// was taken (s: its rise, its pause, its flight). The counter shows them only once they land.
     /// </summary>
     readonly List<Flight> _flights = new();
 
     sealed class Flight
     {
         public Vector2 From;
-        public float Side, T;
+        public float Side, Age;
         /// <summary>Its size on the screen as it set off (pixels across), and how it was turned (seen from the camera).</summary>
         public float Size;
         public Quaternion Lie;
@@ -63,8 +63,11 @@ public partial class HudView : Control
     /// <summary>The counter's shell: its size (pixels across), and how it is turned (its coil to the eye, tipped a little).</summary>
     const float CounterSize = 40f;
     static readonly Quaternion CounterLie = new Basis(Vector3.Right, Mathf.Pi * 0.5f - 0.35f).GetRotationQuaternion();
-    /// <summary>A flight's length (s): brief, so it does not get in the way, quick enough to read as a flick.</summary>
-    const float FlightTime = 0.55f;
+    /// <summary>
+    /// A taken shell's rise (s), how far up it floats (px) and how much it swells; how long it then hangs there (s); its
+    /// flight to the counter (s): brief, so it does not get in the way, quick enough to read as a flick.
+    /// </summary>
+    const float RiseTime = 0.22f, Rise = 26f, Swell = 1.3f, HangTime = 0.14f, FlightTime = 0.55f;
     int _side = 1;
 
     // ───────────────────────── the adventure's gonad gauge ─────────────────────────
@@ -320,8 +323,8 @@ public partial class HudView : Control
         for (int i = _flights.Count - 1; i >= 0; i--)
         {
             var f = _flights[i];
-            f.T += dt / FlightTime;
-            if (f.T >= 1f)
+            f.Age += dt;
+            if (f.Age >= RiseTime + HangTime + FlightTime)
             {
                 // Landed: it counts in, with a pulse.
                 f.Mesh.QueueFree();
@@ -361,8 +364,8 @@ public partial class HudView : Control
     }
 
     /// <summary>
-    /// The shells' view this frame: the counter's shell, still (swelling with each that lands); each flying shell
-    /// on its arc, from its size where it lay to the counter's, righting itself from how it lay to the counter's turn
+    /// The shells' view this frame: the counter's shell, still (swelling with each that lands); each taken shell
+    /// rising and swelling where it was, then on its arc, from its size where it lay to the counter's, righting itself from how it lay to the counter's turn
     /// with a tumble on the way.
     /// </summary>
     void SyncShells(float dt)
@@ -376,12 +379,17 @@ public partial class HudView : Control
         PlaceShell(_counterShell, ShellIcon, counter * (1f + 0.3f * k2), CounterLie);
         foreach (var f in _flights)
         {
-            float e = FlightEase(f.T);
-            float pop = Mathf.Clamp(f.T / 0.1f, 0f, 1f);
-            float size = Mathf.Lerp(f.Size, (_adventure ? GaugeShell : CounterSize) * 0.85f, e) * (1f + 0.25f * Mathf.Sin(Mathf.Pi * pop));
-            var tumble = new Quaternion(new Vector3(0.3f, 1f, 0.2f).Normalized(), Mathf.Tau * e * f.Side);
+            // Up first, easing out, swelling as it goes; then still a moment (a slow turn); then off on its arc.
+            float r = Mathf.Clamp(f.Age / RiseTime, 0f, 1f);
+            r = 1f - (1f - r) * (1f - r);
+            float e = FlightEase(Mathf.Clamp((f.Age - RiseTime - HangTime) / FlightTime, 0f, 1f));
+            var from = f.From + Vector2.Up * Rise * r;
+            float lifted = f.Size * Mathf.Lerp(1f, Swell, r);
+            float size = Mathf.Lerp(lifted, (_adventure ? GaugeShell : CounterSize) * 0.85f, e);
+            float drift = Mathf.Min(f.Age, RiseTime + HangTime) * 0.8f * f.Side;
+            var tumble = new Quaternion(new Vector3(0.3f, 1f, 0.2f).Normalized(), Mathf.Tau * e * f.Side + drift);
             var lie = f.Lie.Slerp(CounterLie, e * e * (3f - 2f * e)) * tumble;
-            PlaceShell(f.Mesh, FlightAt(f.From, f.Side, e), size, lie.Normalized());
+            PlaceShell(f.Mesh, FlightAt(from, f.Side, e), size, lie.Normalized());
         }
     }
 
@@ -618,23 +626,6 @@ public partial class HudView : Control
             // Shells still in flight are not counted yet.
             int shown = Mathf.Max(_shells - _flights.Count, 0);
             Outlined(font, c + new Vector2(26f, 8f + 3f * k2), shown.ToString(), fontSize, col);
-        }
-
-        // Shells in flight: a wisp of warm light with a short tail behind each (the shell itself is drawn over it, in 3D).
-        foreach (var flight in _flights)
-        {
-            var (from, side, t) = (flight.From, flight.Side, flight.T);
-            float e = FlightEase(t);
-            const int tail = 16;
-            for (int j = tail; j >= 1; j--)
-            {
-                float back = FlightEase(Mathf.Max(t - j * 0.02f, 0f));
-                float fade = 1f - j / (float)(tail + 1);
-                var pt = FlightAt(from, side, back);
-                // A soft shade under the gold, so the wisp reads on bright sand as well as in the dark.
-                DrawCircle(pt, 3f + 7f * fade, new Color(0.25f, 0.12f, 0f, 0.12f * fade));
-                DrawCircle(pt, 2f + 5.5f * fade, new Color(1f, 0.72f, 0.25f, 0.65f * fade * fade));
-            }
         }
 
         // The dive prompt, low in the middle: a key cap and a word.

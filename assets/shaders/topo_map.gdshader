@@ -33,6 +33,8 @@ uniform float rock_keep = 2.5;
 uniform float rock_fade = 3.0;
 uniform float backdrop = 0.72;
 uniform sampler2D fog : filter_linear;
+// The minimap: what is not yet seen is filled as the reef's rock (rock_col), not dark fog.
+uniform bool fog_rock = false;
 const vec3 FOG = vec3(0.16, 0.19, 0.21);
 
 const vec3 LAND = vec3(0.985, 0.983, 0.975);
@@ -131,7 +133,7 @@ float iso(float f, float px) {
 void fragment() {
 	vec2 w = view_origin + UV * view_size;
 	if (w.x < 0.0 || w.y < 0.0 || w.x > samples - 1.0 || w.y > samples - 1.0) {
-		COLOR = cutout ? vec4(0.0, 0.0, 0.0, backdrop) : vec4(use_fog ? FOG : OUTSIDE, 1.0);
+		COLOR = cutout ? vec4(0.0, 0.0, 0.0, backdrop) : vec4(use_fog ? (fog_rock ? rock_col : FOG) : OUTSIDE, 1.0);
 	} else {
 		vec3 fld = field_at(w);
 		float h = fld.x;
@@ -162,7 +164,7 @@ void fragment() {
 			col = mix(col, INDEX, index);
 			col = mix(col, SHORE, edge);
 		}
-		if (use_fog) col = mix(FOG, col, smoothstep(0.0, 1.0, texture(fog, (w + 0.5) / samples).r));
+		if (use_fog) col = mix(fog_rock ? rock_col : FOG, col, smoothstep(0.0, 1.0, texture(fog, (w + 0.5) / samples).r));
 		if (cutout) {
 			// Water, or rock near it: drawn; its edges soft, a little ragged, as a chart torn from its sheet.
 			float keep = rock_keep + rock_fade * (0.35 * vnoise(w * 0.3) - 0.1);
