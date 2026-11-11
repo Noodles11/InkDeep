@@ -17,7 +17,10 @@ namespace OctoShoots.Game.TopDown;
 /// the walls). A split beam's other rays (docs/BEAM-PEARLS-PLAN.md) are fans of their own; Rear Fin's and Lighthouse's
 /// are fainter fans. The corrupted show where any of them falls (her_beam_lit: the whole of her beam's fan, every ray of
 /// it within it; her_beam2_lit, her_beam3_lit Rear Fin's and Lighthouse's, with their _dir) and sear where her own burns
-/// (her_beam_at). Electric Eel Tail's arcs flicker between what her beam burns and what it arcs on to.
+/// (her_beam_at). Electric Eel Tail's arcs flicker between what her beam burns and what it arcs on to. Where a line goes
+/// into a prism stone (PlanePrismStones.cs) her light lands on it, and out of its far side goes on in the stone's colour
+/// (mixed as light mixes through more than one): a band of that colour laid between the lines that carry it, to where
+/// they end, and a light of that colour where her own beam's axis lands.
 /// </summary>
 public partial class BeamView : Node3D
 {
@@ -54,6 +57,14 @@ public partial class BeamView : Node3D
     SpotLight3D _spot = null!;
     MeshInstance3D _arcs = null!;
     ImmediateMesh _arcMesh = null!;
+    /// <summary>Her light come out of prism stones in their colours, laid out afresh each frame (world), and a light where her beam's coloured axis lands.</summary>
+    MeshInstance3D _tint = null!;
+    ImmediateMesh _tintMesh = null!;
+    bool _tintBegun;
+    OmniLight3D _tintLight = null!;
+    readonly List<(float In, float Out, LightHue Hue, float Across)> _hues = new(), _prevHues = new();
+    /// <summary>How strong the coloured light is near the stone it comes out of, and at the end of its way.</summary>
+    const float TintNear = 0.3f, TintFar = 0.1f;
     float _time;
 
     static readonly StringName BeamAt = "her_beam_at";
@@ -79,6 +90,19 @@ public partial class BeamView : Node3D
             },
         };
         AddChild(_arcs);
+        _tintMesh = new ImmediateMesh();
+        _tint = new MeshInstance3D
+        {
+            Mesh = _tintMesh, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, ExtraCullMargin = 40f,
+            MaterialOverride = new StandardMaterial3D
+            {
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, VertexColorUseAsAlbedo = true, CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+                Transparency = BaseMaterial3D.TransparencyEnum.Alpha, BlendMode = BaseMaterial3D.BlendModeEnum.Add, NoDepthTest = false,
+            },
+        };
+        AddChild(_tint);
+        _tintLight = new OmniLight3D { OmniRange = 3.5f, OmniAttenuation = 1.2f, ShadowEnabled = false, Visible = false, LightSpecular = 0.4f };
+        AddChild(_tintLight);
     }
 
     /// <summary>
@@ -86,13 +110,14 @@ public partial class BeamView : Node3D
     /// two lines' ends. UV.x: how far along its own line (1 at its end); UV.y: 1 where something stopped the line (its
     /// end glows there). Returns how far its longest line gets (metres).
     /// </summary>
-    float LayFan(PlaneWorld world, Fan fan, LightEmitter beam)
+    float LayFan(PlaneWorld world, Fan fan, LightEmitter beam, float strength)
     {
         float half = beam.HalfAngle, range = Mathf.Max(beam.Range, 0.1f);
         int n = Mathf.Clamp(Mathf.CeilToInt(2f * Mathf.RadToDeg(half) / LineDegrees), LeastLines, MostLines);
         var mesh = fan.Mesh;
         mesh.ClearSurfaces();
         mesh.SurfaceBegin(Mesh.PrimitiveType.Triangles);
+        _prevHues.Clear();
         float longest = 0f;
         Vector3 prev = default;
         float prevHit = 0f;
@@ -104,6 +129,18 @@ public partial class BeamView : Node3D
                 beam.Direction.X * Mathf.Sin(a) + beam.Direction.Y * Mathf.Cos(a));
             float len = world.LineReach(beam.Position, way, range, out bool hit);
             longest = Mathf.Max(longest, len);
+            // Into a prism stone her own light lands on it; out of it, it goes on in its colour.
+            world.HuesAlong(beam.Position, way, len, _hues);
+            if (_hues.Count > 0) TintBetween(beam.Position, way, len, k > 0 ? _prevWay : way, strength);
+            _prevHues.Clear();
+            _prevHues.AddRange(_hues);
+            _prevWay = way;
+            _prevLen = len;
+            if (_hues.Count > 0)
+            {
+                len = _hues[0].In;
+                hit = true;
+            }
             float f = len / range;
             fan.Reach[k] = f;
             fan.Stopped[k] = hit;
@@ -125,6 +162,43 @@ public partial class BeamView : Node3D
         fan.Lines = n;
         LayVolume(fan, half);
         return longest;
+    }
+
+    System.Numerics.Vector2 _prevWay;
+    float _prevLen;
+
+    /// <summary>
+    /// The coloured light between this line and the one before it: each stretch of this line out of a stone, to the next
+    /// stone or its end, joined to the stretch of the same colour on the line before (if it has one).
+    /// </summary>
+    void TintBetween(System.Numerics.Vector2 from, System.Numerics.Vector2 way, float len, System.Numerics.Vector2 prevWay, float strength)
+    {
+        if (_prevHues.Count == 0 || strength <= 0.001f) return;
+        float y = LevelMap.SwimBand + 0.3f;
+        Vector3 P(System.Numerics.Vector2 w, float t) => new(from.X + w.X * t, y, from.Y + w.Y * t);
+        for (int i = 0; i < _hues.Count; i++)
+        {
+            var hue = _hues[i].Hue;
+            float a0 = _hues[i].Out, a1 = i + 1 < _hues.Count ? _hues[i + 1].In : len;
+            int j = _prevHues.FindIndex(h => h.Hue == hue);
+            if (j < 0 || a1 <= a0) continue;
+            float b0 = _prevHues[j].Out, b1 = j + 1 < _prevHues.Count ? _prevHues[j + 1].In : _prevLen;
+            if (b1 <= b0) continue;
+            if (!_tintBegun)
+            {
+                _tintMesh.SurfaceBegin(Mesh.PrimitiveType.Triangles);
+                _tintBegun = true;
+            }
+            var c = OctoShoots.Game.Fx.HueColor.Of(hue);
+            // Bright as it comes out of the stone, fainter along its way, and soft at its sides (where it went through
+            // the stone's rim).
+            float edgeA = 1f - Mathf.SmoothStep(0.45f, 1f, _hues[i].Across), edgeB = 1f - Mathf.SmoothStep(0.45f, 1f, _prevHues[j].Across);
+            Color nearA = new(c, TintNear * strength * edgeA), farA = new(c, TintFar * strength * edgeA);
+            Color nearB = new(c, TintNear * strength * edgeB), farB = new(c, TintFar * strength * edgeB);
+            void V(Vector3 p, Color col) { _tintMesh.SurfaceSetColor(col); _tintMesh.SurfaceAddVertex(p); }
+            V(P(way, a0), nearA); V(P(prevWay, b0), nearB); V(P(prevWay, b1), farB);
+            V(P(way, a0), nearA); V(P(prevWay, b1), farB); V(P(way, a1), farA);
+        }
     }
 
     /// <summary>A line's reach (a share of the fan's) at an angle off its axis, between the two cast either side of it.</summary>
@@ -215,6 +289,9 @@ public partial class BeamView : Node3D
         float life = Mathf.Clamp(world.Player.Hp / Mathf.Max(world.Run.MaxHp, 1f), 0f, 1f);
         float dim = 0.45f + 0.55f * Mathf.Sqrt(life);
         int i = 0;
+        _tintMesh.ClearSurfaces();
+        _tintBegun = false;
+        _tintLight.Visible = false;
         // Her beam's fan as a whole, for what it shows: out to its farthest ray's stop, as wide as its rays reach.
         float reach = 0f;
         bool anyOn = false;
@@ -240,7 +317,7 @@ public partial class BeamView : Node3D
             var dir = new Vector3(beam.Direction.X, 0f, beam.Direction.Y);
             float range = beam.Range;
             // Its lines, each to what stops it.
-            float longest = LayFan(world, fan, beam);
+            float longest = LayFan(world, fan, beam, fan.On * dim * beam.Intensity / LightTuning.BeamIntensity);
             float stop = Mathf.Clamp(longest / Mathf.Max(range, 0.1f), 0.02f, 1f);
             var origin = new Vector3(beam.Position.X, LevelMap.SwimBand + 0.3f, beam.Position.Y);
             fan.Node.GlobalTransform = fan.Volume.GlobalTransform = new Transform3D(new Basis(Vector3.Up, Mathf.Atan2(-dir.Z, dir.X)).Scaled(new Vector3(range, range, range)), origin);
@@ -262,6 +339,16 @@ public partial class BeamView : Node3D
                 RenderingServer.GlobalShaderParameterSet(fan.Lit, on ? new Vector4(origin.X, origin.Y, origin.Z, range * stop) : new Vector4(0f, -1000f, 0f, 0f));
             }
             if (!main) continue;
+            // Where her beam's axis lands, in the colour the stones on its way give it.
+            var hue = world.HueAlong(beam.Position, world.BeamEnd);
+            if (hue != LightHue.None)
+            {
+                _tintLight.Visible = true;
+                _tintLight.LightColor = OctoShoots.Game.Fx.HueColor.Of(hue);
+                _tintLight.LightEnergy = 2.5f * fan.On * dim;
+                var back = world.BeamEnd - beam.Direction * 0.6f;
+                _tintLight.GlobalPosition = new Vector3(back.X, LevelMap.SwimBand + 0.4f, back.Y);
+            }
             // Her own beam's spotlight: from her heart, along the beam and a little down onto the reef.
             var look = (dir + Vector3.Down * SpotTilt).Normalized();
             _spot.GlobalTransform = new Transform3D(Basis.LookingAt(look, Vector3.Up), heart);
@@ -274,6 +361,7 @@ public partial class BeamView : Node3D
                 ? new Vector4(origin.X, origin.Y + 0.05f, origin.Z, range * stop) : new Vector4(0f, -1000f, 0f, 0f));
         }
         for (int k = i; k < _fans.Count; k++) _fans[k].Node.Visible = _fans[k].Volume.Visible = false;
+        if (_tintBegun) _tintMesh.SurfaceEnd();
         // What her beam shows (her_reveal), the whole of its fan: along her aim, as wide as its rays spread.
         var her = new Vector3(world.Beam.Position.X, LevelMap.SwimBand + 0.3f, world.Beam.Position.Y);
         var aim = new Vector3(world.BeamAim.X, 0f, world.BeamAim.Y);

@@ -123,7 +123,7 @@ public class LightEmitterTests
         // (Touching bubbles join, so count the shots that are left: one light each, besides her aura, her three beams (registered, dark) and the plant.)
         int shots = w.Shots.Count(s => s.FromPlayer && s.Life > 0f);
         Assert.True(shots > 0);
-        Assert.Equal(shots + 5 + w.Crystals.Count, w.Lights.All.Count);
+        Assert.Equal(shots + 5 + w.ChargeStones.Count, w.Lights.All.Count);
         Assert.All(w.Shots, s => Assert.NotNull(w.LightOf(s)));
         Assert.Equal(w.Lights.All.Count, w.Lights.All.Select(e => e.Id).Distinct().Count());
     }

@@ -19,7 +19,7 @@ All numbers are first guesses (`AdventureTuning`).
 - **What:** brittle stars of ink floating at her plane (`PlaneLeak`, `LeakArm`), **one over every hole out of the
   reef** (`PlaneWorld.PlaceLeaks`): over its shaft, the hole shut under it. A boss's Crack has none (its boss holds it);
   a leak cave holds its one leak at its dead end.
-- **Seen only in light,** as a murkling is: within her glow, where her beam falls on it, or in a lit crystal's light;
+- **Seen only in light,** as a murkling is: within her glow, where her beam falls on it, or in a lit charge stone's light;
   elsewhere nothing of it is drawn (its edge breaking up in the water), and its own glow and the water it bends show
   only as much as it is seen (`leak_unseen` in its shaders). Light on its disc shows all of it (`core_seen`), and
   her beam shows it only where the beam gets to it (none past rock). In the dark it must be found.

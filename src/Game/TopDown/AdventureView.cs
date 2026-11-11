@@ -288,11 +288,11 @@ public partial class AdventureView : Node3D
             node.Sealing = Mathf.MoveToward(node.Sealing, sealing ? 1f : 0f, dt * 3f);
             // A staple about to snap trembles first.
             float fray = !v.Sealed && v.Light > 0f && v.Since > AdventureTuning.LeakHold * 0.5f ? 1f : 0f;
-            // Seen only in light (leak.gdshader's leak_unseen): a lit crystal shows it too; its own glow and the water it
+            // Seen only in light (leak.gdshader's leak_unseen): a lit charge stone shows it too; its own glow and the water it
             // bends show only as much as it is seen, so nothing gives it away in the dark.
-            float crystal = world.CrystalSees(v.Position, AdventureTuning.LeakArmLength(world.Menace));
-            node.Arms.SetInstanceShaderParameter(SN.Of("crystal_seen"), crystal);
-            node.Disc.SetInstanceShaderParameter(SN.Of("crystal_seen"), crystal);
+            float crystal = world.ChargeStoneSees(v.Position, AdventureTuning.LeakArmLength(world.Menace));
+            node.Arms.SetInstanceShaderParameter(SN.Of("charge_seen"), crystal);
+            node.Disc.SetInstanceShaderParameter(SN.Of("charge_seen"), crystal);
             float seen = Mathf.Max(crystal, world.Aura.Shining ? 1f - Mathf.SmoothStep(world.Aura.Range * 0.8f, world.Aura.Range + 1.5f, d) : 0f);
             bool beamed = false;
             foreach (var (beam, _) in world.HerBeams)

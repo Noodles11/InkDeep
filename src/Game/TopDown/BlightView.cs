@@ -147,8 +147,8 @@ public partial class BlightView : Node3D
             body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("hidden"), 1f);
             // Her beam shows it only if one reaches it (a body in the way shades it).
             body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("beam_seen"), world.BeamSees(m, m.Position, m.Radius) ? 1f : 0f);
-            // A lit crystal's light shows it too, as much as it glows.
-            body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("crystal_seen"), world.CrystalSees(m.Position, m.Radius));
+            // A lit charge stone's light shows it too, as much as it glows.
+            body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("charge_seen"), world.ChargeStoneSees(m.Position, m.Radius));
             // Light on its core shows all of it (eased in quickly, out a little slower).
             bool core = world.CoreLit(m, m.Position);
             body.Core = Mathf.MoveToward(body.Core, core ? 1f : 0f, dt * (core ? 6f : 3f));

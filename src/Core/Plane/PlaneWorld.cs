@@ -87,6 +87,8 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     BattleBegan, BossLanded, BossVolley, BossTelegraph, BossPulse, BossSacBurst, BossExposed, BossMutates, BossClosed, BossHit, BossStagger, BossSnapWarning, BossSnap, BossDefeated, BossFreed, BossReach, BossBloom,
     /// <summary>Experience: gained (Size: how much), and a level reached (Size: the new level).</summary>
     XpGained, LevelUp,
+    /// <summary>A trio of charge stones all glowing at once: its cache of shells bursts up between them (Size: how many).</summary>
+    TrioOpened,
     /// <summary>
     /// The adventure: an ink dot cleared by her light or eaten by a fish; a leak's staple in or snapped out (at it; Size:
     /// the staples in now) or the leak sealed (Size: leaks still open); a shot meeting a leak's arm (Direction: the shot's
@@ -118,8 +120,8 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     LampLit,
     /// <summary>She puts her glow out (Size 0) or lights it again (Size 1).</summary>
     GlowToggled,
-    /// <summary>Her beam lights a dark crystal (at its face, Direction the way out of the wall).</summary>
-    CrystalLit }
+    /// <summary>Her beam lights a dark charge stone (at its face, Direction the way out of the wall).</summary>
+    ChargeStoneLit }
 
 /// <summary>What hurt Clementine (the killing blow names what ended a run; saved by number, so Gloomvine stays though nothing deals it now).</summary>
 public enum DamageSource { None, PufferNeedle, PufferSpines, BossPearl, RoyalPearl, BossSnap, BossContact, Murkling, MurkShot, Gloomvine, Blightroot, Blotter, Thumpsquirt, Lashjaw, Curse, Hearthguard, Leak, LeakWater }
@@ -173,8 +175,9 @@ public sealed partial class PlaneWorld
         PlaceBoss();
         if (Options.Vases) PlaceVases();
         PlaceSprings();
-        PlaceCrystals();
+        PlaceChargeStones();
         PlaceSeals();
+        PlacePrismStones();
         if (Options.Corruption || adventure) PlaceCorruption();
         if (adventure) PlaceAdventure();
         // The reef's zones: its murkling packs.
@@ -301,6 +304,7 @@ public sealed partial class PlaneWorld
         p.JetTimer -= Dt;
 
         Move(ref p.Position, ref p.Velocity, Radius);
+        StepPrismStones();
 
         StepReef();
         StepVases();
@@ -318,7 +322,7 @@ public sealed partial class PlaneWorld
         }
         SyncLights(input);
         StepHerLight();
-        StepCrystals();
+        StepChargeStones();
         StepAsh();
         StepCorruption();
         if (Options.Adventure) StepAdventure();

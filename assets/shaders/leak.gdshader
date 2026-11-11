@@ -27,13 +27,13 @@ float noise(vec2 p) {
 
 
 // Seen only in light, as a murkling is (murkling.gdshaderinc): within her aura, where a beam of hers falls on it, or in a
-// lit crystal's light (crystal_seen, AdventureView); elsewhere it is not drawn at all, its edge breaking up in the water.
-instance uniform float crystal_seen = 0.0;
+// lit charge stone's light (charge_seen, AdventureView); elsewhere it is not drawn at all, its edge breaking up in the water.
+instance uniform float charge_seen = 0.0;
 // Whether a beam of hers gets to it (AdventureView: none past rock), and light on its disc (all of it shows then).
 instance uniform float beam_seen = 1.0;
 instance uniform float core_seen = 0.0;
 bool leak_unseen(vec3 world, float salt) {
-	float seen = max(max(max(her_reveal_aura(world), beam_seen * her_reveal_beams(world)), crystal_seen), core_seen);
+	float seen = max(max(max(her_reveal_aura(world), beam_seen * her_reveal_beams(world)), charge_seen), core_seen);
 	return seen < 0.15 + 0.7 * noise(world.xz * 4.0 + vec2(TIME * 0.4, salt));
 }
 

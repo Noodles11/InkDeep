@@ -292,7 +292,8 @@ public sealed partial class PlaneWorld
             if (!ray.Shining || ray == RearBeam || ray == SweepBeam) continue;
             var from = ray.Position;
             var end = ray == Beam ? BeamEnd : StopOf(ray);
-            if (_rocks.Exists(r => r.Contains(end))) StrikeSeal(end, worth * Dt * BeamFalloff(ray, Vector2.Distance(from, end)), quiet: true);
+            // (In the colour the prism stones on its way give it.)
+            if (_rocks.Exists(r => r.Contains(end))) StrikeSeal(end, worth * Dt * BeamFalloff(ray, Vector2.Distance(from, end)), quiet: true, hue: HueAlong(from, end));
             if (Dots is not null) ClearAlong(from, end, HerLightTuning.BeamDots);
         }
     }

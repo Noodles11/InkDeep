@@ -140,6 +140,12 @@ public partial class SealView : Node3D
             material.SetShaderParameter(SN.Of("light_color"), Crimson);
             material.SetShaderParameter(SN.Of("ember"), 1f);
         }
+        else if (seal.Hue != LightHue.None)
+        {
+            // A coloured seal: its X glows faintly in the colour it takes.
+            material.SetShaderParameter(SN.Of("light_color"), OctoShoots.Game.Fx.HueColor.Of(seal.Hue));
+            material.SetShaderParameter(SN.Of("ember"), 1f);
+        }
         var mesh = new MeshInstance3D { Mesh = st.Commit(), MaterialOverride = material, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
         // In the wall's own frame (both are laid out in the level's metres), so it rises and sinks with it.
         if (level.SealWall(seal.Rock.Center) is { } wall) wall.AddChild(mesh);

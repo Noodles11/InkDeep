@@ -33,6 +33,11 @@ public sealed class SecretSeal
     /// <summary>Light short of a whole hit (a small shot is only part of one).</summary>
     public float Credit;
     public bool Open;
+    /// <summary>
+    /// The colour its X is carved in (docs/LIGHT-AND-GRAPH-PROPOSAL.md §2.6): it takes only her light of that colour, come
+    /// through the prism stones out before it (None: any of her light).
+    /// </summary>
+    public LightHue Hue;
     /// <summary>Shut by a barred boss arena while its fight runs (it cannot be lit meanwhile); whether it stood open before.</summary>
     public bool Barred, WasOpen;
     /// <summary>Since the last hit that counted (its light drains once Hold has passed), and the drain's clock.</summary>
@@ -83,12 +88,16 @@ public sealed partial class PlaneWorld
         }
     }
 
-    /// <summary>One of her shots struck rock here: on a seal's emblem it adds its light; full, the seal crumbles.</summary>
-    void StrikeSeal(Vector2 at, float light = 1f, bool quiet = false)
+    /// <summary>
+    /// One of her shots struck rock here: on a seal's emblem it adds its light; full, the seal crumbles. A coloured seal
+    /// takes only light of its own colour (<paramref name="hue"/>: the light's, through the prism stones).
+    /// </summary>
+    void StrikeSeal(Vector2 at, float light = 1f, bool quiet = false, LightHue hue = LightHue.None)
     {
         foreach (var seal in Seals)
         {
             if (seal.Open || seal.Barred || seal.Rock.Fake || !seal.Rock.Contains(at, 0.3f) || Vector2.Distance(at, seal.Emblem) > SealTuning.Reach) continue;
+            if (seal.Hue != LightHue.None && hue != seal.Hue) return;
             // (A great cave's arena waits for its leak; a reef's leaks hold only its holes.)
             if (seal.Kind == SealKind.Boss && Map.LeakCave && LeaksLeft > 0)
             {
@@ -158,7 +167,7 @@ public sealed partial class PlaneWorld
 
     public void DebugStrikeSeal(SecretSeal? which = null)
     {
-        if ((which ?? Seals.FirstOrDefault(x => !x.Open)) is { } seal) StrikeSeal(seal.Emblem - seal.Facing * 0.3f);
+        if ((which ?? Seals.FirstOrDefault(x => !x.Open)) is { } seal) StrikeSeal(seal.Emblem - seal.Facing * 0.3f, hue: seal.Hue);
     }
 
     /// <summary>The caves still sealed (the maps draw them as wall).</summary>

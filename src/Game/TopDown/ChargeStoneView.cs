@@ -6,12 +6,14 @@ using OctoShoots.Core.Plane;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// The light crystals in the walls (PlaneCrystals.cs): each a little cluster of hexagonal shards set in the rock's face
+/// the charge stones in the walls (PlaneChargeStones.cs): each a little cluster of hexagonal shards set in the rock's face
 /// at her plane, leaning out of it, in its own colour. Dark, a faint glint in it so it can be found; charged, its shards
-/// burn in their colour and a soft round light spreads from it over the reef (CrystalTuning.ShownReach), fainter than
-/// hers, dimming as its charge runs out.
+/// burn in their colour and a soft round light spreads from it over the reef (ChargeStoneTuning.ShownReach), fainter than
+/// hers, dimming as its charge runs out. A level's trio (ChargeTrio) has its sign on the sand of the nook between them:
+/// three shards of its colour lying in a triangle, each pointing to its stone and burning while it glows; once the
+/// cache has burst up there, they are spent and dark.
 /// </summary>
-public partial class CrystalView : Node3D
+public partial class ChargeStoneView : Node3D
 {
     const float DarkGlint = 0.18f, LitEmission = 3.2f, LightEnergy = 1.3f;
 
@@ -23,7 +25,9 @@ public partial class CrystalView : Node3D
     }
 
     readonly List<Shown> _shown = new();
-    List<PlaneCrystal>? _for;
+    /// <summary>The trio's sign: each shard's material, with the stone it stands for.</summary>
+    readonly List<(StandardMaterial3D Material, int Stone)> _sign = new();
+    List<ChargeStone>? _for;
     static ArrayMesh? _shard;
     float _time;
 
@@ -50,15 +54,17 @@ public partial class CrystalView : Node3D
         return _shard = st.Commit();
     }
 
-    void Build(List<PlaneCrystal> crystals)
+    void Build(PlaneWorld world)
     {
+        var crystals = world.ChargeStones;
         foreach (var child in GetChildren()) child.QueueFree();
         _shown.Clear();
+        _sign.Clear();
         _for = crystals;
         var shard = Shard();
         foreach (var c in crystals)
         {
-            var colour = new Color(CrystalTuning.Colours[c.Colour].X, CrystalTuning.Colours[c.Colour].Y, CrystalTuning.Colours[c.Colour].Z);
+            var colour = new Color(ChargeStoneTuning.Colours[c.Colour].X, ChargeStoneTuning.Colours[c.Colour].Y, ChargeStoneTuning.Colours[c.Colour].Z);
             var material = new StandardMaterial3D
             {
                 AlbedoColor = colour.Darkened(0.55f), Roughness = 0.12f, Metallic = 0.25f, EmissionEnabled = true, Emission = colour,
@@ -79,21 +85,40 @@ public partial class CrystalView : Node3D
             }
             var light = new OmniLight3D
             {
-                LightColor = colour, LightEnergy = 0f, OmniRange = CrystalTuning.ShownReach, OmniAttenuation = 1.6f, ShadowEnabled = false,
+                LightColor = colour, LightEnergy = 0f, OmniRange = ChargeStoneTuning.ShownReach, OmniAttenuation = 1.6f, ShadowEnabled = false,
                 LightSpecular = 0.3f, Position = new Vector3(c.Position.X, LevelMap.SwimBand + 0.2f, c.Position.Y), Visible = false,
             };
             AddChild(light);
             _shown.Add(new Shown { Material = material, Light = light });
         }
+        if (world.Trio is { } trio)
+            for (int i = 0; i < crystals.Count; i++)
+            {
+                var c = crystals[i];
+                if (c.Trio < 0) continue;
+                var colour = new Color(ChargeStoneTuning.Colours[c.Colour].X, ChargeStoneTuning.Colours[c.Colour].Y, ChargeStoneTuning.Colours[c.Colour].Z);
+                var material = new StandardMaterial3D
+                {
+                    AlbedoColor = colour.Darkened(0.55f), Roughness = 0.12f, Metallic = 0.25f, EmissionEnabled = true, Emission = colour,
+                    EmissionEnergyMultiplier = DarkGlint, RimEnabled = true, Rim = 0.7f, RimTint = 0.6f,
+                };
+                // Lying on the sand a little out from the nook's middle, pointing to its stone.
+                var to = System.Numerics.Vector2.Normalize(c.Position - trio.Middle);
+                var at = trio.Middle + to * 0.55f;
+                var point = new Vector3(to.X, 0f, to.Y);
+                var basis = new Basis(new Quaternion(Vector3.Up, point)).Scaled(Vector3.One * 1.4f);
+                AddChild(new MeshInstance3D { Mesh = shard, MaterialOverride = material, Transform = new Transform3D(basis, new Vector3(at.X, world.Map.HeightAt(at) + 0.12f, at.Y)) });
+                _sign.Add((material, i));
+            }
     }
 
     public void Sync(PlaneWorld world, float dt)
     {
-        if (!ReferenceEquals(world.Crystals, _for)) Build(world.Crystals);
+        if (!ReferenceEquals(world.ChargeStones, _for)) Build(world);
         _time += dt;
-        for (int i = 0; i < _shown.Count && i < world.Crystals.Count; i++)
+        for (int i = 0; i < _shown.Count && i < world.ChargeStones.Count; i++)
         {
-            var c = world.Crystals[i];
+            var c = world.ChargeStones[i];
             var s = _shown[i];
             // Easing to the sim's glow, so its light swells rather than snaps on.
             s.Glow = Mathf.MoveToward(s.Glow, c.Glow, dt * 3f);
@@ -102,6 +127,13 @@ public partial class CrystalView : Node3D
             s.Material.EmissionEnergyMultiplier = Mathf.Lerp(glint, LitEmission * flicker, s.Glow);
             s.Light.Visible = s.Glow > 0.01f;
             s.Light.LightEnergy = LightEnergy * s.Glow * flicker;
+        }
+        bool spent = world.Trio is { Opened: true };
+        foreach (var (material, stone) in _sign)
+        {
+            if (stone >= _shown.Count) continue;
+            float glint = DarkGlint * (0.7f + 0.3f * Mathf.Sin(_time * 1.7f + stone));
+            material.EmissionEnergyMultiplier = spent ? 0.05f : Mathf.Lerp(glint, LitEmission, _shown[stone].Glow);
         }
     }
 }

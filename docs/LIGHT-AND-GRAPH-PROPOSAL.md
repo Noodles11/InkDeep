@@ -92,21 +92,51 @@ her Ink Cloud (`Unseen`), and a murkling beside her never finds her. But she see
 murklings show only in her light), and her inner light seals no leak while it is out. Her beam gives her away the
 moment it shines.
 
-### 2.5 Light crystals
+### 2.5 Charge stones
 
-Small shards of coloured crystal are set in the reef's walls at her plane (`PlaneCrystals.cs`, `CrystalTuning`; drawn
-by `CrystalView`): about sixteen a reef, 9 m apart at least, each in its own colour (cyan, magenta, amber, lime,
-violet, ice blue). Dark, a faint glint shows where one is.
+Small clusters of coloured crystal shards are set in the reef's walls at her plane (`PlaneChargeStones.cs`,
+`ChargeStoneTuning`; drawn by `ChargeStoneView`): about sixteen a reef, 9 m apart at least, each in its own colour (cyan,
+magenta, amber, lime, violet, ice blue). Dark, a faint glint shows where one is.
 
 - **Her beam charges one**, the faster the more of its light reaches it (`PlaneWorld.BeamLight`): a second of beam at
   one shot's light gives 5 s of glow, up to 14 s.
 - **Charged, it glows on its own**: full while it holds more than 5 s of glow, then dimming over those last 5 s, and
   out. Its light is round it, as hers is, fainter even at full (half her aura's), and reaches about 4.5 m over the reef.
 - **It harms nothing**, but it is a light like any: a murkling may go to it instead of her (her glow out, or the
-  crystal brighter where it is) and drink it down. A lure, and a lamp for the reef.
-- **It shows what is in its light**, as her glow does (`PlaneWorld.CrystalSees`): a murkling within most of its drawn
-  light is seen fully, thinning at its edge, and less as the crystal dims; not round rock. So she can watch what a lure
-  has drawn in.
+  stone brighter where it is) and drink it down. A lure, and a lamp for the reef.
+- **It shows what is in its light**, as her glow does (`PlaneWorld.ChargeStoneSees`): a murkling within most of its
+  drawn light is seen fully, thinning at its edge, and less as the stone dims; not round rock. So she can watch what a
+  lure has drawn in.
+- **A trio** (`ChargeTrio`, 70% of levels; none in a labyrinth): three charge stones of one colour in the walls round
+  an open nook, at most 6.5 m from its middle and far apart in angle. On the sand in the middle lie three shards of
+  their colour in a triangle, each pointing to its stone and burning while that stone glows. With all three glowing at
+  once (14 s of glow each gives her time to go round them), a secret cache of 12 shells bursts up from the sand there
+  with a burst of light, once; the shards then lie spent and dark.
+
+### 2.6 Prism stones
+
+Great standing stones, menhirs of rough grey rock taller than her plane (`PlanePrismStones.cs`, `PrismStoneTuning`;
+drawn by `PrismStoneView`), each with a crystal band at her plane and a crystal crown in its colour: **red, green or
+blue**. Dark, the crystal glows faintly so its colour can be read; while her light goes through it, it burns bright and
+lights what is round it in its colour.
+
+- **Coloured seals.** Up to two of a level's secret seals (85% of them, outside the tutorial) have their X carved in a
+  colour, glowing faintly in it. Such a seal takes only her light of exactly its colour (`SecretSeal.Hue`); her own
+  light and any other colour do nothing to it. Plain seals still take any of her light.
+- **The bed.** Before each coloured seal, 4 to 12 m from its X and in sight of it, a round of open sand 3.4 m wide is
+  ringed with pale pebbles. In it stand the stones that make the seal's colour, and 60% of the time one more of a colour
+  it does not need, to choose among.
+- **Pushing.** She pushes a stone by swimming into it. It is heavy: it gives at most 1.6 m/s and takes most of her push
+  off her. It never leaves its bed, and it stops at rock and at the other stones.
+- **Light through a stone.** Her light passes through a stone (within 0.8 m of its middle) and comes out of its far side
+  in its colour. Through more than one it mixes as light does: red and green make yellow, red and blue magenta, green
+  and blue cyan, all three white (`LightHue`, `PlaneWorld.HueAlong`). So a seal's colour is made by putting its stones,
+  and only those, between her and its X; a mixed colour needs two stones in line. Each ray of a split beam has its own
+  colour.
+- **Drawn.** Each line of her beam that goes into a stone lands on it (the flashlight's cone stops there, its edge
+  tracing the stone). Out of the stone a band of its colour goes on between the lines that carry it, brightest at the
+  stone, softer at its sides and toward its end (`BeamView`). Where her own beam's axis lands, a light of that colour
+  falls on the rock.
 
 ## 3. Murklings
 

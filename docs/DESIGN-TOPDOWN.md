@@ -1385,7 +1385,7 @@ at mist distance (inherited fade rule).
     `--dbg-nocarve` keeps every wall whole; `--dbg-nofloor` leaves out the see floor.
 - **Leaving a level fades all of it** (`TopDownMain.FadeLevelLife`): down a hole, or up and out of a sub-level, the
   old level's rock and flora are cut by the iris, and everything else of it — its creatures and their ink, leaks,
-  crystals, springs, seals, mouths, kelp, places and its lights and decals — fades out as the iris's edge passes over
+  charge stones, prism stones, springs, seals, mouths, kelp, places and its lights and decals — fades out as the iris's edge passes over
   it and with the descent; what a shader of its own keeps opaque is hidden as the edge passes. Nothing is switched off
   in one frame as the level is let go; the next level's life is drawn whole again on arrival.
 - **Combat** (`PlaneCombat.cs`; the Depth-1 bestiary is being ported onto the plane, the Pufferling first): Clementine has

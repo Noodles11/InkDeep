@@ -25,7 +25,9 @@ namespace OctoShoots.Game.TopDown;
 /// level, any pearls), F3 toggles the debug map, R regenerates from the seed field.
 /// Verification flags: --seed=, --cycle=, --depth=, --level=, --at=start|arch|arch-near|cave|exit|hole|kelp|shop|shop-out|cache|cache-near|secret|secret-in|treasure|treasure-out|clam-pearl|mob|boss|spring|spring-in,
 /// --autopilot, --dive (dives whenever it can), --dbg-pad (on the controller from the start), --calm (no creatures), --fire, --pearls=, --hp=, --luck=, --boss-hp=, --paused, --map, --f3, --no-focus, --dbg-nofog (no floor fog),
-/// --capture=dir --frames=a,b, --dbg-say=text (a message banner, a second in), --dbg-loose=id (that pearl loose near her), --at=gate (swims into the boss arena through its
+/// --capture=dir --frames=a,b, --dbg-say=text (a message banner, a second in), --dbg-loose=id (that pearl loose near her), --at=prism|trio|charge (in a prism stones' bed, a charge stones' trio's
+/// nook, before a charge stone), --dbg-prism (a coloured seal's stones laid on her way to it; --fire aims at it),
+/// --dbg-charge (every charge stone charged), --at=gate (swims into the boss arena through its
 /// opened way in), --dbg-free=seconds (the boss freed that long after it lands), --dbg-steer=x,y (she swims that way;
 /// --dbg-steer-fight: once the boss fights), --dbg-freed=tull,… (the bay's folk freed, at home), --look=N (an art direction under study for the reef, docs/ART-LOOKS.md).
 /// </summary>
@@ -45,10 +47,12 @@ public partial class TopDownMain : Node3D
     float _dbgSealAt;
     /// <summary>The rims of the reef's holes, each in the colour of where it leads.</summary>
     HoleView _holes = null!;
-    /// <summary>The light crystals in the walls.</summary>
-    CrystalView _crystals = null!;
-    /// <summary>Verification (--dbg-crystals): every crystal charged full as she arrives.</summary>
-    bool _dbgCrystals;
+    /// <summary>the charge stones in the walls.</summary>
+    ChargeStoneView _chargeStones = null!;
+    /// <summary>The prism stones in their beds.</summary>
+    PrismStoneView _prismStones = null!;
+    /// <summary>Verification (--dbg-charge): every charge stone charged full as she arrives.</summary>
+    bool _dbgChargeStones;
     CurrentView _currents = null!;
     CrabView _crab = null!;
     float _holeShown;
@@ -324,6 +328,12 @@ public partial class TopDownMain : Node3D
     bool _dbgExit;
     /// <summary>Verification (--dbg-loose=id): that pearl lies loose on the reef a few metres from her at the start.</summary>
     string? _dbgLoose;
+    /// <summary>
+    /// Verification (--dbg-prism; with --at=prism): the first coloured seal's stones of its colour laid on her way to its
+    /// carving, and --fire aims at it.
+    /// </summary>
+    bool _dbgPrism;
+    SecretSeal? _dbgPrismSeal;
     /// <summary>Verification: murklings bud round an Inkwarden (the first, or a turned pufferfish set 6 m ahead of her), so its tethers show.</summary>
     bool _dbgWard;
     /// <summary>Verification: the first seal starts with this many hits less one, and takes the last a second in (0: off).</summary>
@@ -414,8 +424,10 @@ public partial class TopDownMain : Node3D
         AddChild(_beam);
         _cores = new CoreView();
         AddChild(_cores);
-        _crystals = new CrystalView();
-        AddChild(_crystals);
+        _chargeStones = new ChargeStoneView();
+        AddChild(_chargeStones);
+        _prismStones = new PrismStoneView();
+        AddChild(_prismStones);
         _motes = new LightMotes();
         AddChild(_motes);
         _holes = new HoleView();
@@ -544,6 +556,7 @@ public partial class TopDownMain : Node3D
             else if (arg == "--dbg-ward") _dbgWard = true;
             else if (arg == "--dbg-exit") _dbgExit = true;
             else if (arg.StartsWith("--dbg-loose=")) _dbgLoose = Value("--dbg-loose=");
+            else if (arg == "--dbg-prism") _dbgPrism = true;
             else if (arg.StartsWith("--dbg-moment=")) _dbgMoment = float.Parse(Value("--dbg-moment="), CultureInfo.InvariantCulture);
             else if (arg.StartsWith("--boss=")) _dbgBoss = Value("--boss=");
             else if (arg == "--boss-level") _dbgBossLevel = true;
@@ -586,7 +599,7 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--xp=") && int.TryParse(Value("--xp="), out int xp)) _startXp = xp;
             else if (arg == "--showcase") _dbgShowcase = true;
             else if (arg == "--dbg-glowoff") _dbgGlowOff = true;
-            else if (arg == "--dbg-crystals") _dbgCrystals = true;
+            else if (arg == "--dbg-charge") _dbgChargeStones = true;
             else if (arg.StartsWith("--dbg-sealat=") && float.TryParse(Value("--dbg-sealat="), NumberStyles.Float, CultureInfo.InvariantCulture, out float sealAt)) _dbgSealAt = sealAt;
             else if (arg == "--showcase=0")
             {
@@ -1423,6 +1436,17 @@ public partial class TopDownMain : Node3D
             _dbgWard = false;
         }
         if (_dbgExit) _world.ExitOpen = true;
+        if (_dbgPrism && _world.Seals.FirstOrDefault(s => s.Hue != LightHue.None) is { } tinted)
+        {
+            _dbgPrism = false;
+            _dbgPrismSeal = tinted;
+            int index = _world.Seals.IndexOf(tinted);
+            var her = _world.Player.Position;
+            var way = System.Numerics.Vector2.Normalize(tinted.Emblem - her);
+            int n = 0;
+            foreach (var stone in _world.PrismStones.Where(s => s.Seal == index))
+                stone.Position = (stone.Hue & tinted.Hue) != 0 ? her + way * (2f + 1.9f * n++) : her + way * 2f + new System.Numerics.Vector2(-way.Y, way.X) * 2.2f;
+        }
         if (_dbgLoose is { } loose)
         {
             _dbgLoose = null;
@@ -1581,8 +1605,8 @@ public partial class TopDownMain : Node3D
             if (forced == CurseReward.Pearl) _world.Pearls.Add(new PlanePearl { ItemId = PlaneRun.PortedPearls[0], Position = den.End, Placed = true });
         }
         EnterShowcase();
-        if (_dbgCrystals)
-            foreach (var crystal in _world.Crystals) crystal.Charge = CrystalTuning.MaxGlow;
+        if (_dbgChargeStones)
+            foreach (var crystal in _world.ChargeStones) crystal.Charge = ChargeStoneTuning.MaxGlow;
         _achievements.EnterLevel();
         // A pearl unlocked by an achievement, offered here for the first time, wears a NEW chip.
         var fresh = new HashSet<string>();
@@ -2026,8 +2050,12 @@ public partial class TopDownMain : Node3D
             "cave" => _map.Caves.Select(c => (System.Numerics.Vector2?)(c.Mouth + c.Facing * 5f)).FirstOrDefault(),
             "exit" => _map.Exit.Position + new System.Numerics.Vector2(0f, _map.Exit.Radius + 3f),
             "hole" => _map.Exit.Position,
-            // Before the light crystal nearest her start, a few metres out from its wall.
-            "crystal" => _world.Crystals.OrderBy(c => System.Numerics.Vector2.Distance(c.Position, _map.Start.Position)).Select(c => (System.Numerics.Vector2?)(c.Position + c.Out * 3f)).FirstOrDefault(),
+            // Before the charge stone nearest her start, a few metres out from its wall.
+            // In a prism stones' bed, on its far side from its seal.
+            "prism" => _world.PrismStones.Select(s => (System.Numerics.Vector2?)(s.Bed + System.Numerics.Vector2.Normalize(s.Bed - _world.Seals[s.Seal].Emblem) * 2.6f)).FirstOrDefault(),
+            // In a charge stones' trio's nook.
+            "trio" => _world.Trio is { } trio0 ? trio0.Middle : null,
+            "charge" => _world.ChargeStones.OrderBy(c => System.Numerics.Vector2.Distance(c.Position, _map.Start.Position)).Select(c => (System.Numerics.Vector2?)(c.Position + c.Out * 3f)).FirstOrDefault(),
             // Over a reef's holes left to right (hole0 the leftmost), or a few metres south of one (rim0…).
             _ when where is { } w0 && w0.StartsWith("hole") && int.TryParse(w0[4..], out int k) && k >= 0 && k < _map.Holes.Count => _map.Holes[k].Shaft.Center,
             _ when where is { } w1 && w1.StartsWith("rim") && int.TryParse(w1[3..], out int r) && r >= 0 && r < _map.Holes.Count => _map.Holes[r].Shaft.Center + new System.Numerics.Vector2(0f, 7f),
@@ -2761,7 +2789,8 @@ public partial class TopDownMain : Node3D
         Guard("cores", () => _cores.Sync(_world));
         Guard("lamps", () => _lamps.Sync(_world, dt));
         Guard("holes", () => _holes.Sync(_world, dt));
-        Guard("crystals", () => _crystals.Sync(_world, dt));
+        Guard("charge stones", () => _chargeStones.Sync(_world, dt));
+        Guard("prism stones", () => _prismStones.Sync(_world, dt));
         Guard("showcase", () => StepShowcase(dt));
         // Her glow out: her bell all but dark (her light going out at the end has its own).
         if (!_dying) _bell.Lit = Mathf.MoveToward(_bell.Lit, _world.GlowOff ? GlowOffLit : 1f, dt * 5f);
@@ -3048,14 +3077,14 @@ public partial class TopDownMain : Node3D
     /// <summary>The views of a level's life: its creatures, pickups and shots, Queen Clam, damage numbers, currents.</summary>
     /// <summary>
     /// Everything of the level's own that is drawn beside its rock (the rock, its flora and its kelp are cut by the iris
-    /// itself): its creatures and their ink, its places, leaks and lights, the reef's crystals, seals, springs and
+    /// itself): its creatures and their ink, its places, leaks and lights, the reef's charge stones, seals, springs and
     /// mouths. All of it fades out with the dive or the ride (FadeLevelLife), so nothing just vanishes as the old level
     /// is let go.
     /// </summary>
     IEnumerable<Node> LevelLife => new Node[]
     {
         _crab, _combat, _puffers, _reefFish, _curseDen, _clamRooms, _geysers, _boss, _damage, _currents, _vases, _abyss,
-        _kelp, _crystals, _cores, _lamps, _motes, _seals, _surgeView, _blight, _ash, _adventure, _springs, _portals,
+        _kelp, _chargeStones, _prismStones, _cores, _lamps, _motes, _seals, _surgeView, _blight, _ash, _adventure, _springs, _portals,
         _mirrorView, _fanView, _vapour,
     };
 
@@ -3625,6 +3654,14 @@ public partial class TopDownMain : Node3D
             case PlaneEventType.ThumpBurst:
                 _sfx.PlayPitched("bell_ring", 1.1f, -6f);
                 break;
+            case PlaneEventType.TrioOpened:
+                // The trio's cache bursts up from the sand: a burst of light, its shells flung out.
+                _combat.LightBurst(e.Position, 2.5f);
+                _combat.MagicBurst(new Vector3(e.Position.X, LevelMap.SwimBand, e.Position.Y));
+                _camera.Shake(0.3f);
+                _sfx.PlayPitched("bell_ring", 1.6f, -4f);
+                _sfx.PlayPitched("pop", 0.6f, -4f);
+                break;
             case PlaneEventType.SealLit:
                 // The emblem takes her light: a chime rising as it fills.
                 _sfx.PlayPitched("bell_ring", 1.3f + 0.7f * e.Size, -12f);
@@ -4192,7 +4229,7 @@ public partial class TopDownMain : Node3D
     {
         if (!_autoFire) return false;
         var from = _world.Player.Position;
-        System.Numerics.Vector2? target = _world.Boss is { Stage: BossStage.Fight } queen ? queen.Position
+        System.Numerics.Vector2? target = _dbgPrismSeal is { } aimed ? aimed.Emblem : _world.Boss is { Stage: BossStage.Fight } queen ? queen.Position
             : _world.Mobs.Where(m => m.Alive).OrderBy(m => System.Numerics.Vector2.Distance(m.Position, from)).Select(m => (System.Numerics.Vector2?)m.Position).FirstOrDefault()
               // Else the nearest corrupted creature (not the wardens: what they guard).
               ?? _world.Murklings.Where(m => m.Alive && !m.Budding).Select(m => m.Position)

@@ -1,7 +1,8 @@
 // A sealed wall's carving (DESIGN-TOPDOWN §4.2; SealView): an X carved faintly in the wall, easy to miss (shape 0: a
 // secret's, a tunnel's), or a sword (shape 1: the way into the boss's arena), its crimson smouldering in the groove
 // (ember). Her light striking it fills the carving from its heart outward (the X's crossing, the sword's guard); each
-// strike flashes it. Drawn on a patch of the wall's own surface (SealView.Carve), laid out as seen from above; its
+// strike flashes it. A coloured seal's X (PrismStones: it takes only light of its colour) glows faintly in its colour
+// even unlit (ember), so it can be read from afar. Drawn on a patch of the wall's own surface (SealView.Carve), laid out as seen from above; its
 // vertex alpha keeps it to the rock (none on the seabed at the wall's foot).
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled;
@@ -76,9 +77,10 @@ void fragment() {
 	// The carving itself: a faint shade in the stone (not too visible), and the light in it.
 	vec3 shade = vec3(0.02, 0.05, 0.06);
 	float shine = lit * (0.85 + 0.15 * sin(TIME * 3.0)) + flash * groove * 0.8;
-	ALBEDO = mix(shade, light_color * 1.6, clamp(shine, 0.0, 1.0));
+	float tinted = ember * groove * (0.4 + 0.12 * sin(TIME * 1.4));
+	ALBEDO = mix(shade, light_color * 1.6, clamp(shine + tinted, 0.0, 1.0));
 	// A soft halo round the lit carving.
-	float halo = (1.0 - smoothstep(0.0, 0.35, min(d1, d2))) * fill * 0.25 + flash * 0.15 * (1.0 - smoothstep(0.0, 0.6, length(p)));
-	ALPHA = clamp(groove * (0.32 + 0.68 * clamp(shine, 0.0, 1.0)) + halo, 0.0, 1.0) * fade * COLOR.a;
+	float halo = (1.0 - smoothstep(0.0, 0.35, min(d1, d2))) * (fill * 0.25 + ember * 0.12) + flash * 0.15 * (1.0 - smoothstep(0.0, 0.6, length(p)));
+	ALPHA = clamp(groove * (0.32 + 0.68 * clamp(shine + tinted, 0.0, 1.0)) + halo, 0.0, 1.0) * fade * COLOR.a;
 	}
 }
