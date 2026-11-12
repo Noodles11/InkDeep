@@ -121,7 +121,7 @@ public class ItemTests
     [InlineData("coral_crown", "+20 max HP")]
     [InlineData("frost_kelp", "Her light turns to frost: what it lights slows, and stands still after 2 s")]
     [InlineData("conch_horn", "Recharges in 30s")]
-    [InlineData("lamprey_mouth", "Kills heal 3 HP")]
+    [InlineData("lamprey_mouth", "What her light frees sends its core of light flying to her, worth 3 more")]
     [InlineData("whale_lung", "+30% shot size")]
     [InlineData("hammerhead", "Opens the beam into a 5-ray floodlight, each 32% of the beam")]
     [InlineData("triple_tentacle", "Splits the beam into 3 rays, each 46% of the beam")]
@@ -157,10 +157,10 @@ public class ItemTests
             Assert.Null(item.Unlock);
         }
 
-        var everythingButLamprey = Catalog.Items.Where(i => i.Id != "lamprey_mouth").Select(i => i.Id).ToHashSet();
-        Assert.Null(ItemPools.Draw(Catalog, "treasure", new Rng(2), none, everythingButLamprey));
-        var drawn = ItemPools.Draw(Catalog, "treasure", new Rng(2), new HashSet<string> { "hollow_maw" }, everythingButLamprey);
-        Assert.Equal("lamprey_mouth", drawn?.Id);
+        var everythingButMitosis = Catalog.Items.Where(i => i.Id != "mitosis").Select(i => i.Id).ToHashSet();
+        Assert.Null(ItemPools.Draw(Catalog, "treasure", new Rng(2), none, everythingButMitosis));
+        var drawn = ItemPools.Draw(Catalog, "treasure", new Rng(2), new HashSet<string> { "bubble_bath" }, everythingButMitosis);
+        Assert.Equal("mitosis", drawn?.Id);
     }
 
     [Fact]

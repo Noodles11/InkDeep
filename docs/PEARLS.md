@@ -9,7 +9,7 @@
 | | Passive | Active | All |
 |---|---|---|---|
 | Pearls | 59 | 13 | 72 |
-| Built | 43 | 5 | 48 |
+| Built | 45 | 5 | 50 |
 
 - **Passive** pearls work on their own from the moment she absorbs one: her stats, her bubbles, or something that
   happens when she is hit or frees a creature. They stack.
@@ -143,7 +143,7 @@ comes to it (the level below is laid out while she plays the one above); a run w
 | Yes | ✅ | **Double Helix** | *Twice the twist* | Splits the beam into 2 rays, each 62% of the beam; The beam's rays weave across your aim in a double helix | ★★★ | treasure |  |
 | Yes | ✅ | **Triple Tentacle** | *Why squirt once?* | Splits the beam into 3 rays, each 46% of the beam | ★★★ | treasure, boss |  |
 | Yes | ✅ | **Starfish Arm** | *Grows back bigger* | Her beam flares, half as wide again at its tip | ★★ | treasure | big_bubble_energy |
-| Yes | ✅ | **Starburst Gland** | *Bursts with borrowed sun* | Shots burst into light (cleanses ground, strikes the corrupted near) | ★★★ | treasure, curse |  |
+| Yes | ✅ | **Starburst Gland** | *Bursts with borrowed sun* | What her light frees flares: a ring of her light 3 m wide, in her colours | ★★★ | treasure, curse |  |
 | Yes | ✅ | **Sardine Run** | *A million small reasons* | Held without a break, her beam spins up: ×1.8 burn after 3 s | ★★★ | treasure, boss |  |
 | Yes | ✅ | **Pistol Shrimp Claw** | *Snap. Bang.* | Held on a creature, her beam snaps every 0.8 s: a burst of light 2.5 m wide that pushes it back | ★★★ | treasure, boss |  |
 | Yes |  | **Siren Song** | *Come closer…* | 15% chance to charm foes for 3s | ★★ | treasure, siren |  |
@@ -164,12 +164,12 @@ comes to it (the level below is laid out while she plays the one above); a run w
 | No | ✅ | **Cannonball** | *Fire in the hold!* | +0.8 damage; −0.15 beam carry; ×1.4 shot size; ×2 light pressure | ★★ | treasure, boss |  |
 | No | ✅ | **Captain's Hook** | *Get over here* | ×2.5 light pressure | ★ | treasure, shop |  |
 | No (+1s) |  | **Stingray Barb** | *Numbs on contact* | 30% chance to slow foes for 2s | ★ | treasure |  |
-| No (+1HP) |  | **Lamprey Mouth** | *Every bite counts* | Each creature freed heals 3 HP | ★★★ | treasure, curse | hollow_maw |
+| No (+1HP) | ✅ | **Lamprey Mouth** | *Every bite counts* | What her light frees sends its core flying to her, worth 3 more | ★★★ | treasure, curse |  |
 | Yes | ✅ | **Hammerhead** | *Wide-angle view* | Opens the beam into a 5-ray floodlight, each 32% of the beam | ★★★ | treasure, boss |  |
 | Yes |  | **Rear Fin** | *Eyes in the back of your mantle* | Also fires backwards | ★ | treasure, shop |  |
 | No | ✅ | **Abyssal Glow** | *Light from below the light* | +0.4 damage; ×1.3 glow radius | ★★ | treasure, curse |  |
 | No (+x1.5 glow, +0.1HP regen) | ✅ | **Glowing Moss** | *Soft and luminous* | ×1.5 glow radius; +0.1 HP regeneration per second; her light turns to bloom: ink and ash clear ×2 as fast in it, and a murkling it frees leaves ×1.5 the light | ★ | treasure, shop |  |
-| Yes |  | **Fire Urchin Spine** | *Pass it on* | Freed creatures burst into 6 spines | ★★★ | treasure, curse | jesters |
+| Yes | ✅ | **Fire Urchin Spine** | *Pass it on* | What her light frees shines out 6 spines of her light, in her colours, taking her paths | ★★★ | treasure, curse |  |
 | No |  | **Oyster Pearl** | *A little grit, a little shine* | +1 luck; +10 max HP; +5 sand dollars | ★ | treasure, goldenClam |  |
 | No | ✅ | **Dolphin Fin** | *Born to sprint* | +0.25 speed; ×0.85 dash cooldown | ★★ | treasure |  |
 | Yes | ✅ | **Brass Compass** | *Points to what matters* | Every place shows on the maps before you reach it (secret rooms stay hidden) | ★ | shop, treasure |  |
@@ -230,7 +230,7 @@ caption reads "Synergy!" with its name, a chime plays and a ring of her light go
 | ✅ | **String of Pearls** | Sardine Run + Pearl Diver | Spun right up, her beam keeps its focus through a swing |
 | ✅ | **Depth Charge** | Pistol Shrimp Claw + Pearl Diver | At full focus the snap is twice as wide and half again as strong |
 |  | **Broadside** | Cannonball + Rear Fin | Shots out of the back explode |
-| ✅ | **Supernova** | Firefly Squid + Starburst Gland | The surge bursts into light at its tip and wherever it strikes |
+| ✅ | **Supernova** | Starburst Gland + Fire Urchin Spine | Each spine of a freed creature's light ends in a flare |
 | ✅ | **Lance of Light** | Firefly Squid + Swordfish Bill | The surge runs through every creature in its path |
 | ✅ | **Helix Lamp** | Firefly Squid + Double Helix | The surge twists into two strands spiralling round each other |
 | ✅ | **Searchlight** | Firefly Squid + Hammerhead | The surge opens into a wide cone of light |

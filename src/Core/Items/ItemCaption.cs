@@ -112,7 +112,7 @@ public static class ItemCaption
         if (s.Wave) lines.Add("The beam's rays weave across your aim in a double helix");
         if (s.Spiral) lines.Add("Shots spiral outward");
         if (s.Grow) lines.Add($"Her beam flares, widening along its length: {Pct(OpenPathTuning.FlareWide)} wider again at its tip");
-        if (s.Explosive) lines.Add($"Shots burst into light where they pop: {Pct(PlaneCombatTuning.BurstDamage)} of their damage to every corrupted thing within {N(PlaneCombatTuning.BurstRadius)} m, cleansing the ground");
+        if (s.Explosive) lines.Add($"What her light frees flares: a ring of her light {N(EchoTuning.FlareReach)} m wide that burns and clears ink, in her colours");
         if (s.Charge) lines.Add($"Held steady, her beam focuses: over {N(RhythmTuning.FocusTime)} s it narrows and burns up to ×{N(RhythmTuning.FocusBurn)}; swinging it loses the focus");
         if (s.Laser) lines.Add("Her beam reaches half as far again, narrowed to a searchlight");
         if (s.Rear) lines.Add("A fainter beam shines out of her back too");
@@ -136,7 +136,7 @@ public static class ItemCaption
         string when = e.Trigger switch
         {
             Trigger.OnPickup => "",
-            Trigger.OnKill => "Kills ",
+            Trigger.OnKill => "What her light frees ",
             Trigger.OnHit => "Hits ",
             Trigger.OnShoot => "Shots ",
             Trigger.OnDamaged => "When hurt, ",
@@ -146,12 +146,13 @@ public static class ItemCaption
         };
         string what = e.Action switch
         {
-            EffectAction.Heal => e.Trigger == Trigger.OnPickup ? $"Heals {N(e.Value)} HP" : $"heal {N(e.Value)} HP",
+            EffectAction.Heal => e.Trigger == Trigger.OnPickup ? $"Heals {N(e.Value)} HP" : e.Trigger == Trigger.OnKill
+                ? $"sends its core of light flying to her, worth {N(e.Value)} more" : $"heal {N(e.Value)} HP",
             EffectAction.Foam => e.Trigger == Trigger.OnPickup ? $"+{N(e.Value)} foam HP" : $"gives {N(e.Value)} foam HP",
             EffectAction.Coins => e.Trigger == Trigger.OnPickup ? $"+{N(e.Value)} sand dollars" : $"drop {N(e.Value)} sand dollars",
             EffectAction.Bombs => e.Trigger == Trigger.OnPickup ? $"+{N(e.Value)} ink bombs" : $"give {N(e.Value)} ink bombs",
             EffectAction.Frenzy => $"send you into a frenzy: ×{N(e.Value)} fire rate for {N(e.Duration)}s",
-            EffectAction.Shards => $"burst into {N(e.Value)} spines",
+            EffectAction.Shards => $"shines out {N(e.Value)} spines of her light ({N(EchoTuning.SpineReach)} m), in her colours",
 
             _ => e.Action.ToString(),
         };

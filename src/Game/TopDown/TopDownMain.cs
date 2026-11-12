@@ -342,6 +342,8 @@ public partial class TopDownMain : Node3D
     /// there; her beam on the middle one for its first 2.5 s, then off (it grows back).
     /// </summary>
     bool _dbgMurks;
+    /// <summary>With --dbg-murks: the row budded worn down to 15% (freed quickly, for their echoes).</summary>
+    bool _dbgWeak;
     readonly List<(Murkling M, System.Numerics.Vector2 At)> _dbgRow = new();
     System.Numerics.Vector2 _dbgRowWay;
     /// <summary>Verification (--dbg-sense): as --dbg-shadow, her beam dark and the murklings held past her glow, unseen.</summary>
@@ -559,6 +561,7 @@ public partial class TopDownMain : Node3D
             else if (arg == "--dbg-sense") _autoFire = _dbgShadow = _dbgSense = true;
             else if (arg == "--dbg-paths") _autoFire = _dbgShadow = _dbgPaths = true;
             else if (arg == "--dbg-murks") _autoFire = _dbgMurks = true;
+            else if (arg == "--dbg-weak") _dbgWeak = true;
             else if (arg == "--use-active") _autoActive = true;
             else if (arg.StartsWith("--dbg-leaks=")) _dbgLeaks = int.Parse(Value("--dbg-leaks="));
             else if (arg.StartsWith("--dbg-leak-hits=")) _dbgLeakHits = int.Parse(Value("--dbg-leak-hits="));
@@ -2678,6 +2681,12 @@ public partial class TopDownMain : Node3D
                     _combat.Shockwave(e.Position, e.Size, 0.5f);
                     _sfx.PlayAt("chime", new Vector3(e.Position.X, LevelMap.SwimBand, e.Position.Y), -6f, 0.1f);
                 }
+                else if (e.Type == PlaneEventType.EchoFlare)
+                {
+                    // An echo's flare (Starburst Gland; Supernova's small ones at its spines' tips): a gold ring racing out.
+                    _combat.Shockwave(e.Position, e.Size, e.Size > 2f ? 0.55f : 0.35f);
+                    if (e.Size > 2f) _sfx.PlayAt("chime", new Vector3(e.Position.X, LevelMap.SwimBand, e.Position.Y), -8f, 0.15f);
+                }
                 else if (e.Type == PlaneEventType.LightBurst)
                 {
                     _combat.LightBurst(e.Position, e.Size);
@@ -4256,6 +4265,7 @@ public partial class TopDownMain : Node3D
                     var spot = from + _dbgRowWay * 4.5f + across * ((k - 2) * 1.7f);
                     var m = _world.DebugBud(spot, prime: false);
                     m.Bud = 0f;
+                    if (_dbgWeak) m.Corruption.Value = m.Corruption.Max * 0.15f;
                     _dbgRow.Add((m, spot));
                 }
             }

@@ -481,3 +481,25 @@ nor the rays born on rock).
   in their colours, swelling as they are laid, fading out (larger and brighter under Aurora); arcs as before.
 - Bubble Coral's old shot effects (hover, merging) stay on it for her shots (off in the game) and are not captioned.
 - Tests: `OpenPathTests`.
+
+## 14. Her light's echoes (built)
+
+The light grammar's fifth words (docs/proposals/LIGHT-GRAMMAR.md §7): what the light a creature had drunk does when
+her light frees it (`PlaneEcho.cs`, `EchoTuning`). Any light of hers that frees it counts (her beam, its born rays,
+its pools); a creature freed by an echo (a flare, a light burst) does not echo again: one generation deep. **An echo
+carries her colours**: the mix on the creature and hers, lent to what it catches (ember left burning, frost's chill
+half-way, bloom and sunfire marked, lull); and **its rays take her path words**.
+
+| Pearl | Word | When her light frees a creature |
+|---|---|---|
+| Starburst Gland | **Flare** | A ring of her light 3 m wide races out from it: one shot's burn, clearing ink as a light burst does; a chime. |
+| Fire Urchin Spine | **Spines** | 6 short rays of hers (3.2 m) shine out from where it was for 0.5 s, half a shot's light each, turned by where it was; they bounce, fork, return and ghost as her light does (rays born on rock, `PathWord.Spine`). |
+| Lamprey Mouth | **Gather** | A murkling's core flies to her at once (16 m/s, through anything, never fading on the way), worth 3 more (+1 a copy). |
+
+- **Named when they meet** (synergies, with the banner): **Supernova** (Starburst Gland + Fire Urchin Spine: each
+  spine ends in a small flare, 1.4 m wide, half a shot's burn).
+- **Drawn**: a flare a gold shockwave ring (smaller and silent at a spine's tip); spines as born rays, with a glint
+  where they start; a gathered core streaking home.
+- Fire Urchin Spine and Lamprey Mouth are open from the first run (their old unlocks were never earnable on the plane).
+  `--dbg-murks --dbg-weak` buds a worn-down row to see it.
+- Tests: `EchoTests`.

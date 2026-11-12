@@ -148,8 +148,10 @@ much corruption is left (CORRUPTION, "Corruption rings").
   Charge and String of Pearls name where they meet.
 - **Her light's paths in the open** (LIGHT-AND-GRAPH §13): it leans toward creatures (Anglerfish Lure), flares
   (Starfish Arm), leaves pools of light that burn on, painting the reef (Bubble Coral), and arcs (Electric Eel Tail);
-  Will-o'-Wisp, Pinball Storm and Aurora name where they meet. The rest of the light grammar
-  (proposals/LIGHT-GRAMMAR.md) is to come.
+  Will-o'-Wisp, Pinball Storm and Aurora name where they meet.
+- **Her light's echoes** (LIGHT-AND-GRAPH §14): what her light frees flares (Starburst Gland), shines out spines that
+  take her paths (Fire Urchin Spine) or sends its core flying home (Lamprey Mouth), in her colours, one generation
+  deep; Supernova names where they meet. The rest of the light grammar (proposals/LIGHT-GRAMMAR.md) is to come.
 - **Synergies** announce themselves; **transformations** are designed, not built.
 
 ## 9. Growth and the jelly

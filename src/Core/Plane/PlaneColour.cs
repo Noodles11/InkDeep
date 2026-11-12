@@ -162,6 +162,8 @@ public sealed partial class PlaneWorld
     /// <summary>A creature her light freed: bloom leaves its core the richer, sunfire bursts from it.</summary>
     void FreedInColour(object kin, Vector2 at)
     {
+        // (And its echo: PlaneEcho.cs.)
+        Echo(kin, at);
         if (!_glare.TryGetValue(kin, out var g)) return;
         if (g.Bloom > 0f && kin is Murkling && Cores.Count > 0 && Vector2.DistanceSquared(Cores[^1].Position, at) < 0.01f)
             Cores[^1].Light *= ColourTuning.Bloom(ColourTuning.BloomCore, Run.Loadout.Shot.Bloom);

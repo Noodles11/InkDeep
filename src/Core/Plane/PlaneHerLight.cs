@@ -200,6 +200,8 @@ public sealed partial class PlaneWorld
         else if (Boss is { } after) StepLamps(after);
         // Her colours' bursts (sunfire, shatter), once every creature has had its turn.
         StepColourBursts();
+        // The echoes of what her light freed (flares, spines).
+        StepEchoes();
         // Creatures gone (freed, or the level left) are forgotten.
         if (Tick % 60 == 0)
         {

@@ -69,7 +69,7 @@ public class PlanePearlEffectTests
             if (item.Kind == ItemKind.Active)
                 Assert.Contains(item.Active!.Action, new[] { ActiveAction.BubbleShield, ActiveAction.WhaleSong, ActiveAction.Prism, ActiveAction.PushWave, ActiveAction.InkCloud, ActiveAction.ConchHorn, ActiveAction.GlowBurst });
             else
-                Assert.True(item.Shot is not null || item.Stats.Count > 0 || item.Flags.Count > 0, id);
+                Assert.True(item.Shot is not null || item.Stats.Count > 0 || item.Flags.Count > 0 || item.Effects.Count > 0, id);
         }
     }
 

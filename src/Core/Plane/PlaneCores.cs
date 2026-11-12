@@ -22,6 +22,8 @@ public sealed class PlaneCore
     public Vector2 Position, Velocity;
     public float Age, Light;
     public bool Taken;
+    /// <summary>Gather (Lamprey Mouth): flying to her at once, through anything, never fading on the way.</summary>
+    public bool Rush;
     /// <summary>How much of its time is gone (0 new, 1 gone).</summary>
     public float Fade => Math.Clamp(Age / CoreTuning.Life, 0f, 1f);
 }
@@ -54,7 +56,12 @@ public sealed partial class PlaneWorld
             }
             Vector2 to = p.Position - core.Position;
             float d = to.Length();
-            if (magnet > 0f && d < Radius + magnet && d > 1e-4f) core.Velocity = to / d * PlaneEconomyTuning.ShellMagnetSpeed;
+            if (core.Rush && d > 1e-4f)
+            {
+                core.Age = 0f;
+                core.Position += to / d * MathF.Min(EchoTuning.GatherSpeed * Dt, d);
+            }
+            else if (magnet > 0f && d < Radius + magnet && d > 1e-4f) core.Velocity = to / d * PlaneEconomyTuning.ShellMagnetSpeed;
             else core.Velocity *= MathF.Exp(-4f * Dt);
             var next = core.Position + core.Velocity * Dt;
             if (Map.IsOpen(next)) core.Position = next;

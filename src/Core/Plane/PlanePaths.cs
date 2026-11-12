@@ -34,7 +34,7 @@ public static class PathTuning
 
 /// <summary>The path words (one bit each, for what a ray's line has taken).</summary>
 [Flags]
-public enum PathWord { None = 0, Bounce = 1, Fork = 2, Return = 4, Ghost = 8 }
+public enum PathWord { None = 0, Bounce = 1, Fork = 2, Return = 4, Ghost = 8, Spine = 16 }
 
 /// <summary>A ray of hers born where her light landed on rock: by which word, where (on the rock), worth and colour.</summary>
 public sealed class BornRay
@@ -103,13 +103,22 @@ public sealed partial class PlaneWorld
         var s = Run.Loadout.Shot;
         int bounces = s.Bounces;
         var words = (bounces > 0 ? PathWord.Bounce : 0) | (s.Split ? PathWord.Fork : 0) | (s.Boomerang ? PathWord.Return : 0) | (s.Spectral ? PathWord.Ghost : 0);
-        if (words != PathWord.None && !Defeated)
+        if (!Defeated && (words != PathWord.None || Spines.Count > 0))
         {
             // Her own rays first (as HerBeams gives them), then each born ray in the order it was born.
             var parents = new List<(LightEmitter Beam, float Worth, LightHue Hue, PathWord Taken, int Bounces)>();
             float tick = BeamTick;
-            foreach (var (beam, shots) in HerBeams)
-                if (beam.Shining && BornOf(beam) is null) parents.Add((beam, shots / tick, RayHue(beam), PathWord.None, 0));
+            if (words != PathWord.None)
+                foreach (var (beam, shots) in HerBeams)
+                    if (beam.Shining && BornOf(beam) is null) parents.Add((beam, shots / tick, RayHue(beam), PathWord.None, 0));
+            // An echo's spines (PlaneEcho.cs): rays of hers out from where a creature was freed, taking her path words.
+            foreach (var spine in Spines)
+            {
+                if (_bornCount >= PathTuning.MostBorn) break;
+                var r = Bear(PathWord.Spine, spine.At, spine.At, spine.Way, EchoTuning.SpineReach, EchoTuning.SpineHalf, EchoTuning.SpineShots,
+                    spine.Hue, PathWord.Spine, 0);
+                parents.Add((r.Emitter, r.Worth, r.Hue, r.Taken, 0));
+            }
             for (int p = 0; p < parents.Count && _bornCount < PathTuning.MostBorn; p++)
             {
                 var (beam, worth, hue, taken, bounced) = parents[p];
