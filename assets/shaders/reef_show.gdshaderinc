@@ -68,7 +68,8 @@ float rs_beam(vec3 p) {
 	if (d >= her_beam_show.w) return 0.0;
 	float angle = acos(clamp(dot(to / max(d, 1e-3), normalize(her_show_dir.xz)), -1.0, 1.0));
 	float cone = d < 0.8 ? 1.0 : 1.0 - smoothstep(her_show_dir.w * 0.6, her_show_dir.w * 1.1, angle);
-	float fall = pow(1.0 - d / her_beam_show.w, 0.9);
+	// (Fading out to nothing over its last stretch, so no edge shows where it ends.)
+	float fall = pow(1.0 - d / her_beam_show.w, 0.9) * (1.0 - smoothstep(her_beam_show.w * 0.55, her_beam_show.w, d));
 	return cone * fall * her_show_dir.y * her_sight(p) * rs_beam_shadow(p);
 }
 

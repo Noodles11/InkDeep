@@ -1,14 +1,14 @@
-using OctoShoots.Core.Plane;
+﻿using OctoShoots.Core.Plane;
 
 namespace OctoShoots.Game;
 
 /// <summary>Which build this is, shown on the title screen (bump with each notable change).</summary>
 public static class GameVersion
 {
-    public const string Number = "0.29.0";
+    public const string Number = "0.29.1";
     /// <summary>The line of work this build comes from.</summary>
     public const string Line = "m6-redefine";
 
     /// <summary>For the title's footer: the version, its line, and whether the corruption war is on.</summary>
-    public static string Label => $"v{Number} ({Line}) · corruption {(PlaneOptions.Default.Corruption ? "on" : "off")}";
+    public static string Label => $"v{Number} ({Line}) Â· corruption {(PlaneOptions.Default.Corruption ? "on" : "off")}";
 }

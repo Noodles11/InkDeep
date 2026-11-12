@@ -62,8 +62,9 @@ float light_at(vec3 v, vec3 across, out float dist) {
 	// Light spreads out and the water takes it up; not over her own bell.
 	float fall = exp(-absorb * dist) / (1.0 + 0.012 * dist * dist);
 	float near = smoothstep(0.15, 0.9, dist);
-	// (And it runs out at its reach.)
-	float out_ = 1.0 - smoothstep(reach * 0.8, reach, dist);
+	// (And it runs out at its reach, fading over the far half of it, so no edge shows where it ends.)
+	float out_ = 1.0 - smoothstep(reach * 0.5, reach, dist);
+	out_ *= out_;
 	return spot * lit * fall * near * out_;
 }
 
