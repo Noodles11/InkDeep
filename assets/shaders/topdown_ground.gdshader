@@ -65,13 +65,19 @@ void fragment() {
 	ReefSkin nat = s;
 	if (reef_art == 7) s.normal = normalize(world_normal);
 	art(s, local, fwidth(local.y), px);
-	// Watercolour (look 7): the simple wash is the reef as it is, in her light too: no fine relief, no glow of its own.
+	// Watercolour (look 7): the simple wash is the reef as her light shows it (nat): no fine relief, no glow of its
+	// own. All that lies under the walls' line is the water's dark wash. Out of her light the reef is held near the
+	// water's tone (s), so reef and water part only faintly until she lights them.
 	if (reef_art == 7) {
-		s.normal = normalize(world_normal);
+		vec3 w7 = lf_pattern(local);
+		float wk = art_water(local);
+		vec3 wash = art_wash(w7, reef_water_deep, reef_murk);
 		s.rough = 0.95;
-		// (And a little of the sheet's own light, so a wall's wash stands pale off the dark water wherever it is.)
-		s.emission = s.albedo * 0.2;
 		nat = s;
+		nat.albedo = mix(s.albedo, wash * 0.3, wk);
+		s.albedo = mix(mix(wash * 1.5, s.albedo, 0.16) * 0.4, wash * 0.3, wk);
+		s.emission = mix(mix(wash * 1.5, nat.albedo, 0.16) * 0.55, wash * 0.8, wk);
+		nat.emission = s.emission;
 	}
 	float show = reef_show_skin(s, nat, world);
 	float dark = door_count > 0 ? door_dark(local) : 0.0;

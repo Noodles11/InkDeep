@@ -63,7 +63,7 @@ global uniform int reef_art;
 // unlit_dim: what is left of them there), so she is the one who brings the colour, and her light reads.
 // Watercolour (look 7): how soft all that lies under her plane runs (mip levels), and how dark its wash of water is
 // (a share of the depth's water colour).
-uniform float paper_blur = 4.2;
+uniform float paper_blur = 3.0;
 uniform float paper_dark = 0.62;
 uniform float below_fog = 0.0;
 uniform float below_fog_depth = 5.0;
@@ -359,7 +359,8 @@ void fragment() {
 	float layered = below;
 	// (Watercolour, look 7: its own water, below.)
 	bool paper = reef_art == 7;
-	float paper_deep = !paper ? 0.0 : open_deep ? 1.0 : smoothstep(0.2, 2.6, below);
+	// (Water: all that lies under the walls' line, as the reef's surface paints it, reef_art.gdshaderinc's art_water.)
+	float paper_deep = !paper ? 0.0 : open_deep ? 1.0 : 1.0 - smoothstep(0.06, 0.14, h);
 	if (reef_art > 0 && reef_art != 4 && reef_art != 5 && !paper && !open_deep) {
 		float x = below / 2.2;
 		layered = (floor(x) + smoothstep(0.8, 1.0, fract(x))) * 2.2;
@@ -371,7 +372,7 @@ void fragment() {
 	float peak = open_deep ? 0.0 : smoothstep(peak_from, peak_from + peak_span, h);
 	lod += peak_blur * peak;
 	// Watercolour: the walls stay crisp at every height; all that lies under her plane runs soft, wet into wet.
-	if (paper) lod = paper_blur * smoothstep(0.25, 3.0, below);
+	if (paper) lod = paper_blur * smoothstep(0.5, 4.0, below);
 	vec3 col = blurred(suv, lod);
 	// Blasts' marks: inside each, the picture smeared in toward its middle (a zoom blur), strongest at its heart,
 	// softening out to its rim and fading as it ages — painterly, never a bright disc.
@@ -428,14 +429,14 @@ void fragment() {
 	// in her light, so the reef keeps its depth round her.
 	col = mix(col, water, fog * (1.0 - 0.45 * lit));
 	// Under her plane, the water thickens into a fog that hides the depths (thinner where her light reaches down).
-	if (below_fog > 0.0 && !open_deep && below > 0.0) {
+	if (below_fog > 0.0 && !paper && !open_deep && below > 0.0) {
 		float under = below_fog * smoothstep(0.15, below_fog_depth, below) * (1.0 - 0.5 * lit);
 		col = mix(col, mix(reef_water_deep, reef_murk, 0.2), under);
 	}
-	// Watercolour: the water under her plane a dark wash, the floor only a soft shape in it; its paper showing through
-	// (the reef's own paper is in its surface, reef_art.gdshaderinc's art_paper: the same sheet, laid on the world).
-	if (paper && (below > 0.0 || open_deep)) {
-		float deep = paper_deep;
+	// Watercolour: where nothing is drawn (the open deep), the water's dark wash and its paper, as the reef's surface
+	// paints them under her plane (reef_art.gdshaderinc's art_wash).
+	if (paper && open_deep) {
+		float deep = 1.0;
 		vec3 dark = mix(reef_water_deep, reef_murk, 0.45) * paper_dark;
 		col = mix(col, dark, deep * (0.86 - 0.3 * lit));
 		vec4 pm = INV_PROJECTION_MATRIX * vec4(uv * 2.0 - 1.0, 0.5, 1.0);
@@ -567,7 +568,7 @@ void fragment() {
 	float luma = dot(col, vec3(0.299, 0.587, 0.114));
 	// (Its values drawn together where she does not light it: darks lifted a little, lights held down.)
 	if (unlit_flatten > 0.0) {
-		float flat_to = mix(luma, 0.2, unlit_flatten * (1.0 - shown) * (1.0 - paper_deep));
+		float flat_to = mix(luma, 0.2, unlit_flatten * (1.0 - shown) * (paper ? 0.0 : 1.0));
 		col *= flat_to / max(luma, 1e-3);
 		luma = flat_to;
 	}

@@ -110,7 +110,8 @@ vec3 wr_base(float kind, float rnd, vec3 p) {
 // The paint, its veil of water, its light; returns the colour and whether it is cut away (alpha 0 → discard).
 vec4 wr_fragment(vec3 cam, vec2 frag, vec2 screen_uv, vec2 viewport, float time, bool front) {
 	vec3 world = wr_world;
-	if (lf_portal_cut(world, frag)) return vec4(0.0);
+	// (The watercolour study, look 7, shows no decorations on the reef.)
+	if (reef_art == 7 || lf_portal_cut(world, frag)) return vec4(0.0);
 	vec3 local = lf_local(world);
 	float h = local.y;
 	vec3 view = normalize(cam - world);
@@ -134,18 +135,15 @@ vec4 wr_fragment(vec3 cam, vec2 frag, vec2 screen_uv, vec2 viewport, float time,
 	vec3 sun = normalize(vec3(0.55, 0.75, 0.35));
 	float ndl = dot(n, sun) * 0.5 + 0.5;
 	float tone = 0.5 * smoothstep(0.36, 0.5, ndl) + 0.5 * smoothstep(0.66, 0.8, ndl);
-	// (The watercolour study, look 7: one flat wash, no modelling, no stroke.)
-	bool wash = reef_art == 7;
-	if (wash) tone = 0.6;
 	vec3 shade = mix(base * 0.5, reef_water_deep * 0.55, 0.35);
 	vec3 col = mix(shade, base, 0.25 + 0.75 * tone);
 	// A rim of light along its tops.
-	if (!wash) col += base * smoothstep(0.82, 0.97, n.y) * 0.12;
+	col += base * smoothstep(0.82, 0.97, n.y) * 0.12;
 	// Light reaching in: deep among the branches, at the foot, darker.
 	col *= mix(0.5, 1.0, wr_paint.r);
 	// A faint brush stroke, laid along the piece's height.
 	float stroke = wr_noise(vec3(pat.x * 2.2, pat.y * 0.5, pat.z * 2.2)) * 0.65 + wr_noise(pat * 5.0) * 0.35;
-	if (!wash) col *= 0.93 + 0.14 * stroke;
+	col *= 0.93 + 0.14 * stroke;
 
 	// Her light on it: a warm lift of its own colour, near her.
 	float near = distance(world, her_glow.xyz);

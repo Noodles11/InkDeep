@@ -198,6 +198,9 @@ float reef_show_skin(inout ReefSkin s, ReefSkin nat, vec3 world) {
 	if (lit > 0.0) {
 		vec3 to = normalize(her_show_aura.xyz + vec3(0.0, 0.8, 0.0) - world);
 		float ndl = clamp(dot(nat.normal, to), 0.0, 1.0);
+		// (Watercolour, look 7: seen from straight overhead, the walls' tops face up, away from her; her light brings
+		// their wash out whole.)
+		if (reef_art == 7) ndl = 1.0;
 		s.emission += nat.albedo * her_show_light * lit * (0.3 + 0.7 * ndl) * 1.25;
 	}
 	s.emission += (nat.albedo * 0.9 + 0.08) * her_show_light * reef_wave_front(world) * 1.4;

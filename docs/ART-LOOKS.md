@@ -39,24 +39,25 @@ drawn out into a dash or a line; where its stretch on screen passes 1.25 it fade
 ## Look 7: watercolour paper, from overhead (a study)
 
 `--look=7`. The painted game drawn another way: it stays on over the painted look (her light still shows the reef and
-the leaks still wake it), and changes only the camera and how the reef, its corals and plants, and the water are drawn. Creatures, Clementine,
+the leaks still wake it), and changes only the camera and how the reef and the water are drawn. Creatures, Clementine,
 her light and the HUD are as they are.
 
 - **The camera** looks straight down (`CameraRig.Tilt`, 90° in this look), north up, from the same distance.
-- **The reef simple** (`art_paint`, `reef_art.gdshaderinc`): each material one flat wash, a breath of its own colour
-  left; no fine relief, no caustics, next to no shading (`art_light`), a little light of its own so a wall's wash stands
-  pale off the dark water.
+- **Water up to the line:** all that lies under the line where the reef rises through her plane (the pale walls'
+  line) is the water's dark wash, right up to it (`art_water`, `art_wash` in `reef_art.gdshaderinc`, painted by the
+  reef's own surface, so the creatures in it are untouched): uneven in broad soft clouds, no floor showing. What lies
+  deep under her plane still runs soft (`topdown_post.gdshader`'s `paper_blur`).
+- **The reef simple** (`art_paint`): each material one flat wash, a breath of its own colour left; no fine relief, no
+  caustics, next to no shading (`art_light`).
 - **A few stains for depth:** broad pools where the pigment dried darker, each with a finer dark rim where the wash
   stopped; here and there a paler backrun; and the pigment gathered darker where a wall drops away to the water.
-- **The water dark and soft** (`topdown_post.gdshader`, `paper_blur`, `paper_dark`): all that lies under her plane
-  runs soft, wet into wet, under a dark wash of the depth's water, uneven in broad clouds; the walls stay crisp at
-  every height. In her light the wash is thinner.
+- **Low contrast until she lights it** (`topdown_ground`, `reef_rock`): out of her light the reef is held near the
+  water's tone, a shade paler, so only the walls' line parts them. Where her light falls (and as the sealed leaks
+  wake the reef) its wash comes out whole, pale against the dark water.
+- **No decorations:** corals, plants, kelp and the woven reef's pieces are not drawn (`flora.gdshader`,
+  `kelp.gdshaderinc`, `woven_reef.gdshaderinc`). The Tide Fan and the reef fish's anemones stay.
 - **The paper** (`art_paper`): a cold-pressed sheet's tooth and mottling with the pigment settled darker in its hollows,
   laid on the world (so it lies flat on the screen and moves with the reef), on the reef's washes and on the water.
-- **Corals and plants simple** (`flora.gdshader`, `kelp.gdshaderinc`, `woven_reef.gdshaderinc`): each one flat wash
-  of its own hue at an even value, held back a little, the pigment darker round its edge and the paper's tooth in
-  it; no brain coral's grooves, polyps, sea fan's net, grain, midrib or bands, no caustics on them. They still sway.
-- **Outside her light** the reef keeps more of its colour than in the painted look (0.55 of it, not 0.15).
 
 ## The studies
 

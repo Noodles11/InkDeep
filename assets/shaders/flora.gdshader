@@ -10,7 +10,7 @@ render_mode cull_disabled;
 #include "res://assets/shaders/level_frame.gdshaderinc"
 #include "res://assets/shaders/flow_field.gdshaderinc"
 
-// The art look (docs/ART-LOOKS.md): in the watercolour study (7) a plant is one flat wash of its colour.
+// The art look (docs/ART-LOOKS.md): the watercolour study (7) shows no decorations on the reef.
 global uniform int reef_art;
 
 varying vec3 sun_world;
@@ -77,6 +77,7 @@ void vertex() {
 
 void fragment() {
 	// (Cut away with the rock it grows on, where it stands between the camera and her.)
+	if (reef_art == 7) discard;
 	if (lf_portal_cut(world_pos, FRAGCOORD.xy) || !IN_SHADOW_PASS && lf_see_cut(world_pos, CAMERA_POSITION_WORLD, FRAGCOORD.xy)) discard;
 	vec3 col = COLOR.rgb;
 	if (recolor > 0.0) {
@@ -85,22 +86,6 @@ void fragment() {
 		col = mix(col, painted, recolor);
 	}
 	col *= tint.g;
-	if (reef_art == 7) {
-		// Watercolour: one flat wash of its own hue at an even value, held back a little; no grooves, polyps, net or
-		// grain; the pigment gathered darker round its edge, and the paper's tooth in it.
-		float l7 = max(dot(col, vec3(0.299, 0.587, 0.114)), 0.05);
-		col = mix(col, min(col / l7 * 0.42, vec3(1.0)), 0.8);
-		col = mix(vec3(dot(col, vec3(0.299, 0.587, 0.114))), col, 0.75);
-		float edge = pow(1.0 - abs(dot(normalize(NORMAL), normalize(VIEW))), 2.0);
-		col *= 1.0 - 0.32 * edge;
-		float tooth = noise(vec3(world_pos.xz * 9.0, 0.0)) * 0.55 + noise(vec3(world_pos.xz * 21.0, 7.0)) * 0.45;
-		col *= 1.0 - 0.2 * smoothstep(0.35, 0.75, tooth);
-		ALBEDO = col * 0.75;
-		ROUGHNESS = 0.95;
-		SPECULAR = 0.0;
-		BACKLIGHT = vec3(0.0);
-		EMISSION = col * 0.2;
-	} else {
 	col *= 0.85 + 0.3 * noise(local * 18.0);
 
 	if (lattice > 0.0) {
@@ -136,5 +121,4 @@ void fragment() {
 	EMISSION = col * glow;
 	// Caustics and dappled sunlight play over it, except in the shade of rock.
 	EMISSION += ALBEDO * sun_light;
-	}
 }

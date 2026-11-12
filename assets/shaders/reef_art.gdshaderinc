@@ -21,7 +21,8 @@
 //     streaks for texture. No ink on the reef at all; light in two tones; no caustics.
 //   7 Watercolour paper (docs/ART-LOOKS.md): the reef seen from straight overhead, simple: each material one flat wash,
 //     a few stains and backruns here and there, pigment gathered darker where a wall drops to the water, all on a
-//     cold-pressed paper's grain. No caustics, almost no shading. The water under her plane dark and blurred (the post).
+//     cold-pressed paper's grain. No caustics, almost no shading. All that lies under her plane is the water's dark wash, right up to the walls' line; out of her light the
+//     reef is held near the water's tone, and her light brings its wash out (the surface shaders' part).
 //
 // The caller (in fragment) works out what needs derivatives (hw: how much the height changes across a pixel) and calls
 // art_paint, then art_ink; its light() bands the light through art_light.
@@ -81,6 +82,19 @@ float art_paper(vec2 p, float wash) {
 	float mottle = art_noise(p * 0.9 + 5.0) * 0.6 + art_noise(p * 2.3 + 17.0) * 0.4;
 	float hollow = smoothstep(0.35, 0.75, tooth);
 	return (0.9 + 0.16 * mottle) * (1.0 - (0.13 + 0.2 * wash) * hollow) * (1.0 + 0.07 * (1.0 - hollow));
+}
+
+// Watercolour (look 7): how much a point of the reef is water (1) or reef (0): all that lies under the line where the
+// reef rises through her plane (the walls' line, topdown_post's wall_line) is water, right up to it.
+float art_water(vec3 local) {
+	return 1.0 - smoothstep(0.06, 0.14, local.y);
+}
+
+// Watercolour (look 7): the water's dark wash, uneven in broad soft clouds where it dried lighter and darker, on the
+// sheet's paper.
+vec3 art_wash(vec3 w, vec3 water, vec3 murk) {
+	float cloud = art_noise(w.xz * 0.13 + 71.0) * 0.6 + art_noise(w.xz * 0.37 + 9.0) * 0.4;
+	return mix(water, murk, 0.45) * 0.62 * (0.7 + 0.6 * cloud) * art_paper(w.xz, 1.0);
 }
 
 vec3 art_paint(vec3 c, vec3 w, vec3 local, vec3 n, vec3 water, vec3 rock, vec3 sand) {
