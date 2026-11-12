@@ -9,7 +9,7 @@
 | | Passive | Active | All |
 |---|---|---|---|
 | Pearls | 59 | 13 | 72 |
-| Built | 42 | 5 | 47 |
+| Built | 43 | 5 | 48 |
 
 - **Passive** pearls work on their own from the moment she absorbs one: her stats, her bubbles, or something that
   happens when she is hit or frees a creature. They stack.
@@ -126,10 +126,10 @@ comes to it (the level below is laid out while she plays the one above); a run w
 
 | Unique | Built | Pearl | Tagline | Effect | Quality | Found in | Unlocked by |
 |:---:|:---:|---|---|---|---|---|---|
-| No (+1 chain) |  | **Electric Eel Tail** | *Zzzap!* | Hits chain lightning to 2 foes (50% damage) | ★★★ | treasure |  |
+| No (+1 chain) | ✅ | **Electric Eel Tail** | *Zzzap!* | What her light burns arcs its burn to 2 more within 4 m, at half the rate | ★★★ | treasure |  |
 | Yes |  | **Nautilus Spiral** | *Golden ratio, golden shots* | Shots spiral outward | ★★ | treasure |  |
 | No (+ 1 bounce) | ✅ | **Mirror Scale** | *Shiny side out* | Her light bounces off rock (60% of it) | ★★ | treasure |  |
-| Yes | ✅ | **Anglerfish Lure** | *Follow the light* | Shots home onto foes | ★★★ | treasure |  |
+| Yes | ✅ | **Anglerfish Lure** | *Follow the light* | Her beam leans toward the nearest creature near it, up to 10° | ★★★ | treasure |  |
 | Yes | ✅ | **Swordfish Bill** | *En garde* | Shots pierce foes | ★★ | treasure |  |
 | Yes | ✅ | **Mitosis** | *One becomes two* | Where her light lands on rock it forks in two (70° apart, 30% each) | ★★ | treasure | bubble_bath |
 | No | ✅ | **Frost Kelp** | *Grown in the cold seep* | Her light turns to frost: what it lights slows, and stands still after 2 s | ★★ | treasure, shop |  |
@@ -142,7 +142,7 @@ comes to it (the level below is laid out while she plays the one above); a run w
 | Yes | ✅ | **Firefly Squid** | *Never blinks* | Fire pours out a continuous surge of light instead of shots: 90% of your shots' damage per second to all it touches, clearing a little corruption where it ends. Your other pearls shape it | ★★★★ | treasure, boss |  |
 | Yes | ✅ | **Double Helix** | *Twice the twist* | Splits the beam into 2 rays, each 62% of the beam; The beam's rays weave across your aim in a double helix | ★★★ | treasure |  |
 | Yes | ✅ | **Triple Tentacle** | *Why squirt once?* | Splits the beam into 3 rays, each 46% of the beam | ★★★ | treasure, boss |  |
-| Yes | ✅ | **Starfish Arm** | *Grows back bigger* | Shots grow with distance | ★★ | treasure | big_bubble_energy |
+| Yes | ✅ | **Starfish Arm** | *Grows back bigger* | Her beam flares, half as wide again at its tip | ★★ | treasure | big_bubble_energy |
 | Yes | ✅ | **Starburst Gland** | *Bursts with borrowed sun* | Shots burst into light (cleanses ground, strikes the corrupted near) | ★★★ | treasure, curse |  |
 | Yes | ✅ | **Sardine Run** | *A million small reasons* | Held without a break, her beam spins up: ×1.8 burn after 3 s | ★★★ | treasure, boss |  |
 | Yes | ✅ | **Pistol Shrimp Claw** | *Snap. Bang.* | Held on a creature, her beam snaps every 0.8 s: a burst of light 2.5 m wide that pushes it back | ★★★ | treasure, boss |  |
@@ -181,7 +181,7 @@ comes to it (the level below is laid out while she plays the one above); a run w
 | Unique | Built | Pearl | Tagline | Effect | Quality | Found in | Unlocked by |
 |:---:|:---:|---|---|---|---|---|---|
 | No |  | **Twin Siphon** | *Two at a time* | +1 shot per throw (a volley shares her light) | ★★★ | treasure, boss |  |
-| Yes | ✅ | **Bubble Coral** | *Little ones grow up* | ×1.5 bubble hover time; Her light lingers at the end of its range; shots that touch merge into one, bigger and stronger | ★★ | treasure, shop |  |
+| Yes | ✅ | **Bubble Coral** | *Little ones grow up* | Where her beam ends, a pool of her light stays 2.5 s and burns on: swept, it paints a trail | ★★ | treasure, shop |  |
 
 ## Active pearls (Right mouse click/RB, recharge over time)
 
@@ -210,7 +210,7 @@ caption reads "Synergy!" with its name, a chime plays and a ring of her light go
 |:---:|---|---|---|
 | ✅ | **Cathedral** | Mirror Scale + Mitosis | Every bounce forks: a cave fills with a lattice of light |
 | ✅ | **Hall of Mirrors** | Boomerang Shrimp + Mirror Scale | Light caught between two walls: everything between burns from all sides |
-|  | **Pinball Storm** | Electric Eel Tail + Mirror Scale | Each wall bounce emits a lightning arc |
+| ✅ | **Pinball Storm** | Electric Eel Tail + Mirror Scale | Each glint where her light bounces arcs to the nearest creature |
 |  | **Lighthouse** | Sunbeam + Nautilus Spiral | The beam sweeps in a rotating spiral |
 |  | **Cell Bloom** | Mitosis + Starfish Arm | Split shots also grow |
 |  | **Guided Inkfish** | Ink Sac + Anglerfish Lure | Homing bombs; explosions leave slowing ink clouds |
@@ -223,7 +223,8 @@ caption reads "Synergy!" with its name, a chime plays and a ring of her light go
 |  | **Prism Pearl** | Sunbeam + Pearl Diver | A full-charge pearl fires lasers in 4 directions when it pops |
 |  | **Black Tide** | Tidal Wave + Ink Sac | The wave detonates ink on every foe it hits |
 |  | **Big Mad Puff** | Pufferfish Pout + Starfish Arm | Shots burst into a spiky shotgun blast when they pop |
-|  | **Will-o'-Wisp** | Ghost Jelly + Anglerfish Lure | Spectral wisps home twice as hard |
+| ✅ | **Will-o'-Wisp** | Ghost Jelly + Anglerfish Lure | Her light leans twice as far, toward creatures behind rock too |
+| ✅ | **Aurora** | Bubble Coral + any two of Fire Coral, Glowing Moss, Frost Kelp | Her pools of light hang twice as long, curtains of mixing colour |
 |  | **Toxic Bloom** | Sea Nettle Sting + Mitosis | Split shots carry a double dose of poison |
 |  | **Feeding Frenzy** | Shark Tooth + Lamprey Mouth | Every creature freed sends you into a fast-firing frenzy |
 | ✅ | **String of Pearls** | Sardine Run + Pearl Diver | Spun right up, her beam keeps its focus through a swing |

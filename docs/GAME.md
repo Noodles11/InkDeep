@@ -145,8 +145,11 @@ much corruption is left (CORRUPTION, "Corruption rings").
   they land (Cathedral, Hall of Mirrors), always with less light than arrived.
 - **Her light's rhythms** (LIGHT-AND-GRAPH §12): held steady her beam focuses (Pearl Diver), held long it spins up
   (Sardine Run), held on a creature it snaps (Pistol Shrimp Claw), and Glow Burst makes it beat; Pearl Necklace, Depth
-  Charge and String of Pearls name where they meet. The rest of the light grammar (proposals/LIGHT-GRAMMAR.md) is to
-  come.
+  Charge and String of Pearls name where they meet.
+- **Her light's paths in the open** (LIGHT-AND-GRAPH §13): it leans toward creatures (Anglerfish Lure), flares
+  (Starfish Arm), leaves pools of light that burn on, painting the reef (Bubble Coral), and arcs (Electric Eel Tail);
+  Will-o'-Wisp, Pinball Storm and Aurora name where they meet. The rest of the light grammar
+  (proposals/LIGHT-GRAMMAR.md) is to come.
 - **Synergies** announce themselves; **transformations** are designed, not built.
 
 ## 9. Growth and the jelly

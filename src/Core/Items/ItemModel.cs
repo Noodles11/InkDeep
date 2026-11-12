@@ -234,6 +234,9 @@ public sealed class SynergyDef : EffectBundle
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
     public List<string> Requires { get; set; } = new();
+    /// <summary>And at least AnyCount of these (Aurora: any two of her colours).</summary>
+    public List<string> RequiresAny { get; set; } = new();
+    public int AnyCount { get; set; }
     public string Description { get; set; } = "";
 }
 

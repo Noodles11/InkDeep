@@ -23,6 +23,8 @@ uniform vec3 axis = vec3(1.0, 0.0, 0.0);
 uniform float half_angle = 0.38;
 uniform float span = 0.41;
 uniform float reach = 16.0;
+// Flare (Starfish Arm): the cone widens along its length, this much as wide again at its reach (a trumpet).
+uniform float flare = 0.0;
 uniform sampler2D shadow : filter_linear, repeat_disable, hint_default_white;
 // How thick the water's glow is per metre of lit water, how much of the light the water takes up per metre, and how
 // forward it scatters (Henyey–Greenstein g).
@@ -49,9 +51,10 @@ float light_at(vec3 v, vec3 across, out float dist) {
 	if (dist <= 1e-3 || dist >= reach) return 0.0;
 	float x = dot(v, axis), z = dot(v, across);
 	float angle = acos(clamp(x / dist, -1.0, 1.0));
-	if (angle >= half_angle) return 0.0;
+	float ha = half_angle * (1.0 + flare * clamp(dist / reach, 0.0, 1.0));
+	if (angle >= ha) return 0.0;
 	// A flashlight's spot: a hot middle, falling away softly to nothing at its rim.
-	float spot = 1.0 - smoothstep(half_angle * 0.25, half_angle, angle);
+	float spot = 1.0 - smoothstep(ha * 0.25, ha, angle);
 	spot *= 0.7 + 0.3 * spot;
 	// The shadow: this point's ray in the grid, a few around it (a soft edge, the light a little more than a point).
 	float az = atan(z, x), el = atan(v.y, length(vec2(x, z)));
@@ -82,7 +85,7 @@ void fragment() {
 	float t_end = min(t_back, t_scene);
 	// Where the line of sight comes into the cone (its side; else into its reach, through its far end).
 	vec3 co = cam - origin;
-	float k = cos(half_angle);
+	float k = cos(half_angle * (1.0 + flare));
 	k *= k;
 	float da = dot(d, axis), ca = dot(co, axis);
 	float a = da * da - k, b = 2.0 * (da * ca - k * dot(d, co)), c = ca * ca - k * dot(co, co);

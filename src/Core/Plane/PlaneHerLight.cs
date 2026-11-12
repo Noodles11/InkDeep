@@ -114,6 +114,9 @@ public sealed partial class PlaneWorld
         GatherBodies();
         StepBeam();
         StepArcs();
+        // Pinball Storm's arcs off her glints, and her pools of light (PlaneOpenPaths.cs).
+        GlintArcs();
+        StepPools();
         if (!LightBurns)
         {
             _glare.Clear();
@@ -258,6 +261,16 @@ public sealed partial class PlaneWorld
                     from = beam.Position;
                 }
             }
+        // Her pools of light burn on what stands in them, in their colours (Linger).
+        if (!Defeated && beams && Pools.Count > 0)
+        {
+            float pooled = PoolsOn(at, radius, ref hue);
+            if (pooled > 0f)
+            {
+                n += pooled;
+                if (from == default) from = at;
+            }
+        }
         if (!_glare.TryGetValue(kin, out var g)) _glare[kin] = g = new Glare();
         g.Seen = Tick;
         if (beamed)

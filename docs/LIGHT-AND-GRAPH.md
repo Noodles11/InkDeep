@@ -458,3 +458,26 @@ so what the rays born of them carry; Rear Fin's and Lighthouse's beams keep thei
   the bang's shockwave, snap and shake (as Depth Charge's, bigger).
 - Her shots (when on) keep the old charged pearl, stream and bang.
 - Tests: `RhythmTests`.
+
+## 13. Her light's paths in the open (built)
+
+The light grammar's fourth words (docs/proposals/LIGHT-GRAMMAR.md §4, step 4): what her rays do on their way and
+where they end (`PlaneOpenPaths.cs`, `OpenPathTuning`). They act on her own beam's rays (not Rear Fin's, Lighthouse's,
+nor the rays born on rock).
+
+| Pearl | Word | What her light does |
+|---|---|---|
+| Anglerfish Lure | **Lean** | Each ray turns toward the nearest corrupted creature within its reach and near its cone (in sight), up to 10° off her aim, easing at 90° a second. |
+| Starfish Arm | **Flare** | Each ray widens along its length, half as wide again at its reach: a trumpet (`LightEmitter.Flare`, `HalfAt`). |
+| Bubble Coral | **Linger** | Where each ray ends (rock, a body, its reach), a pool of her light 0.8 m wide stays 2.5 s, burning on at 35% of what her light burned there, in its colours, fading; laid at least 0.55 m apart, so a sweep paints a trail. A creature in a pool shows, burns and takes its colours. At most 90 pools. |
+| Electric Eel Tail | **Arc** | Arcs off what any light of hers burns (§5.1), the rays born on rock too; now offered. |
+
+- **Named when they meet** (synergies, with the banner): **Will-o'-Wisp** (Ghost Jelly + Anglerfish Lure: it leans
+  twice as far, toward creatures behind rock too), **Pinball Storm** (Mirror Scale + Electric Eel Tail: each glint
+  where her light bounced arcs to the nearest creature within the arcs' reach), **Aurora** (Bubble Coral and any two
+  colour pearls, the first synergy to need "any two of": her pools hang twice as long, overlapping in their colours).
+- **Drawn** (`BeamView`): a leaning ray simply points where it turned (the cone stays straight); a flaring one's haze,
+  hull and shadow grid open into a trumpet (her_beam_volume's `flare`); pools are soft discs of her light on the water
+  in their colours, swelling as they are laid, fading out (larger and brighter under Aurora); arcs as before.
+- Bubble Coral's old shot effects (hover, merging) stay on it for her shots (off in the game) and are not captioned.
+- Tests: `OpenPathTests`.

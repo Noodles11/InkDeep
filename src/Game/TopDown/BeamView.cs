@@ -287,12 +287,14 @@ public partial class BeamView : Node3D
             // Where its light gets to, in three dimensions; its hull to march through. A born ray ends at the rock.
             if (born is not null) range = Mathf.Min(range, longest + 0.4f);
             range = Mathf.Max(range, 0.1f);
-            if (born is null) fan.Shadow.Cast(world, beam.Position, origin.Y, beam.Direction, beam.HalfAngle, range);
+            // (Its widest, at its reach: a flaring beam's trumpet mouth. PlaneOpenPaths.cs.)
+            float widest = beam.HalfAngle * (1f + beam.Flare);
+            if (born is null) fan.Shadow.Cast(world, beam.Position, origin.Y, beam.Direction, widest, range);
             fan.VolumeMaterial.SetShaderParameter("shadow", born is null ? fan.Shadow.Texture : _unshadowed);
-            if (!Mathf.IsEqualApprox(fan.HullHalf, beam.HalfAngle))
+            if (!Mathf.IsEqualApprox(fan.HullHalf, widest))
             {
-                LayHull(fan.VolumeMesh, beam.HalfAngle);
-                fan.HullHalf = beam.HalfAngle;
+                LayHull(fan.VolumeMesh, widest);
+                fan.HullHalf = widest;
             }
             fan.Volume.GlobalTransform = new Transform3D(new Basis(Vector3.Up, Mathf.Atan2(-dir.Z, dir.X)).Scaled(new Vector3(range, range, range)), origin);
             var m = fan.VolumeMaterial;
@@ -313,14 +315,15 @@ public partial class BeamView : Node3D
             m.SetShaderParameter("origin", origin);
             m.SetShaderParameter("axis", dir);
             m.SetShaderParameter("half_angle", beam.HalfAngle);
-            m.SetShaderParameter("span", beam.HalfAngle * BeamShadow.Margin);
+            m.SetShaderParameter("flare", beam.Flare);
+            m.SetShaderParameter("span", widest * BeamShadow.Margin);
             m.SetShaderParameter("reach", range);
             if (main)
             {
                 // The reef's own light from her beam (reef_show's rs_beam) is shadowed alike.
                 RenderingServer.GlobalShaderParameterSet(BeamShadowTex, fan.Shadow.Texture);
                 RenderingServer.GlobalShaderParameterSet(BeamFrame, new Vector4(origin.X, origin.Y, origin.Z, range));
-                RenderingServer.GlobalShaderParameterSet(BeamAxis, new Vector4(dir.X, dir.Z, beam.HalfAngle * BeamShadow.Margin, 1f));
+                RenderingServer.GlobalShaderParameterSet(BeamAxis, new Vector4(dir.X, dir.Z, widest * BeamShadow.Margin, 1f));
             }
             // A born ray's glint where her light landed (a ghost's: where it went into the rock).
             if (born is not null && born.Word != PathWord.Return)
@@ -377,6 +380,64 @@ public partial class BeamView : Node3D
         RenderingServer.GlobalShaderParameterSet(SlotDir[0], new Vector4(aim.X, 0f, aim.Z, Mathf.Max(world.BeamSpread, world.Beam.HalfAngle)));
         RenderingServer.GlobalShaderParameterSet(SlotLit[0], anyOn ? new Vector4(her.X, her.Y, her.Z, reach) : new Vector4(0f, -1000f, 0f, 0f));
         DrawArcs(world, color);
+        DrawPools(world, dim);
+    }
+
+    /// <summary>
+    /// Her pools of light (Linger, PlaneOpenPaths.cs): soft discs of her light on the water where her beam ended, in their
+    /// colours, fading as they go; under Aurora, taller and brighter.
+    /// </summary>
+    MultiMeshInstance3D? _pools;
+    const float PoolGlow = 0.55f;
+
+    void DrawPools(PlaneWorld world, float dim)
+    {
+        if (_pools is null)
+        {
+            var shader = new Shader
+            {
+                Code = @"shader_type spatial;
+render_mode unshaded, blend_add, depth_draw_never, cull_disabled;
+varying vec4 v_col;
+void vertex() { v_col = INSTANCE_CUSTOM; }
+void fragment() {
+	float r = length(UV - 0.5) * 2.0;
+	float soft = 1.0 - smoothstep(0.0, 1.0, r);
+	soft *= soft;
+	float ring = smoothstep(0.55, 0.8, r) * (1.0 - smoothstep(0.8, 1.0, r));
+	ALBEDO = v_col.rgb;
+	ALPHA = clamp((soft * 0.85 + ring * 0.35) * v_col.a, 0.0, 1.0);
+}",
+            };
+            var mm = new MultiMesh
+            {
+                TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true,
+                Mesh = new PlaneMesh { Size = Vector2.One * 2f },
+            };
+            _pools = new MultiMeshInstance3D
+            {
+                Multimesh = mm, MaterialOverride = new ShaderMaterial { Shader = shader },
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, ExtraCullMargin = 60f,
+            };
+            AddChild(_pools);
+        }
+        var pools = world.Pools;
+        var multi = _pools.Multimesh;
+        if (multi.InstanceCount < pools.Count) multi.InstanceCount = Mathf.Max(pools.Count, OpenPathTuning.MostPools + 8);
+        multi.VisibleInstanceCount = pools.Count;
+        bool aurora = world.Run.Loadout.Has("aurora");
+        for (int i = 0; i < pools.Count; i++)
+        {
+            var p = pools[i];
+            float left = p.Left;
+            // Swelling a little as it is laid down, then fading out.
+            float grow = Mathf.Min(1f, p.Age / 0.15f);
+            float r = OpenPathTuning.PoolReach * (0.6f + 0.4f * grow) * (aurora ? 1.25f : 1f);
+            var basis = Basis.Identity.Scaled(new Vector3(r, 1f, r));
+            multi.SetInstanceTransform(i, new Transform3D(basis, new Vector3(p.At.X, LevelMap.SwimBand + 0.05f + (aurora ? 0.1f : 0f), p.At.Y)));
+            var c = OctoShoots.Game.Fx.LightColour.Beam(p.Hue, TopDownMain.ShowcaseOn);
+            multi.SetInstanceCustomData(i, new Color(c.R, c.G, c.B, PoolGlow * dim * left * left * (aurora ? 1.4f : 1f)));
+        }
     }
 
     /// <summary>Electric Eel Tail's arcs: a jagged line of her light, flickering, from each burned creature to the next.</summary>

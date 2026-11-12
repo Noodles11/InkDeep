@@ -1,12 +1,12 @@
 # The light grammar (proposal)
 
 Step 4 of the project review (MASTERPIECE-REVIEW.md §3.2, §9): the pearls re-founded on her light. Approved. **Steps 1
-(colour), 2 (paths on rock) and 3 (rhythm) are built** (docs/LIGHT-AND-GRAPH.md §10–§12, where their rules now live);
-the rest is to come. Built differently from this page: Sea Nettle Sting, Stingray Barb and Siren Song stay in the catalogue
+(colour), 2 (paths on rock), 3 (rhythm) and 4 (paths in the open) are built** (docs/LIGHT-AND-GRAPH.md §10–§13, where
+their rules now live); the rest is to come. Built differently from this page: Sea Nettle Sting, Stingray Barb and Siren Song stay in the catalogue
 until step 8; frost stills only the creatures a dazzle holds; the colour on a creature is drawn on murklings; a fork
 opens round the way a mirror would send it (70° apart), not round the ray's own way; her shots keep their older paths;
 String of Pearls was kept, renamed in meaning (a spun-up beam keeps its focus through a swing); the pulse beats twice
-a second. It replaces BEAM-PEARLS-PLAN.md once approved, keeping everything that plan
+a second; Lean turns a ray rather than curving it; Pinball Storm's glints arc within the arcs' own reach. It replaces BEAM-PEARLS-PLAN.md once approved, keeping everything that plan
 already built (the split beams, tick rate, carry, light pressure).
 
 ## 1. In one breath

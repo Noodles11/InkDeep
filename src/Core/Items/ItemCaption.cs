@@ -37,10 +37,11 @@ public static class ItemCaption
     public static List<string> Describe(EffectBundle bundle)
     {
         var lines = new List<string>();
-        foreach (var m in bundle.Stats) lines.Add(StatLine(m));
+        // (Not the shots' own hover: her shots are off, her beam her one light.)
+        foreach (var m in bundle.Stats) if (m.Stat != Stat.BubbleHover) lines.Add(StatLine(m));
         if (bundle.Shot is { } s) ShotLines(s, lines);
         foreach (var e in bundle.Effects) lines.Add(EffectLine(e));
-        foreach (var f in bundle.Flags) lines.Add(FlagLine(f));
+        foreach (var f in bundle.Flags) if (f != "mergeBubbles") lines.Add(FlagLine(f));
         if (bundle is ItemDef { Active: { } a }) lines.Add(ActiveLine(a));
         return lines;
     }
@@ -101,7 +102,7 @@ public static class ItemCaption
         {
             lines.Add("Short beams shine all round you, 8 ways");
         }
-        if (s.Homing) lines.Add($"Shots home onto foes within {N(PlaneCombatTuning.HomingReach)} m (turning {N(PlaneCombatTuning.HomingDegPerSec)}° a second)");
+        if (s.Homing) lines.Add($"Her beam leans toward the nearest creature near it, up to {N(OpenPathTuning.LeanDeg)}° off her aim");
         if (s.Pierce) lines.Add("Shots pierce foes (each foe hit once)");
         // Her light's paths on rock (PlanePaths.cs).
         if (s.Spectral) lines.Add($"Her light passes through a wall up to {N(PathTuning.GhostThick)} m thick, {Pct(PathTuning.Ghost)} as strong beyond");
@@ -110,7 +111,7 @@ public static class ItemCaption
         if (s.Boomerang) lines.Add($"Her light that lands on rock comes back along its way ({Pct(PathTuning.Return)} of it): what stands in it is lit from both sides");
         if (s.Wave) lines.Add("The beam's rays weave across your aim in a double helix");
         if (s.Spiral) lines.Add("Shots spiral outward");
-        if (s.Grow) lines.Add($"Shots grow with distance: up to ×{N(PlaneCombatTuning.GrowMax)} size and damage at full range");
+        if (s.Grow) lines.Add($"Her beam flares, widening along its length: {Pct(OpenPathTuning.FlareWide)} wider again at its tip");
         if (s.Explosive) lines.Add($"Shots burst into light where they pop: {Pct(PlaneCombatTuning.BurstDamage)} of their damage to every corrupted thing within {N(PlaneCombatTuning.BurstRadius)} m, cleansing the ground");
         if (s.Charge) lines.Add($"Held steady, her beam focuses: over {N(RhythmTuning.FocusTime)} s it narrows and burns up to ×{N(RhythmTuning.FocusBurn)}; swinging it loses the focus");
         if (s.Laser) lines.Add("Her beam reaches half as far again, narrowed to a searchlight");
@@ -162,6 +163,7 @@ public static class ItemCaption
         "magnet" => $"Pulls pickups and freed murklings' light toward you from {N(PlaneEconomyTuning.RemoraMagnet)} m (not {N(PlaneEconomyTuning.ShellMagnet)} m)",
         "minigun" => $"Held without a break, her beam spins up: ×{N(RhythmTuning.SpinBurn)} burn after {N(RhythmTuning.SpinTime)} s",
         "cavitation" => $"Held on a creature, her beam snaps every {N(RhythmTuning.SnapEvery)} s: a burst of light {N(RhythmTuning.SnapReach)} m wide that pushes it back",
+        "linger" => $"Where her beam ends, a pool of her light stays {N(OpenPathTuning.PoolLife)} s and goes on burning: swept, it paints a trail",
         "mergeBubbles" => $"Her light lingers at the end of its range; shots that touch merge into one, adding their damage (+{Pct(PlaneCombatTuning.BubbleGrowth)} size for each)",
         "severedNerve" => "A severed strand circles you, stinging as your arm does",
         "moltenCarapace" => "Under half health your shots pierce and do 60% more",

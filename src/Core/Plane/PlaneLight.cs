@@ -96,6 +96,11 @@ public sealed class LightEmitter
     /// <summary>A cone's unit direction (unused by a point).</summary>
     public Vector2 Direction = Vector2.UnitX;
     public float HalfAngle = LightTuning.BeamHalfAngleDeg * MathF.PI / 180f;
+    /// <summary>Flare (Starfish Arm): a cone widening along its length, this much as wide again at its reach (0: a plain cone).</summary>
+    public float Flare;
+
+    /// <summary>A cone's half-angle this far along it (wider toward its reach when it flares).</summary>
+    public float HalfAt(float distance) => Flare <= 0f ? HalfAngle : HalfAngle * (1f + Flare * Math.Clamp(distance / MathF.Max(Range, 0.1f), 0f, 1f));
     public float Intensity = 1f, Range = 1f;
     /// <summary>Warm gold for hers; others by owner (for the view).</summary>
     public Vector3 Colour = new(1f, 0.82f, 0.45f);
@@ -153,11 +158,12 @@ public static class LightQuery
         if (e.Shape == LightShape.Cone && d > 1e-4f)
         {
             float angle = MathF.Acos(Math.Clamp(Vector2.Dot(to / d, e.Direction), -1f, 1f));
-            if (angle >= e.HalfAngle) return 0f;
-            float soft = e.HalfAngle * LightTuning.ConeSoft;
+            float half = e.HalfAt(d);
+            if (angle >= half) return 0f;
+            float soft = half * LightTuning.ConeSoft;
             if (angle > soft)
             {
-                float t = (angle - soft) / (e.HalfAngle - soft);
+                float t = (angle - soft) / (half - soft);
                 b *= 1f - t * t * (3f - 2f * t);
             }
         }
@@ -376,7 +382,7 @@ public sealed partial class PlaneWorld
         {
             float angle = MathF.Acos(Math.Clamp(Vector2.Dot(to / flat, b.Direction), -1f, 1f));
             float widen = MathF.Asin(MathF.Min(radius / flat, 1f));
-            if (angle - widen > b.HalfAngle) return false;
+            if (angle - widen > b.HalfAt(flat)) return false;
         }
         return LineOfSight(b.Position, at);
     }
@@ -397,7 +403,7 @@ public sealed partial class PlaneWorld
         if (flat > radius + 0.5f)
         {
             float angle = MathF.Acos(Math.Clamp(Vector2.Dot(to / flat, b.Direction), -1f, 1f));
-            cone = 1f - 0.4f * Math.Clamp((angle / MathF.Max(b.HalfAngle, 1e-3f) - 0.6f) / 0.4f, 0f, 1f);
+            cone = 1f - 0.4f * Math.Clamp((angle / MathF.Max(b.HalfAt(flat), 1e-3f) - 0.6f) / 0.4f, 0f, 1f);
         }
         return BeamFalloff(b, MathF.Max(0f, flat - radius)) * cone;
     }
@@ -483,7 +489,8 @@ public sealed partial class PlaneWorld
     {
         foreach (var (beam, _) in HerBeams)
             if (BeamLight(beam, at, 0f, radius, kin) > 0f) return true;
-        return false;
+        // (Her pools of light too: Linger.)
+        return Pools.Count > 0 && PoolSees(at, radius);
     }
 
     /// <summary>
@@ -654,6 +661,8 @@ public sealed partial class PlaneWorld
             if (reach >= 1f) spread = MathF.Max(spread, MathF.Abs(offset) + half * width);
         }
         for (int k = layout.Count - 1; k < _rays.Count; k++) _rays[k].Active = false;
+        // Lean and Flare (PlaneOpenPaths.cs): her rays turned toward the nearest creature, widening along their length.
+        LeanRays(layout.Count);
         BeamSpread = spread;
         // Her colours dealt across the rays (the fan first, the Kraken's rays round her after it).
         DealHues(layout, shape.Pattern == ShotPattern.Kraken8 ? layout.Count - (LightTuning.KrakenRays - 1) : layout.Count);

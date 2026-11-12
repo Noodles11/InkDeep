@@ -203,7 +203,7 @@
     { "id": "bubble_coral", "name": "Bubble Coral", "tagline": "Little ones grow up",
       "quality": 2, "pools": ["treasure", "shop"], "tags": ["coral"],
       "stats": [ { "stat": "bubbleHover", "op": "mult", "value": 1.5 } ],
-      "flags": ["mergeBubbles"] },
+      "flags": ["linger", "mergeBubbles"] },
 
     // ── Active (F) — recharge over time ─────────────────────────────
     { "id": "tide_pulse", "name": "Tide Pulse", "tagline": "Room to breathe",
@@ -249,7 +249,7 @@
 
   "synergies": [
     { "id": "pinball_storm", "name": "Pinball Storm", "requires": ["electric_eel_tail", "mirror_scale"],
-      "description": "Each wall bounce emits a lightning arc" },
+      "description": "Each glint where her light bounces arcs to the nearest creature" },
     { "id": "lighthouse", "name": "Lighthouse", "requires": ["sunbeam", "nautilus_spiral"],
       "description": "The beam sweeps in a rotating spiral" },
     { "id": "cell_bloom", "name": "Cell Bloom", "requires": ["mitosis", "starfish_arm"],
@@ -279,7 +279,9 @@
     { "id": "big_mad_puff", "name": "Big Mad Puff", "requires": ["pufferfish_pout", "starfish_arm"],
       "description": "Shots burst into a spiky shotgun blast when they pop" },
     { "id": "will_o_wisp", "name": "Will-o'-Wisp", "requires": ["ghost_jelly", "anglerfish_lure"],
-      "description": "Spectral wisps home twice as hard" },
+      "description": "Her light leans twice as far, toward creatures behind rock too" },
+    { "id": "aurora", "name": "Aurora", "requires": ["bubble_coral"], "requiresAny": ["fire_coral", "glowing_moss", "frost_kelp"], "anyCount": 2,
+      "description": "Her pools of light hang twice as long, curtains of mixing colour" },
     { "id": "toxic_bloom", "name": "Toxic Bloom", "requires": ["sea_nettle_sting", "mitosis"],
       "description": "Split shots carry a double dose of poison" },
     { "id": "feeding_frenzy", "name": "Feeding Frenzy", "requires": ["shark_tooth", "lamprey_mouth"],

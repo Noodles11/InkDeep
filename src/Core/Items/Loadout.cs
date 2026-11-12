@@ -128,7 +128,7 @@ public sealed class Loadout
         }
 
         var ownedIds = owned.Select(i => i.Id).ToHashSet();
-        var synergies = catalog.Synergies.Where(s => s.Requires.All(ownedIds.Contains)).ToList();
+        var synergies = catalog.Synergies.Where(s => s.Requires.All(ownedIds.Contains) && s.RequiresAny.Count(ownedIds.Contains) >= s.AnyCount).ToList();
         bundles.AddRange(synergies);
 
         var tagCounts = owned.SelectMany(i => i.Tags.Distinct()).GroupBy(t => t).ToDictionary(g => g.Key, g => g.Count());

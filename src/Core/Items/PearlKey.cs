@@ -101,7 +101,7 @@ public static class PearlKey
                 case "cavitation": Add(Damage, PearlIcon.Chevron); break;
                 case "magnet" or "richCaches" or "richDrops": Add(Luck, PearlIcon.Nautilus); break;
                 case "landmarks" or "minimap": Add(Wayfinding, PearlIcon.Nautilus); break;
-                case "mergeBubbles": Add(MoreShots, PearlIcon.Chevron); break;
+                case "mergeBubbles" or "linger": Add(MoreShots, PearlIcon.Chevron); break;
                 case "severedNerve" or "moltenCarapace" or "clawTithe": Add(Damage, PearlIcon.Chevron, 1.5f); break;
                 case "lastLight": Add(Defence, PearlIcon.Shield, 1.5f); break;
             }

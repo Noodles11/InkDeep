@@ -90,7 +90,8 @@ public sealed class ItemCatalog
         }
         foreach (var s in m.Synergies)
         {
-            if (s.Requires.Count < 2) problems.Add($"synergy '{s.Id}' needs at least two items");
+            if (s.Requires.Count + s.AnyCount < 2) problems.Add($"synergy '{s.Id}' needs at least two items");
+            if (s.AnyCount > s.RequiresAny.Count) problems.Add($"synergy '{s.Id}' needs more of its any-list than it lists");
             foreach (var r in s.Requires)
                 if (!ids.Contains(r)) problems.Add($"synergy '{s.Id}' requires unknown item '{r}'");
         }
