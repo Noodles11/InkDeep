@@ -316,10 +316,18 @@ it `PlaneHeart`. She takes one only when corrupted at all; otherwise it waits.
   as one corruption number a second, summed over it. A dash bursts her light: each clinging murkling is thrown off
   (9 m/s), losing one default shot's worth (10) of its meter, and is dazed for 0.7 s. Then it chases her again. One
   already worn down bursts. The dash shows as a small light burst, not an ink cloud.
-- **Killed by light:** its corruption meter is 36 × (1 + 1.2 × Menace), so four default shots in a row burst it in
-  the Shallows. Nothing regrows it (only a leak heals).8 s without a hit, and one strong (merged) shot empties it at once. Each shot bursts on it, and
-  a piercing one flies on. Passing through a throw halves a shot's light. A murkling burst leaves one shell, and over
-  cleansed ground it drops its ember, which blooms a 2.6 m patch of colour.
+- **A murkling's size is its corruption** (`PlaneMurkSize.cs`, `MurkSizeTuning`). Each one budded from the ink has a
+  full size of its own: a radius from 0.36 to 0.68 m, skewed small. Its meter is a plain murkling's (36 × (1 + 1.2 ×
+  Menace), for a 0.45 m one) × its ink round its core against a plain one's, so an elite holds over twice a lesser
+  one's. As her light (or anything else) takes its corruption it shrinks toward its glowing core (0.275 m, the size of
+  the core it leaves), its core's glow filling more of it, and it is freed the moment it is no bigger than its core.
+  Its body (what it collides as, what her light finds) shrinks with it. Out of every light of hers for 1 s, and
+  unhit as long, it grows back toward its full size, 12% of its meter a second. One strong (merged) shot still
+  empties it at once; passing through a throw halves a shot's light.
+- **Its grade is its full size, and its grade its loot:** a **lesser** one (under 0.42 m) leaves no shells, a
+  **regular** one 1–2, an **elite** (over 0.6 m) 5–10. Every one leaves its core of light, and over cleansed ground
+  drops its ember, which blooms a 2.6 m patch of colour. Primes, turned fish ("lesser murklings" below, a different
+  thing from a lesser-grade murkling) and their loot are as before.
 
 ## Murkling primes (`Murkling.Prime`)
 
@@ -382,8 +390,9 @@ meter that starts full. Each shot of her light takes its damage (illuminance) of
 meter regrows, at a rate set by the creature's kind and the Menace. Emptied, the creature is cleansed: one strong
 enough shot does it at once, or keep shooting until the meter runs out.
 
-**Corruption rings** (`HealthBars`): a thin ring round each corrupted creature (murklings, Blightroots, Blotters,
-Thumpsquirts, Inkwardens, Lashjaws, corrupted flounders) shows how much of its meter is left, in the language of her own
+**Corruption rings** (`HealthBars`): a thin ring round each corrupted creature (Blightroots, Blotters, Thumpsquirts,
+Inkwardens, Lashjaws, corrupted flounders, primes and turned fish; not a murkling budded from the ink, whose size shows
+its meter) shows how much of its meter is left, in the language of her own
 meter on the minimap's bezel: dark glossy ink over a faint gold track, filling clockwise from 12 o'clock, a violet
 sheen on its lip. As the creature is cleansed the ink draws back and thins, down to a fine sliver near empty. No green
 or red. It is drawn only while the creature can be seen: a murkling only while her glow, her beam, a lit charge stone or

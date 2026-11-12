@@ -337,6 +337,13 @@ public partial class TopDownMain : Node3D
     /// <summary>Verification of her light's paths on rock (--dbg-paths): as --dbg-shadow, aimed at the nearest wall and sweeping slowly across it.</summary>
     bool _dbgPaths;
     System.Numerics.Vector2? _dbgPathsAt;
+    /// <summary>
+    /// Verification of murklings' sizes (--dbg-murks): a row of five budded across the longest open way from her, held
+    /// there; her beam on the middle one for its first 2.5 s, then off (it grows back).
+    /// </summary>
+    bool _dbgMurks;
+    readonly List<(Murkling M, System.Numerics.Vector2 At)> _dbgRow = new();
+    System.Numerics.Vector2 _dbgRowWay;
     /// <summary>Verification (--dbg-sense): as --dbg-shadow, her beam dark and the murklings held past her glow, unseen.</summary>
     bool _dbgSense;
     System.Numerics.Vector2? _dbgShadowWay;
@@ -551,6 +558,7 @@ public partial class TopDownMain : Node3D
             else if (arg == "--dbg-shadow") _autoFire = _dbgShadow = true;
             else if (arg == "--dbg-sense") _autoFire = _dbgShadow = _dbgSense = true;
             else if (arg == "--dbg-paths") _autoFire = _dbgShadow = _dbgPaths = true;
+            else if (arg == "--dbg-murks") _autoFire = _dbgMurks = true;
             else if (arg == "--use-active") _autoActive = true;
             else if (arg.StartsWith("--dbg-leaks=")) _dbgLeaks = int.Parse(Value("--dbg-leaks="));
             else if (arg.StartsWith("--dbg-leak-hits=")) _dbgLeakHits = int.Parse(Value("--dbg-leak-hits="));
@@ -4231,6 +4239,38 @@ public partial class TopDownMain : Node3D
     {
         if (!_autoFire) return false;
         var from = _world.Player.Position;
+        if (_dbgMurks)
+        {
+            if (_dbgRow.Count == 0)
+            {
+                float best = -1f;
+                for (int k = 0; k < 36; k++)
+                {
+                    var w = new System.Numerics.Vector2(Mathf.Cos(k * Mathf.Tau / 36f), Mathf.Sin(k * Mathf.Tau / 36f));
+                    float r = _world.LineReach(from, w, 16f, out _);
+                    if (r > best) { best = r; _dbgRowWay = w; }
+                }
+                var across = new System.Numerics.Vector2(-_dbgRowWay.Y, _dbgRowWay.X);
+                for (int k = 0; k < 5; k++)
+                {
+                    var spot = from + _dbgRowWay * 4.5f + across * ((k - 2) * 1.7f);
+                    var m = _world.DebugBud(spot, prime: false);
+                    m.Bud = 0f;
+                    _dbgRow.Add((m, spot));
+                }
+            }
+            foreach (var (m, held) in _dbgRow)
+            {
+                m.Position = held;
+                m.Velocity = System.Numerics.Vector2.Zero;
+                m.ThrowTimer = 100f;
+                m.Windup = 0f;
+            }
+            _world.Player.Velocity = System.Numerics.Vector2.Zero;
+            input.Aim = _dbgRowWay;
+            input.Beam = _world.Time < ExperienceTuning.CalmSeconds + 0.2f + 2.5f;
+            return true;
+        }
         if (_dbgShadow)
         {
             if (_dbgShadowWay is null && _dbgPaths)

@@ -220,6 +220,13 @@ public sealed class Murkling
     public float Radius = BlightTuning.MurkRadius, ClingDrain = BlightTuning.ClingDrain;
     /// <summary>The body it moves as (a prime collides smaller than it looks, so it can squeeze through the passes).</summary>
     public float Body = BlightTuning.MurkRadius;
+    /// <summary>
+    /// A murkling budded from the ink: its full size, and its grade by it (PlaneMurkSize.cs). Its Radius and Body follow
+    /// its corruption, shrinking toward its core. 0: not sized (a prime, a turned fish).
+    /// </summary>
+    public float Full;
+    public MurkGrade Grade;
+    public bool Sized => Full > 0f;
     /// <summary>A murkling prime (rare, five times the size, every stat scaled up); its bud's length.</summary>
     public bool Prime;
     /// <summary>One of Drippus Prime's brood: born out of its body (it pops when Drippus is freed).</summary>
@@ -1152,7 +1159,10 @@ public sealed partial class PlaneWorld
         }
         var m = new Murkling { Position = at, Area = area, Seed = _blightRng.Range(0f, 100f), ThrowTimer = BlightTuning.ThrowEvery * _blightRng.Range(0.5f, 1f) };
         if (!prime) m.Kind = KindAt(m.Seed);
-        m.Corruption.Max = m.Corruption.Value = BlightTuning.MurkCorruption * (1f + BlightTuning.MeterPerMenace * Menace) * (prime ? BlightTuning.PrimeMeter : 1f);
+        float meter = BlightTuning.MurkCorruption * (1f + BlightTuning.MeterPerMenace * Menace);
+        m.Corruption.Max = m.Corruption.Value = meter * (prime ? BlightTuning.PrimeMeter : 1f);
+        // Its own full size, its grade and its meter by it (a prime keeps a prime's).
+        if (!prime) Size(m, meter);
         if (prime)
         {
             m.Prime = true;
@@ -1251,8 +1261,9 @@ public sealed partial class PlaneWorld
             return;
         }
         Corruption?.Release(matter);
-        // Every freed murkling leaves a shell (a prime its handful, above).
-        Shells.Add(new PlaneShell { Position = m.Position, Velocity = Fling(2f, 4f) });
+        // A freed murkling leaves shells by its grade (a prime its handful, above).
+        if (m.Sized) ShellsByGrade(m);
+        else Shells.Add(new PlaneShell { Position = m.Position, Velocity = Fling(2f, 4f) });
         bool blooms = ember && Corruption is { } field && field.At(m.Position) < CorruptionTuning.Clean;
         if (blooms) Corruption!.Cleanse(m.Position, CorruptionTuning.EmberRadius, 1f);
         Events.Add(new PlaneEvent(PlaneEventType.MurklingBurst, m.Position, Vector2.Zero, blooms ? CorruptionTuning.EmberRadius : 0f));

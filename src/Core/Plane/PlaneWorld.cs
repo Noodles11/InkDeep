@@ -324,6 +324,8 @@ public sealed partial class PlaneWorld
         }
         SyncLights(input);
         StepHerLight();
+        // Murklings as big as their corruption (shrunk by her light, grown back in the dark).
+        StepMurkSizes();
         StepChargeStones();
         StepAsh();
         StepCorruption();

@@ -179,6 +179,8 @@ public partial class BlightView : Node3D
             float scale = m.Radius;
             // A lesser one carries a dim ember in its fish's old colour, so it shows what it was.
             float ember = m.Lesser ? 0.7f : m.Prime ? 0.75f : 0.45f;
+            // Shrunk toward its core by her light, the core's glow fills more of it (PlaneMurkSize.cs).
+            if (m.Sized) ember += 0.55f * (1f - m.Corruption.Fraction);
             view.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("ember_tint"), m.Fish is { } fish ? FishEmber(fish.Kind) : m.Prime ? Kin.Tint(Kin.PrimeCore) : new Color(0f, 0f, 0f, 0f));
             if (m.Budding)
             {
