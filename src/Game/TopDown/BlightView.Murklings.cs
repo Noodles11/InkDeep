@@ -38,6 +38,9 @@ public partial class BlightView
         /// <summary>Her light's colour on it as drawn (eased), and the colour it was last.</summary>
         public float Colour;
         public LightHue ColourHue;
+        /// <summary>How hard her light's current presses it now (eased, 0..1), and which way (world, level).</summary>
+        public float Pressed;
+        public Vector3 PressWay;
         /// <summary>Unseen but near her: till its next ripple on the water (s), and whether its coming has been heard.</summary>
         public float Ripple;
         public bool Heard;

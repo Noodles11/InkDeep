@@ -21,6 +21,9 @@ public partial class FxParticles : Node3D
         public Color Color1;
         public float Drag;
         public float Buoyancy;
+        /// <summary>Its turn on the screen (radians) and how fast it turns (a flake's, a leaf's tumble).</summary>
+        public float Angle;
+        public float Spin;
     }
 
     readonly Particle[] _particles;
@@ -123,7 +126,7 @@ public partial class FxParticles : Node3D
         }
     }
 
-    public void Emit(Vector3 position, Vector3 velocity, float life, float size0, float size1, Color color0, Color color1, float drag = 2f, float buoyancy = 0f)
+    public void Emit(Vector3 position, Vector3 velocity, float life, float size0, float size1, Color color0, Color color1, float drag = 2f, float buoyancy = 0f, float spin = 0f)
     {
         if (_count >= _particles.Length) return;
         _particles[_count++] = new Particle
@@ -138,6 +141,8 @@ public partial class FxParticles : Node3D
             Color1 = color1,
             Drag = drag,
             Buoyancy = buoyancy,
+            Angle = spin != 0f ? RandRange(0f, Mathf.Tau) : 0f,
+            Spin = spin,
         };
     }
 
@@ -171,7 +176,13 @@ public partial class FxParticles : Node3D
 
             float t = 1f - p.Life / p.MaxLife;
             float size = Mathf.Lerp(p.Size0, p.Size1, t);
-            _multimesh.SetInstanceTransform(i, new Transform3D(cameraBasis.Scaled(new Vector3(size, size, size)), p.Position));
+            var facing = cameraBasis;
+            if (p.Spin != 0f)
+            {
+                p.Angle += p.Spin * dt;
+                facing = cameraBasis * new Basis(Vector3.Back, p.Angle);
+            }
+            _multimesh.SetInstanceTransform(i, new Transform3D(facing.Scaled(new Vector3(size, size, size)), p.Position));
             _multimesh.SetInstanceColor(i, p.Color0.Lerp(p.Color1, t));
             i++;
         }

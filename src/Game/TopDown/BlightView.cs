@@ -242,6 +242,20 @@ public partial class BlightView : Node3D
             view.Position = new Vector3(m.Position.X, y, m.Position.Y);
             // Drawing the bend is an effort: the whole body trembles across its aim.
             if (pull < 0f) view.Position += new Vector3(-m.Aim.Y, 0f, m.Aim.X) * Mathf.Sin(_time * 55f + m.Seed) * 0.035f * -pull;
+            // In her light's current: pressed back from it a little, shuddering against it (BlightView.Burn.cs).
+            bool pressed = !m.Budding && world.LitFrom(m) is { } light && System.Numerics.Vector2.DistanceSquared(m.Position, light) > 0.04f;
+            if (pressed)
+            {
+                var way = m.Position - world.LitFrom(m)!.Value;
+                body.PressWay = new Vector3(way.X, 0f, way.Y).Normalized();
+            }
+            body.Pressed = Mathf.MoveToward(body.Pressed, pressed ? 1f : 0f, dt * (pressed ? 7f : 3f));
+            if (body.Pressed > 0f)
+            {
+                float shudder = 0.55f + 0.45f * Mathf.Sin(_time * PressShudder + m.Seed * 5f);
+                var across = new Vector3(-body.PressWay.Z, 0f, body.PressWay.X);
+                view.Position += (body.PressWay * PressBack * shudder + across * 0.012f * Mathf.Sin(_time * PressShudder * 1.3f + m.Seed)) * body.Pressed;
+            }
             view.Scale = Vector3.One * scale;
             view.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("seed"), m.Seed);
             view.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("ember"), ember);

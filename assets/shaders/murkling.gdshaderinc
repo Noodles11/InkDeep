@@ -228,11 +228,11 @@ void fragment() {
 		float rough = ROUGHNESS;
 		her_burn_paint((INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz, n, seed, 1.0, ALBEDO, EMISSION, rough);
 		ROUGHNESS = rough;
-		// Her light's colour on it: its rim kindled in it, a glow through the ink.
+		// Her light's colour on it: its rim faintly kindled in it (the light itself shows on its lit side: her_burn_paint).
 		if (colour_lit.a > 0.0) {
 			float kindled = smoothstep(0.3, 0.95, 1.0 - facing);
 			float lick = 0.75 + 0.25 * sin(TIME * 9.0 + around * 5.0 + seed * 7.0);
-			EMISSION += colour_lit.rgb * colour_lit.a * (0.25 + 1.8 * kindled * lick);
+			EMISSION += colour_lit.rgb * colour_lit.a * (0.04 + 0.45 * kindled * lick);
 		}
 		// Frost's rime: pale and glassy as it is stilled, crystals glinting on it.
 		if (chill > 0.0) {

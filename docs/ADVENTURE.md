@@ -43,7 +43,7 @@ All numbers are first guesses (`AdventureTuning`).
   at Menace 1). Each staple snaps in with a clear note rising as the leak fills. As each arm is stapled shut all along
   it spits a ring of 8 ink drops at 60% of a throw's damage. The last staple seals it, and its arms and staples dissolve
   together.
-- **The burn while sealing:** where the staples hold an arm its edges sear as her light burns the corrupted: bleached
+- **The burn while sealing:** where the staples hold an arm its edges sear: bleached
   to a pale crust lit in her colour, crazed with bright seams, a hard bright seam where the searing ends. While she is
   sealing, the burn reaches further in and burns brighter. The disc pales toward her gold from its rim as it fills.
 - **Her coming near rouses it:** healthy fish within 14 m turn at once.
@@ -265,15 +265,18 @@ what burn the corrupted. Caves are dark. The sim is in `src/Core/Plane/PlaneHerL
 - **The look of the burn** (`her_burn.gdshaderinc`, in `murkling.gdshaderinc`, `corruption_orb` and `flounder`):
   - **Which lights:** the first four shots burning something (`PlaneWorld.Burners`), each sent to the shaders as
     `her_burn0`–`her_burn3`: where it hangs and how far its light reaches.
-  - **Where:** only the side of a body facing a shot, within its light (a little more from above, so a body is lit over
-    its top, where the camera sees it).
-  - **Not fire:** the ink bleaches and boils off. Its black thins to a pale, glassy crust lit from within in her colour,
-    molten in its cells and crazed by a crawling net of white-hot seams, fizzing with tiny boiling specks.
-  - **The edge:** where the burn ends, the crust meets the dark ink in one hard bright seam, torn a little, with a
-    scorched dark band just past it. A body half in a shot's light shows the light's edge across it; a body wholly in
-    it shows the edge where its lit side turns away from the shot.
-  - **Particles** (`BlightView.Burn`): from the side facing the nearest shot lighting it, white-hot specks boil off and
-    rise as they cool to her colour. Flakes of bleached ink peel away and sink, and now and then a pale wisp rises.
+  - **The colour:** `her_burn_tint`, her beam's colours (BeamView): one colour as it is; two or three each in their
+    own patches drifting over the lit side, so every colour of the mix shows.
+  - **Where:** only the side of a body facing the light, within its reach, measured level on her plane, so it lights
+    the body's side and not its top.
+  - **Light, not paint:** it lights the side as a lamp lights what it shines on. The ink's own look stays under it.
+    Brightest where the side faces the light squarely, with a soft press of it there, it fades softly to nothing round
+    the turn of the body and at the light's edge. Soft bands of it stream over the body away from the light.
+  - **A current** (`BlightView.Burn`): her light strikes a body as a strong current strikes a stone. Where it meets the
+    side facing it, it splashes in its own colours, sheeting round the body and flung off it. Streaks of it run on past
+    the body's edges downstream, and flakes of the ink it wears away are torn off and carried along. A murkling in it
+    is pressed back a little (7 cm) and shudders against it. Lit from all round (a pool, a firefly), only a soft glow of
+    its colour wells off it.
 - **It dazzles:**
   - **Who:** a murkling, an Inkwarden or a Hearthguard coming into a shot's light.
   - **The freeze:** it stops dead for 0.8 s and lets go of a throw it was winding up; an Inkwarden's spin and spikes

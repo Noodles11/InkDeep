@@ -405,8 +405,17 @@ The first words of the light grammar (docs/proposals/LIGHT-GRAMMAR.md §5). Thre
 - **Not on bosses**: a boss takes no colours. Frost stills the creatures a dazzle holds (murklings, Inkwardens,
   Hearthguards) and slows murklings; the rooted and leaping creatures it only marks.
 - **Drawn** (`LightColour`): each ray's haze, its spotlight and her light on the reef in its colour (thicker, so it
-  shows); a murkling kindled at its rim in the colour on it, frosted and glinting as frost stills it; shatter a burst
-  of steam and a snap, sunfire a ring of light and a chime; a charge stone lit in colour glows in it.
+  shows); what it burns lit on its side facing the light in the ray's colours (docs/ADVENTURE.md §8), a murkling
+  faintly kindled at its rim in the colour on it, frosted and glinting as frost stills it; shatter a burst of steam
+  and a snap, sunfire a ring of light and a chime; a charge stone lit in colour glows in it.
+- **Its motes** (`BeamView.Motes.cs`): each coloured ray carries its colour's motes in the water it lights, born at
+  random points of its cone short of the rock and borne out along it by its current. A mix carries every colour's.
+
+  | Colour | Motes |
+  |---|---|
+  | ember | sparks sprayed off her like a hot hearth's, fast out along the beam, rising and cooling from gold to red |
+  | frost | tiny tumbling snowflakes in a pale breath of cold mist welling out from her, sinking a little |
+  | bloom | many drifting moss spores, wandering and rising a little, and now and then a little tumbling leaf |
 - Tests: `ColourTests`.
 
 ## 11. Her light's paths on rock (built)

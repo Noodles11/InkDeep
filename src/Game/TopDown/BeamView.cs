@@ -86,6 +86,7 @@ public partial class BeamView : Node3D
             ShadowEnabled = OctoShoots.Game.Settings.ViewOptions.Shadows, ShadowBias = 0.06f, ShadowNormalBias = 1.2f, Visible = false,
         };
         AddChild(_spot);
+        ReadyMotes();
         _arcMesh = new ImmediateMesh();
         _arcs = new MeshInstance3D
         {
@@ -324,6 +325,8 @@ public partial class BeamView : Node3D
             m.SetShaderParameter("flare", beam.Flare);
             m.SetShaderParameter("span", widest * BeamShadow.Margin);
             m.SetShaderParameter("reach", range);
+            // Her colours' motes in the water it lights (BeamView.Motes.cs).
+            if (on) EmitMotes(world, beam, rayHue, range, fan.On * Mathf.Min(bright, 1.2f) * (main ? 1f : 0.55f), origin.Y, dt);
             if (main)
             {
                 // The reef's own light from her beam (reef_show's rs_beam) is shadowed alike.
@@ -373,7 +376,8 @@ public partial class BeamView : Node3D
             _spot.LightEnergy = SpotEnergy * fan.On * dim * rhythmLook;
             _spot.SpotRange = range * 1.25f;
             _spot.SpotAngle = Mathf.RadToDeg(beam.HalfAngle);
-            // The sear on the corrupted (her_burn.gdshaderinc): only while it burns something, as her shots'.
+            // The sear on the corrupted (her_burn.gdshaderinc): only while it burns something, as her shots', in its colours.
+            RenderingServer.GlobalShaderParameterSet(BurnTint, BurnTintOf(rayHue));
             RenderingServer.GlobalShaderParameterSet(BeamAt, world.BeamBurns
                 ? new Vector4(origin.X, origin.Y + 0.05f, origin.Z, range * stop) : new Vector4(0f, -1000f, 0f, 0f));
         }
@@ -388,6 +392,16 @@ public partial class BeamView : Node3D
         DrawArcs(world, color);
         DrawPools(world, dim);
         DrawFireflies(world, dim);
+        TickMotes(dt);
+    }
+
+    static readonly StringName BurnTint = "her_burn_tint";
+
+    /// <summary>Her light's colour as it lights what it burns, and its colours' bits (her_burn.gdshaderinc's hb_tint).</summary>
+    static Vector4 BurnTintOf(LightHue hue)
+    {
+        var c = OctoShoots.Game.Fx.LightColour.Beam(hue, TopDownMain.ShowcaseOn);
+        return new Vector4(c.R, c.G, c.B, (float)(int)hue);
     }
 
     /// <summary>

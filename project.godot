@@ -51,6 +51,10 @@ her_light={
 "type": "vec3",
 "value": Vector3(1, 0.769, 0.42)
 }
+her_burn_tint={
+"type": "vec4",
+"value": Vector4(1, 0.769, 0.42, 0)
+}
 her_warm={
 "type": "vec3",
 "value": Vector3(1, 0.46, 0.18)
