@@ -153,7 +153,7 @@ public static class PearlKey
         Stat.MaxHp or Stat.Regen => (Health, PearlIcon.Arrow),
         Stat.Speed or Stat.DashCooldown or Stat.Sink => (Mobility, PearlIcon.Feather),
         Stat.Luck => (Luck, PearlIcon.Nautilus),
-        Stat.Glow => (Glow, PearlIcon.Arrow),
+        Stat.Glow or Stat.Fireflies or Stat.FireflyReturn => (Glow, PearlIcon.Arrow),
         Stat.Knockback => (Knockback, PearlIcon.Arrow),
         Stat.EnemyShotSpeed => (Defence, PearlIcon.Shield),
         Stat.ActiveRecharge => (Recharge, PearlIcon.Arrow),

@@ -273,6 +273,20 @@ public sealed partial class PlaneWorld
                 if (from == default) from = at;
             }
         }
+        // Her fireflies burn a little, in her colours; her glow lends her colours to what is near her (PlaneFireflies.cs).
+        if (!Defeated && beams)
+        {
+            if (Fireflies.Count > 0)
+            {
+                float lit = FirefliesOn(at, radius, ref hue);
+                if (lit > 0f)
+                {
+                    n += lit;
+                    if (from == default) from = at;
+                }
+            }
+            hue |= GlowHueAt(at, radius);
+        }
         if (!_glare.TryGetValue(kin, out var g)) _glare[kin] = g = new Glare();
         g.Seen = Tick;
         if (beamed)

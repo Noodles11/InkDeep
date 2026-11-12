@@ -38,10 +38,10 @@ public static class ItemCaption
     {
         var lines = new List<string>();
         // (Not the shots' own hover: her shots are off, her beam her one light.)
-        foreach (var m in bundle.Stats) if (m.Stat != Stat.BubbleHover) lines.Add(StatLine(m));
+        foreach (var m in bundle.Stats) if (m.Stat is not (Stat.BubbleHover or Stat.BubbleCapacity or Stat.BubbleRegrow)) lines.Add(StatLine(m));
         if (bundle.Shot is { } s) ShotLines(s, lines);
         foreach (var e in bundle.Effects) lines.Add(EffectLine(e));
-        foreach (var f in bundle.Flags) if (f != "mergeBubbles") lines.Add(FlagLine(f));
+        foreach (var f in bundle.Flags) if (f is not ("mergeBubbles" or "surge")) lines.Add(FlagLine(f));
         if (bundle is ItemDef { Active: { } a }) lines.Add(ActiveLine(a));
         return lines;
     }
@@ -71,6 +71,8 @@ public static class ItemCaption
         Stat.BubblesPerThrow => "bubbles per throw",
         Stat.ActiveRecharge => "active item recharge speed",
         Stat.BubbleHover => "bubble hover time",
+        Stat.Fireflies => "fireflies of her light round her (each reveals, burns a little and carries her colours)",
+        Stat.FireflyReturn => "time a firefly a murkling drank takes to come back",
         _ => s.ToString(),
     };
 

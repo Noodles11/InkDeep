@@ -151,7 +151,10 @@ much corruption is left (CORRUPTION, "Corruption rings").
   Will-o'-Wisp, Pinball Storm and Aurora name where they meet.
 - **Her light's echoes** (LIGHT-AND-GRAPH §14): what her light frees flares (Starburst Gland), shines out spines that
   take her paths (Fire Urchin Spine) or sends its core flying home (Lamprey Mouth), in her colours, one generation
-  deep; Supernova names where they meet. The rest of the light grammar (proposals/LIGHT-GRAMMAR.md) is to come.
+  deep; Supernova names where they meet.
+- **Her glow's second voice** (LIGHT-AND-GRAPH §15): fireflies of her light orbit her (Firefly Squid, Bubble Gland,
+  Anemone Pump), revealing and burning a little in her colours, lures for the murklings; her glow takes her colours.
+  The rest of the light grammar (proposals/LIGHT-GRAMMAR.md) is to come.
 - **Synergies** announce themselves; **transformations** are designed, not built.
 
 ## 9. Growth and the jelly

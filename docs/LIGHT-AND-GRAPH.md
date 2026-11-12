@@ -503,3 +503,23 @@ half-way, bloom and sunfire marked, lull); and **its rays take her path words**.
 - Fire Urchin Spine and Lamprey Mouth are open from the first run (their old unlocks were never earnable on the plane).
   `--dbg-murks --dbg-weak` buds a worn-down row to see it.
 - Tests: `EchoTests`.
+
+## 15. Her glow's second voice (built)
+
+The light grammar's sixth words (docs/proposals/LIGHT-GRAMMAR.md §8). Her glow burns nothing by itself; these change
+that (`PlaneFireflies.cs`, `FireflyTuning`).
+
+- **Fireflies** (`Stat.Fireflies`: Firefly Squid 4, Bubble Gland 3, Anemone Pump 1, each stacking): motes of her light
+  orbiting her at 85% of her glow's reach (at least 1.2 m; at a rock's face where rock is nearer), turning 1.3 radians
+  a second. Each is a tiny lantern, an emitter of hers: what is within 1.6 m of it (in sight) shows, burns at 0.3 of a
+  shot (× her tick rate) and takes her colours. A murkling may drink one as it drinks any light (they are lures): drunk,
+  it goes out for 4 s (`Stat.FireflyReturn`: Anemone Pump halves it). They shine with her beam off and her glow out:
+  dark, they are all the light she has.
+- **Her glow's colour**: what is within 45% of her glow's reach (about 2.5 m, in sight) takes her colours as her beam
+  gives them: an ember glow leaves what brushes it burning, a frost glow chills what lingers by her, bloom and sunfire
+  mark it, lull makes it forget her. Her glow's light is tinted by her colours (her body stays her own gold).
+- **Drawn** (`BeamView`): each firefly a bright twinkling mote of her light in her colours with a little light of its
+  own on the reef; drunk, it fades out, and fades back in when it returns.
+- Firefly Squid's old surge, and Bubble Gland's and Anemone Pump's bubble stats, stay on them for her shots (off in the
+  game) and are not captioned.
+- Tests: `GlowVoiceTests`.

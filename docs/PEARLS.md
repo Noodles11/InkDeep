@@ -9,7 +9,7 @@
 | | Passive | Active | All |
 |---|---|---|---|
 | Pearls | 59 | 13 | 72 |
-| Built | 45 | 5 | 50 |
+| Built | 47 | 5 | 52 |
 
 - **Passive** pearls work on their own from the moment she absorbs one: her stats, her bubbles, or something that
   happens when she is hit or frees a creature. They stack.
@@ -139,7 +139,9 @@ comes to it (the level below is laid out while she plays the one above); a run w
 | Yes | ✅ | **Ghost Jelly** | *Walls are a suggestion* | Her light passes through a wall up to 3 m thick, 50% as strong beyond | ★★ | treasure, secret |  |
 | Yes | ✅ | **Pearl Diver** | *Patience makes pearls* | Held steady, her beam focuses: it narrows and burns up to ×3 over 1.5 s; a swing loses it | ★★★ | treasure, boss |  |
 | Yes |  | **Sunbeam** | *A shaft of the surface, bottled* | Hold to charge a laser beam | ★★★★ | treasure, boss, whale |  |
-| Yes | ✅ | **Firefly Squid** | *Never blinks* | Fire pours out a continuous surge of light instead of shots: 90% of your shots' damage per second to all it touches, clearing a little corruption where it ends. Your other pearls shape it | ★★★★ | treasure, boss |  |
+| Yes | ✅ | **Firefly Squid** | *Never blinks* | Four fireflies of her light orbit her: each reveals, burns a little and carries her colours | ★★★★ | treasure, boss |  |
+| No | ✅ | **Bubble Gland** | *Always one more in reserve* | +3 fireflies of her light round her | ★★ | treasure, shop |  |
+| No | ✅ | **Anemone Pump** | *Squeeze, refill, repeat* | +1 firefly; a firefly a murkling drinks is back in half the time | ★★ | treasure, shop |  |
 | Yes | ✅ | **Double Helix** | *Twice the twist* | Splits the beam into 2 rays, each 62% of the beam; The beam's rays weave across your aim in a double helix | ★★★ | treasure |  |
 | Yes | ✅ | **Triple Tentacle** | *Why squirt once?* | Splits the beam into 3 rays, each 46% of the beam | ★★★ | treasure, boss |  |
 | Yes | ✅ | **Starfish Arm** | *Grows back bigger* | Her beam flares, half as wide again at its tip | ★★ | treasure | big_bubble_energy |

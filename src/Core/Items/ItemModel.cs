@@ -25,6 +25,10 @@ public enum Stat
     ActiveRecharge,
     /// <summary>How long a bubble hovers where it stopped before it pops (a factor on its own 0.8–1.2 s).</summary>
     BubbleHover,
+    /// <summary>Her fireflies: motes of her light orbiting at her glow's edge (PlaneFireflies.cs).</summary>
+    Fireflies,
+    /// <summary>How long a firefly a murkling drank takes to come back (a factor on FireflyTuning.Return).</summary>
+    FireflyReturn,
 }
 
 public enum StatOp { Add, Mult }

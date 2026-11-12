@@ -46,6 +46,8 @@ public sealed class StatBlock
         s[Stat.BubblesPerThrow] = 1f;
         s[Stat.ActiveRecharge] = 1f;
         s[Stat.BubbleHover] = 1f;
+        s[Stat.Fireflies] = 0f;
+        s[Stat.FireflyReturn] = 1f;
         return s;
     }
 
@@ -70,6 +72,8 @@ public sealed class StatBlock
         this[Stat.BubblesPerThrow] = MathF.Round(Math.Clamp(this[Stat.BubblesPerThrow], 1f, 6f));
         this[Stat.ActiveRecharge] = Math.Clamp(this[Stat.ActiveRecharge], 0.25f, 4f);
         this[Stat.BubbleHover] = Math.Clamp(this[Stat.BubbleHover], 0.25f, 4f);
+        this[Stat.Fireflies] = MathF.Round(Math.Clamp(this[Stat.Fireflies], 0f, 16f));
+        this[Stat.FireflyReturn] = Math.Clamp(this[Stat.FireflyReturn], 0.2f, 2f);
     }
 }
 

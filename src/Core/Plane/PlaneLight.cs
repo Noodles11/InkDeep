@@ -489,8 +489,8 @@ public sealed partial class PlaneWorld
     {
         foreach (var (beam, _) in HerBeams)
             if (BeamLight(beam, at, 0f, radius, kin) > 0f) return true;
-        // (Her pools of light too: Linger.)
-        return Pools.Count > 0 && PoolSees(at, radius);
+        // (Her pools of light too: Linger; and her fireflies.)
+        return (Pools.Count > 0 && PoolSees(at, radius)) || (Fireflies.Count > 0 && FireflySees(at, radius));
     }
 
     /// <summary>
@@ -625,6 +625,8 @@ public sealed partial class PlaneWorld
     {
         _ = Aura;
         PlaceAura();
+        // Her fireflies round her (PlaneFireflies.cs).
+        SyncFireflies();
         var beam = Beam;
         var shape = Run.Loadout.Shot;
         beam.Position = Player.Position;

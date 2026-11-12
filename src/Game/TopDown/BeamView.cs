@@ -381,6 +381,56 @@ public partial class BeamView : Node3D
         RenderingServer.GlobalShaderParameterSet(SlotLit[0], anyOn ? new Vector4(her.X, her.Y, her.Z, reach) : new Vector4(0f, -1000f, 0f, 0f));
         DrawArcs(world, color);
         DrawPools(world, dim);
+        DrawFireflies(world, dim);
+    }
+
+    /// <summary>
+    /// Her fireflies (PlaneFireflies.cs): each a bright mote of her light in her colours, with a little light of its own on
+    /// the reef, twinkling; one a murkling drank fades out and back in when it returns.
+    /// </summary>
+    readonly List<(MeshInstance3D Mote, OmniLight3D Light, float Shown)> _flies = new();
+    StandardMaterial3D? _flyMaterial;
+    const float FlyEnergy = 2f, FlyRange = 2.4f, FlySize = 0.17f;
+
+    void DrawFireflies(PlaneWorld world, float dim)
+    {
+        _flyMaterial ??= new StandardMaterial3D
+        {
+            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, VertexColorUseAsAlbedo = false,
+            Transparency = BaseMaterial3D.TransparencyEnum.Alpha, BlendMode = BaseMaterial3D.BlendModeEnum.Add,
+        };
+        var flies = world.Fireflies;
+        while (_flies.Count < flies.Count)
+        {
+            var mote = new MeshInstance3D
+            {
+                Mesh = new SphereMesh { Radius = 1f, Height = 2f, RadialSegments = 10, Rings = 5 }, MaterialOverride = _flyMaterial,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            };
+            var light = new OmniLight3D { OmniRange = FlyRange, OmniAttenuation = 1.3f, ShadowEnabled = false, LightSpecular = 0.3f };
+            AddChild(mote);
+            AddChild(light);
+            _flies.Add((mote, light, 0f));
+        }
+        var tint = world.HerHue == LightHue.None ? OctoShoots.Game.Fx.HerColor.Light : OctoShoots.Game.Fx.LightColour.Of(world.HerHue);
+        _flyMaterial.AlbedoColor = tint.Lerp(Colors.White, 0.35f);
+        for (int i = 0; i < _flies.Count; i++)
+        {
+            var (mote, light, shown) = _flies[i];
+            bool on = i < flies.Count && flies[i].Lit && !world.Defeated;
+            shown = Mathf.MoveToward(shown, on ? 1f : 0f, (float)GetProcessDeltaTime() * (on ? 2.5f : 6f));
+            _flies[i] = (mote, light, shown);
+            mote.Visible = light.Visible = shown > 0.01f && i < flies.Count;
+            if (!mote.Visible) continue;
+            var p = flies[i].Emitter.Position;
+            float twinkle = 0.75f + 0.25f * Mathf.Sin(_time * 7.3f + i * 2.1f);
+            var at = new Vector3(p.X, LevelMap.SwimBand + 0.35f + 0.12f * Mathf.Sin(_time * 2.4f + i), p.Y);
+            mote.Position = at;
+            mote.Scale = Vector3.One * FlySize * (0.6f + 0.4f * shown) * twinkle;
+            light.Position = at;
+            light.LightColor = tint;
+            light.LightEnergy = FlyEnergy * dim * shown * twinkle;
+        }
     }
 
     /// <summary>
