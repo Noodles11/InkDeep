@@ -26,6 +26,8 @@ public partial class BeamView : Node3D
 {
     /// <summary>The spotlight's strength and how far down it tilts.</summary>
     const float SpotEnergy = 3.2f, SpotTilt = 0.35f;
+    /// <summary>How long a beam takes to shoot out of her bell to its full reach as it comes on (s).</summary>
+    const float ExtendTime = 0.14f;
 
     sealed class Fan
     {
@@ -37,6 +39,8 @@ public partial class BeamView : Node3D
         /// <summary>The half-angle its hull was laid out for.</summary>
         public float HullHalf = -1f;
         public float On;
+        /// <summary>How far out of her bell it has shot since it came on (0..1, eased out: Extend).</summary>
+        public float Out;
         public StringName Lit = null!, Dir = null!;
     }
 
@@ -269,6 +273,9 @@ public partial class BeamView : Node3D
             i++;
             bool on = beam.Shining;
             fan.On = Mathf.MoveToward(fan.On, on ? 1f : 0f, dt * (on ? 10f : 5f));
+            // (Coming on, it shoots out of her bell to its reach; going off, it fades where it is.)
+            if (on) fan.Out = Mathf.MoveToward(fan.Out, 1f, dt / ExtendTime);
+            else if (fan.On <= 0.001f) fan.Out = 0f;
             fan.Volume.Visible = fan.On > 0.001f;
             if (main) _spot.Visible = fan.Volume.Visible;
             if (!fan.Volume.Visible)
@@ -291,6 +298,14 @@ public partial class BeamView : Node3D
             // Where its light gets to, in three dimensions; its hull to march through. A born ray ends at the rock.
             if (born is not null) range = Mathf.Min(range, longest + 0.4f);
             range = Mathf.Max(range, 0.1f);
+            // Shooting out of her bell as it comes on: drawn out only as far as it has got yet.
+            if (fan.Out < 1f)
+            {
+                float got = 1f - Mathf.Pow(1f - fan.Out, 3f);
+                float stopAt = stop * Mathf.Max(beam.Range, 0.1f);
+                range = Mathf.Max(range * got, 0.1f);
+                stop = Mathf.Clamp(Mathf.Min(stopAt, range) / range, 0.02f, 1f);
+            }
             // (Its widest, at its reach: a flaring beam's trumpet mouth. PlaneOpenPaths.cs.)
             float widest = beam.HalfAngle * (1f + beam.Flare);
             if (born is null) fan.Shadow.Cast(world, beam.Position, origin.Y, beam.Direction, widest, range);
