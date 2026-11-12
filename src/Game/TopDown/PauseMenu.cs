@@ -44,8 +44,8 @@ public partial class PauseMenu : Control
     /// <summary>The stat sheet's name for each modifier (its values are read from there).</summary>
     static readonly Dictionary<Stat, string> SheetName = new()
     {
-        [Stat.MaxHp] = "Max HP", [Stat.Damage] = "Damage per shot", [Stat.FireRate] = "Beam tick rate", [Stat.ShotSpeed] = "Beam carry",
-        [Stat.Range] = "Range", [Stat.ShotSize] = "Shot size", [Stat.Speed] = "Swim speed", [Stat.DashCooldown] = "Dash cooldown", [Stat.Glow] = "Glow",
+        [Stat.MaxHp] = "Max HP", [Stat.Damage] = "Damage", [Stat.FireRate] = "Beam tick rate", [Stat.ShotSpeed] = "Beam carry",
+        [Stat.Range] = "Beam reach", [Stat.ShotSize] = "Beam width", [Stat.Speed] = "Swim speed", [Stat.DashCooldown] = "Dash cooldown", [Stat.Glow] = "Glow",
     };
 
     PanelContainer _panel = null!;
@@ -249,6 +249,18 @@ public partial class PauseMenu : Control
     void FillStats(PlaneRun run)
     {
         Empty(_stats);
+        // Her light in words first (the sentence: PlaneStatSheet.Words), then her stats.
+        foreach (var (kind, words) in PlaneStatSheet.Words(run))
+        {
+            var k = new Label { Text = kind, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+            k.AddThemeColorOverride("font_color", Gold);
+            _stats.AddChild(k);
+            var w = new Label { Text = words, SizeFlagsHorizontal = SizeFlags.ExpandFill, AutowrapMode = TextServer.AutowrapMode.WordSmart };
+            w.AddThemeColorOverride("font_color", new Color(1f, 0.95f, 0.88f));
+            _stats.AddChild(w);
+        }
+        _stats.AddChild(new Control { CustomMinimumSize = new Vector2(0f, 10f) });
+        _stats.AddChild(new Control());
         foreach (var line in PlaneStatSheet.Of(run))
         {
             var name = new Label { Text = line.Name, SizeFlagsHorizontal = SizeFlags.ExpandFill };
@@ -257,9 +269,9 @@ public partial class PauseMenu : Control
             bool better = line.LowerIsBetter ? line.Change < 0f : line.Change > 0f;
             string change = MathF.Abs(line.Change) < 0.005f ? "" : $"  ({(line.Change > 0f ? "+" : "−")}{MathF.Abs(line.Change) * 100f:0}%)";
             // Counts (luck, shots per throw, mending) change by a number, not a share.
-            if (line.Name is "Luck" or "Shots per throw" or "Mending" or "Critical hits") change = "";
+            if (line.Name is "Luck" or "Mending" or "Critical hits") change = "";
             var value = new Label { Text = line.Value + change, SizeFlagsHorizontal = SizeFlags.ExpandFill };
-            value.AddThemeColorOverride("font_color", MathF.Abs(line.Change) < 0.005f ? new Color(1f, 0.95f, 0.88f) : better ? new Color(0.55f, 0.95f, 0.65f) : new Color(1f, 0.55f, 0.5f));
+            value.AddThemeColorOverride("font_color", MathF.Abs(line.Change) < 0.005f || line.Neutral ? new Color(1f, 0.95f, 0.88f) : better ? new Color(0.55f, 0.95f, 0.65f) : new Color(1f, 0.55f, 0.5f));
             _stats.AddChild(value);
         }
     }

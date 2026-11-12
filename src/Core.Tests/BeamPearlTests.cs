@@ -134,24 +134,6 @@ public class BeamPearlTests
     }
 
     [Fact]
-    public void Siren_Song_charms_and_Stingray_Barb_slows()
-    {
-        var w = World("siren_song", "siren_song", "siren_song", "stingray_barb", "stingray_barb", "stingray_barb");
-        var d = Line(w, 6f);
-        var at = w.Map.Start.Position + d * 4f;
-        var m = Pinned(w, at, 10000f);
-        bool charmed = false, slowed = false;
-        for (int i = 0; i < 20 * PlaneWorld.TickRate && !(charmed && slowed); i++)
-        {
-            Step(w, d, true, (m, at));
-            charmed |= w.Charmed(m);
-            slowed |= w.Slowed(m);
-        }
-        Assert.True(charmed);
-        Assert.True(slowed);
-    }
-
-    [Fact]
     public void The_Anglerfish_Lure_makes_a_hanging_shot_a_decoy_brighter_than_her()
     {
         var w = World("anglerfish_lure");

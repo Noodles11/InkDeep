@@ -203,4 +203,40 @@ public class GreatLightTests
             else Assert.Equal(100000f, back.Corruption.Value, 1);
         }
     }
+
+    [Fact]
+    public void The_pause_menu_reads_her_light_back_in_words_and_her_beam_as_it_plays()
+    {
+        var w = World("sunbeam", "nautilus_spiral", "mirror_scale", "fire_coral", "frost_kelp", "pearl_diver", "whale_lung");
+        Step(w, Vector2.UnitX, true);
+        var words = PlaneStatSheet.Words(w.Run).ToDictionary(x => x.Kind, x => x.Words);
+        Assert.Contains("lance", words["Shape"]);
+        Assert.Contains("a second lance turning round her", words["Shape"]);
+        Assert.Equal("bounce", words["Paths"]);
+        Assert.Equal("ember + frost (shatter)", words["Colour"]);
+        Assert.Equal("focus", words["Rhythm"]);
+        Assert.Contains("Lighthouse", words["Named"]);
+        Assert.Contains("Shatter", words["Named"]);
+        Assert.False(words.ContainsKey("Echo"));
+        Assert.Equal(w.Beam.Range, PlaneStatSheet.BeamReach(w.Run), 2);
+        Assert.Equal(w.Beam.HalfAngle / w.FocusWidth * 2f * 180f / MathF.PI, PlaneStatSheet.BeamWidthDeg(w.Run), 1);
+        Assert.Equal("one beam", PlaneStatSheet.Words(World().Run).Single().Words);
+    }
+
+    [Fact]
+    public void Molten_Carapace_under_half_health_burns_hotter_and_runs_on_through_creatures()
+    {
+        foreach (bool low in new[] { false, true })
+        {
+            var w = World("molten_carapace");
+            w.Player.Hp = low ? w.Run.MaxHp * 0.4f : w.Run.MaxHp;
+            var d = Line(w, 7f);
+            var her = w.Map.Start.Position;
+            var front = Pinned(w, her + d * 2.5f);
+            var back = Pinned(w, her + d * 5f);
+            for (int i = 0; i < PlaneWorld.TickRate / 2; i++) Step(w, d, true, (front, her + d * 2.5f), (back, her + d * 5f));
+            if (low) Assert.True(back.Corruption.Value < 100000f, "her light runs on through the front one");
+            else Assert.Equal(100000f, back.Corruption.Value, 1);
+        }
+    }
 }

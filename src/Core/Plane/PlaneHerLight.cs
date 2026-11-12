@@ -124,7 +124,8 @@ public sealed partial class PlaneWorld
         }
         foreach (var s in Shots)
             if (s.FromPlayer && !s.BossPearl && s.Life > 0f) _lights.Add(s);
-        float burn = HerLightTuning.Burn * DamageScale * Dt;
+        // (Molten Carapace: under half health her light burns the hotter, and runs on through bodies: GatherBodies.)
+        float burn = HerLightTuning.Burn * DamageScale * (Molten ? CrabTuning.Molten : 1f) * Dt;
         for (int i = 0; i < Murklings.Count; i++)
         {
             var m = Murklings[i];

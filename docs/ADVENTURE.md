@@ -233,8 +233,7 @@ what burn the corrupted. Caves are dark. The sim is in `src/Core/Plane/PlaneHerL
   - Electric Eel Tail arcs what her beam burns on to the 2 nearest corrupted within 4 m (in sight), burning them at
     half the beam's rate; the view draws the arcs;
   - her chance pearls roll once for each whole second her beam keeps burning a creature: Frost Kelp holds it still
-    1.6 s, Fire Coral (3 s) and Sea Nettle (4 s) leave it burning on as one shot once out of her light, Stingray Barb
-    slows it to half pace 2 s, Siren Song charms it 3 s (it does not see her light), Giant Squid Eye burns it × 3 for
+    1.6 s, Fire Coral (3 s) leaves it burning on as one shot once out of her light, Giant Squid Eye burns it × 3 for
     a second;
   - the Anglerfish Lure makes a shot of hers left hanging 2.5 × as bright: a decoy the murklings go for.
 - **Her beams on a boss** (`PlaneBossLight.cs`, `BossLightTuning`; `BossLightTests`): they burn its pearl while it

@@ -6,8 +6,9 @@ namespace OctoShoots.Core.Items;
 
 /// <summary>
 /// How a pearl looks follows what it does (docs/PEARLS.md, "Reading a pearl"): every effect it has stands for a colour
-/// (damage red, fire rate orange, shot speed blue, range cyan, more or bigger shots violet, health green, mobility white,
-/// luck and shells gold, finding the way tan, glow pale lemon, knockback bronze, defence silver, each status its own),
+/// (damage red, her beam's shape violet, its paths cyan, its rhythms and tick rate orange, its echoes amber, carry blue,
+/// health green, mobility white, luck and shells gold, finding the way tan, glow pale lemon, knockback bronze, defence
+/// silver, each colour of her light and each status its own),
 /// weighted by how strong it is; the strongest is the pearl's middle colour (its light), the next ones blend in beside it.
 /// What kind of effect weighs most picks the icon engraved on it: an arrow a stat up, three dots in a chevron a change to
 /// her shots, a shield defence, a nautilus shell luck, shells and maps, a feather mobility, a swirl a status, a five-armed
@@ -18,7 +19,7 @@ public static class PearlKey
     public const string Damage = "#e63946", FireRate = "#ff9f1c", ShotSpeed = "#3a6ff7", Range = "#3fd0e8",
         MoreShots = "#8a5cf6", Health = "#52d273", Mobility = "#f4f6f8", Luck = "#ffc93c", Wayfinding = "#d4a373",
         Glow = "#fff59d", Knockback = "#b07040", Defence = "#a9b8c9", Freeze = "#c6f1ff", Burn = "#ff4d00",
-        Poison = "#b5e61d", Charm = "#ff6fb5", Slow = "#8e7cc3", Recharge = "#d9c2ff";
+        Poison = "#b5e61d", Charm = "#ff6fb5", Slow = "#8e7cc3", Recharge = "#d9c2ff", Echo = "#f0a830";
 
     /// <summary>One thing a pearl does: its colour, its family (the icon it stands for) and how much it weighs.</summary>
     public readonly record struct Part(string Color, PearlIcon Family, float Weight);
@@ -68,13 +69,15 @@ public static class PearlKey
         if (item.Shot is { } s)
         {
             const PearlIcon Shots = PearlIcon.Chevron, Status = PearlIcon.Swirl;
+            // The light grammar's words (PearlWords): her beam's shape violet, its paths cyan, its rhythms orange, its echoes amber.
             if (s.Multishot > 1) Add(MoreShots, Shots, (s.Multishot - 1) / 2f + 0.5f);
-            if (s.Split || s.Wave || s.Rear || s.Grow) Add(MoreShots, Shots);
+            if (s.Wave || s.Rear || s.Laser || s.Spiral || s.Pattern == ShotPattern.Kraken8) Add(MoreShots, Shots, 1.5f);
             if (s.SizeMult > 1f) Add(MoreShots, PearlIcon.Arrow, MathF.Log(s.SizeMult) / MathF.Log(1.3f));
             if (s.DamageMult > 1f) Add(Damage, PearlIcon.Arrow, MathF.Log(s.DamageMult) / MathF.Log(1.3f));
-            if (s.Explosive || s.Charge || s.Laser || s.ChainTargets > 0 || s.CritChance > 0f) Add(Damage, Shots);
-            if (s.Pierce || s.Spectral || s.Bounces > 0) Add(Range, Shots);
-            if (s.Homing || s.Boomerang || s.Spiral) Add(ShotSpeed, Shots);
+            if (s.Split || s.Grow || s.Pierce || s.Spectral || s.Bounces > 0 || s.Homing || s.Boomerang || s.ChainTargets > 0) Add(Range, Shots, 1.5f);
+            if (s.Charge) Add(FireRate, Shots, 1.5f);
+            if (s.Explosive) Add(Echo, Shots, 1.5f);
+            if (s.CritChance > 0f) Add(Damage, Shots);
             // Her light's colours: each pearl its colour.
             if (s.Ember > 0) Add(Burn, Status, 2f);
             if (s.Bloom > 0) Add(Health, Status, 2f);
@@ -88,20 +91,23 @@ public static class PearlKey
         foreach (var e in item.Effects)
             switch (e.Action)
             {
+                // (Freed light: Lamprey Mouth's gather is an echo, as are Fire Urchin Spine's shards.)
+                case EffectAction.Heal when e.Trigger == Trigger.OnKill: Add(Echo, PearlIcon.Chevron, 1.5f); break;
                 case EffectAction.Heal: Add(Health, PearlIcon.Arrow); break;
                 case EffectAction.Foam: Add(Defence, PearlIcon.Shield); break;
                 case EffectAction.Coins: Add(Luck, PearlIcon.Nautilus); break;
-                case EffectAction.Bombs or EffectAction.Shards: Add(Damage, PearlIcon.Chevron); break;
+                case EffectAction.Shards: Add(Echo, PearlIcon.Chevron, 1.5f); break;
+                case EffectAction.Bombs: Add(Damage, PearlIcon.Chevron); break;
                 case EffectAction.Frenzy: Add(FireRate, PearlIcon.Arrow); break;
             }
         foreach (string f in item.Flags)
             switch (f)
             {
-                case "minigun" or "surge": Add(FireRate, PearlIcon.Chevron, 1.5f); break;
-                case "cavitation": Add(Damage, PearlIcon.Chevron); break;
+                case "minigun": Add(FireRate, PearlIcon.Chevron, 1.5f); break;
+                case "cavitation": Add(FireRate, PearlIcon.Chevron, 1.5f); break;
                 case "magnet" or "richCaches" or "richDrops": Add(Luck, PearlIcon.Nautilus); break;
                 case "landmarks" or "minimap": Add(Wayfinding, PearlIcon.Nautilus); break;
-                case "mergeBubbles" or "linger": Add(MoreShots, PearlIcon.Chevron); break;
+                case "linger": Add(Range, PearlIcon.Chevron, 1.5f); break;
                 case "severedNerve" or "moltenCarapace" or "clawTithe": Add(Damage, PearlIcon.Chevron, 1.5f); break;
                 case "lastLight": Add(Defence, PearlIcon.Shield, 1.5f); break;
                 case "blackSun": Add(Damage, PearlIcon.Chevron, 1.5f); break;

@@ -47,7 +47,19 @@ public partial class SeaPediaCard : PanelContainer
         _close = close;
     }
 
-    public static int PearlsFound(Profile p) => PlaneRun.PortedPearls.Count(id => p.SeenItems.Contains(id));
+    /// <summary>
+    /// Every pearl in play (the reef's and the crab's), by its kind in her light's grammar (PearlWords: shapes, paths,
+    /// colours, rhythms, echoes, glow, stats, actives, the crab's), in the catalogue's order within each.
+    /// </summary>
+    public static IReadOnlyList<string> PearlsInPlay(ItemCatalog? catalog)
+    {
+        var all = PlaneRun.PortedPearls.Concat(PlaneRun.CrabPearls).ToList();
+        if (catalog is null) return all;
+        return all.Select((id, i) => (id, i, kind: catalog.TryGet(id, out var item) ? PearlWords.Kind(item) : PearlKind.Stat))
+            .OrderBy(x => x.kind).ThenBy(x => x.i).Select(x => x.id).ToList();
+    }
+
+    public static int PearlsFound(Profile p) => PlaneRun.PortedPearls.Concat(PlaneRun.CrabPearls).Count(id => p.SeenItems.Contains(id));
     public static int CreaturesMet(Profile p) => Creatures.Keys.Count(id => p.SeenCreatures.Contains(id) || p.SeenBosses.Contains(id));
 
     public override void _Ready()
@@ -70,7 +82,7 @@ public partial class SeaPediaCard : PanelContainer
         var tabs = new HBoxContainer();
         tabs.AddThemeConstantOverride("separation", 10);
         box.AddChild(tabs);
-        _pearlTab = DrawerStyle.Button($"Pearls  {PearlsFound(_profile)} / {PlaneRun.PortedPearls.Length}", 16);
+        _pearlTab = DrawerStyle.Button($"Pearls  {PearlsFound(_profile)} / {PlaneRun.PortedPearls.Length + PlaneRun.CrabPearls.Length}", 16);
         _creatureTab = DrawerStyle.Button($"Creatures  {CreaturesMet(_profile)} / {Creatures.Count}", 16);
         _pearlTab.Pressed += () => ShowTab(true);
         _creatureTab.Pressed += () => ShowTab(false);
@@ -114,7 +126,7 @@ public partial class SeaPediaCard : PanelContainer
         Button? first = null;
         if (pearls)
         {
-            foreach (string id in PlaneRun.PortedPearls)
+            foreach (string id in PearlsInPlay(_catalog))
             {
                 var tile = PearlTile(id);
                 _grid.AddChild(tile);
@@ -220,14 +232,16 @@ public partial class SeaPediaCard : PanelContainer
         if (state == Known.Unknown || item is null)
         {
             names.AddChild(TitleStyle.Text("Not found yet", 28, DrawerStyle.Text, TitleStyle.Display));
-            names.AddChild(Wrapped("Find it in a clam room, a shop, or on a freed boss.", 15, DrawerStyle.Soft, width: 230f));
+            names.AddChild(Wrapped(PlaneRun.CrabPearls.Contains(id) ? "Only the crab trades it, in a Crab Deal." : "Find it in a clam room, a shop, or on a freed boss.", 15, DrawerStyle.Soft, width: 230f));
             return;
         }
         names.AddChild(TitleStyle.Text(item.Name, 30, DrawerStyle.Text, TitleStyle.Display));
         names.AddChild(Wrapped(item.Tagline, 16, DrawerStyle.Soft, width: 230f));
+        // Its kind in her light's grammar (PearlWords).
+        names.AddChild(Chip(PearlWords.Name(PearlWords.Kind(item)).ToUpperInvariant(), DrawerStyle.Gold, DrawerStyle.OnGold));
         if (state == Known.Seen) names.AddChild(Chip("SEEN, NOT TAKEN", DrawerStyle.TileHover, DrawerStyle.Soft));
         foreach (string line in ItemCaption.Describe(item)) _detail.AddChild(Wrapped("+ " + line, 16, DrawerStyle.Text, TitleStyle.BodyBold));
-        _detail.AddChild(Wrapped("Found in: " + string.Join(", ", item.Pools.Select(p => p switch { "treasure" => "clam rooms", "shop" => "shops", "boss" => "bosses", _ => p })), 14, DrawerStyle.Soft));
+        _detail.AddChild(Wrapped("Found in: " + (PlaneRun.StartingPearls.Contains(id) ? "every run's start" : string.Join(", ", item.Pools.Select(PearlWords.Pool))), 14, DrawerStyle.Soft));
         _detail.AddChild(new HSeparator());
         var r = _profile.Pearls.GetValueOrDefault(id) ?? new PearlRecord();
         _detail.AddChild(Record(("Absorbed", r.Absorbed.ToString("N0")), ("Runs it was in", r.Runs.ToString("N0")),

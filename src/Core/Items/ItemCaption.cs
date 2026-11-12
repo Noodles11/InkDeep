@@ -56,13 +56,13 @@ public static class ItemCaption
         Stat.Damage => "damage",
         Stat.FireRate => "beam tick rate",
         Stat.ShotSpeed => "beam carry",
-        Stat.Range => "range",
+        Stat.Range => "beam reach",
         Stat.Speed => "swim speed",
         Stat.Luck => "luck",
-        Stat.ShotSize => "shot size",
+        Stat.ShotSize => "beam width",
         Stat.Sink => "idle sink",
         Stat.DashCooldown => "dash cooldown",
-        Stat.Glow => "glow radius",
+        Stat.Glow => "reach of her glow and her beam",
         Stat.EnemyShotSpeed => "enemy shot speed",
         Stat.Knockback => "light pressure",
         Stat.Regen => "HP mended per second",
@@ -76,8 +76,20 @@ public static class ItemCaption
         _ => s.ToString(),
     };
 
+    /// <summary>Stats that act on her light by their square root (her beam's reach and width, her glow's reach).</summary>
+    static bool Rooted(Stat s) => s is Stat.Range or Stat.ShotSize or Stat.Glow;
+
     static string StatLine(StatMod m)
     {
+        // Her beam's reach and width and her glow's reach grow by the square root of the stat: the line reads what it
+        // does to her light (×1.3 shot size is +14% beam width).
+        if (m.Stat == Stat.Fireflies && m.Op != StatOp.Mult && System.MathF.Abs(m.Value - 1f) < 0.01f) return "+1 firefly of her light round her (it reveals, burns a little and carries her colours)";
+        if (Rooted(m.Stat))
+        {
+            float b0 = Baseline[m.Stat];
+            float factor = m.Op == StatOp.Mult ? m.Value : b0 > 0f ? 1f + m.Value / b0 : 1f;
+            return $"{SignedPct(System.MathF.Sqrt(System.MathF.Max(factor, 0f)) - 1f)} {StatName(m.Stat)}";
+        }
         if (m.Op == StatOp.Mult)
         {
             if (m.Stat == Stat.Sink && m.Value == 0f) return "No idle sinking";
@@ -96,22 +108,22 @@ public static class ItemCaption
             lines.Add(s.Pattern switch
             {
                 ShotPattern.Cone => $"Opens the beam into a {s.Multishot}-ray floodlight, each {Pct(PlaneCombatTuning.VolleyShot(s.Multishot))} of the beam",
-                ShotPattern.Kraken8 => "Short beams shine all round you, 8 ways",
+                ShotPattern.Kraken8 => "Seven short rays shine all round her beside her beam",
                 _ => $"Splits the beam into {s.Multishot} rays, each {Pct(PlaneCombatTuning.VolleyShot(s.Multishot))} of the beam",
             });
         }
         else if (s.Pattern == ShotPattern.Kraken8)
         {
-            lines.Add("Short beams shine all round you, 8 ways");
+            lines.Add("Seven short rays shine all round her beside her beam");
         }
         if (s.Homing) lines.Add($"Her beam leans toward the nearest creature near it, up to {N(OpenPathTuning.LeanDeg)}° off her aim");
-        if (s.Pierce) lines.Add("Shots pierce foes (each foe hit once)");
+        if (s.Pierce) lines.Add("Her light runs on through creatures: their bodies stop none of it and cast no shadow");
         // Her light's paths on rock (PlanePaths.cs).
         if (s.Spectral) lines.Add($"Her light passes through a wall up to {N(PathTuning.GhostThick)} m thick, {Pct(PathTuning.Ghost)} as strong beyond");
         if (s.Bounces > 0) lines.Add(s.Bounces == 1 ? $"Her light bounces off rock ({Pct(PathTuning.Bounce)} of it)" : $"Her light bounces off rock {s.Bounces}× ({Pct(PathTuning.Bounce)} of it each time)");
         if (s.Split) lines.Add($"Where her light lands on rock it forks in two ({N(PathTuning.ForkDeg * 2)}° apart, {Pct(PathTuning.Fork)} of it each)");
         if (s.Boomerang) lines.Add($"Her light that lands on rock comes back along its way ({Pct(PathTuning.Return)} of it): what stands in it is lit from both sides");
-        if (s.Wave) lines.Add("The beam's rays weave across your aim in a double helix");
+        if (s.Wave) lines.Add("The beam's rays weave across her aim in a double helix");
         if (s.Spiral) lines.Add($"A fainter beam turns slowly round her, always ({Pct(GreatLightTuning.OrbitIntensity)} as bright, {Pct(GreatLightTuning.OrbitReach)} as long)");
         if (s.Grow) lines.Add($"Her beam flares, widening along its length: {Pct(OpenPathTuning.FlareWide)} wider again at its tip");
         if (s.Explosive) lines.Add($"What her light frees flares: a ring of her light {N(EchoTuning.FlareReach)} m wide that burns and clears ink, in her colours");
@@ -127,9 +139,9 @@ public static class ItemCaption
         if (s.PoisonChance > 0) lines.Add($"{Pct(s.PoisonChance)} chance to poison foes for {N(StatusRules.PoisonTime)}s");
         if (s.CharmChance > 0) lines.Add($"{Pct(s.CharmChance)} chance to charm foes for {N(StatusRules.CharmTime)}s");
         if (s.SlowChance > 0) lines.Add($"{Pct(s.SlowChance)} chance to slow foes for {N(StatusRules.SlowTime)}s");
-        if (s.CritChance > 0) lines.Add($"{Pct(s.CritChance)} chance of a ×{N(s.CritMult)} critical hit");
-        if (s.SizeMult != 1f) lines.Add($"{SignedPct(s.SizeMult - 1f)} shot size");
-        if (s.DamageMult != 1f) lines.Add($"{SignedPct(s.DamageMult - 1f)} damage per shot");
+        if (s.CritChance > 0) lines.Add(s.CritMult > 1f ? $"{Pct(s.CritChance)} chance of a ×{N(s.CritMult)} critical hit" : $"+{Pct(s.CritChance)} chance of a critical hit");
+        if (s.SizeMult != 1f) lines.Add($"{SignedPct(s.SizeMult - 1f)} beam width");
+        if (s.DamageMult != 1f) lines.Add($"{SignedPct(s.DamageMult - 1f)} burn of each ray");
     }
 
     static string EffectLine(TriggerEffect e)
@@ -163,19 +175,19 @@ public static class ItemCaption
 
     static string FlagLine(string flag) => flag switch
     {
-        "magnet" => $"Pulls pickups and freed murklings' light toward you from {N(PlaneEconomyTuning.RemoraMagnet)} m (not {N(PlaneEconomyTuning.ShellMagnet)} m)",
+        "magnet" => $"Pulls pickups and freed murklings' light toward her from {N(PlaneEconomyTuning.RemoraMagnet)} m (not {N(PlaneEconomyTuning.ShellMagnet)} m)",
         "minigun" => $"Held without a break, her beam spins up: ×{N(RhythmTuning.SpinBurn)} burn after {N(RhythmTuning.SpinTime)} s",
         "cavitation" => $"Held on a creature, her beam snaps every {N(RhythmTuning.SnapEvery)} s: a burst of light {N(RhythmTuning.SnapReach)} m wide that pushes it back",
         "linger" => $"Where her beam ends, a pool of her light stays {N(OpenPathTuning.PoolLife)} s and goes on burning: swept, it paints a trail",
         "mergeBubbles" => $"Her light lingers at the end of its range; shots that touch merge into one, adding their damage (+{Pct(PlaneCombatTuning.BubbleGrowth)} size for each)",
-        "severedNerve" => "A severed strand circles you, stinging as your arm does",
-        "moltenCarapace" => "Under half health your shots pierce and do 60% more",
-        "lastLight" => "Once a level, a killing blow leaves you at 1 HP in a flood of light",
+        "severedNerve" => "A severed strand circles her, stinging as her arm does",
+        "moltenCarapace" => $"Under half health her light burns {SignedPct(CrabTuning.Molten - 1f)} and runs on through creatures",
+        "lastLight" => "Once a level, a killing blow leaves her at 1 HP in a flood of light",
         "clawTithe" => "Each cut the crab has taken adds 25% damage",
         "blackSun" => "The shadow a creature casts down her beam burns what stands in it, as hard as her light would have",
         "surge" => $"Fire pours out a continuous surge of light instead of shots: {Pct(SurgeTuning.Dps)} of your shots' damage per second to all it touches, clearing a little corruption where it ends. Your other pearls shape it",
-        "landmarks" => "Every place shows on the maps before you reach it (secret rooms stay hidden)",
-        "minimap" => "Shows the minimap: the reef round you, top right",
+        "landmarks" => "Every place shows on the maps before she reaches it (secret rooms stay hidden)",
+        "minimap" => "Shows the minimap: the reef round her, top right",
         "inkTrail" => "Leaves an ink trail",
         "colorCycle" => "Shots cycle through neon colours",
         "richDrops" => "Foes drop more sand dollars",
@@ -187,6 +199,17 @@ public static class ItemCaption
     {
         ActiveAction.PushWave => $"Three waves push everything loose {N(a.Radius)} m away from her; recharges in {N(a.Recharge)}s",
         ActiveAction.GlowBurst => $"For {N(a.Duration)} s her beam beats, burning ×{N(a.Value)} on each beat; recharges in {N(a.Recharge)}s",
+        ActiveAction.Prism => $"Splits her into three smaller Clementines, red, green and blue, for {N(a.Duration)} s, each shining in its colour; recharges in {N(a.Recharge)}s",
+        ActiveAction.ConchHorn => $"Every murkling within {N(a.Radius)} m is shaken loose, knocked away and stunned for {N(a.Duration)} s; recharges in {N(a.Recharge)}s",
+        ActiveAction.BubbleShield => $"An untouchable bubble round her for {N(a.Duration)} s; recharges in {N(a.Recharge)}s",
+        ActiveAction.InkCloud => $"An ink cloud ({N(a.Radius)} m) where she is, and for {N(a.Duration)} s the Leak's creatures lose her; recharges in {N(a.Recharge)}s",
+        ActiveAction.WhaleSong => $"Heals {N(a.Value)} HP; recharges in {N(a.Recharge)}s",
+        ActiveAction.TidalWave => $"A wave that pushes and hurts everything ahead ({N(a.Value)}, {N(a.Radius)} m); recharges in {N(a.Recharge)}s",
+        ActiveAction.TreasureMap => $"Reveals the level, secrets included; recharges in {N(a.Recharge)}s",
+        ActiveAction.MimicClam => $"Rerolls the pearls on offer in the room; recharges in {N(a.Recharge)}s",
+        ActiveAction.SeaDice => $"Rerolls the pickups nearby; recharges in {N(a.Recharge)}s",
+        ActiveAction.KrakenCall => $"A great tentacle strikes the creatures about her ({N(a.Value)}); recharges in {N(a.Recharge)}s",
+        ActiveAction.AnchorDrop => $"Opens a way straight down to the next level; recharges in {N(a.Recharge)}s",
         _ => $"Recharges in {N(a.Recharge)}s",
     };
 }

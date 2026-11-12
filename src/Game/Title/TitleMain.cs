@@ -658,7 +658,7 @@ public partial class TitleMain : Node3D
         var p = save.Profile;
         Item("reef").Detail.Text = save.Jellies.Count > 0 ? $"{save.Jellies.Count} of {JellyNames.MaxJellies} jellies" : "make your jelly";
         Item("seeded").Detail.Text = p.RecentSeeds.Count > 0 ? $"last: {p.RecentSeeds[0]}" : "type a seed to share a reef";
-        Item("pedia").Detail.Text = $"{SeaPediaCard.PearlsFound(p)} / {PlaneRun.PortedPearls.Length} pearls · {SeaPediaCard.CreaturesMet(p)} / {SeaPediaCard.Creatures.Count} creatures";
+        Item("pedia").Detail.Text = $"{SeaPediaCard.PearlsFound(p)} / {PlaneRun.PortedPearls.Length + PlaneRun.CrabPearls.Length} pearls · {SeaPediaCard.CreaturesMet(p)} / {SeaPediaCard.Creatures.Count} creatures";
         Item("stats").Detail.Text = p.Stats.Runs > 0 ? $"best: {StatsCard.Reach(p.Stats)} · {p.Stats.Runs} runs" : "no runs yet";
         Item("save").Detail.Text = save.Run is { } r ? $"saved run: {r.Where}" : "no saved run";
     }

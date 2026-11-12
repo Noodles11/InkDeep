@@ -457,7 +457,7 @@ public sealed partial class PlaneWorld
     void GatherBodies()
     {
         _bodies.Clear();
-        if (Run.Loadout.Shot.Pierce) return;
+        if (Run.Loadout.Shot.Pierce || Molten) return;
         foreach (var m in Murklings)
             if (m.Alive && !m.Budding && !m.Clinging) _bodies.Add((m, m.Position, m.Body));
         foreach (var w in Inkwardens)

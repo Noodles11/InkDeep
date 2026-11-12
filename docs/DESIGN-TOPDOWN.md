@@ -126,7 +126,7 @@ What changes is the protagonist's skin:
   bell**, orbiting slowly round her oral arms — visible diegetic ammo. Base
   8; they **regrow** one per 0.35 s starting 0.6 s after the last shot (inherited
   timings, DESIGN-3D §4.1). Items modify capacity/regrowth/multithrow exactly as
-  in the 3D doc (Bubble Gland, Anemone Pump, Twin Siphon).
+  in the 3D doc (Bubble Gland, Anemone Pump).
 - Bubbles are slow, physical, iridescent-rimmed orbs; they pop at end of range
   (9.75 m base); they inherit 30% of Clementine's velocity (inherited Isaac rule).
 - **Mouse aim with aim assist** inherited (DESIGN-3D §4.2 tiers: Off/Low/Medium/
@@ -1469,9 +1469,7 @@ at mist distance (inherited fade rule).
       once, not on top of each other), each 60% of a shot's damage over 1.8 m plus its width;
     - **Pearl Diver:** held, it focuses over 1 s, to 55% of its width and ×2 damage; **Sardine Run:** it spins up over
       1.2 s to strike up to ×4 as fast.
-    The synergies Supernova (Starburst Gland), Lance of Light (Swordfish Bill), Helix Lamp (Double Helix) and
-    Searchlight (Hammerhead) announce the most striking of these. Bubble Coral and Pistol Shrimp Claw do nothing to
-    it.
+    Bubble Coral and Pistol Shrimp Claw do nothing to it.
   - **Lantern Pearl:** her glow (its light) reaches ×1.8 as far and shines brighter, and she reveals the minimap's fog
     ×1.4 as far around her.
   - **Active pearls (F):** she holds one at a time (the last taken; a new one comes charged). Used, it empties and

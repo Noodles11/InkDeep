@@ -17,8 +17,8 @@ public class ItemTests
     [Fact]
     public void CatalogLoadsTheFullSet()
     {
-        Assert.Equal(77, Catalog.Items.Count);
-        Assert.Equal(26, Catalog.Synergies.Count);
+        Assert.Equal(73, Catalog.Items.Count);
+        Assert.Equal(14, Catalog.Synergies.Count);
         Assert.Equal(5, Catalog.Transformations.Count);
         Assert.Equal(13, Catalog.Items.Count(i => i.Kind == ItemKind.Active));
     }
@@ -101,7 +101,7 @@ public class ItemTests
         var tuning = new Tuning();
         var two = Loadout.Build(Catalog, new[] { "shark_tooth", "swordfish_bill" }, tuning);
         Assert.Empty(two.Transformations);
-        var three = Loadout.Build(Catalog, new[] { "shark_tooth", "swordfish_bill", "stingray_barb" }, tuning);
+        var three = Loadout.Build(Catalog, new[] { "shark_tooth", "swordfish_bill", "lamprey_mouth" }, tuning);
         Assert.Contains("shark_mode", three.Transformations);
         Assert.Equal(1f + 0.2f, three.Stats.Speed, 4);
     }
@@ -120,9 +120,9 @@ public class ItemTests
     [InlineData("squid_ink_espresso", "+30% swim speed")]
     [InlineData("coral_crown", "+20 max HP")]
     [InlineData("frost_kelp", "Her light turns to frost: what it lights slows, and stands still after 2 s")]
-    [InlineData("conch_horn", "Recharges in 30s")]
+    [InlineData("whale_song", "Heals 35 HP; recharges in 40s")]
     [InlineData("lamprey_mouth", "What her light frees sends its core of light flying to her, worth 3 more")]
-    [InlineData("whale_lung", "+30% shot size")]
+    [InlineData("whale_lung", "+14% beam width")]
     [InlineData("hammerhead", "Opens the beam into a 5-ray floodlight, each 32% of the beam")]
     [InlineData("triple_tentacle", "Splits the beam into 3 rays, each 46% of the beam")]
     [InlineData("barnacle_armor", "+30 foam HP")]

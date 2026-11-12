@@ -1,9 +1,13 @@
 # The light grammar (proposal)
 
 Step 4 of the project review (MASTERPIECE-REVIEW.md §3.2, §9): the pearls re-founded on her light. Approved. **Steps 1
-(colour), 2 (paths on rock), 3 (rhythm), 4 (paths in the open), 5 (echo), 6 (glow) and 7 (great lights) are
-built** (docs/LIGHT-AND-GRAPH.md §10–§16, where their rules now live); step 8 is to come. Built differently from this page: Sea Nettle Sting, Stingray Barb and Siren Song stay in the catalogue
-until step 8; frost stills only the creatures a dazzle holds; the colour on a creature is drawn on murklings; a fork
+(colour), 2 (paths on rock), 3 (rhythm), 4 (paths in the open), 5 (echo), 6 (glow), 7 (great lights) and
+8 (the catalogue) are built**: the rules live in docs/LIGHT-AND-GRAPH.md §10–§16, the pearls in docs/PEARLS.md
+(generated from the catalogue, by kind). Built differently from this page: the shot-era synergies that the grammar
+has no place for left with the leavers (Cell Bloom, Guided Inkfish, Tuna Rang, Prism Pearl, Black Tide, Big Mad Puff,
+Toxic Bloom, Feeding Frenzy, Broadside, and the surge's Lance of Light, Helix Lamp and Searchlight), leaving the
+constellations and the colour mixes; Molten Carapace's pierce and heat moved onto her light; captions read her
+beam's reach, width and glow by what they really do (the square root of the stat); frost stills only the creatures a dazzle holds; the colour on a creature is drawn on murklings; a fork
 opens round the way a mirror would send it (70° apart), not round the ray's own way; her shots keep their older paths;
 String of Pearls was kept, renamed in meaning (a spun-up beam keeps its focus through a swing); the pulse beats twice
 a second; Lean turns a ray rather than curving it; Pinball Storm's glints arc within the arcs' own reach; an echo

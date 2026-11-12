@@ -1,26 +1,48 @@
 # Pearls
 
-> Every pearl in the item catalogue (`data/items.json`): what it does, where it is found and what unlocks it. Built
-> (✅) marks the pearls ported to the top-down game (`PlaneRun.PortedPearls`): they lie in clam rooms, are sold in
-> shops and fall from Queen Clam. The rest are designed and in the catalogue (their numbers load and are tested) but
-> not yet in play. The effect lines are the game's own captions (`ItemCaption`). Generated from the catalogue; when
-> the catalogue changes, this page should be regenerated.
+> Every pearl in the item catalogue (`data/items.json`), by the kind of word it is in her light's grammar
+> (docs/proposals/LIGHT-GRAMMAR.md; `PearlWords`): what it does, where it is found and what unlocks it. "In play" are
+> the pearls offered on the reef (`PlaneRun.PortedPearls`, and the crab's): they lie in clam rooms, are sold in shops
+> and fall from bosses. The effect lines are the game's own captions (`ItemCaption`), as the absorbing card, the pause
+> menu and the Sea-pedia read them. The tables below are generated from the catalogue (`PearlsPageTests`, which fails
+> when this page falls behind); the prose is this page's own.
 
-| | Passive | Active | All |
-|---|---|---|---|
-| Pearls | 59 | 13 | 72 |
-| Built | 50 | 5 | 55 |
+## The kinds of pearl
 
-- **Passive** pearls work on their own from the moment she absorbs one: her stats, her bubbles, or something that
-  happens when she is hit or frees a creature. They stack.
-- **Active** pearls are used with **F** and then recharge over time. She carries one at a time: a new one takes the
-  old one's place, and the old one is gone (`PlaneRun.Add`). Every run starts with **Tide Pulse** and the **Sea
-  Chart Nautilus** (`PlaneRun.StartingPearls`; never offered, since she always has them). Its charge is the rim of her bell, a light sweeping round it (DESIGN-TOPDOWN §2.5).
-- **Quality** is ★ to ★★★★ (rarer, stronger). **Found in** lists the item pools that can offer it.
-- **Unique** pearls are absorbed once a run and then leave the pools. A non-unique one (**No**) can be absorbed again:
-  it stays in the pools at a lower chance (×0.35 of its weight per copy held, `ItemPools.RepeatWeight`). Each extra
-  copy adds the whole pearl again, or what the column notes in brackets (the catalog's `stack`: one more chain or
-  bounce, more reach, +5% chance, +1 s, +1 HP).
+Her light is a sentence and her pearls are its words (docs/LIGHT-AND-GRAPH.md §10–§16):
+
+- **Shapes** say how her light leaves her (split rays, a lance, a beam turning round her).
+- **Paths** say what a ray does where it lands (bounce, fork, return, ghost, pierce, lean, flare, linger, arc).
+- **Colours** say what it does to what it lights (ember, bloom, frost, and their mixes).
+- **Rhythms** say how it changes while held (focus, spin-up, snap; Glow Burst's pulse).
+- **Echoes** say what freed light does (flare, spines, gather).
+- **Glow** is her aura's own voice (its reach, the fireflies).
+- **Stats** are the plain adverbs. **Actives** are used with their button and recharge.
+- **Lantern forms** (three pearls of one tag) re-theme her whole light; **constellations** are words meeting, named.
+- **The crab's pearls** are found only in a Crab Deal.
+
+The pause menu's Stats tab reads her light back in these words (`PlaneStatSheet.Words`), above her numbers.
+
+- **Passive** pearls work from the moment she absorbs one. **Active** pearls are used with their button and then
+  recharge; every run starts with **Tide Pulse** and the **Sea Chart Nautilus** (`PlaneRun.StartingPearls`; never
+  offered, since she always has them).
+- **Quality** is ★ to ★★★★ (rarer, stronger). **Found in** lists where it can be offered.
+- **Stacks**: a pearl taken **Once** leaves the pools for the run. One that stacks can be absorbed again: it stays in
+  the pools at a lower chance (×0.35 of its weight per copy held, `ItemPools.RepeatWeight`), and each copy adds the
+  whole pearl again, or what the column notes.
+
+Every stat counts on the plane: damage, max HP, fire rate, shot speed, range, shot size, swim speed, dash cooldown,
+HP regeneration (her corruption ebbing), luck, glow and knockback. On her beam (docs/proposals/BEAM-PEARLS-PLAN.md) her fire rate
+is its **tick rate** (it burns, seals and charges faster), her shot speed its **carry** (the light it keeps far out) and
+her knockback its **light pressure** (what is in it is pushed away from her). Stat pearls are never unique, so each copy stacks
+(including the drawbacks: Glass Squid, Sea Cucumber, Pufferfish Pout and Cannonball all trade something away).
+
+**Luck**, per point (each capped; `LuckTuning`): every freed foe leaves one more shell; a level without a clam room gets
+one with a 10% chance (at most 60%); each shell she picks
+up counts twice with an 8% chance (at most 60%; a second shell flies to her counter); a light spring is 10% likelier (at
+most +60%) — on an adventure level, a second one — and holds 15% more healing (at most
+twice as much). A level is planned with her luck as she
+comes to it (the level below is laid out while she plays the one above); a run without luck gets the very same levels.
 
 ## Reading a pearl
 
@@ -32,19 +54,20 @@ max HP leaves it all red).
 
 | Colour | What it does |
 |---|---|
-| Red | Damage: damage, bigger hits, crits, exploding or charged shots, lasers, chain lightning, shards |
-| Orange | Fire rate: fire rate, Sardine Run's stream, Firefly Squid's surge |
-| Blue | Shot speed, and shots that steer (homing, spiral, boomerang) |
-| Cyan | Range, and shots that go on through (pierce, spectral, bounces) |
-| Violet | More or bigger shots: multishot, split, wave, rear, grow, shot size, her bubbles |
-| Green | Health: max HP, regeneration, healing |
+| Violet | Her beam's shape: split rays, a lance, a beam behind or turning round her; and its width |
+| Cyan | Her light's paths: bounce, fork, return, ghost, pierce, lean, flare, linger, arc; and its reach |
+| Orange | Her beam's rhythms and tick rate: focus, spin-up, snap |
+| Amber | Her light's echoes: flares, spines, gather |
+| Ember, green, ice | Her light's colours: ember, bloom, frost (docs/LIGHT-AND-GRAPH.md §10) |
+| Pale lemon | Glow: its reach, her fireflies |
+| Red | Damage: damage, crits, the crab's burning pearls |
+| Blue | Her beam's carry |
+| Green | Health: max HP, mending, healing |
 | White | Mobility: swim speed, dash cooldown |
 | Gold | Luck and shells |
 | Tan | Finding the way: maps, landmarks |
-| Pale lemon | Glow |
-| Bronze | Knockback |
+| Bronze | Light pressure (knockback) |
 | Silver | Defence: foam, slower enemy shots, shields |
-| Ice, ember, lime, pink, lilac | Freeze, burn, poison, charm, slow; her light's colours: frost ice, ember ember, bloom green (docs/LIGHT-AND-GRAPH.md §10) |
 | Lavender | Active recharge |
 
 The icon engraved on it is the kind of effect that weighs most (`PearlIcon`, `pearl_engraving.gdshaderinc`), cut dark
@@ -53,7 +76,7 @@ into the face turned to the camera, wherever the pearl is drawn:
 | Icon | Kind of effect |
 |---|---|
 | Up-pointing arrow | Stat up |
-| Three dots in a chevron pointing up | Change to her shots |
+| Three dots in a chevron pointing up | A word of her light (shape, path, rhythm, echo) |
 | Shield | Defence |
 | Nautilus shell | Luck, shells and maps |
 | Feather | Mobility |
@@ -93,166 +116,197 @@ Taking a pearl is a moment of its own. It plays round Clementine while she swims
 - **Haptics:** a hum rising from touch to a trembling peak while she holds the look, a sharp tap on the shatter, and
   the climax, a full-strength pulse, on the burst.
 
-## Passive pearls
+## The pearls
 
-### Stats
+<!-- generated: PearlsPageTests (OCTO_WRITE_DOCS=1 dotnet test regenerates it) -->
 
-Every stat counts on the plane: damage, max HP, fire rate, shot speed, range, shot size, swim speed, dash cooldown,
-HP regeneration (her corruption ebbing), luck, glow and knockback. On her beam (docs/proposals/BEAM-PEARLS-PLAN.md) her fire rate
-is its **tick rate** (it burns, seals and charges faster), her shot speed its **carry** (the light it keeps far out) and
-her knockback its **light pressure** (what is in it is pushed away from her). Stat pearls are never unique, so each copy stacks
-(including the drawbacks: Glass Squid, Sea Cucumber, Pufferfish Pout and Cannonball all trade something away).
-
-**Luck**, per point (each capped; `LuckTuning`): every freed foe leaves one more shell; a level without a clam room gets
-one with a 10% chance (at most 60%); each shell she picks
-up counts twice with an 8% chance (at most 60%; a second shell flies to her counter); a light spring is 10% likelier (at
-most +60%) — on an adventure level, a second one — and holds 15% more healing (at most
-twice as much). A level is planned with her luck as she
-comes to it (the level below is laid out while she plays the one above); a run without luck gets the very same levels.
-
-| Unique | Built | Pearl | Tagline | Effect | Quality | Found in | Unlocked by |
-|:---:|:---:|---|---|---|---|---|---|
-| No | ✅ | **Coral Crown** | *A reef princess's lost tiara* | +20 max HP; +0.3 damage; Heals 20 HP | ★★ | treasure, boss |  |
-| No | ✅ | **Squid Ink Espresso** | *The Galleon's cook swore by it* | +0.3 speed; +0.4 beam tick rate | ★★ | treasure, shop |  |
-| No | ✅ | **Whale Lung** | *Deep breath!* | +1 range; ×1.3 shot size | ★★ | treasure |  |
-| No | ✅ | **Pufferfish Pout** | *Angry and proud of it* | ×1.35 damage; −0.2 beam carry | ★★★ | treasure, boss |  |
-| No | ✅ | **Lucky Sea Glass** | *Found only on moonlit tides* | +2 luck | ★ | treasure, shop | untouchable |
-| No | ✅ | **Plankton Swarm** | *Tiny friends* | +0.5 beam tick rate; Splits the beam into 3 rays, each 46% of the beam; ×0.6 shot size; ×0.85 shot damage | ★★ | treasure |  |
-| No | ✅ | **Glass Squid** | *See-through, and sharp for it* | +1 damage; −20 max HP | ★★ | treasure, curse |  |
-| No | ✅ | **Sea Cucumber** | *Slow, soft, and very hard to stop* | +30 max HP; −0.15 speed; Heals 30 HP | ★ | treasure, shop |  |
-| No |  | **Barnacle Armor** | *Clingy but protective* | −0.1 speed; +30 foam HP | ★ | treasure, shop |  |
-
-### Shot modifiers
-
-| Unique | Built | Pearl | Tagline | Effect | Quality | Found in | Unlocked by |
-|:---:|:---:|---|---|---|---|---|---|
-| No (+1 chain) | ✅ | **Electric Eel Tail** | *Zzzap!* | What her light burns arcs its burn to 2 more within 4 m, at half the rate | ★★★ | treasure |  |
-| Yes | ✅ | **Nautilus Spiral** | *Golden ratio, golden shots* | A fainter beam turns slowly round her, always (50% as bright, 70% as long) | ★★ | treasure |  |
-| No (+ 1 bounce) | ✅ | **Mirror Scale** | *Shiny side out* | Her light bounces off rock (60% of it) | ★★ | treasure |  |
-| Yes | ✅ | **Anglerfish Lure** | *Follow the light* | Her beam leans toward the nearest creature near it, up to 10° | ★★★ | treasure |  |
-| Yes | ✅ | **Swordfish Bill** | *En garde* | Shots pierce foes | ★★ | treasure |  |
-| Yes | ✅ | **Mitosis** | *One becomes two* | Where her light lands on rock it forks in two (70° apart, 30% each) | ★★ | treasure | bubble_bath |
-| No | ✅ | **Frost Kelp** | *Grown in the cold seep* | Her light turns to frost: what it lights slows, and stands still after 2 s | ★★ | treasure, shop |  |
-| No | ✅ | **Fire Coral** | *Don't touch* | Her light turns ember: what it lights keeps burning 2.5 s after it leaves | ★★ | treasure, shop |  |
-| Yes |  | **Sea Nettle Sting** | *It lingers* | 30% chance to poison foes for 4s | ★★ | treasure, curse |  |
-| Yes | ✅ | **Boomerang Shrimp** | *Always comes back* | Her light that lands on rock comes back along its way (50%): lit from both sides | ★★ | treasure |  |
-| Yes | ✅ | **Ghost Jelly** | *Walls are a suggestion* | Her light passes through a wall up to 3 m thick, 50% as strong beyond | ★★ | treasure, secret |  |
-| Yes | ✅ | **Pearl Diver** | *Patience makes pearls* | Held steady, her beam focuses: it narrows and burns up to ×3 over 1.5 s; a swing loses it | ★★★ | treasure, boss |  |
-| Yes | ✅ | **Sunbeam** | *A shaft of the surface, bottled* | Her beam becomes a lance: 160% as long, 50% as wide, carrying its light to its end | ★★★★ | treasure, boss, whale |  |
-| Yes | ✅ | **Firefly Squid** | *Never blinks* | Four fireflies of her light orbit her: each reveals, burns a little and carries her colours | ★★★★ | treasure, boss |  |
-| No | ✅ | **Bubble Gland** | *Always one more in reserve* | +3 fireflies of her light round her | ★★ | treasure, shop |  |
-| No | ✅ | **Anemone Pump** | *Squeeze, refill, repeat* | +1 firefly; a firefly a murkling drinks is back in half the time | ★★ | treasure, shop |  |
-| Yes | ✅ | **Double Helix** | *Twice the twist* | Splits the beam into 2 rays, each 62% of the beam; The beam's rays weave across your aim in a double helix | ★★★ | treasure |  |
-| Yes | ✅ | **Triple Tentacle** | *Why squirt once?* | Splits the beam into 3 rays, each 46% of the beam | ★★★ | treasure, boss |  |
-| Yes | ✅ | **Starfish Arm** | *Grows back bigger* | Her beam flares, half as wide again at its tip | ★★ | treasure | big_bubble_energy |
-| Yes | ✅ | **Starburst Gland** | *Bursts with borrowed sun* | What her light frees flares: a ring of her light 3 m wide, in her colours | ★★★ | treasure, curse |  |
-| Yes | ✅ | **Sardine Run** | *A million small reasons* | Held without a break, her beam spins up: ×1.8 burn after 3 s | ★★★ | treasure, boss |  |
-| Yes | ✅ | **Pistol Shrimp Claw** | *Snap. Bang.* | Held on a creature, her beam snaps every 0.8 s: a burst of light 2.5 m wide that pushes it back | ★★★ | treasure, boss |  |
-| Yes |  | **Siren Song** | *Come closer…* | 15% chance to charm foes for 3s | ★★ | treasure, siren |  |
-
-### More passives (DESIGN-2D §28)
-
-| Unique | Built | Pearl | Tagline | Effect | Quality | Found in | Unlocked by |
-|:---:|:---:|---|---|---|---|---|---|
-| No | ✅ | **Moon Jelly Heart** | *Beats in slow pulses* | +20 max HP; Heals 20 HP | ★ | treasure, boss, whale |  |
-| No | ✅ | **Shark Tooth** | *Still sharp* | +0.5 damage | ★★ | treasure, curse |  |
-| No (+range) | ✅ | **Remora Sucker** | *Sticks to everything* | Pulls pickups toward you | ★ | shop, treasure |  |
-| No |  | **Manta Shawl** | *Glide like a ray* | +0.2 speed; ×0.8 dash cooldown | ★★ | treasure, whale |  |
-| No | ✅ | **Cuttlebone** | *Light as foam, hard as shell* | +0.3 beam carry; +1 range | ★ | treasure, shop |  |
-| No (+5% chance)| ✅ | **Giant Squid Eye** | *It sees your weak spot* | 10% chance of a ×3 critical hit | ★★★ | treasure, boss | shucked_in_fifteen |
-| No | ✅ | **Coral Polyp** | *Slowly, the reef rebuilds* | +0.25 HP regeneration per second | ★★ | treasure, whale |  |
-| No |  | **Brain Coral** | *Thinks two moves ahead* | +1 luck; ×1.35 active item recharge speed | ★★ | treasure, shop |  |
-| No | ✅ | **Pirate's Doubloon** | *Finders keepers* | +15 sand dollars; Shell caches hold 50% more | ★ | treasure, goldenClam | hermit_hoarder |
-| No | ✅ | **Cannonball** | *Fire in the hold!* | +0.8 damage; −0.15 beam carry; ×1.4 shot size; ×2 light pressure | ★★ | treasure, boss |  |
-| No | ✅ | **Captain's Hook** | *Get over here* | ×2.5 light pressure | ★ | treasure, shop |  |
-| No (+1s) |  | **Stingray Barb** | *Numbs on contact* | 30% chance to slow foes for 2s | ★ | treasure |  |
-| No (+1HP) | ✅ | **Lamprey Mouth** | *Every bite counts* | What her light frees sends its core flying to her, worth 3 more | ★★★ | treasure, curse |  |
-| Yes | ✅ | **Hammerhead** | *Wide-angle view* | Opens the beam into a 5-ray floodlight, each 32% of the beam | ★★★ | treasure, boss |  |
-| Yes | ✅ | **Rear Fin** | *Eyes in the back of your mantle* | A fainter beam shines out of her back too | ★ | treasure, shop |  |
-| No | ✅ | **Abyssal Glow** | *Light from below the light* | +0.4 damage; ×1.3 glow radius | ★★ | treasure, curse |  |
-| No (+x1.5 glow, +0.1HP regen) | ✅ | **Glowing Moss** | *Soft and luminous* | ×1.5 glow radius; +0.1 HP regeneration per second; her light turns to bloom: ink and ash clear ×2 as fast in it, and a murkling it frees leaves ×1.5 the light | ★ | treasure, shop |  |
-| Yes | ✅ | **Fire Urchin Spine** | *Pass it on* | What her light frees shines out 6 spines of her light, in her colours, taking her paths | ★★★ | treasure, curse |  |
-| No |  | **Oyster Pearl** | *A little grit, a little shine* | +1 luck; +10 max HP; +5 sand dollars | ★ | treasure, goldenClam |  |
-| No | ✅ | **Dolphin Fin** | *Born to sprint* | +0.25 speed; ×0.85 dash cooldown | ★★ | treasure |  |
-| Yes | ✅ | **Brass Compass** | *Points to what matters* | Every place shows on the maps before you reach it (secret rooms stay hidden) | ★ | shop, treasure |  |
-| Yes | ✅ | **Sea Chart Nautilus** | *Remembers every current* | Shows the minimap: the reef round you, top right, and the whole level's map. She starts every run with it, for now | ★ | start |  |
-| No | ✅ | **Lantern Pearl** | *Carry the light down* | ×1.8 glow radius | ★ | treasure, boss |  |
-
-### Bubbles on the throwing tentacle
-
-| Unique | Built | Pearl | Tagline | Effect | Quality | Found in | Unlocked by |
-|:---:|:---:|---|---|---|---|---|---|
-| No |  | **Twin Siphon** | *Two at a time* | +1 shot per throw (a volley shares her light) | ★★★ | treasure, boss |  |
-| Yes | ✅ | **Bubble Coral** | *Little ones grow up* | Where her beam ends, a pool of her light stays 2.5 s and burns on: swept, it paints a trail | ★★ | treasure, shop |  |
-
-## Active pearls (Right mouse click/RB, recharge over time)
-
-| Unique | Built | Pearl | Tagline | Effect | Quality | Found in | Unlocked by |
-|:---:|:---:|---|---|---|---|---|---|
-| Yes | ✅ | **Tide Pulse** | *Room to breathe* | She starts every run with it. Three quick waves of water from her bell within 1 s, each telegraphed by her bell drawing in hard (deeper each time) and leaving as it snaps open, each wider and harder than the last (out to 4, 5.3 and 6.6 m; thrown on at 5, 7 and 10 m/s). Each wave's front sweeps everything loose out ahead of it, sliding along rock: mobs and corrupted creatures, the reef's fish, shells, hearts, loose pearls, pots, their shots and throws (turned away from her); the first shakes off clinging murklings. When it is done the water is clear 6.6 m round her bell (about six of her). Rooted creatures, Hearthguards on their beds, shop stands, the boss and her own light stay put. Seen as the currents' moving water: three rings of it shoving the picture outward (PlanePushWave.cs); recharges in 60 s | ★ | start |  |
-| Yes | ✅ | **Prism Pearl** | *One light, three colours* | Splits her light into three smaller Clementines for 6 s, in a triangle round the point she steers (each corner 1.4 m from it, the triangle turning with her aim): she is the green one at its front corner toward her aim, a red at the back corner on her left and a blue on her right, keeping their corners (her own controls) round the rock. Each fires its own volleys, on its own beat, at where she aims, its light and shots in its colour. A hit on any of them is a hit on her, one body of health. Splitting and flowing back together each take 0.45 s, with a jolt, the picture's colours pulled apart for a moment and a burst of light (PlanePrism.cs); recharges in 45 s | ★★★ | treasure, boss |  |
-| Yes | ✅ | **Conch Horn** | *The sea answers* | Every murkling within 8 m is shaken loose, knocked away and stunned for 2 s (a ring of moving water out to its reach); recharges in 30 s | ★★ | treasure, shop |  |
-| Yes | ✅ | **Bubble Shield** | *Pop-proof, mostly* | An untouchable bubble round her for 3 s; recharges in 20 s | ★★ | treasure, shop |  |
-| Yes |  | **Tidal Wave** | *Surf's up* | A wave that pushes and hurts everything ahead (10, 12 m); recharges in 40 s | ★★ | treasure |  |
-| Yes |  | **Treasure Map** | *X marks a lot of spots* | Reveals the level, secrets included; recharges in 60 s | ★ | shop |  |
-| Yes |  | **Mimic Clam** | *What's inside? Something else now* | Rerolls the pearls on offer in the room; recharges in 60 s | ★★★ | treasure, secret |  |
-| Yes | ✅ | **Glow Burst** | *Everybody shine* | For 5 s her beam beats, ×2 on each beat; recharges in 10 s | ★★ | treasure |  |
-| Yes |  | **Sea Dice** | *Roll the tide* | Rerolls the pickups nearby; recharges in 30 s | ★ | shop |  |
-| Yes |  | **Kraken Call** | *Something big owes you a favour* | A great tentacle strikes the foes about her (25); recharges in 60 s | ★★★ | treasure, boss | siphonophore |
-| Yes | ✅ | **Ink Cloud** | *Now you don't* | An ink cloud (3 m) where she is, and for 4 s the Leak's creatures lose her: murklings stop chasing and throwing, and a boss aims where it last had her; recharges in 20 s | ★★ | treasure, secret |  |
-| Yes | ✅ | **Whale Song** | *A low hum that mends* | Heals 35 HP; recharges in 40 s | ★★ | whale, treasure |  |
-| Yes |  | **Anchor Drop** | *Straight down* | Opens a way straight down to the next level; recharges in 30 s | ★ | shop, treasure |  |
-
-## Synergies and transformations
-
-Not pearls themselves, but what pearls do together. Built (✅) synergies announce themselves when they form: the
-caption reads "Synergy!" with its name, a chime plays and a ring of her light goes out.
-
-| | Synergy | Needs | What happens |
-|:---:|---|---|---|
-| ✅ | **Cathedral** | Mirror Scale + Mitosis | Every bounce forks: a cave fills with a lattice of light |
-| ✅ | **Hall of Mirrors** | Boomerang Shrimp + Mirror Scale | Light caught between two walls: everything between burns from all sides |
-| ✅ | **Pinball Storm** | Electric Eel Tail + Mirror Scale | Each glint where her light bounces arcs to the nearest creature |
-| ✅ | **Lighthouse** | Sunbeam + Nautilus Spiral | The beam turning round her is a full Lance |
-|  | **Cell Bloom** | Mitosis + Starfish Arm | Split shots also grow |
-|  | **Guided Inkfish** | Ink Sac + Anglerfish Lure | Homing bombs; explosions leave slowing ink clouds |
-| ✅ | **Shatter** | Frost Kelp + Fire Coral | Ember and frost mix to magenta: what frost has stilled, ember shatters in a burst of steam |
-| ✅ | **Sunfire** | Fire Coral + Glowing Moss | Ember and bloom mix to gold: what it frees bursts in a ring of light |
-| ✅ | **Lull** | Glowing Moss + Frost Kelp | Bloom and frost mix to cyan: what it lights forgets you |
-| ✅ | **Daybreak** | all three | All three mix to white: every colour at once, and her light burns half again as hard |
-|  | **Tuna Rang** | Boomerang Shrimp + Swordfish Bill | Piercing boomerang hits twice and grows on the way back |
-| ✅ | **Pearl Necklace** | Pearl Diver + Mitosis | At full focus the beam's tip opens into a ring of 8 rays |
-|  | **Prism Pearl** | Sunbeam + Pearl Diver | A full-charge pearl fires lasers in 4 directions when it pops |
-|  | **Black Tide** | Tidal Wave + Ink Sac | The wave detonates ink on every foe it hits |
-|  | **Big Mad Puff** | Pufferfish Pout + Starfish Arm | Shots burst into a spiky shotgun blast when they pop |
-| ✅ | **Will-o'-Wisp** | Ghost Jelly + Anglerfish Lure | Her light leans twice as far, toward creatures behind rock too |
-| ✅ | **Aurora** | Bubble Coral + any two of Fire Coral, Glowing Moss, Frost Kelp | Her pools of light hang twice as long, curtains of mixing colour |
-|  | **Toxic Bloom** | Sea Nettle Sting + Mitosis | Split shots carry a double dose of poison |
-|  | **Feeding Frenzy** | Shark Tooth + Lamprey Mouth | Every creature freed sends you into a fast-firing frenzy |
-| ✅ | **String of Pearls** | Sardine Run + Pearl Diver | Spun right up, her beam keeps its focus through a swing |
-| ✅ | **Depth Charge** | Pistol Shrimp Claw + Pearl Diver | At full focus the snap is twice as wide and half again as strong |
-|  | **Broadside** | Cannonball + Rear Fin | Shots out of the back explode |
-| ✅ | **Supernova** | Starburst Gland + Fire Urchin Spine | Each spine of a freed creature's light ends in a flare |
-| ✅ | **Lance of Light** | Firefly Squid + Swordfish Bill | The surge runs through every creature in its path |
-| ✅ | **Helix Lamp** | Firefly Squid + Double Helix | The surge twists into two strands spiralling round each other |
-| ✅ | **Searchlight** | Firefly Squid + Hammerhead | The surge opens into a wide cone of light |
-
-| Transformation | Pearls with the tag | What happens |
+| Kind | In play | Designed, not yet in play |
 |---|---|---|
-| **Kraken Form** | tentacle | Short beams shine all round her, 8 ways; ink trail |
-| **Neon Rave** | glow | Her light cycles through all seven colours, every colour's effect in turn; her glow ×1.3 |
-| **Shark Mode** | predator | A narrower, hotter beam (×1.3); what it frees sends her into the Frenzy (her beam ×1.5 for 3 s); +20% speed |
-| **Coral Reef** | coral | Her light lingers where it lands, and standing in her own afterlight mends her (3 HP/s) |
-| **Pirate** | galleon | Gilded light: shells it touches fly to her, and what it frees drops 2 more; +2 luck |
+| Shapes | 7 | 0 |
+| Paths | 9 | 0 |
+| Colours | 3 | 0 |
+| Rhythms | 3 | 0 |
+| Echoes | 3 | 0 |
+| Glow | 5 | 0 |
+| Stats and others | 19 | 6 |
+| Active pearls | 7 | 6 |
+| The crab's | 5 | |
+| **All** | **61** | **12** |
 
-## The crab's pearls
+### Shapes
+
+How her light leaves her.
+
+| Pearl | Tagline | What it does | Stacks | Quality | Found in | Unlocked by |
+|---|---|---|---|---|---|---|
+| **Plankton Swarm** | *Tiny friends* | +19% beam tick rate; Splits the beam into 3 rays, each 46% of the beam; −40% beam width; −15% burn of each ray | Yes | ★★ | clam rooms |  |
+| **Nautilus Spiral** | *Golden ratio, golden shots* | A fainter beam turns slowly round her, always (50% as bright, 70% as long) | Once | ★★ | clam rooms |  |
+| **Sunbeam** | *A shaft of the surface, bottled* | Her beam becomes a lance: 160% as long, 50% as wide, carrying its light to its end | Once | ★★★★ | clam rooms, bosses, the whale |  |
+| **Double Helix** | *Twice the twist* | Splits the beam into 2 rays, each 62% of the beam; The beam's rays weave across her aim in a double helix | Once | ★★★ | clam rooms |  |
+| **Triple Tentacle** | *Why squirt once?* | Splits the beam into 3 rays, each 46% of the beam | Once | ★★★ | clam rooms, bosses |  |
+| **Hammerhead** | *Wide-angle view* | Opens the beam into a 5-ray floodlight, each 32% of the beam | Once | ★★★ | clam rooms, bosses |  |
+| **Rear Fin** | *Eyes in the back of your mantle* | A fainter beam shines out of her back too | Once | ★ | clam rooms, shops |  |
+
+### Paths
+
+What a ray of hers does where it lands, on rock or on a body, or along the way.
+
+| Pearl | Tagline | What it does | Stacks | Quality | Found in | Unlocked by |
+|---|---|---|---|---|---|---|
+| **Electric Eel Tail** | *Zzzap!* | What her beam burns arcs its burn to 2 more within 4 m, at half the rate | Yes (each copy: What her beam burns arcs its burn to 1 more within 4 m, at half the rate) | ★★★ | clam rooms |  |
+| **Mirror Scale** | *Shiny side out* | Her light bounces off rock (60% of it) | Yes (each copy: Her light bounces off rock (60% of it)) | ★★ | clam rooms |  |
+| **Anglerfish Lure** | *Follow the light* | Her beam leans toward the nearest creature near it, up to 10° off her aim | Once | ★★★ | clam rooms |  |
+| **Swordfish Bill** | *En garde* | Her light runs on through creatures: their bodies stop none of it and cast no shadow | Once | ★★ | clam rooms |  |
+| **Ghost Jelly** | *Walls are a suggestion* | Her light passes through a wall up to 3 m thick, 50% as strong beyond | Once | ★★ | clam rooms, secret rooms |  |
+| **Mitosis** | *One becomes two* | Where her light lands on rock it forks in two (70° apart, 30% of it each) | Once | ★★ | clam rooms | bubble_bath |
+| **Boomerang Shrimp** | *Always comes back* | Her light that lands on rock comes back along its way (50% of it): what stands in it is lit from both sides | Once | ★★ | clam rooms |  |
+| **Starfish Arm** | *Grows back bigger* | Her beam flares, widening along its length: 50% wider again at its tip | Once | ★★ | clam rooms | big_bubble_energy |
+| **Bubble Coral** | *Little ones grow up* | Where her beam ends, a pool of her light stays 2.5 s and goes on burning: swept, it paints a trail | Once | ★★ | clam rooms, shops |  |
+
+### Colours
+
+What her light does to what it lights; two or three mix (docs/LIGHT-AND-GRAPH.md §10).
+
+| Pearl | Tagline | What it does | Stacks | Quality | Found in | Unlocked by |
+|---|---|---|---|---|---|---|
+| **Frost Kelp** | *Grown in the cold seep* | Her light turns to frost: what it lights slows, and stands still after 2 s | Yes | ★★ | clam rooms, shops |  |
+| **Fire Coral** | *Don't touch* | Her light turns ember: what it lights keeps burning 2.5 s after it leaves | Yes | ★★ | clam rooms, shops |  |
+| **Glowing Moss** | *Soft and luminous* | +22% reach of her glow and her beam; +0.1 HP mended per second; Her light turns to bloom: ink and ash clear ×2 as fast in it, and a murkling it frees leaves ×1.5 the light | Yes | ★ | clam rooms, shops |  |
+
+### Rhythms
+
+How her beam changes the longer it is held.
+
+| Pearl | Tagline | What it does | Stacks | Quality | Found in | Unlocked by |
+|---|---|---|---|---|---|---|
+| **Pearl Diver** | *Patience makes pearls* | Held steady, her beam focuses: over 1.5 s it narrows and burns up to ×3; swinging it loses the focus | Once | ★★★ | clam rooms, bosses |  |
+| **Sardine Run** | *A million small reasons* | Held without a break, her beam spins up: ×1.8 burn after 3 s | Once | ★★★ | clam rooms, bosses |  |
+| **Pistol Shrimp Claw** | *Snap. Bang.* | Held on a creature, her beam snaps every 0.8 s: a burst of light 2.5 m wide that pushes it back | Once | ★★★ | clam rooms, bosses |  |
+
+### Echoes
+
+What the light a creature had drunk does when her light frees it.
+
+| Pearl | Tagline | What it does | Stacks | Quality | Found in | Unlocked by |
+|---|---|---|---|---|---|---|
+| **Starburst Gland** | *Bursts with borrowed sun* | What her light frees flares: a ring of her light 3 m wide that burns and clears ink, in her colours | Once | ★★★ | clam rooms, curse rooms |  |
+| **Lamprey Mouth** | *Every bite counts* | What her light frees sends its core of light flying to her, worth 3 more | Yes (each copy: What her light frees sends its core of light flying to her, worth 1 more) | ★★★ | clam rooms, curse rooms |  |
+| **Fire Urchin Spine** | *Pass it on* | What her light frees shines out 6 spines of her light (3.2 m), in her colours | Once | ★★★ | clam rooms, curse rooms |  |
+
+### Glow
+
+Her glow's own voice: its reach, and the fireflies round her.
+
+| Pearl | Tagline | What it does | Stacks | Quality | Found in | Unlocked by |
+|---|---|---|---|---|---|---|
+| **Abyssal Glow** | *Light from below the light* | +11% damage; +14% reach of her glow and her beam | Yes | ★★ | clam rooms, curse rooms |  |
+| **Firefly Squid** | *Never blinks* | +4 fireflies of her light round her (each reveals, burns a little and carries her colours) | Once | ★★★★ | clam rooms, bosses |  |
+| **Lantern Pearl** | *Carry the light down* | +34% reach of her glow and her beam | Yes | ★ | clam rooms, bosses |  |
+| **Bubble Gland** | *Always one more in reserve* | +3 fireflies of her light round her (each reveals, burns a little and carries her colours) | Yes | ★★ | clam rooms, shops |  |
+| **Anemone Pump** | *Squeeze, refill, repeat* | +1 firefly of her light round her (it reveals, burns a little and carries her colours); −50% time a firefly a murkling drank takes to come back | Yes | ★★ | clam rooms, shops |  |
+
+### Stats and others
+
+The plain adverbs: her numbers, her pickups, her maps.
+
+| Pearl | Tagline | What it does | Stacks | Quality | Found in | Unlocked by |
+|---|---|---|---|---|---|---|
+| **Coral Crown** | *A reef princess's lost tiara* | +20 max HP; +8.6% damage; Heals 20 HP | Yes | ★★ | clam rooms, bosses |  |
+| **Squid Ink Espresso** | *The Galleon's cook swore by it* | +30% swim speed; +15% beam tick rate | Yes | ★★ | clam rooms, shops |  |
+| **Whale Lung** | *Deep breath!* | +7.4% beam reach; +14% beam width | Yes | ★★ | clam rooms |  |
+| **Pufferfish Pout** | *Angry and proud of it* | +35% damage; −20% beam carry | Yes | ★★★ | clam rooms, bosses |  |
+| **Lucky Sea Glass** | *Found only on moonlit tides* | +2 luck | Yes | ★ | clam rooms, shops | untouchable |
+| **Glass Squid** | *See-through, and sharp for it* | +29% damage; −20 max HP | Yes | ★★ | clam rooms, curse rooms |  |
+| **Sea Cucumber** | *Slow, soft, and very hard to stop* | +30 max HP; −15% swim speed; Heals 30 HP | Yes | ★ | clam rooms, shops |  |
+| **Moon Jelly Heart** | *Beats in slow pulses* | +20 max HP; Heals 20 HP | Yes | ★ | clam rooms, bosses, the whale |  |
+| **Shark Tooth** | *Still sharp* | +14% damage | Yes | ★★ | clam rooms, curse rooms |  |
+| **Remora Sucker** | *Sticks to everything* | Pulls pickups and freed murklings' light toward her from 7.5 m (not 2.5 m) | Yes (each copy: Pulls pickups and freed murklings' light toward her from 7.5 m (not 2.5 m)) | ★ | shops, clam rooms |  |
+| **Cuttlebone** | *Light as foam, hard as shell* | +30% beam carry; +7.4% beam reach | Yes | ★ | clam rooms, shops |  |
+| **Giant Squid Eye** | *It sees your weak spot* | 10% chance of a ×3 critical hit | Yes (each copy: +5% chance of a critical hit) | ★★★ | clam rooms, bosses | shucked_in_fifteen |
+| **Coral Polyp** | *Slowly, the reef rebuilds* | +0.25 HP mended per second | Yes | ★★ | clam rooms, the whale |  |
+| **Pirate's Doubloon** | *Finders keepers* | +15 sand dollars; Shell caches hold 50% more | Yes | ★ | clam rooms, golden clams | hermit_hoarder |
+| **Cannonball** | *Fire in the hold!* | +23% damage; −15% beam carry; +18% beam width; +100% light pressure | Yes | ★★ | clam rooms, bosses |  |
+| **Captain's Hook** | *Get over here* | +150% light pressure | Yes | ★ | clam rooms, shops |  |
+| **Dolphin Fin** | *Born to sprint* | +25% swim speed; −15% dash cooldown | Yes | ★★ | clam rooms |  |
+| **Brass Compass** | *Points to what matters* | Every place shows on the maps before she reaches it (secret rooms stay hidden) | Once | ★ | shops, clam rooms |  |
+| **Sea Chart Nautilus** | *Remembers every current* | Shows the minimap: the reef round her, top right | Once | ★ | every run's start |  |
+
+### Active pearls
+
+Used with their button, then they recharge. She carries three.
+
+| Pearl | Tagline | What it does | Stacks | Quality | Found in | Unlocked by |
+|---|---|---|---|---|---|---|
+| **Tide Pulse** | *Room to breathe* | Three waves push everything loose 6.6 m away from her; recharges in 60s | Once | ★ | every run's start |  |
+| **Prism Pearl** | *One light, three colours* | Splits her into three smaller Clementines, red, green and blue, for 6 s, each shining in its colour; recharges in 45s | Once | ★★★ | clam rooms, bosses |  |
+| **Conch Horn** | *The sea answers* | Every murkling within 8 m is shaken loose, knocked away and stunned for 2 s; recharges in 30s | Once | ★★ | clam rooms, shops |  |
+| **Bubble Shield** | *Pop-proof, mostly* | An untouchable bubble round her for 3 s; recharges in 20s | Once | ★★ | clam rooms, shops |  |
+| **Glow Burst** | *Everybody shine* | For 5 s her beam beats, burning ×2 on each beat; recharges in 10s | Once | ★★ | clam rooms |  |
+| **Ink Cloud** | *Now you don't* | An ink cloud (3 m) where she is, and for 4 s the Leak's creatures lose her; recharges in 20s | Once | ★★ | clam rooms, secret rooms |  |
+| **Whale Song** | *A low hum that mends* | Heals 35 HP; recharges in 40s | Once | ★★ | the whale, clam rooms |  |
+
+### The crab's pearls
 
 Found only in a Crab Deal (docs/ADVENTURE.md §7), at the price of a quarter of her max HP.
 
-| Pearl | Tagline | Effect |
+| Pearl | Tagline | What it does |
 |---|---|---|
 | **Severed Nerve** | *It never stopped stinging* | A severed strand circles her, stinging as her arm does |
-| **Molten Carapace** | *Hurt, it runs hot* | Under half health her shots pierce and do 60% more |
+| **Molten Carapace** | *Hurt, it runs hot* | Under half health her light burns +60% and runs on through creatures |
 | **Last Light** | *Not yet* | Once a level, a killing blow leaves her at 1 HP in a flood of light |
 | **Claw Tithe** | *Paid in full* | Each cut the crab has taken adds 25% damage |
 | **Black Sun** | *A little of the Leak, kept* | The shadow a creature casts down her beam burns what stands in it, as hard as her light would have |
+
+### Constellations
+
+What pearls make together, named (each announces itself: "Synergy!" with its name, a chime and a ring of her light).
+
+| Constellation | Needs | What happens |
+|---|---|---|
+| **Pinball Storm** | Electric Eel Tail + Mirror Scale | Each glint where her light bounces arcs to the nearest creature |
+| **Lighthouse** | Sunbeam + Nautilus Spiral | The beam turning round her is a full Lance |
+| **Shatter** | Frost Kelp + Fire Coral | Ember and frost mix to magenta: what frost has stilled, ember shatters in a burst of steam |
+| **Sunfire** | Fire Coral + Glowing Moss | Ember and bloom mix to gold: what it frees bursts in a ring of light |
+| **Lull** | Glowing Moss + Frost Kelp | Bloom and frost mix to cyan: what it lights forgets her |
+| **Daybreak** | Fire Coral + Glowing Moss + Frost Kelp | All three mix to white: every colour at once, and her light burns half again as hard |
+| **Cathedral** | Mirror Scale + Mitosis | Every bounce forks: a cave fills with a lattice of light |
+| **Hall of Mirrors** | Boomerang Shrimp + Mirror Scale | Light caught between two walls: everything between burns from all sides |
+| **Pearl Necklace** | Pearl Diver + Mitosis | At full focus the beam's tip opens into a ring of 8 rays |
+| **Will-o'-Wisp** | Ghost Jelly + Anglerfish Lure | Her light leans twice as far, toward creatures behind rock too |
+| **Aurora** | Bubble Coral + any 2 of Fire Coral, Glowing Moss, Frost Kelp | Her pools of light hang twice as long, curtains of mixing colour |
+| **String of Pearls** | Sardine Run + Pearl Diver | Spun right up, her beam keeps its focus through a swing |
+| **Depth Charge** | Pistol Shrimp Claw + Pearl Diver | At full focus the snap is twice as wide and half again as strong |
+| **Supernova** | Starburst Gland + Fire Urchin Spine | Each spine of a freed creature's light ends in a flare |
+
+### Lantern forms
+
+Three pearls of one tag re-theme her whole light (docs/LIGHT-AND-GRAPH.md §16).
+
+| Form | Pearls with the tag | What happens | Its numbers |
+|---|---|---|---|
+| **Kraken Form** | 3 of: Triple Tentacle, Starfish Arm, Starburst Gland, Cuttlebone, Giant Squid Eye, Ink Cloud | The Crown: seven short rays shine all round her beside her beam |  |
+| **Neon Rave** | 3 of: Anglerfish Lure, Ghost Jelly, Sunbeam, Moon Jelly Heart, Abyssal Glow, Glowing Moss, Firefly Squid, Lantern Pearl, Glow Burst | Her light cycles through all seven colours, every colour's effect in turn | +14% reach of her glow and her beam |
+| **Shark Mode** | 3 of: Pufferfish Pout, Electric Eel Tail, Swordfish Bill, Shark Tooth, Lamprey Mouth, Hammerhead, Fire Urchin Spine | A narrower, hotter beam; what it frees sends her into a frenzy | +20% swim speed |
+| **Coral Reef** | 3 of: Coral Crown, Fire Coral, Coral Polyp, Anemone Pump, Bubble Coral | Her light lingers where it lands, and standing in her own afterlight mends her | Where her beam ends, a pool of her light stays 2.5 s and goes on burning: swept, it paints a trail |
+| **Pirate** | 3 of: Squid Ink Espresso, Pirate's Doubloon, Cannonball, Captain's Hook, Brass Compass, Sea Chart Nautilus | Gilded light: shells it touches fly to her, and what it frees drops more | +2 luck |
+
+### Designed, not yet in play
+
+In the catalogue (their numbers load and are tested), but not yet offered on the reef.
+
+| Pearl | Kind | Tagline | What it does | Quality |
+|---|---|---|---|---|
+| **Barnacle Armor** | Stat | *Clingy but protective* | −10% swim speed; +30 foam HP | ★ |
+| **Manta Shawl** | Stat | *Glide like a ray* | +20% swim speed; −20% dash cooldown | ★★ |
+| **Brain Coral** | Stat | *Thinks two moves ahead* | +1 luck; +35% active item recharge speed | ★★ |
+| **Oyster Pearl** | Stat | *A little grit, a little shine* | +1 luck; +10 max HP; +5 sand dollars | ★ |
+| **Sea Sponge** | Stat | *Soaks it up* | What her light frees gives 3 foam HP | ★ |
+| **Diver's Watch** | Stat | *Time moves slower down here* | −20% enemy shot speed | ★★ |
+| **Tidal Wave** | Active | *Surf's up* | A wave that pushes and hurts everything ahead (10, 12 m); recharges in 40s | ★★ |
+| **Treasure Map** | Active | *X marks a lot of spots* | Reveals the level, secrets included; recharges in 60s | ★ |
+| **Mimic Clam** | Active | *What's inside? Something else now* | Rerolls the pearls on offer in the room; recharges in 60s | ★★★ |
+| **Sea Dice** | Active | *Roll the tide* | Rerolls the pickups nearby; recharges in 30s | ★ |
+| **Kraken Call** | Active | *Something big owes you a favour* | A great tentacle strikes the creatures about her (25); recharges in 60s | ★★★ |
+| **Anchor Drop** | Active | *Straight down* | Opens a way straight down to the next level; recharges in 30s | ★ |
+
+<!-- end of generated -->

@@ -157,8 +157,11 @@ much corruption is left (CORRUPTION, "Corruption rings").
 - **Her great lights** (LIGHT-AND-GRAPH §16): Sunbeam's Lance, Nautilus Spiral's turning beam and Lighthouse where
   they meet; the lantern forms (three pearls of a tag) re-theme her light: Kraken Form's crown, Neon Rave's seven
   colours in turn, Coral Reef's mending afterlight, Shark Mode's hot beam and Frenzy, Pirate's gilded light; and the
-  crab's Black Sun, whose shadows burn. The catalogue's last pass (proposals/LIGHT-GRAMMAR.md step 8) is to come.
-- **Synergies** and **transformations** announce themselves.
+  crab's Black Sun, whose shadows burn.
+- **The catalogue** (docs/PEARLS.md, generated from it): 61 pearls in play, each a word of her light's grammar
+  (shape, path, colour, rhythm, echo, glow), a plain stat, an active or the crab's; 14 constellations and 5 lantern
+  forms, each announcing itself. The pause menu's Stats tab reads her light back in those words above her numbers
+  (beam reach and width, tick rate, carry); the Sea-pedia lists the pearls by kind.
 
 ## 9. Growth and the jelly
 

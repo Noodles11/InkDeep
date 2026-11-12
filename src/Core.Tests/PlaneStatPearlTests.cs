@@ -161,7 +161,7 @@ public class PlaneStatPearlTests
         Assert.All(bare, l => Assert.Equal(0f, l.Change, 3));
         var w = World("shark_tooth", "squid_ink_espresso", "dolphin_fin");
         var sheet = PlaneStatSheet.Of(w.Run).ToDictionary(l => l.Name);
-        Assert.True(sheet["Damage per shot"].Change > 0.1f);
+        Assert.True(sheet["Damage"].Change > 0.1f);
         Assert.True(sheet["Beam tick rate"].Change > 0.1f);
         Assert.True(sheet["Swim speed"].Change > 0.5f);
         Assert.True(sheet["Dash cooldown"].Change < 0f && sheet["Dash cooldown"].LowerIsBetter);
