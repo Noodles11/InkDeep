@@ -67,9 +67,12 @@ public sealed partial class PlaneWorld
         var prim = Primaries();
         var all = LightHue.None;
         foreach (var h in prim) all |= h;
+        // Neon Rave: all her light is one colour at a time, each in turn (PlaneGreatLights.cs).
+        var neon = NeonHue;
+        if (neon != LightHue.None) all = neon;
         HerHue = all;
         while (_rayHue.Count < Math.Max(layout.Count - 1, 0)) _rayHue.Add(LightHue.None);
-        if (layout.Count <= 1 || prim.Count <= 1)
+        if (layout.Count <= 1 || prim.Count <= 1 || neon != LightHue.None)
         {
             _beamHue = all;
             for (int i = 0; i < _rayHue.Count; i++) _rayHue[i] = all;
@@ -162,8 +165,9 @@ public sealed partial class PlaneWorld
     /// <summary>A creature her light freed: bloom leaves its core the richer, sunfire bursts from it.</summary>
     void FreedInColour(object kin, Vector2 at)
     {
-        // (And its echo: PlaneEcho.cs.)
+        // (And its echo: PlaneEcho.cs; Shark Mode's Frenzy and Pirate's gilded drop: PlaneGreatLights.cs.)
         Echo(kin, at);
+        FreedGreat(at);
         if (!_glare.TryGetValue(kin, out var g)) return;
         if (g.Bloom > 0f && kin is Murkling && Cores.Count > 0 && Vector2.DistanceSquared(Cores[^1].Position, at) < 0.01f)
             Cores[^1].Light *= ColourTuning.Bloom(ColourTuning.BloomCore, Run.Loadout.Shot.Bloom);

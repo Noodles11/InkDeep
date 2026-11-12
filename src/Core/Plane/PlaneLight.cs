@@ -33,13 +33,12 @@ public static class LightTuning
     public const float LeastCarry = 0.05f, MostCarry = 1.5f, Pressure = 1.2f;
     /// <summary>
     /// Her pearls on the beam (docs/LIGHT-AND-GRAPH.md §5.1): her range stat lengthens it and her shot size
-    /// widens it (each × its square root; at most MaxHalfAngleDeg); Sunbeam makes it a searchlight (SunbeamReach × as
-    /// long, SunbeamHalfAngleDeg wide). Rear Fin adds a beam behind her (RearIntensity, RearReach × as long), Lighthouse
-    /// one turning round her at SweepTurn rad/s (SweepIntensity, SweepReach × as long); each burns as one shot. The
-    /// Anglerfish Lure makes a shot of hers left hanging LureBright × as bright.
+    /// widens it (each × its square root; at most MaxHalfAngleDeg); Sunbeam makes it a Lance and Nautilus Spiral adds a
+    /// beam turning round her (GreatLightTuning). Rear Fin adds a beam behind her (RearIntensity, RearReach × as long),
+    /// burning as one shot. The Anglerfish Lure makes a shot of hers left hanging LureBright × as bright.
     /// </summary>
-    public const float MaxHalfAngleDeg = 35f, SunbeamReach = 1.5f, SunbeamHalfAngleDeg = 15f;
-    public const float RearIntensity = 0.6f, RearReach = 0.75f, SweepIntensity = 0.5f, SweepReach = 0.7f, SweepTurn = 0.6f;
+    public const float MaxHalfAngleDeg = 35f;
+    public const float RearIntensity = 0.6f, RearReach = 0.75f;
     public const float LureBright = 2.5f;
     /// <summary>
     /// Her beam split into rays (docs/proposals/BEAM-PEARLS-PLAN.md, step 1), by her merged shot shape: Multishot rays fanned
@@ -102,6 +101,8 @@ public sealed class LightEmitter
     /// <summary>A cone's half-angle this far along it (wider toward its reach when it flares).</summary>
     public float HalfAt(float distance) => Flare <= 0f ? HalfAngle : HalfAngle * (1f + Flare * Math.Clamp(distance / MathF.Max(Range, 0.1f), 0f, 1f));
     public float Intensity = 1f, Range = 1f;
+    /// <summary>A beam's own carry, the light it keeps at its reach (0: hers, PlaneWorld.BeamCarry; a Lance's is full).</summary>
+    public float Carry;
     /// <summary>Warm gold for hers; others by owner (for the view).</summary>
     public Vector3 Colour = new(1f, 0.82f, 0.45f);
     /// <summary>False: registered, but lighting nothing (her beam while Fire is up).</summary>
@@ -280,19 +281,19 @@ public sealed partial class PlaneWorld
     /// <summary>Her beam is shining now.</summary>
     public bool BeamOn => Beam.Shining;
 
-    /// <summary>Rear Fin's beam behind her, and Lighthouse's turning round her (registered, dark until their pearls shine them).</summary>
+    /// <summary>Rear Fin's beam behind her, and the one turning round her (Orbit, Lighthouse: registered, dark until their pearls shine them).</summary>
     public LightEmitter RearBeam => _rear ??= Lights.Add(new LightEmitter
     {
         Owner = Her, Shape = LightShape.Cone, Intensity = LightTuning.BeamIntensity * LightTuning.RearIntensity, Active = false,
     });
     public LightEmitter SweepBeam => _sweep ??= Lights.Add(new LightEmitter
     {
-        Owner = Her, Shape = LightShape.Cone, Intensity = LightTuning.BeamIntensity * LightTuning.SweepIntensity, Active = false,
+        Owner = Her, Shape = LightShape.Cone, Intensity = LightTuning.BeamIntensity * GreatLightTuning.OrbitIntensity, Active = false,
     });
 
     /// <summary>
     /// Her beams and how many plain shots' burn each is worth: her own (BeamShots, or its share of them when it is split),
-    /// its other rays, Rear Fin's and Lighthouse's (one each).
+    /// its other rays, Rear Fin's (one), the turning beam's (Orbit one, Lighthouse her whole beam's).
     /// </summary>
     public IEnumerable<(LightEmitter Beam, float Shots)> HerBeams
     {
@@ -300,12 +301,12 @@ public sealed partial class PlaneWorld
         {
             // (Her fire rate is its tick rate: each burns, seals and charges the faster.)
             float tick = BeamTick;
-            // (Her own beam's rays by her rhythms: focus, spin-up, pulse. PlaneRhythm.cs.)
-            float rhythm = RhythmBurn;
+            // (Her own beam's rays by her rhythms: focus, spin-up, pulse (PlaneRhythm.cs); and Shark Mode's heat and Frenzy.)
+            float rhythm = RhythmBurn * GreatBurn;
             yield return (Beam, _beamWorth * tick * rhythm);
             for (int i = 0; i < _rays.Count; i++) yield return (_rays[i], _rayWorth[i] * tick * rhythm);
             yield return (RearBeam, tick);
-            yield return (SweepBeam, tick);
+            yield return (SweepBeam, OrbitWorth * tick);
             // The rays born where her light lands on rock (PlanePaths.cs).
             for (int i = 0; i < _bornCount; i++) yield return (_born[i].Emitter, _born[i].Worth * tick);
         }
@@ -397,6 +398,12 @@ public sealed partial class PlaneWorld
     {
         if (!BeamReaches(b, at, height, radius)) return 0f;
         if (BodyInTheWay(b.Position, at, radius, self)) return 0f;
+        return OpenLight(b, at, radius);
+    }
+
+    /// <summary>A beam's light on a body within its reach, were nothing in the way: its falloff, softer toward its rim.</summary>
+    float OpenLight(LightEmitter b, Vector2 at, float radius)
+    {
         var to = at - b.Position;
         float flat = to.Length();
         float cone = 1f;
@@ -415,7 +422,7 @@ public sealed partial class PlaneWorld
     public float BeamFalloff(LightEmitter b, float distance)
     {
         float k = 1f - Math.Clamp(distance / MathF.Max(b.Range, 0.1f), 0f, 1f);
-        float far = BeamCarry;
+        float far = b.Carry > 0f ? b.Carry : BeamCarry;
         return far + (LightTuning.NearLight - far) * MathF.Pow(k, 1.4f);
     }
 
@@ -633,12 +640,15 @@ public sealed partial class PlaneWorld
         var aim = input.Aim.LengthSquared() > 1e-6f ? input.Aim : Player.Aim;
         if (aim.LengthSquared() > 1e-6f) beam.Direction = Vector2.Normalize(aim);
         beam.Range = LightTuning.BeamReach * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.Glow], 0.1f)) * MathF.Sqrt(MathF.Max(RangeScale, 0.1f))
-            * (shape.Laser ? LightTuning.SunbeamReach : 1f);
-        // Her rhythms (PlaneRhythm.cs): focus narrows her beam.
+            * (shape.Laser ? GreatLightTuning.LanceReach : 1f);
+        // Her rhythms (PlaneRhythm.cs): focus narrows her beam. Her great lights (PlaneGreatLights.cs).
         StepRhythm(input.Beam && !Defeated, beam.Direction);
-        float halfDeg = shape.Laser ? LightTuning.SunbeamHalfAngleDeg
-            : MathF.Min(LightTuning.BeamHalfAngleDeg * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.ShotSize], 0.1f)), LightTuning.MaxHalfAngleDeg);
-        float half = halfDeg * MathF.PI / 180f * MathF.Sqrt(MathF.Max(shape.SizeMult, 0.1f)) * FocusWidth;
+        StepGreatLights();
+        float halfDeg = MathF.Min(LightTuning.BeamHalfAngleDeg * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.ShotSize], 0.1f)), LightTuning.MaxHalfAngleDeg);
+        // (The Lance: long and narrow, its light carried to its end; Shark Mode narrower.)
+        float half = halfDeg * MathF.PI / 180f * MathF.Sqrt(MathF.Max(shape.SizeMult, 0.1f)) * FocusWidth
+            * (shape.Laser ? GreatLightTuning.LanceWidth : 1f) * (Run.Loadout.Has("shark_mode") ? GreatLightTuning.SharkNarrow : 1f);
+        float carry = shape.Laser ? LightTuning.MostCarry : 0f;
         float range = beam.Range;
         beam.Active = input.Beam && !Defeated;
         // Split into its rays (her shot shape: Triple Tentacle, Hammerhead, Double Helix, Plankton Swarm, Kraken Form).
@@ -654,6 +664,7 @@ public sealed partial class PlaneWorld
             ray.Direction = Rotate(BeamAim, offset);
             ray.HalfAngle = half * width;
             ray.Range = range * reach;
+            ray.Carry = carry;
             if (i == 0) _beamWorth = HerLightTuning.BeamShots * worth;
             else
             {
@@ -675,15 +686,8 @@ public sealed partial class PlaneWorld
         rear.Range = beam.Range * LightTuning.RearReach;
         rear.HalfAngle = beam.HalfAngle;
         rear.Active = beam.Active && shape.Rear;
-        // Lighthouse: a fainter beam turning slowly round her, always.
-        var sweep = SweepBeam;
-        bool lighthouse = Run.Loadout.Has("lighthouse");
-        if (lighthouse) _sweepAngle = (_sweepAngle + LightTuning.SweepTurn * Dt) % MathF.Tau;
-        sweep.Position = beam.Position;
-        sweep.Direction = new Vector2(MathF.Cos(_sweepAngle), MathF.Sin(_sweepAngle));
-        sweep.Range = beam.Range * LightTuning.SweepReach;
-        sweep.HalfAngle = beam.HalfAngle;
-        sweep.Active = lighthouse && !Defeated;
+        // Orbit (Nautilus Spiral): a fainter beam turning slowly round her, always (Lighthouse: a full Lance).
+        PlaceOrbit(beam, shape.Spiral);
         BeamEnd = beam.Active ? FirstBlocked(beam.Position, beam.Position + beam.Direction * beam.Range, 0.1f) : beam.Position;
         // Her rays born where her light lands on rock (Bounce, Fork, Return, Ghost).
         SyncPaths();

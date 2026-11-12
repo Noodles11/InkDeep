@@ -154,8 +154,11 @@ much corruption is left (CORRUPTION, "Corruption rings").
   deep; Supernova names where they meet.
 - **Her glow's second voice** (LIGHT-AND-GRAPH §15): fireflies of her light orbit her (Firefly Squid, Bubble Gland,
   Anemone Pump), revealing and burning a little in her colours, lures for the murklings; her glow takes her colours.
-  The rest of the light grammar (proposals/LIGHT-GRAMMAR.md) is to come.
-- **Synergies** announce themselves; **transformations** are designed, not built.
+- **Her great lights** (LIGHT-AND-GRAPH §16): Sunbeam's Lance, Nautilus Spiral's turning beam and Lighthouse where
+  they meet; the lantern forms (three pearls of a tag) re-theme her light: Kraken Form's crown, Neon Rave's seven
+  colours in turn, Coral Reef's mending afterlight, Shark Mode's hot beam and Frenzy, Pirate's gilded light; and the
+  crab's Black Sun, whose shadows burn. The catalogue's last pass (proposals/LIGHT-GRAMMAR.md step 8) is to come.
+- **Synergies** and **transformations** announce themselves.
 
 ## 9. Growth and the jelly
 

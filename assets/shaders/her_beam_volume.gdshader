@@ -26,6 +26,9 @@ uniform float reach = 16.0;
 // Flare (Starfish Arm): the cone widens along its length, this much as wide again at its reach (a trumpet).
 uniform float flare = 0.0;
 uniform sampler2D shadow : filter_linear, repeat_disable, hint_default_white;
+// Black Sun: the shadows the creatures cast down it glow a dark violet (0: plain shadows).
+uniform float black_sun = 0.0;
+const vec3 BLACK_SUN = vec3(0.42, 0.08, 0.78);
 // How thick the water's glow is per metre of lit water, how much of the light the water takes up per metre, and how
 // forward it scatters (Henyey–Greenstein g).
 uniform float density = 0.09;
@@ -46,7 +49,8 @@ void vertex() {
 float bv_hash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
 
 // How much of her light gets to a point (v: from her bell), 0..1: inside the cone, softly to its rim, and not shaded.
-float light_at(vec3 v, vec3 across, out float dist) {
+float light_at(vec3 v, vec3 across, out float dist, out float dark) {
+	dark = 0.0;
 	dist = length(v);
 	if (dist <= 1e-3 || dist >= reach) return 0.0;
 	float x = dot(v, axis), z = dot(v, across);
@@ -61,13 +65,16 @@ float light_at(vec3 v, vec3 across, out float dist) {
 	vec2 uv = vec2(az, el) / (2.0 * span) + 0.5;
 	// (The grid's texels blend, so the shadow's edge is soft, the softer the farther.)
 	float soft = 0.15 + 0.05 * dist;
-	float lit = smoothstep(-soft, soft, texture(shadow, uv).r * reach - dist);
+	vec2 sh = texture(shadow, uv).rg;
+	float lit = smoothstep(-soft, soft, sh.r * reach - dist);
 	// Light spreads out and the water takes it up; not over her own bell.
 	float fall = exp(-absorb * dist) / (1.0 + 0.012 * dist * dist);
 	float near = smoothstep(0.15, 0.9, dist);
 	// (And it runs out at its reach, fading over the far half of it, so no edge shows where it ends.)
 	float out_ = 1.0 - smoothstep(reach * 0.5, reach, dist);
 	out_ *= out_;
+	// (Black Sun: where a creature, not rock, stopped this ray, the shadow behind it burns.)
+	if (black_sun > 0.0) dark = spot * (1.0 - lit) * step(sh.g - sh.r, 0.02) * fall * near * out_;
 	return spot * lit * fall * near * out_;
 }
 
@@ -109,14 +116,15 @@ void fragment() {
 	// Each pixel starts a little differently along its line (no banding).
 	float jitter = fract(52.9829189 * fract(dot(FRAGCOORD.xy, vec2(0.06711056, 0.00583715))) + TIME * 0.618);
 	float g = forward, g2 = g * g;
-	float glow = 0.0, sparkle = 0.0;
+	float glow = 0.0, sparkle = 0.0, gloom = 0.0;
 	vec3 drift = vec3(TIME * 0.11, TIME * 0.04, TIME * 0.07);
 	for (int i = 0; i < STEPS; i++) {
 		float t = t_in + (float(i) + jitter) * step_len;
 		vec3 p = cam + d * t;
 		vec3 v = p - origin;
-		float dist;
-		float l = light_at(v, across, dist);
+		float dist, dark;
+		float l = light_at(v, across, dist, dark);
+		gloom += dark * step_len;
 		if (l <= 0.0) continue;
 		// Seen against the way the light goes, the water scatters more of it to the eye.
 		float cos_t = dot(v / dist, -d);
@@ -134,6 +142,7 @@ void fragment() {
 		}
 	}
 	float haze = 1.0 - exp(-density * glow);
-	ALBEDO = mix(tint, vec3(1.0), clamp(sparkle * 0.6, 0.0, 1.0));
-	ALPHA = clamp(strength * (haze + sparkle * 0.8), 0.0, 1.0);
+	float dusk = black_sun * (1.0 - exp(-density * 2.5 * gloom));
+	ALBEDO = mix(mix(tint, vec3(1.0), clamp(sparkle * 0.6, 0.0, 1.0)), BLACK_SUN, dusk / max(haze + dusk, 1e-4));
+	ALPHA = clamp(strength * (haze + dusk + sparkle * 0.8), 0.0, 1.0);
 }

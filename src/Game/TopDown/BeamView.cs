@@ -70,6 +70,9 @@ public partial class BeamView : Node3D
     readonly List<OmniLight3D> _glints = new();
     /// <summary>How much her rhythms brighten her own beam's haze: at full focus, spun right up, on a pulse's beat; and how white focus turns it.</summary>
     const float FocusGlow = 0.9f, SpinGlow = 0.6f, BeatGlow = 1.2f, FocusWhite = 0.7f;
+    /// <summary>Shark Mode's Frenzy: her beam flushed bright and hot-white; Coral Reef's pools a living coral.</summary>
+    const float FrenzyGlow = 0.8f, FrenzyWhite = 0.35f;
+    static readonly Color ReefPool = new(1f, 0.5f, 0.45f);
     const float GlintEnergy = 5f, GlintRange = 2.4f, BornHaze = 2f, BornLeast = 0.55f;
 
     static readonly StringName BeamAt = "her_beam_at", BeamShadowTex = "her_beam_shadow", BeamFrame = "her_beam_frame", BeamAxis = "her_beam_axis";
@@ -303,9 +306,12 @@ public partial class BeamView : Node3D
             // Her rhythms on her own beam's rays (PlaneRhythm.cs): focus a white-hot thread, spin-up a thicker haze, the
             // pulse a flash on each beat.
             bool rhythmic = born is null && slot <= 0;
-            float rhythmLook = rhythmic ? (1f + FocusGlow * world.Focus) * (1f + SpinGlow * world.SpinUp) * (1f + BeatGlow * world.PulseBeat) : 1f;
+            float frenzy = world.FrenzyLeft > 0f ? Mathf.Min(1f, world.FrenzyLeft / 0.5f) : 0f;
+            float rhythmLook = rhythmic ? (1f + FocusGlow * world.Focus) * (1f + SpinGlow * world.SpinUp) * (1f + BeatGlow * world.PulseBeat) * (1f + FrenzyGlow * frenzy) : 1f;
             var tint = OctoShoots.Game.Fx.LightColour.Beam(rayHue, TopDownMain.ShowcaseOn);
-            if (rhythmic) tint = tint.Lerp(Colors.White, FocusWhite * world.Focus);
+            if (rhythmic) tint = tint.Lerp(Colors.White, FocusWhite * world.Focus + FrenzyWhite * frenzy);
+            // Black Sun: the creatures' shadows down her own beam glow dark violet (her_beam_volume).
+            m.SetShaderParameter("black_sun", born is null && world.Run.Loadout.Flags.Contains("blackSun") ? 1f : 0f);
             m.SetShaderParameter("tint", tint);
             // (A coloured ray's haze a little thicker, so its colour shows.)
             // (A born ray drawn by the square root of its worth, so even a faint one shows: BornHaze.)
@@ -476,6 +482,7 @@ void fragment() {
         if (multi.InstanceCount < pools.Count) multi.InstanceCount = Mathf.Max(pools.Count, OpenPathTuning.MostPools + 8);
         multi.VisibleInstanceCount = pools.Count;
         bool aurora = world.Run.Loadout.Has("aurora");
+        bool reef = world.Run.Loadout.Has("coral_reef");
         for (int i = 0; i < pools.Count; i++)
         {
             var p = pools[i];
@@ -486,6 +493,8 @@ void fragment() {
             var basis = Basis.Identity.Scaled(new Vector3(r, 1f, r));
             multi.SetInstanceTransform(i, new Transform3D(basis, new Vector3(p.At.X, LevelMap.SwimBand + 0.05f + (aurora ? 0.1f : 0f), p.At.Y)));
             var c = OctoShoots.Game.Fx.LightColour.Beam(p.Hue, TopDownMain.ShowcaseOn);
+            // (Coral Reef: her afterlight a living coral, brighter where she stands in it and mends.)
+            if (reef) c = c.Lerp(ReefPool, 0.6f);
             multi.SetInstanceCustomData(i, new Color(c.R, c.G, c.B, PoolGlow * dim * left * left * (aurora ? 1.4f : 1f)));
         }
     }

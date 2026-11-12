@@ -104,6 +104,7 @@ public static class PearlKey
                 case "mergeBubbles" or "linger": Add(MoreShots, PearlIcon.Chevron); break;
                 case "severedNerve" or "moltenCarapace" or "clawTithe": Add(Damage, PearlIcon.Chevron, 1.5f); break;
                 case "lastLight": Add(Defence, PearlIcon.Shield, 1.5f); break;
+                case "blackSun": Add(Damage, PearlIcon.Chevron, 1.5f); break;
             }
         if (item.Active is { } a)
         {

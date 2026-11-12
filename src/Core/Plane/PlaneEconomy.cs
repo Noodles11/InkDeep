@@ -186,7 +186,8 @@ public sealed partial class PlaneWorld
             if (shell.Taken) continue;
             Vector2 to = p.Position - shell.Position;
             float d = to.Length();
-            if (d < Radius + magnet && d > 1e-4f) shell.Velocity = to / d * PlaneEconomyTuning.ShellMagnetSpeed;
+            // (Pirate: a shell her gilded light reaches flies to her.)
+            if ((d < Radius + magnet || Gilded(shell.Position)) && d > 1e-4f) shell.Velocity = to / d * PlaneEconomyTuning.ShellMagnetSpeed;
             else shell.Velocity *= MathF.Exp(-4f * Dt);
             Vector2 next = shell.Position + shell.Velocity * Dt;
             if (Map.IsOpen(next)) shell.Position = next;

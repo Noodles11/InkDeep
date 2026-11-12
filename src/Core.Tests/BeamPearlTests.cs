@@ -66,7 +66,7 @@ public class BeamPearlTests
     }
 
     [Fact]
-    public void Range_and_size_lengthen_and_widen_the_beam_and_Sunbeam_makes_it_a_searchlight()
+    public void Range_and_size_lengthen_and_widen_the_beam_and_Sunbeam_makes_it_a_lance()
     {
         var plain = World();
         plain.Step(new PlaneInput { Beam = true, Aim = Vector2.UnitX });
@@ -78,8 +78,8 @@ public class BeamPearlTests
 
         var sun = World("sunbeam");
         sun.Step(new PlaneInput { Beam = true, Aim = Vector2.UnitX });
-        Assert.Equal(plain.Beam.Range * LightTuning.SunbeamReach, sun.Beam.Range, 2);
-        Assert.Equal(LightTuning.SunbeamHalfAngleDeg * MathF.PI / 180f, sun.Beam.HalfAngle, 3);
+        Assert.Equal(plain.Beam.Range * GreatLightTuning.LanceReach, sun.Beam.Range, 2);
+        Assert.Equal(plain.Beam.HalfAngle * GreatLightTuning.LanceWidth, sun.Beam.HalfAngle, 3);
     }
 
     [Fact]
@@ -101,16 +101,15 @@ public class BeamPearlTests
     }
 
     [Fact]
-    public void Lighthouse_turns_a_beam_round_her_even_while_her_own_is_off()
+    public void Nautilus_Spiral_turns_a_beam_round_her_even_while_her_own_is_off()
     {
-        var w = World("sunbeam", "nautilus_spiral");
-        Assert.True(w.Run.Loadout.Has("lighthouse"));
+        var w = World("nautilus_spiral");
         w.Step(new PlaneInput());
         Assert.True(w.SweepBeam.Shining);
         var was = w.SweepBeam.Direction;
         for (int i = 0; i < PlaneWorld.TickRate; i++) w.Step(new PlaneInput());
         float turned = MathF.Acos(Math.Clamp(Vector2.Dot(was, w.SweepBeam.Direction), -1f, 1f));
-        Assert.Equal(LightTuning.SweepTurn, turned, 1);
+        Assert.Equal(GreatLightTuning.OrbitTurn, turned, 1);
     }
 
     [Fact]

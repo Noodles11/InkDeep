@@ -9,7 +9,7 @@
 | | Passive | Active | All |
 |---|---|---|---|
 | Pearls | 59 | 13 | 72 |
-| Built | 47 | 5 | 52 |
+| Built | 50 | 5 | 55 |
 
 - **Passive** pearls work on their own from the moment she absorbs one: her stats, her bubbles, or something that
   happens when she is hit or frees a creature. They stack.
@@ -127,7 +127,7 @@ comes to it (the level below is laid out while she plays the one above); a run w
 | Unique | Built | Pearl | Tagline | Effect | Quality | Found in | Unlocked by |
 |:---:|:---:|---|---|---|---|---|---|
 | No (+1 chain) | ✅ | **Electric Eel Tail** | *Zzzap!* | What her light burns arcs its burn to 2 more within 4 m, at half the rate | ★★★ | treasure |  |
-| Yes |  | **Nautilus Spiral** | *Golden ratio, golden shots* | Shots spiral outward | ★★ | treasure |  |
+| Yes | ✅ | **Nautilus Spiral** | *Golden ratio, golden shots* | A fainter beam turns slowly round her, always (50% as bright, 70% as long) | ★★ | treasure |  |
 | No (+ 1 bounce) | ✅ | **Mirror Scale** | *Shiny side out* | Her light bounces off rock (60% of it) | ★★ | treasure |  |
 | Yes | ✅ | **Anglerfish Lure** | *Follow the light* | Her beam leans toward the nearest creature near it, up to 10° | ★★★ | treasure |  |
 | Yes | ✅ | **Swordfish Bill** | *En garde* | Shots pierce foes | ★★ | treasure |  |
@@ -138,7 +138,7 @@ comes to it (the level below is laid out while she plays the one above); a run w
 | Yes | ✅ | **Boomerang Shrimp** | *Always comes back* | Her light that lands on rock comes back along its way (50%): lit from both sides | ★★ | treasure |  |
 | Yes | ✅ | **Ghost Jelly** | *Walls are a suggestion* | Her light passes through a wall up to 3 m thick, 50% as strong beyond | ★★ | treasure, secret |  |
 | Yes | ✅ | **Pearl Diver** | *Patience makes pearls* | Held steady, her beam focuses: it narrows and burns up to ×3 over 1.5 s; a swing loses it | ★★★ | treasure, boss |  |
-| Yes |  | **Sunbeam** | *A shaft of the surface, bottled* | Hold to charge a laser beam | ★★★★ | treasure, boss, whale |  |
+| Yes | ✅ | **Sunbeam** | *A shaft of the surface, bottled* | Her beam becomes a lance: 160% as long, 50% as wide, carrying its light to its end | ★★★★ | treasure, boss, whale |  |
 | Yes | ✅ | **Firefly Squid** | *Never blinks* | Four fireflies of her light orbit her: each reveals, burns a little and carries her colours | ★★★★ | treasure, boss |  |
 | No | ✅ | **Bubble Gland** | *Always one more in reserve* | +3 fireflies of her light round her | ★★ | treasure, shop |  |
 | No | ✅ | **Anemone Pump** | *Squeeze, refill, repeat* | +1 firefly; a firefly a murkling drinks is back in half the time | ★★ | treasure, shop |  |
@@ -168,7 +168,7 @@ comes to it (the level below is laid out while she plays the one above); a run w
 | No (+1s) |  | **Stingray Barb** | *Numbs on contact* | 30% chance to slow foes for 2s | ★ | treasure |  |
 | No (+1HP) | ✅ | **Lamprey Mouth** | *Every bite counts* | What her light frees sends its core flying to her, worth 3 more | ★★★ | treasure, curse |  |
 | Yes | ✅ | **Hammerhead** | *Wide-angle view* | Opens the beam into a 5-ray floodlight, each 32% of the beam | ★★★ | treasure, boss |  |
-| Yes |  | **Rear Fin** | *Eyes in the back of your mantle* | Also fires backwards | ★ | treasure, shop |  |
+| Yes | ✅ | **Rear Fin** | *Eyes in the back of your mantle* | A fainter beam shines out of her back too | ★ | treasure, shop |  |
 | No | ✅ | **Abyssal Glow** | *Light from below the light* | +0.4 damage; ×1.3 glow radius | ★★ | treasure, curse |  |
 | No (+x1.5 glow, +0.1HP regen) | ✅ | **Glowing Moss** | *Soft and luminous* | ×1.5 glow radius; +0.1 HP regeneration per second; her light turns to bloom: ink and ash clear ×2 as fast in it, and a murkling it frees leaves ×1.5 the light | ★ | treasure, shop |  |
 | Yes | ✅ | **Fire Urchin Spine** | *Pass it on* | What her light frees shines out 6 spines of her light, in her colours, taking her paths | ★★★ | treasure, curse |  |
@@ -213,7 +213,7 @@ caption reads "Synergy!" with its name, a chime plays and a ring of her light go
 | ✅ | **Cathedral** | Mirror Scale + Mitosis | Every bounce forks: a cave fills with a lattice of light |
 | ✅ | **Hall of Mirrors** | Boomerang Shrimp + Mirror Scale | Light caught between two walls: everything between burns from all sides |
 | ✅ | **Pinball Storm** | Electric Eel Tail + Mirror Scale | Each glint where her light bounces arcs to the nearest creature |
-|  | **Lighthouse** | Sunbeam + Nautilus Spiral | The beam sweeps in a rotating spiral |
+| ✅ | **Lighthouse** | Sunbeam + Nautilus Spiral | The beam turning round her is a full Lance |
 |  | **Cell Bloom** | Mitosis + Starfish Arm | Split shots also grow |
 |  | **Guided Inkfish** | Ink Sac + Anglerfish Lure | Homing bombs; explosions leave slowing ink clouds |
 | ✅ | **Shatter** | Frost Kelp + Fire Coral | Ember and frost mix to magenta: what frost has stilled, ember shatters in a burst of steam |
@@ -240,10 +240,10 @@ caption reads "Synergy!" with its name, a chime plays and a ring of her light go
 | Transformation | Pearls with the tag | What happens |
 |---|---|---|
 | **Kraken Form** | tentacle | Short beams shine all round her, 8 ways; ink trail |
-| **Neon Rave** | glow | Shots cycle colours, +damage |
-| **Shark Mode** | predator | Speed and damage up, freeing heals |
-| **Coral Reef** | coral | The reef mends you: slowly regain health |
-| **Pirate** | galleon | +1 damage, +2 luck, foes drop more coins |
+| **Neon Rave** | glow | Her light cycles through all seven colours, every colour's effect in turn; her glow ×1.3 |
+| **Shark Mode** | predator | A narrower, hotter beam (×1.3); what it frees sends her into the Frenzy (her beam ×1.5 for 3 s); +20% speed |
+| **Coral Reef** | coral | Her light lingers where it lands, and standing in her own afterlight mends her (3 HP/s) |
+| **Pirate** | galleon | Gilded light: shells it touches fly to her, and what it frees drops 2 more; +2 luck |
 
 ## The crab's pearls
 
@@ -255,3 +255,4 @@ Found only in a Crab Deal (docs/ADVENTURE.md §7), at the price of a quarter of 
 | **Molten Carapace** | *Hurt, it runs hot* | Under half health her shots pierce and do 60% more |
 | **Last Light** | *Not yet* | Once a level, a killing blow leaves her at 1 HP in a flood of light |
 | **Claw Tithe** | *Paid in full* | Each cut the crab has taken adds 25% damage |
+| **Black Sun** | *A little of the Leak, kept* | The shadow a creature casts down her beam burns what stands in it, as hard as her light would have |

@@ -112,11 +112,11 @@ public static class ItemCaption
         if (s.Split) lines.Add($"Where her light lands on rock it forks in two ({N(PathTuning.ForkDeg * 2)}° apart, {Pct(PathTuning.Fork)} of it each)");
         if (s.Boomerang) lines.Add($"Her light that lands on rock comes back along its way ({Pct(PathTuning.Return)} of it): what stands in it is lit from both sides");
         if (s.Wave) lines.Add("The beam's rays weave across your aim in a double helix");
-        if (s.Spiral) lines.Add("Shots spiral outward");
+        if (s.Spiral) lines.Add($"A fainter beam turns slowly round her, always ({Pct(GreatLightTuning.OrbitIntensity)} as bright, {Pct(GreatLightTuning.OrbitReach)} as long)");
         if (s.Grow) lines.Add($"Her beam flares, widening along its length: {Pct(OpenPathTuning.FlareWide)} wider again at its tip");
         if (s.Explosive) lines.Add($"What her light frees flares: a ring of her light {N(EchoTuning.FlareReach)} m wide that burns and clears ink, in her colours");
         if (s.Charge) lines.Add($"Held steady, her beam focuses: over {N(RhythmTuning.FocusTime)} s it narrows and burns up to ×{N(RhythmTuning.FocusBurn)}; swinging it loses the focus");
-        if (s.Laser) lines.Add("Her beam reaches half as far again, narrowed to a searchlight");
+        if (s.Laser) lines.Add($"Her beam becomes a lance: {Pct(GreatLightTuning.LanceReach)} as long, {Pct(GreatLightTuning.LanceWidth)} as wide, carrying its light to its end");
         if (s.Rear) lines.Add("A fainter beam shines out of her back too");
         if (s.ChainTargets > 0) lines.Add($"What her beam burns arcs its burn to {s.ChainTargets} more within {N(s.ChainRange)} m, at half the rate");
         if (s.Ember > 0) lines.Add($"Her light turns ember: what it lights keeps burning {N(ColourTuning.Ember(s.Ember))} s after it leaves");
@@ -172,6 +172,7 @@ public static class ItemCaption
         "moltenCarapace" => "Under half health your shots pierce and do 60% more",
         "lastLight" => "Once a level, a killing blow leaves you at 1 HP in a flood of light",
         "clawTithe" => "Each cut the crab has taken adds 25% damage",
+        "blackSun" => "The shadow a creature casts down her beam burns what stands in it, as hard as her light would have",
         "surge" => $"Fire pours out a continuous surge of light instead of shots: {Pct(SurgeTuning.Dps)} of your shots' damage per second to all it touches, clearing a little corruption where it ends. Your other pearls shape it",
         "landmarks" => "Every place shows on the maps before you reach it (secret rooms stay hidden)",
         "minimap" => "Shows the minimap: the reef round you, top right",

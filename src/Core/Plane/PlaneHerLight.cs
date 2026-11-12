@@ -250,7 +250,17 @@ public sealed partial class PlaneWorld
             {
                 // As much as her beam's light reaches it: more near her, none past a body in the way.
                 float light = BeamLight(beam, at, height, radius, kin);
-                if (light <= 0f) continue;
+                if (light <= 0f)
+                {
+                    // Black Sun: the shadow of a body in its way burns it as hard (unseen, colourless).
+                    float shade = ShadeLight(beam, at, height, radius, kin);
+                    if (shade > 0f)
+                    {
+                        n += worth * shade;
+                        if (from == default) from = beam.Position;
+                    }
+                    continue;
+                }
                 n += worth * light;
                 // In the colour her pearls give that ray, and the prism stones it passed through (mixed on it with the others').
                 hue |= RayHue(beam) | HueAlong(beam.Position, at);

@@ -208,8 +208,8 @@ marked **Beam** or **Beam too** work as written.
 | Coral Crown, Glass Squid, Shark Tooth, Abyssal Glow, Pufferfish Pout, Cannonball; Neon Rave, Shark Mode, Pirate | + damage | **Beam too**: the beam burns faster by the same stat (it already does). |
 | Whale Lung, Cuttlebone | + range | **Beam too**: the beam reaches farther (× √ of the range stat). |
 | Whale Lung, Cannonball | + shot size | **Beam too**: the beam's cone widens (× √ of the size stat, at most 35°). |
-| Sunbeam | her shot is a laser | **Beam**: the beam reaches half as far again and narrows to 15°: a searchlight. Its shot laser goes. |
-| Lighthouse (Sunbeam + Nautilus Spiral) | the laser sweeps a spiral | **Beam**: a second, fainter beam turns slowly round her. |
+| Sunbeam | her shot is a laser | **Beam**: the Lance (§16). Its shot laser goes. |
+| Nautilus Spiral; Lighthouse (Sunbeam + Nautilus Spiral) | shots spiral; the laser sweeps a spiral | **Beam**: Orbit, a fainter beam turning round her; Lighthouse makes it a full Lance (§16). |
 | Electric Eel Tail | shots chain to 2 more foes | **Beam too**: what the beam burns arcs its burn to the 2 nearest corrupted within 4 m, at half the rate. |
 | Rear Fin | a shot out of her back too | **Beam too**: a second beam behind her at half its strength (a murkling sees it too). |
 | Frost Kelp, Fire Coral, Sea Nettle Sting, Stingray Barb, Siren Song, Giant Squid Eye | a chance per hit (freeze, burn, poison, slow, charm, crit) | **Beam too**: rolled once a second for each creature the beam keeps burning. |
@@ -387,7 +387,7 @@ The first words of the light grammar (docs/proposals/LIGHT-GRAMMAR.md §5). Thre
 
 - **Dealt across her rays** (`PlaneWorld.DealHues`): one ray takes all her colours mixed; a split beam deals them in
   turn from its left (Triple Tentacle with ember and frost: ember, frost, ember), Kraken Form's rays round her after
-  it. Rear Fin's and Lighthouse's beams take them all.
+  it. Rear Fin's and the turning beam (Orbit, Lighthouse) take them all.
 - **Mixed on the creature, as light mixes** (`ApplyColour`): the colours of every ray lighting it, of the prism
   stones each passed through, and of a charge stone lit in colour near it. A mix does what its colours do, and more:
 
@@ -440,7 +440,7 @@ her bell's), so a lattice is wider and cleverer, never simply more.
 
 The light grammar's third words (docs/proposals/LIGHT-GRAMMAR.md §6): what happens while she holds her beam
 (`PlaneRhythm.cs`, `RhythmTuning`). They scale what her own beam and its rays burn (`RhythmBurn`, in `HerBeams`), and
-so what the rays born of them carry; Rear Fin's and Lighthouse's beams keep their own.
+so what the rays born of them carry; Rear Fin's and the turning beam keep their own.
 
 | Pearl | Word | While her beam is held |
 |---|---|---|
@@ -462,7 +462,7 @@ so what the rays born of them carry; Rear Fin's and Lighthouse's beams keep thei
 ## 13. Her light's paths in the open (built)
 
 The light grammar's fourth words (docs/proposals/LIGHT-GRAMMAR.md §4, step 4): what her rays do on their way and
-where they end (`PlaneOpenPaths.cs`, `OpenPathTuning`). They act on her own beam's rays (not Rear Fin's, Lighthouse's,
+where they end (`PlaneOpenPaths.cs`, `OpenPathTuning`). They act on her own beam's rays (not Rear Fin's, the turning beam's,
 nor the rays born on rock).
 
 | Pearl | Word | What her light does |
@@ -523,3 +523,29 @@ that (`PlaneFireflies.cs`, `FireflyTuning`).
 - Firefly Squid's old surge, and Bubble Gland's and Anemone Pump's bubble stats, stay on them for her shots (off in the
   game) and are not captioned.
 - Tests: `GlowVoiceTests`.
+
+## 16. Her great lights (built)
+
+The light grammar's seventh words (docs/proposals/LIGHT-GRAMMAR.md §9; `PlaneGreatLights.cs`, `GreatLightTuning`).
+
+- **Lance** (Sunbeam): her beam 1.6× as long and half as wide, its carry full (`LightTuning.MostCarry` at its reach:
+  `LightEmitter.Carry`). Its split rays are lances too.
+- **Orbit** (Nautilus Spiral): a fainter beam turning round her at 0.6 rad/s, always, beam on or off (50% as bright,
+  70% of her beam's reach, as wide), burning as one shot.
+- **Lighthouse** (Lance + Orbit): the turning beam is a full Lance: her beam's reach, width, carry and brightness,
+  burning as her whole beam (`HerLightTuning.BeamShots`).
+- **Lantern forms** (three pearls of a tag; the banner names them):
+  - Kraken Form (tentacle): the Crown, 7 short rays round her (§5.1).
+  - Neon Rave (glow): her light is each of the seven colours in turn, 0.8 s each (ember, sunfire, bloom, lull, frost,
+    shatter, daybreak): every ray, her glow and her fireflies, with every colour's effect; her glow ×1.3.
+  - Coral Reef (coral): her light lingers (Linger, §13) and standing in a pool of it mends her 3 HP a second; the
+    pools are drawn a living coral.
+  - Shark Mode (predator): her beam 75% as wide and burning ×1.3; what her light frees sends her into the Frenzy, her
+    beam burning ×1.5 for 3 s (each freeing starts it again), flushed bright and white; +20% speed.
+  - Pirate (galleon): gilded light: a shell any beam of hers reaches flies to her; what her light frees drops 2 shells
+    more; +2 luck.
+- **Black Sun** (a Crab Deal pearl, the only dark word): where a creature's body stands in a beam of hers, its
+  shadow burns what stands in it as hard as the light would have (unseen: it reveals nothing, and carries no colour).
+  Drawn as a dark violet glow down her beam behind the creature (`her_beam_volume`'s `black_sun`). Pierce leaves no
+  shadows to burn.
+- Tests: `GreatLightTests`.

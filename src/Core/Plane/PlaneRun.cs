@@ -25,11 +25,11 @@ public sealed class PlaneRun
         "squid_ink_espresso", "whale_lung", "pufferfish_pout", "cuttlebone", "cannonball", "dolphin_fin", "coral_polyp",
         "abyssal_glow", "glass_squid", "sea_cucumber", "sardine_run", "pistol_shrimp", "brass_compass", "sea_chart_nautilus",
         "bubble_shield", "whale_song", "firefly_squid", "prism_pearl", "ink_cloud", "conch_horn", StartingPearl,
-        "fire_coral", "glowing_moss", "frost_kelp", "ghost_jelly", "pearl_diver", "glow_burst", "electric_eel_tail", "fire_urchin_spine", "lamprey_mouth", "bubble_gland", "anemone_pump",
+        "fire_coral", "glowing_moss", "frost_kelp", "ghost_jelly", "pearl_diver", "glow_burst", "electric_eel_tail", "fire_urchin_spine", "lamprey_mouth", "bubble_gland", "anemone_pump", "sunbeam", "nautilus_spiral", "rear_fin",
     };
 
     /// <summary>The pearls found only in a Crab Deal (never offered anywhere else).</summary>
-    public static readonly string[] CrabPearls = { "severed_nerve", "molten_carapace", "last_light", "claw_tithe" };
+    public static readonly string[] CrabPearls = { "severed_nerve", "molten_carapace", "last_light", "claw_tithe", "black_sun" };
 
     /// <summary>The active pearl every run starts with (Tide Pulse).</summary>
     public const string StartingPearl = "tide_pulse";

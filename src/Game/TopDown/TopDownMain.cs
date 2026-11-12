@@ -2681,6 +2681,12 @@ public partial class TopDownMain : Node3D
                     _combat.Shockwave(e.Position, e.Size, 0.5f);
                     _sfx.PlayAt("chime", new Vector3(e.Position.X, LevelMap.SwimBand, e.Position.Y), -6f, 0.1f);
                 }
+                else if (e.Type == PlaneEventType.Frenzy)
+                {
+                    // Shark Mode's Frenzy: her beam flushes bright (BeamView); a rush and a jolt.
+                    _sfx.PlayAt("active", new Vector3(e.Position.X, LevelMap.SwimBand, e.Position.Y), -6f, 0.1f);
+                    if (_view.CameraShake && !_view.ReducedMotion) _camera.Shake(0.08f);
+                }
                 else if (e.Type == PlaneEventType.EchoFlare)
                 {
                     // An echo's flare (Starburst Gland; Supernova's small ones at its spines' tips): a gold ring racing out.
