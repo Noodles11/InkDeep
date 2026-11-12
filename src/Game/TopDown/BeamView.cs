@@ -68,6 +68,8 @@ public partial class BeamView : Node3D
     /// </summary>
     ImageTexture _unshadowed = null!;
     readonly List<OmniLight3D> _glints = new();
+    /// <summary>How much her rhythms brighten her own beam's haze: at full focus, spun right up, on a pulse's beat; and how white focus turns it.</summary>
+    const float FocusGlow = 0.9f, SpinGlow = 0.6f, BeatGlow = 1.2f, FocusWhite = 0.7f;
     const float GlintEnergy = 5f, GlintRange = 2.4f, BornHaze = 2f, BornLeast = 0.55f;
 
     static readonly StringName BeamAt = "her_beam_at", BeamShadowTex = "her_beam_shadow", BeamFrame = "her_beam_frame", BeamAxis = "her_beam_axis";
@@ -296,12 +298,18 @@ public partial class BeamView : Node3D
             var m = fan.VolumeMaterial;
             // In the colour her pearls give this ray (PlaneColour.cs).
             var rayHue = world.RayHue(beam);
-            m.SetShaderParameter("tint", OctoShoots.Game.Fx.LightColour.Beam(rayHue, TopDownMain.ShowcaseOn));
+            // Her rhythms on her own beam's rays (PlaneRhythm.cs): focus a white-hot thread, spin-up a thicker haze, the
+            // pulse a flash on each beat.
+            bool rhythmic = born is null && slot <= 0;
+            float rhythmLook = rhythmic ? (1f + FocusGlow * world.Focus) * (1f + SpinGlow * world.SpinUp) * (1f + BeatGlow * world.PulseBeat) : 1f;
+            var tint = OctoShoots.Game.Fx.LightColour.Beam(rayHue, TopDownMain.ShowcaseOn);
+            if (rhythmic) tint = tint.Lerp(Colors.White, FocusWhite * world.Focus);
+            m.SetShaderParameter("tint", tint);
             // (A coloured ray's haze a little thicker, so its colour shows.)
             // (A born ray drawn by the square root of its worth, so even a faint one shows: BornHaze.)
             float bright = born is null ? beam.Intensity / LightTuning.BeamIntensity
                 : Mathf.Clamp(Mathf.Sqrt(born.Worth / HerLightTuning.BeamShots) * BornHaze, BornLeast, 1.2f);
-            m.SetShaderParameter("strength", fan.On * dim * bright * (rayHue is LightHue.None or LightHue.White ? 1f : ColouredHaze));
+            m.SetShaderParameter("strength", fan.On * dim * bright * rhythmLook * (rayHue is LightHue.None or LightHue.White ? 1f : ColouredHaze));
             m.SetShaderParameter("origin", origin);
             m.SetShaderParameter("axis", dir);
             m.SetShaderParameter("half_angle", beam.HalfAngle);
@@ -353,7 +361,7 @@ public partial class BeamView : Node3D
             var look = (dir + Vector3.Down * SpotTilt).Normalized();
             _spot.GlobalTransform = new Transform3D(Basis.LookingAt(look, Vector3.Up), heart);
             _spot.LightColor = OctoShoots.Game.Fx.LightColour.Beam(rayHue, TopDownMain.ShowcaseOn);
-            _spot.LightEnergy = SpotEnergy * fan.On * dim;
+            _spot.LightEnergy = SpotEnergy * fan.On * dim * rhythmLook;
             _spot.SpotRange = range * 1.25f;
             _spot.SpotAngle = Mathf.RadToDeg(beam.HalfAngle);
             // The sear on the corrupted (her_burn.gdshaderinc): only while it burns something, as her shots'.

@@ -294,8 +294,10 @@ public sealed partial class PlaneWorld
         {
             // (Her fire rate is its tick rate: each burns, seals and charges the faster.)
             float tick = BeamTick;
-            yield return (Beam, _beamWorth * tick);
-            for (int i = 0; i < _rays.Count; i++) yield return (_rays[i], _rayWorth[i] * tick);
+            // (Her own beam's rays by her rhythms: focus, spin-up, pulse. PlaneRhythm.cs.)
+            float rhythm = RhythmBurn;
+            yield return (Beam, _beamWorth * tick * rhythm);
+            for (int i = 0; i < _rays.Count; i++) yield return (_rays[i], _rayWorth[i] * tick * rhythm);
             yield return (RearBeam, tick);
             yield return (SweepBeam, tick);
             // The rays born where her light lands on rock (PlanePaths.cs).
@@ -623,9 +625,11 @@ public sealed partial class PlaneWorld
         if (aim.LengthSquared() > 1e-6f) beam.Direction = Vector2.Normalize(aim);
         beam.Range = LightTuning.BeamReach * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.Glow], 0.1f)) * MathF.Sqrt(MathF.Max(RangeScale, 0.1f))
             * (shape.Laser ? LightTuning.SunbeamReach : 1f);
+        // Her rhythms (PlaneRhythm.cs): focus narrows her beam.
+        StepRhythm(input.Beam && !Defeated, beam.Direction);
         float halfDeg = shape.Laser ? LightTuning.SunbeamHalfAngleDeg
             : MathF.Min(LightTuning.BeamHalfAngleDeg * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.ShotSize], 0.1f)), LightTuning.MaxHalfAngleDeg);
-        float half = halfDeg * MathF.PI / 180f * MathF.Sqrt(MathF.Max(shape.SizeMult, 0.1f));
+        float half = halfDeg * MathF.PI / 180f * MathF.Sqrt(MathF.Max(shape.SizeMult, 0.1f)) * FocusWidth;
         float range = beam.Range;
         beam.Active = input.Beam && !Defeated;
         // Split into its rays (her shot shape: Triple Tentacle, Hammerhead, Double Helix, Plankton Swarm, Kraken Form).

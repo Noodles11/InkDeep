@@ -112,7 +112,7 @@ public static class ItemCaption
         if (s.Spiral) lines.Add("Shots spiral outward");
         if (s.Grow) lines.Add($"Shots grow with distance: up to ×{N(PlaneCombatTuning.GrowMax)} size and damage at full range");
         if (s.Explosive) lines.Add($"Shots burst into light where they pop: {Pct(PlaneCombatTuning.BurstDamage)} of their damage to every corrupted thing within {N(PlaneCombatTuning.BurstRadius)} m, cleansing the ground");
-        if (s.Charge) lines.Add($"Hold to charge a pearl: in {N(PlaneCombatTuning.ChargeSeconds)} s, up to ×{N(PlaneCombatTuning.ChargeDamage)} damage and ×{N(PlaneCombatTuning.ChargeSize)} size");
+        if (s.Charge) lines.Add($"Held steady, her beam focuses: over {N(RhythmTuning.FocusTime)} s it narrows and burns up to ×{N(RhythmTuning.FocusBurn)}; swinging it loses the focus");
         if (s.Laser) lines.Add("Her beam reaches half as far again, narrowed to a searchlight");
         if (s.Rear) lines.Add("A fainter beam shines out of her back too");
         if (s.ChainTargets > 0) lines.Add($"What her beam burns arcs its burn to {s.ChainTargets} more within {N(s.ChainRange)} m, at half the rate");
@@ -160,8 +160,8 @@ public static class ItemCaption
     static string FlagLine(string flag) => flag switch
     {
         "magnet" => $"Pulls pickups and freed murklings' light toward you from {N(PlaneEconomyTuning.RemoraMagnet)} m (not {N(PlaneEconomyTuning.ShellMagnet)} m)",
-        "minigun" => $"Hold fire to spin up: up to ×{N(PlaneCombatTuning.MinigunMax)} fire rate over {N(PlaneCombatTuning.SpinUp)} s (shots stray up to {N(PlaneCombatTuning.MinigunJitterDeg)}°)",
-        "cavitation" => $"Shots collapse with a bang where they hit or go out: {Pct(PlaneCombatTuning.CavitationDamage)} of their damage to everything within {N(PlaneCombatTuning.CavitationRadius)} m",
+        "minigun" => $"Held without a break, her beam spins up: ×{N(RhythmTuning.SpinBurn)} burn after {N(RhythmTuning.SpinTime)} s",
+        "cavitation" => $"Held on a creature, her beam snaps every {N(RhythmTuning.SnapEvery)} s: a burst of light {N(RhythmTuning.SnapReach)} m wide that pushes it back",
         "mergeBubbles" => $"Her light lingers at the end of its range; shots that touch merge into one, adding their damage (+{Pct(PlaneCombatTuning.BubbleGrowth)} size for each)",
         "severedNerve" => "A severed strand circles you, stinging as your arm does",
         "moltenCarapace" => "Under half health your shots pierce and do 60% more",
@@ -180,6 +180,7 @@ public static class ItemCaption
     static string ActiveLine(ActiveSpec a) => a.Action switch
     {
         ActiveAction.PushWave => $"Three waves push everything loose {N(a.Radius)} m away from her; recharges in {N(a.Recharge)}s",
+        ActiveAction.GlowBurst => $"For {N(a.Duration)} s her beam beats, burning ×{N(a.Value)} on each beat; recharges in {N(a.Recharge)}s",
         _ => $"Recharges in {N(a.Recharge)}s",
     };
 }

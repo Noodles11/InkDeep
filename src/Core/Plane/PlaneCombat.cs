@@ -675,6 +675,11 @@ public sealed partial class PlaneWorld
                 size = MathF.Min(spec.Value, Run.MaxHp - p.Hp);
                 p.Hp += size;
                 break;
+            case ActiveAction.GlowBurst:
+                // Her beam beats for its duration (PlaneRhythm.cs).
+                BeginPulse(spec.Duration, spec.Value);
+                size = spec.Duration;
+                break;
             // The other actives are not on the plane yet (they are never offered).
             default:
                 return;

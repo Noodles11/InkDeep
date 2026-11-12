@@ -9,7 +9,7 @@
 | | Passive | Active | All |
 |---|---|---|---|
 | Pearls | 59 | 13 | 72 |
-| Built | 41 | 4 | 45 |
+| Built | 42 | 5 | 47 |
 
 - **Passive** pearls work on their own from the moment she absorbs one: her stats, her bubbles, or something that
   happens when she is hit or frees a creature. They stack.
@@ -137,15 +137,15 @@ comes to it (the level below is laid out while she plays the one above); a run w
 | Yes |  | **Sea Nettle Sting** | *It lingers* | 30% chance to poison foes for 4s | ★★ | treasure, curse |  |
 | Yes | ✅ | **Boomerang Shrimp** | *Always comes back* | Her light that lands on rock comes back along its way (50%): lit from both sides | ★★ | treasure |  |
 | Yes | ✅ | **Ghost Jelly** | *Walls are a suggestion* | Her light passes through a wall up to 3 m thick, 50% as strong beyond | ★★ | treasure, secret |  |
-| Yes | ✅ | **Pearl Diver** | *Patience makes pearls* | Hold to charge a pearl (up to ×3 damage) | ★★★ | treasure, boss |  |
+| Yes | ✅ | **Pearl Diver** | *Patience makes pearls* | Held steady, her beam focuses: it narrows and burns up to ×3 over 1.5 s; a swing loses it | ★★★ | treasure, boss |  |
 | Yes |  | **Sunbeam** | *A shaft of the surface, bottled* | Hold to charge a laser beam | ★★★★ | treasure, boss, whale |  |
 | Yes | ✅ | **Firefly Squid** | *Never blinks* | Fire pours out a continuous surge of light instead of shots: 90% of your shots' damage per second to all it touches, clearing a little corruption where it ends. Your other pearls shape it | ★★★★ | treasure, boss |  |
 | Yes | ✅ | **Double Helix** | *Twice the twist* | Splits the beam into 2 rays, each 62% of the beam; The beam's rays weave across your aim in a double helix | ★★★ | treasure |  |
 | Yes | ✅ | **Triple Tentacle** | *Why squirt once?* | Splits the beam into 3 rays, each 46% of the beam | ★★★ | treasure, boss |  |
 | Yes | ✅ | **Starfish Arm** | *Grows back bigger* | Shots grow with distance | ★★ | treasure | big_bubble_energy |
 | Yes | ✅ | **Starburst Gland** | *Bursts with borrowed sun* | Shots burst into light (cleanses ground, strikes the corrupted near) | ★★★ | treasure, curse |  |
-| Yes | ✅ | **Sardine Run** | *A million small reasons* | Hold fire: she spins up to a stream of small shots, four times as fast; ×0.7 shot size; ×0.3 shot damage | ★★★ | treasure, boss |  |
-| Yes | ✅ | **Pistol Shrimp Claw** | *Snap. Bang.* | Shots collapse with a bang where they hit or go out, hurting everything near | ★★★ | treasure, boss |  |
+| Yes | ✅ | **Sardine Run** | *A million small reasons* | Held without a break, her beam spins up: ×1.8 burn after 3 s | ★★★ | treasure, boss |  |
+| Yes | ✅ | **Pistol Shrimp Claw** | *Snap. Bang.* | Held on a creature, her beam snaps every 0.8 s: a burst of light 2.5 m wide that pushes it back | ★★★ | treasure, boss |  |
 | Yes |  | **Siren Song** | *Come closer…* | 15% chance to charm foes for 3s | ★★ | treasure, siren |  |
 
 ### More passives (DESIGN-2D §28)
@@ -194,7 +194,7 @@ comes to it (the level below is laid out while she plays the one above); a run w
 | Yes |  | **Tidal Wave** | *Surf's up* | A wave that pushes and hurts everything ahead (10, 12 m); recharges in 40 s | ★★ | treasure |  |
 | Yes |  | **Treasure Map** | *X marks a lot of spots* | Reveals the level, secrets included; recharges in 60 s | ★ | shop |  |
 | Yes |  | **Mimic Clam** | *What's inside? Something else now* | Rerolls the pearls on offer in the room; recharges in 60 s | ★★★ | treasure, secret |  |
-| Yes |  | **Glow Burst** | *Everybody shine* | Her bubbles ×2 for 5 s; a flash of light; recharges in 10 s | ★★ | treasure |  |
+| Yes | ✅ | **Glow Burst** | *Everybody shine* | For 5 s her beam beats, ×2 on each beat; recharges in 10 s | ★★ | treasure |  |
 | Yes |  | **Sea Dice** | *Roll the tide* | Rerolls the pickups nearby; recharges in 30 s | ★ | shop |  |
 | Yes |  | **Kraken Call** | *Something big owes you a favour* | A great tentacle strikes the foes about her (25); recharges in 60 s | ★★★ | treasure, boss | siphonophore |
 | Yes | ✅ | **Ink Cloud** | *Now you don't* | An ink cloud (3 m) where she is, and for 4 s the Leak's creatures lose her: murklings stop chasing and throwing, and a boss aims where it last had her; recharges in 20 s | ★★ | treasure, secret |  |
@@ -219,15 +219,15 @@ caption reads "Synergy!" with its name, a chime plays and a ring of her light go
 | ✅ | **Lull** | Glowing Moss + Frost Kelp | Bloom and frost mix to cyan: what it lights forgets you |
 | ✅ | **Daybreak** | all three | All three mix to white: every colour at once, and her light burns half again as hard |
 |  | **Tuna Rang** | Boomerang Shrimp + Swordfish Bill | Piercing boomerang hits twice and grows on the way back |
-| ✅ | **Pearl Necklace** | Pearl Diver + Mitosis | A full-charge pearl bursts into a ring of 8 pearls |
+| ✅ | **Pearl Necklace** | Pearl Diver + Mitosis | At full focus the beam's tip opens into a ring of 8 rays |
 |  | **Prism Pearl** | Sunbeam + Pearl Diver | A full-charge pearl fires lasers in 4 directions when it pops |
 |  | **Black Tide** | Tidal Wave + Ink Sac | The wave detonates ink on every foe it hits |
 |  | **Big Mad Puff** | Pufferfish Pout + Starfish Arm | Shots burst into a spiky shotgun blast when they pop |
 |  | **Will-o'-Wisp** | Ghost Jelly + Anglerfish Lure | Spectral wisps home twice as hard |
 |  | **Toxic Bloom** | Sea Nettle Sting + Mitosis | Split shots carry a double dose of poison |
 |  | **Feeding Frenzy** | Shark Tooth + Lamprey Mouth | Every creature freed sends you into a fast-firing frenzy |
-| ✅ | **String of Pearls** | Sardine Run + Pearl Diver | No holding: the stream fires pearls, charged as far as it has spun up |
-| ✅ | **Depth Charge** | Pistol Shrimp Claw + Pearl Diver | A full-charge pearl's blast is twice as wide and half again as strong |
+| ✅ | **String of Pearls** | Sardine Run + Pearl Diver | Spun right up, her beam keeps its focus through a swing |
+| ✅ | **Depth Charge** | Pistol Shrimp Claw + Pearl Diver | At full focus the snap is twice as wide and half again as strong |
 |  | **Broadside** | Cannonball + Rear Fin | Shots out of the back explode |
 | ✅ | **Supernova** | Firefly Squid + Starburst Gland | The surge bursts into light at its tip and wherever it strikes |
 | ✅ | **Lance of Light** | Firefly Squid + Swordfish Bill | The surge runs through every creature in its path |

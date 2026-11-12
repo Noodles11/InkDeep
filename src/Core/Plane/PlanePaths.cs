@@ -172,6 +172,17 @@ public sealed partial class PlaneWorld
                         PathWord.Bounce | PathWord.Fork | PathWord.Return | PathWord.Ghost, bounces);
             }
         }
+        // Pearl Necklace (Focus + Fork): at full focus her own beam's tip opens into a ring of rays.
+        if (Focus >= 1f && Run.Loadout.Has("pearl_necklace") && Beam.Shining && !Defeated)
+        {
+            float len = RockReach(Beam.Position, Beam.Direction, Beam.Range, out _);
+            var tip = Beam.Position + Beam.Direction * MathF.Max(len - PathTuning.Off, 0f);
+            float left = _beamWorth * RhythmBurn * BeamFalloff(Beam, len) / LightTuning.NearLight;
+            for (int k = 0; k < RhythmTuning.NecklaceRays && _bornCount < PathTuning.MostBorn; k++)
+                Bear(PathWord.Fork, tip, tip, Rotate(Beam.Direction, k * MathF.Tau / RhythmTuning.NecklaceRays + MathF.PI / RhythmTuning.NecklaceRays),
+                    Beam.Range * RhythmTuning.NecklaceReach, Beam.HalfAngle * PathTuning.ForkNarrow * 1.4f, left * RhythmTuning.NecklaceShare,
+                    RayHue(Beam), PathWord.Bounce | PathWord.Fork | PathWord.Return | PathWord.Ghost, int.MaxValue);
+        }
         for (int i = _bornCount; i < _born.Count; i++) _born[i].Emitter.Active = false;
     }
 

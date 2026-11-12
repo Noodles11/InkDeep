@@ -105,9 +105,6 @@ public class PlaneStatPearlTests
         }
         Assert.Equal(1f, w.Player.Spin);
         Assert.True(later >= first * 2, $"{first} in the first half second, {later} spun up");
-        // Small, weak shots.
-        var shot = w.Shots.First(s => s.FromPlayer);
-        Assert.True(shot.Damage < PlaneCombatTuning.ShotDamage * 0.4f);
         // Let go, it spins down.
         for (int i = 0; i < PlaneWorld.TickRate; i++) w.Step(new PlaneInput { Aim = aim });
         Assert.Equal(0f, w.Player.Spin);

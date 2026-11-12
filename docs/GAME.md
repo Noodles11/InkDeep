@@ -142,8 +142,11 @@ much corruption is left (CORRUPTION, "Corruption rings").
   shatter, lull, daybreak), each mix doing more. Coloured light opens coloured seals and colours charge stones.
 - **Her light's paths on rock** (LIGHT-AND-GRAPH §11): Mirror Scale bounces it, Mitosis forks it, Boomerang Shrimp
   sends it back along its way, Ghost Jelly takes it through thin walls; the rays born take each other's words where
-  they land (Cathedral, Hall of Mirrors), always with less light than arrived. The rest of the light grammar
-  (proposals/LIGHT-GRAMMAR.md) is to come.
+  they land (Cathedral, Hall of Mirrors), always with less light than arrived.
+- **Her light's rhythms** (LIGHT-AND-GRAPH §12): held steady her beam focuses (Pearl Diver), held long it spins up
+  (Sardine Run), held on a creature it snaps (Pistol Shrimp Claw), and Glow Burst makes it beat; Pearl Necklace, Depth
+  Charge and String of Pearls name where they meet. The rest of the light grammar (proposals/LIGHT-GRAMMAR.md) is to
+  come.
 - **Synergies** announce themselves; **transformations** are designed, not built.
 
 ## 9. Growth and the jelly

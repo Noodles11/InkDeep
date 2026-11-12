@@ -324,6 +324,8 @@ public sealed partial class PlaneWorld
         }
         SyncLights(input);
         StepHerLight();
+        // Pistol Shrimp Claw's snaps where her beam ends on a creature (PlaneRhythm.cs).
+        StepSnap();
         // Murklings as big as their corruption (shrunk by her light, grown back in the dark).
         StepMurkSizes();
         StepChargeStones();

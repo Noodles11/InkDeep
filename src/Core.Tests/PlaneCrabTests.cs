@@ -106,7 +106,4 @@ public class PlaneCrabTests
         foreach (var id in TestLevels.All(_ => true).Take(20))
             Assert.InRange(LightSprings.Of(AbyssReef.Apply(TopDownGenerator.Generate(new OctoShoots.Core.Run.RunStreams(TestLevels.Seed), id, luck: 6f))).Count, 0, 1);
     }
-
-    [Fact]
-    public void PearlDiverIsNotOffered() => Assert.DoesNotContain("pearl_diver", PlaneRun.PortedPearls);
 }

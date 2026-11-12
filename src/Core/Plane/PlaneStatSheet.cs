@@ -43,7 +43,7 @@ public static class PlaneStatSheet
             new("Damage per shot", F(damage, "0.#"), Share(damage, PlaneCombatTuning.ShotDamage)),
             new("Shots per throw", shots.ToString(Inv), shots - 1f),
             // (Her fire rate is her beam's tick rate, her shot speed its carry: docs/proposals/BEAM-PEARLS-PLAN.md.)
-            new("Beam tick rate", "×" + F(rate / baseRate, "0.##") + (minigun ? $" (×{F(PlaneCombatTuning.MinigunMax, "0")} spun up)" : ""), Share(rate, baseRate)),
+            new("Beam tick rate", "×" + F(rate / baseRate, "0.##") + (minigun ? $" (burn ×{F(RhythmTuning.SpinBurn, "0.#")} spun up)" : ""), Share(rate, baseRate)),
             new("Beam carry", "×" + F(speed / PlaneCombatTuning.ShotSpeed, "0.##"), Share(speed, PlaneCombatTuning.ShotSpeed)),
             new("Range", F(range, "0.#") + " m", Share(range, PlaneCombatTuning.BubbleRange)),
             new("Shot size", "×" + F(size, "0.##"), size - 1f),

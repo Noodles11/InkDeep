@@ -435,3 +435,26 @@ her bell's), so a lattice is wider and cleverer, never simply more.
   glint of light where it was born (a ghost's where it went into the rock). `--dbg-paths` aims her at a wall to see it.
 - Her shots (a charged pearl, the surge) keep their own older paths (bounces, splits, the boomerang loop).
 - Tests: `PathTests`.
+
+## 12. Her light's rhythms (built)
+
+The light grammar's third words (docs/proposals/LIGHT-GRAMMAR.md §6): what happens while she holds her beam
+(`PlaneRhythm.cs`, `RhythmTuning`). They scale what her own beam and its rays burn (`RhythmBurn`, in `HerBeams`), and
+so what the rays born of them carry; Rear Fin's and Lighthouse's beams keep their own.
+
+| Pearl | Word | While her beam is held |
+|---|---|---|
+| Pearl Diver | **Focus** | Held steady (turning under 30° a second), it builds over 1.5 s to burn ×3, its cone narrowing to 45% of its width. Swung faster, it loses it four times as fast; let go, it is gone. A chime at full focus. |
+| Sardine Run | **Spin-up** | Held without a break, it builds to burn ×1.8 after 3 s; let go, it spins down over 0.6 s. (It no longer narrows nor weakens her beam.) |
+| Pistol Shrimp Claw | **Snap** | While her beam's axis ends on a creature's body, every 0.8 s a snap of light bursts there: 2.5 m wide, 1.5 shots' burn, pushing what it catches back from her. |
+| Glow Burst *(active)* | **Pulse** | For 5 s her beam beats twice a second, each beat ×2 at its peak, fading to its next; recharges in 10 s. |
+
+- **Named when they meet** (synergies, with the banner): **Pearl Necklace** (Pearl Diver + Mitosis: at full focus her
+  beam's tip opens into a ring of 8 short rays, 12% of the light left there each), **Depth Charge** (Pistol Shrimp +
+  Pearl Diver: at full focus the snap is twice as wide and half again as strong), **String of Pearls** (Sardine Run +
+  Pearl Diver: spun right up, a swing does not break her focus).
+- **Drawn** (`BeamView`): focus turns her own beam's haze and spotlight toward a white-hot thread as it narrows (×1.9
+  bright at full focus); spin-up thickens the haze (×1.6 spun up); the pulse flashes it on each beat (×2.2); a snap is
+  the bang's shockwave, snap and shake (as Depth Charge's, bigger).
+- Her shots (when on) keep the old charged pearl, stream and bang.
+- Tests: `RhythmTests`.
