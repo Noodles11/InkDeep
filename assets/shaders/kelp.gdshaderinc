@@ -8,6 +8,8 @@
 #include "res://assets/shaders/sunlight.gdshaderinc"
 #include "res://assets/shaders/level_frame.gdshaderinc"
 
+// The art look (docs/ART-LOOKS.md): in the watercolour study (7) a blade is one flat wash, darker at its edge.
+global uniform int reef_art;
 uniform vec3 base_col : source_color = vec3(0.2, 0.3, 0.15);
 uniform vec3 tip_col : source_color = vec3(0.55, 0.7, 0.3);
 #ifdef OVER
@@ -38,14 +40,23 @@ void fragment() {
 	vec3 col = mix(base_col, tip_col, smoothstep(0.0, 0.9, u));
 	col *= 0.78 + 0.32 * COLOR.g;
 	// The midrib, paler; soft bands across the blade; the edge a shade darker.
-	col = mix(col, col * 1.3 + 0.02, (1.0 - smoothstep(0.0, 0.1, abs(across))) * 0.55);
-	col *= 0.9 + 0.12 * sin(UV.y * 5.5 + COLOR.r * 9.0 + across * 2.0);
+	if (reef_art != 7) {
+		col = mix(col, col * 1.3 + 0.02, (1.0 - smoothstep(0.0, 0.1, abs(across))) * 0.55);
+		col *= 0.9 + 0.12 * sin(UV.y * 5.5 + COLOR.r * 9.0 + across * 2.0);
+	}
+	else col = mix(vec3(dot(col, vec3(0.299, 0.587, 0.114))), col, 0.75);
 	col *= 1.0 - 0.25 * smoothstep(0.6, 1.0, abs(across) / margin);
 	ALBEDO = col;
 	ROUGHNESS = 0.8;
 	SPECULAR = 0.12;
 	BACKLIGHT = col * 0.3;
 	EMISSION = col * (sun_light + 0.03);
+	if (reef_art == 7) {
+		ROUGHNESS = 0.95;
+		SPECULAR = 0.0;
+		BACKLIGHT = vec3(0.0);
+		EMISSION = col * 0.2;
+	}
 #ifdef OVER
 	// Only over her (over_her.gdshaderinc).
 	ALPHA = over_her(world_pos, VERTEX.z, VIEW_MATRIX);

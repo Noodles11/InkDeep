@@ -39,8 +39,8 @@ drawn out into a dash or a line; where its stretch on screen passes 1.25 it fade
 ## Look 7: watercolour paper, from overhead (a study)
 
 `--look=7`. The painted game drawn another way: it stays on over the painted look (her light still shows the reef and
-the leaks still wake it), and changes only the camera and how the reef and the water are drawn. Creatures, Clementine,
-her light, the flora and the HUD are as they are.
+the leaks still wake it), and changes only the camera and how the reef, its corals and plants, and the water are drawn. Creatures, Clementine,
+her light and the HUD are as they are.
 
 - **The camera** looks straight down (`CameraRig.Tilt`, 90° in this look), north up, from the same distance.
 - **The reef simple** (`art_paint`, `reef_art.gdshaderinc`): each material one flat wash, a breath of its own colour
@@ -53,6 +53,9 @@ her light, the flora and the HUD are as they are.
   every height. In her light the wash is thinner.
 - **The paper** (`art_paper`): a cold-pressed sheet's tooth and mottling with the pigment settled darker in its hollows,
   laid on the world (so it lies flat on the screen and moves with the reef), on the reef's washes and on the water.
+- **Corals and plants simple** (`flora.gdshader`, `kelp.gdshaderinc`, `woven_reef.gdshaderinc`): each one flat wash
+  of its own hue at an even value, held back a little, the pigment darker round its edge and the paper's tooth in
+  it; no brain coral's grooves, polyps, sea fan's net, grain, midrib or bands, no caustics on them. They still sway.
 - **Outside her light** the reef keeps more of its colour than in the painted look (0.55 of it, not 0.15).
 
 ## The studies
