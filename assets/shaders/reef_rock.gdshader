@@ -45,11 +45,20 @@ void fragment() {
 	float px = length(fwidth(world.xz));
 	ReefSkin s = reef_surface(local, normalize(world_normal), TIME, px);
 	ReefSkin nat = s;
+	if (reef_art == 7) s.normal = normalize(world_normal);
 	art(s, local, fwidth(local.y), px);
+	// Watercolour (look 7): the simple wash is the reef as it is, in her light too: no fine relief, no glow of its own.
+	if (reef_art == 7) {
+		s.normal = normalize(world_normal);
+		s.rough = 0.95;
+		// (And a little of the sheet's own light, so a wall's wash stands pale off the dark water wherever it is.)
+		s.emission = s.albedo * 0.2;
+		nat = s;
+	}
 	float show = reef_show_skin(s, nat, world);
 	// The caustics ride to light() in BACKLIGHT (this shader does its own lighting, so nothing else reads it).
 	// (And how much the showcase shows it as it is, in .y: lit plainly there, not in the drawn look's steps.)
-	BACKLIGHT = vec3(s.caustic * 1.5, show, 0.0);
+	BACKLIGHT = vec3(s.caustic * 1.5, reef_art == 7 ? 0.0 : show, 0.0);
 	vec3 c = s.albedo * tint;
 	ALBEDO = c;
 	EMISSION = s.emission + LF_SEE_RIM * lf_see_rim(world, CAMERA_POSITION_WORLD) * 0.35;

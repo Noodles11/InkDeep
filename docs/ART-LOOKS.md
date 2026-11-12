@@ -1,6 +1,6 @@
 # Art looks
 
-The game is **painted** (look 0) in the Blue Hollow's palettes (docs/VISUAL-SHOWCASE.md). Before that it was drawn in
+The game is **painted** (look 0) in the Blue Hollow's palettes (docs/VISUAL-SHOWCASE.md); **look 7** is a study of it in watercolour from straight overhead. Before that it was drawn in
 **look 6, felt tip and highlighter** (`--showcase=0` brings it back): a minimal illustration, after a reference of ink lines and
 flat washes of blue. Looks 1–5 are earlier studies, and 0 the old painted-photographic look; each repaints the reef in
 its own surface shading (`reef_art.gdshaderinc`, used by the ground and the free rock) and changes how the depth pass
@@ -35,6 +35,25 @@ drawn out into a dash or a line; where its stretch on screen passes 1.25 it fade
   corruption particles, and the shimmer of hot water over a leak.
 - **Code:** `ArtLook` (src/Game/Fx) holds the look in use (project.godot's `reef_art` global, 6); `--look=N` picks
   another for verification, and `--dbg-inkview` shows the felt tip's lines alone (tinted red in look 6).
+
+## Look 7: watercolour paper, from overhead (a study)
+
+`--look=7`. The painted game drawn another way: it stays on over the painted look (her light still shows the reef and
+the leaks still wake it), and changes only the camera and how the reef and the water are drawn. Creatures, Clementine,
+her light, the flora and the HUD are as they are.
+
+- **The camera** looks straight down (`CameraRig.Tilt`, 90° in this look), north up, from the same distance.
+- **The reef simple** (`art_paint`, `reef_art.gdshaderinc`): each material one flat wash, a breath of its own colour
+  left; no fine relief, no caustics, next to no shading (`art_light`), a little light of its own so a wall's wash stands
+  pale off the dark water.
+- **A few stains for depth:** broad pools where the pigment dried darker, each with a finer dark rim where the wash
+  stopped; here and there a paler backrun; and the pigment gathered darker where a wall drops away to the water.
+- **The water dark and soft** (`topdown_post.gdshader`, `paper_blur`, `paper_dark`): all that lies under her plane
+  runs soft, wet into wet, under a dark wash of the depth's water, uneven in broad clouds; the walls stay crisp at
+  every height. In her light the wash is thinner.
+- **The paper** (`art_paper`): a cold-pressed sheet's tooth and mottling with the pigment settled darker in its hollows,
+  laid on the world (so it lies flat on the screen and moves with the reef), on the reef's washes and on the water.
+- **Outside her light** the reef keeps more of its colour than in the painted look (0.55 of it, not 0.15).
 
 ## The studies
 

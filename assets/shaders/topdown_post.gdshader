@@ -61,6 +61,10 @@ global uniform int reef_art;
 // The game's look (CameraRig.SetShowcase): a thick fog under her plane (below_fog: how much of it, thickening over
 // below_fog_depth metres down), and the reef drained of its colour and dimmed outside her light (unlit_saturation,
 // unlit_dim: what is left of them there), so she is the one who brings the colour, and her light reads.
+// Watercolour (look 7): how soft all that lies under her plane runs (mip levels), and how dark its wash of water is
+// (a share of the depth's water colour).
+uniform float paper_blur = 4.2;
+uniform float paper_dark = 0.62;
 uniform float below_fog = 0.0;
 uniform float below_fog_depth = 5.0;
 uniform float unlit_saturation = 1.0;
@@ -135,6 +139,10 @@ uniform vec2 world_origin = vec2(0.0);
 uniform float wobble = 1.0;
 /// Verification (--dbg-lightview): 1 shows where the sun reaches (yellow) and her light reaches (orange) on what is drawn.
 uniform int debug_view = 0;
+// The camera's tilt (CameraRig): how far south of a point what lies a metre under it shows (0.577 tilted 60°, 0 from
+// straight overhead), and how much a level disc is squashed up the screen (0.866; 1 overhead).
+uniform float look_slant = 0.577;
+uniform float look_squash = 0.866;
 
 void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
@@ -317,7 +325,7 @@ void fragment() {
 		// The leaks: hot air over each one's disc, where the ink comes through (the framing's 60° tilt taken out of its
 		// height).
 		for (int i = 0; i < leak_count; i++) {
-			vec2 d = (sp.xz - leaks[i].xy) * vec2(1.0, 0.866);
+			vec2 d = (sp.xz - leaks[i].xy) * vec2(1.0, look_squash);
 			if (dot(d, d) > 4.0) continue;
 			float hot = (1.0 - smoothstep(0.35, 1.1, length(d))) * leaks[i].z;
 			suv += (eddy * 0.9 + vec2(0.0, sin(TIME * 5.0 + sp.x * 3.0) * 0.12)) * hot * 0.6 / 25.6 * vec2(VIEWPORT_SIZE.y / VIEWPORT_SIZE.x, 1.0);
@@ -349,7 +357,10 @@ void fragment() {
 
 	// Painted, the depths below her are stated as flat layers of water (each a step deeper, hazier), barely blurred.
 	float layered = below;
-	if (reef_art > 0 && reef_art != 4 && reef_art != 5 && !open_deep) {
+	// (Watercolour, look 7: its own water, below.)
+	bool paper = reef_art == 7;
+	float paper_deep = !paper ? 0.0 : open_deep ? 1.0 : smoothstep(0.2, 2.6, below);
+	if (reef_art > 0 && reef_art != 4 && reef_art != 5 && !paper && !open_deep) {
 		float x = below / 2.2;
 		layered = (floor(x) + smoothstep(0.8, 1.0, fract(x))) * 2.2;
 	}
@@ -359,6 +370,8 @@ void fragment() {
 		+ above_blur * smoothstep(0.0, 9.0, above);
 	float peak = open_deep ? 0.0 : smoothstep(peak_from, peak_from + peak_span, h);
 	lod += peak_blur * peak;
+	// Watercolour: the walls stay crisp at every height; all that lies under her plane runs soft, wet into wet.
+	if (paper) lod = paper_blur * smoothstep(0.25, 3.0, below);
 	vec3 col = blurred(suv, lod);
 	// Blasts' marks: inside each, the picture smeared in toward its middle (a zoom blur), strongest at its heart,
 	// softening out to its rim and fading as it ages — painterly, never a bright disc.
@@ -393,7 +406,7 @@ void fragment() {
 	}
 
 	// How much water this pixel is seen through (the painted looks: as deep as it lies).
-	bool one_reef = (reef_art == 0 || reef_art == 5) && !open_deep;
+	bool one_reef = (reef_art == 0 || reef_art == 5 || paper) && !open_deep;
 	float seen = !floor_fog ? 0.0 : one_reef ? mix(reef_water, below, smoothstep(far_water, far_water + 6.0, below)) : layered;
 	// Everything is seen through water: reds fade and a turquoise in-scatter rises with the water between the sea
 	// surface and what this pixel shows.
@@ -407,7 +420,7 @@ void fragment() {
 	// The water over it: clear in the Shallows (a light veil), thick murk deeper down (reef_fog); and past the reef, the
 	// deeps sink into it, the depth's murk far below.
 	vec3 water = mix(reef_water_deep, reef_murk, smoothstep(2.0, 16.0, seen));
-	float veil = mix(0.18, 0.5, reef_fog) * (reef_art > 0 && reef_art != 5 ? 0.7 : 1.0);
+	float veil = mix(0.18, 0.5, reef_fog) * (reef_art > 0 && reef_art != 5 && !paper ? 0.7 : 1.0);
 	float fog = smoothstep(0.0, 1.8, seen) * (veil + (0.85 - veil) * (1.0 - exp(-seen * deep_fog * (0.6 + reef_fog))));
 	// Drawn in felt tip (look 4), the water a lighter veil, so the stippling under it still reads.
 	if (reef_art == 4) fog *= 0.55;
@@ -418,6 +431,23 @@ void fragment() {
 	if (below_fog > 0.0 && !open_deep && below > 0.0) {
 		float under = below_fog * smoothstep(0.15, below_fog_depth, below) * (1.0 - 0.5 * lit);
 		col = mix(col, mix(reef_water_deep, reef_murk, 0.2), under);
+	}
+	// Watercolour: the water under her plane a dark wash, the floor only a soft shape in it; its paper showing through
+	// (the reef's own paper is in its surface, reef_art.gdshaderinc's art_paper: the same sheet, laid on the world).
+	if (paper && (below > 0.0 || open_deep)) {
+		float deep = paper_deep;
+		vec3 dark = mix(reef_water_deep, reef_murk, 0.45) * paper_dark;
+		col = mix(col, dark, deep * (0.86 - 0.3 * lit));
+		vec4 pm = INV_PROJECTION_MATRIX * vec4(uv * 2.0 - 1.0, 0.5, 1.0);
+		vec3 pray = normalize((INV_VIEW_MATRIX * vec4(pm.xyz / pm.w, 0.0)).xyz);
+		vec3 pcam = INV_VIEW_MATRIX[3].xyz;
+		vec2 on_plane = (pcam + pray * ((swim_level - pcam.y) / min(pray.y, -1e-3))).xz + world_origin;
+		float tooth = value_noise(on_plane * 9.0) * 0.55 + value_noise(on_plane * 21.0 + 13.0) * 0.45;
+		float mottle = value_noise(on_plane * 0.9 + 5.0) * 0.6 + value_noise(on_plane * 2.3 + 17.0) * 0.4;
+		// (And the wash itself uneven: broad soft clouds where it dried lighter and darker.)
+		float cloud = value_noise(on_plane * 0.13 + 71.0) * 0.6 + value_noise(on_plane * 0.37 + 9.0) * 0.4;
+		float hollow = smoothstep(0.35, 0.75, tooth);
+		col *= mix(1.0, (0.9 + 0.12 * mottle) * (1.0 - 0.26 * hollow) * (1.0 + 0.08 * (1.0 - hollow)) * (0.7 + 0.6 * cloud), deep);
 	}
 	// Fish far under her plane: their vague shadows on all that lies below it, where this pixel's ray crosses their depth (over the
 	// water's veil, which would wash them away).
@@ -448,7 +478,7 @@ void fragment() {
 		float gap = her_glow.y - world.y;
 		// Round her as the eye sees her: the point of the floor behind her on the screen (the camera is tilted, so what lies
 		// straight under her shows south of her).
-		float d = distance(world.xz, her_glow.xz - vec2(0.0, 0.577 * gap));
+		float d = distance(world.xz, her_glow.xz - vec2(0.0, look_slant * gap));
 		float k = her_glow_strength * smoothstep(0.1, 0.5, gap) * (1.0 - smoothstep(5.0, 10.0, gap));
 		// Only where her light reaches: the reef's walls and rises keep it from what lies behind them.
 		float pool = exp(-pow(d / (her_glow.w * 0.55), 2.0)) * k * her_sight(world);
@@ -537,7 +567,7 @@ void fragment() {
 	float luma = dot(col, vec3(0.299, 0.587, 0.114));
 	// (Its values drawn together where she does not light it: darks lifted a little, lights held down.)
 	if (unlit_flatten > 0.0) {
-		float flat_to = mix(luma, 0.2, unlit_flatten * (1.0 - shown));
+		float flat_to = mix(luma, 0.2, unlit_flatten * (1.0 - shown) * (1.0 - paper_deep));
 		col *= flat_to / max(luma, 1e-3);
 		luma = flat_to;
 	}
@@ -548,7 +578,7 @@ void fragment() {
 		col *= rolled;
 		luma *= rolled;
 	}
-	col = mix(vec3(luma), col, reef_saturation * mix(unlit_saturation, 1.0, shown));
+	col = mix(vec3(luma), col, reef_saturation * mix(paper ? max(unlit_saturation, 0.55) : unlit_saturation, 1.0, shown));
 	// The walls' line: where the reef's surface crosses her plane (only on a whole surface, not at a silhouette's edge).
 	if (wall_line > 0.0 && !open_deep) {
 		float dy = world.y - swim_level - 0.1;

@@ -591,7 +591,7 @@ public partial class TopDownMain : Node3D
                 && float.TryParse(steer[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float sx) && float.TryParse(steer[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float sy))
                 _dbgSteer = new Vector2(sx, sy).Normalized();
             else if (arg == "--dbg-steer-fight") _dbgSteerFight = true;
-            // Verification: another art direction (docs/ART-LOOKS.md: 6 the game's own; 0 the old look; 1–5 the studies).
+            // Verification: another art direction (docs/ART-LOOKS.md: 0 the game's own; 7 the watercolour study, over it; 6 and 1–5 the older ones, with --showcase=0).
             else if (arg.StartsWith("--look=") && int.TryParse(Value("--look="), out int look))
             {
                 OctoShoots.Game.Fx.ArtLook.Set(look);
@@ -1042,7 +1042,8 @@ public partial class TopDownMain : Node3D
     void ApplyLook(ReefLook look)
     {
         // The game is painted (look 0, docs/VISUAL-SHOWCASE.md); `--showcase=0` draws it in the look it had (or --look=N's).
-        OctoShoots.Game.Fx.ArtLook.Set(ReefLook.Painted ? OctoShoots.Game.Fx.ArtLook.Painted : _artLook);
+        // (The watercolour study, --look=7, is the painted game drawn another way: it stays on over it.)
+        OctoShoots.Game.Fx.ArtLook.Set(_artLook == OctoShoots.Game.Fx.ArtLook.Watercolour ? _artLook : ReefLook.Painted ? OctoShoots.Game.Fx.ArtLook.Painted : _artLook);
         look.Apply();
         look.ApplyTo(_environment.Environment);
         SetFloorFog(_floorFog);

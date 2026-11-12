@@ -10,8 +10,8 @@ namespace OctoShoots.Game.TopDown;
 /// </summary>
 public partial class CameraRig : Node3D
 {
-    /// <summary>Downward tilt from the horizontal.</summary>
-    public const float Tilt = 60f;
+    /// <summary>Downward tilt from the horizontal: 60°, or straight down in the watercolour study (ArtLook.Watercolour).</summary>
+    public static float Tilt => OctoShoots.Game.Fx.ArtLook.IsWatercolour ? 90f : 60f;
     public const float Fov = 35f;
     /// <summary>
     /// Distance from the followed point while the reef is calm: ~36 m of ground top to bottom and ~54 m across at 16:9,
@@ -294,6 +294,9 @@ public partial class CameraRig : Node3D
         Vector3 jolt = _shake > 0f ? new Vector3(Mathf.Sin(_shakeTime * 53f), Mathf.Sin(_shakeTime * 61f + 1f), Mathf.Sin(_shakeTime * 47f + 2f)) * _shake * _shake : Vector3.Zero;
         Camera.GlobalTransform = new Transform3D(Basis.FromEuler(new Vector3(-tilt, 0f, 0f)), _focus + offset + jolt);
         _player = focus;
+        // (How the tilt shows on the screen, for what the water pass lays on the floor and on her plane.)
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("look_slant"), Mathf.Cos(tilt) / Mathf.Sin(tilt));
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("look_squash"), Mathf.Sin(tilt));
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("player_pos"), focus);
         _edgeFlash = Mathf.MoveToward(_edgeFlash, 0f, dt / EdgeFlashSeconds);
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("edge_flash"), _edgeFlash);

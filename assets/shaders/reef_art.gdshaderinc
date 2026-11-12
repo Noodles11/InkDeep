@@ -19,6 +19,9 @@
 //     creatures carry the picture: each material a flat marker tone, a whisper of its own colour left, shading evenly
 //     with height (the deeper, the more of the water's blue; no bands, no lines up the walls); the marker's faint
 //     streaks for texture. No ink on the reef at all; light in two tones; no caustics.
+//   7 Watercolour paper (docs/ART-LOOKS.md): the reef seen from straight overhead, simple: each material one flat wash,
+//     a few stains and backruns here and there, pigment gathered darker where a wall drops to the water, all on a
+//     cold-pressed paper's grain. No caustics, almost no shading. The water under her plane dark and blurred (the post).
 //
 // The caller (in fragment) works out what needs derivatives (hw: how much the height changes across a pixel) and calls
 // art_paint, then art_ink; its light() bands the light through art_light.
@@ -70,9 +73,41 @@ float art_marker(vec3 w) {
 	return art_noise(vec2(p.x * 0.18, p.y * 3.4)) * 0.7 + art_noise(vec2(p.x * 0.5 + 3.0, p.y * 9.0)) * 0.3;
 }
 
+// Watercolour paper (look 7): a cold-pressed sheet's grain, laid on the world (the camera looks straight down, so it
+// lies flat on the screen and moves with the reef): a fine tooth, the sheet's broader mottling, and the pigment settled
+// darker in the tooth's hollows (granulation, the more the darker the wash). A factor on the colour, about 1.
+float art_paper(vec2 p, float wash) {
+	float tooth = art_noise(p * 9.0) * 0.55 + art_noise(p * 21.0 + 13.0) * 0.45;
+	float mottle = art_noise(p * 0.9 + 5.0) * 0.6 + art_noise(p * 2.3 + 17.0) * 0.4;
+	float hollow = smoothstep(0.35, 0.75, tooth);
+	return (0.9 + 0.16 * mottle) * (1.0 - (0.13 + 0.2 * wash) * hollow) * (1.0 + 0.07 * (1.0 - hollow));
+}
+
 vec3 art_paint(vec3 c, vec3 w, vec3 local, vec3 n, vec3 water, vec3 rock, vec3 sand) {
 	if (reef_art <= 0 || reef_art == 5) return c;
 	float h = local.y;
+	if (reef_art == 7) {
+		// One flat wash to each material, a breath of its own colour left.
+		float up = smoothstep(0.7, 0.92, n.y) * (1.0 - smoothstep(-0.4, 0.6, h));
+		c = mix(mix(rock, sand, up), c, 0.06);
+		c = art_mute(c, 0.75, water);
+		// A few stains: broad pools where the pigment dried darker, each with a finer dark rim where the wash stopped;
+		// and here and there a backrun, paler, where water ran back into it.
+		float s = art_noise(w.xz * 0.11 + 3.0) * 0.65 + art_noise(w.xz * 0.31 + 11.0) * 0.35;
+		float stain = smoothstep(0.6, 0.66, s);
+		float rim = smoothstep(0.575, 0.6, s) * (1.0 - smoothstep(0.6, 0.63, s));
+		float b = art_noise(w.xz * 0.17 + 31.0) * 0.7 + art_noise(w.xz * 0.5 + 47.0) * 0.3;
+		float back = smoothstep(0.66, 0.7, b);
+		float back_rim = smoothstep(0.64, 0.66, b) * (1.0 - smoothstep(0.66, 0.69, b));
+		c *= 1.0 - 0.24 * stain - 0.2 * rim;
+		c = mix(c, c * 1.2 + 0.02, back * 0.8) * (1.0 - 0.16 * back_rim);
+		// Depth: the pigment gathers where a wall drops away to the water; its top a touch lighter the higher it stands.
+		float steep = 1.0 - smoothstep(0.4, 0.88, n.y);
+		c *= 1.0 - 0.34 * steep;
+		c *= 1.0 + 0.03 * clamp(h / 3.0, 0.0, 3.0);
+		float wash = 1.0 - clamp(dot(c, vec3(0.299, 0.587, 0.114)) * 1.6, 0.0, 1.0);
+		return c * art_paper(w.xz, wash);
+	}
 	if (reef_art == 6) {
 		// Each material one marker tone, a whisper of its own colour left, held back toward the water's hue.
 		float up = smoothstep(0.7, 0.92, n.y) * (1.0 - smoothstep(-0.4, 0.6, h));
@@ -333,6 +368,8 @@ float art_rim(vec3 local, vec3 n, float hw) {
 // Light in bands (looks 1–3): soft-edged steps, as a painter states light and shade, not a smooth photographic ramp.
 float art_light(float ndl) {
 	if (reef_art <= 0) return ndl;
+	// Watercolour: next to flat, a wash has no modelling.
+	if (reef_art == 7) return mix(0.82, 1.0, smoothstep(0.05, 0.6, ndl));
 	// Two tones, the step between them soft.
 	if (reef_art == 6) return mix(0.55, 1.0, smoothstep(0.15, 0.3, ndl));
 	if (reef_art >= 4) return 0.85;
