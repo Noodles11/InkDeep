@@ -46,9 +46,7 @@ public partial class HealthBars : Control
     {
         if (_world is not { } w || _camera is not { } cam || _blight is not { } blight) return;
         float scale = Mathf.Clamp(GetViewportRect().Size.Y / 1080f, 0.7f, 2f);
-        // (A murkling budded from the ink shows its corruption as its size: it has no ring. PlaneMurkSize.cs.)
-        foreach (var m in w.Murklings)
-            if (m.Alive && !m.Sized && blight.Shown(m)) Ring(cam, m.Position, m.Radius, m.Corruption, scale);
+        // (Murklings wear no ring: a budded one shows its corruption as its size, PlaneMurkSize.cs.)
         foreach (var r in w.Blightroots)
             if (r.Alive) Ring(cam, r.Position, BlightTuning.SacRadius, r.Corruption, scale, 1.4f);
         foreach (var b in w.Blotters)

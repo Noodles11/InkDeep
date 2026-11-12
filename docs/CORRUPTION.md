@@ -391,8 +391,8 @@ meter regrows, at a rate set by the creature's kind and the Menace. Emptied, the
 enough shot does it at once, or keep shooting until the meter runs out.
 
 **Corruption rings** (`HealthBars`): a thin ring round each corrupted creature (Blightroots, Blotters, Thumpsquirts,
-Inkwardens, Lashjaws, corrupted flounders, primes and turned fish; not a murkling budded from the ink, whose size shows
-its meter) shows how much of its meter is left, in the language of her own
+Inkwardens, Lashjaws and corrupted flounders; never a murkling, of any kind: a budded one's size shows its
+meter) shows how much of its meter is left, in the language of her own
 meter on the minimap's bezel: dark glossy ink over a faint gold track, filling clockwise from 12 o'clock, a violet
 sheen on its lip. As the creature is cleansed the ink draws back and thins, down to a fine sliver near empty. No green
 or red. It is drawn only while the creature can be seen: a murkling only while her glow, her beam, a lit charge stone or
