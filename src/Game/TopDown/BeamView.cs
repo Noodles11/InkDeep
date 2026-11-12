@@ -62,6 +62,13 @@ public partial class BeamView : Node3D
     /// <summary>How much thicker a coloured ray's haze is drawn (docs/LIGHT-AND-GRAPH.md §10).</summary>
     const float ColouredHaze = 1.7f;
     float _time;
+    /// <summary>
+    /// The rays born where her light lands on rock (PlanePaths.cs) are drawn as soft cones without the shadow grid (a
+    /// white one: lit all through, to the rock their axis meets), and each has a glint of its light where it was born.
+    /// </summary>
+    ImageTexture _unshadowed = null!;
+    readonly List<OmniLight3D> _glints = new();
+    const float GlintEnergy = 5f, GlintRange = 2.4f, BornHaze = 2f, BornLeast = 0.55f;
 
     static readonly StringName BeamAt = "her_beam_at", BeamShadowTex = "her_beam_shadow", BeamFrame = "her_beam_frame", BeamAxis = "her_beam_axis";
 
@@ -98,6 +105,9 @@ public partial class BeamView : Node3D
         AddChild(_tint);
         _tintLight = new OmniLight3D { OmniRange = 3.5f, OmniAttenuation = 1.2f, ShadowEnabled = false, Visible = false, LightSpecular = 0.4f };
         AddChild(_tintLight);
+        var white = Image.CreateEmpty(1, 1, false, Image.Format.Rgba8);
+        white.Fill(Colors.White);
+        _unshadowed = ImageTexture.CreateFromImage(white);
     }
 
     /// <summary>
@@ -213,6 +223,17 @@ public partial class BeamView : Node3D
         return _fans[i];
     }
 
+    OmniLight3D GlintAt(int k)
+    {
+        while (_glints.Count <= k)
+        {
+            var g = new OmniLight3D { OmniRange = GlintRange, OmniAttenuation = 1.4f, ShadowEnabled = false, Visible = false, LightSpecular = 0.8f };
+            AddChild(g);
+            _glints.Add(g);
+        }
+        return _glints[k];
+    }
+
     static readonly StringName[] SlotLit = { "her_beam_lit", "her_beam2_lit", "her_beam3_lit" }, SlotDir = { "her_beam_dir", "her_beam2_dir", "her_beam3_dir" };
 
     /// <summary>Follows the sim's beams: from <paramref name="heart"/> (her light's heart, world) for her own's spotlight.</summary>
@@ -229,12 +250,14 @@ public partial class BeamView : Node3D
         // Her beam's fan as a whole, for what it shows: out to its farthest ray's stop, as wide as its rays reach.
         float reach = 0f;
         bool anyOn = false;
+        int glints = 0;
         foreach (var (beam, _) in world.HerBeams)
         {
             var fan = FanAt(i);
             bool main = beam == world.Beam;
             int slot = main ? 0 : beam == world.RearBeam ? 1 : beam == world.SweepBeam ? 2 : -1;
-            bool ofHers = slot == 0 || slot < 0;
+            var born = slot < 0 ? world.BornOf(beam) : null;
+            bool ofHers = slot == 0 || (slot < 0 && born is null);
             fan.Lit = slot >= 0 ? SlotLit[slot] : null!;
             fan.Dir = slot >= 0 ? SlotDir[slot] : null!;
             i++;
@@ -254,13 +277,16 @@ public partial class BeamView : Node3D
             }
             var dir = new Vector3(beam.Direction.X, 0f, beam.Direction.Y);
             float range = beam.Range;
-            // Its lines, each to what stops it.
-            float longest = LayFan(world, beam, fan.On * dim * beam.Intensity / LightTuning.BeamIntensity);
+            // Its lines, each to what stops it (a born ray: its axis, to the rock).
+            float longest = born is null ? LayFan(world, beam, fan.On * dim * beam.Intensity / LightTuning.BeamIntensity)
+                : world.LineReach(beam.Position, beam.Direction, Mathf.Max(range, 0.1f), out _);
             float stop = Mathf.Clamp(longest / Mathf.Max(range, 0.1f), 0.02f, 1f);
             var origin = new Vector3(beam.Position.X, LevelMap.SwimBand + 0.3f, beam.Position.Y);
-            // Where its light gets to, in three dimensions; its hull to march through.
+            // Where its light gets to, in three dimensions; its hull to march through. A born ray ends at the rock.
+            if (born is not null) range = Mathf.Min(range, longest + 0.4f);
             range = Mathf.Max(range, 0.1f);
-            fan.Shadow.Cast(world, beam.Position, origin.Y, beam.Direction, beam.HalfAngle, range);
+            if (born is null) fan.Shadow.Cast(world, beam.Position, origin.Y, beam.Direction, beam.HalfAngle, range);
+            fan.VolumeMaterial.SetShaderParameter("shadow", born is null ? fan.Shadow.Texture : _unshadowed);
             if (!Mathf.IsEqualApprox(fan.HullHalf, beam.HalfAngle))
             {
                 LayHull(fan.VolumeMesh, beam.HalfAngle);
@@ -272,7 +298,10 @@ public partial class BeamView : Node3D
             var rayHue = world.RayHue(beam);
             m.SetShaderParameter("tint", OctoShoots.Game.Fx.LightColour.Beam(rayHue, TopDownMain.ShowcaseOn));
             // (A coloured ray's haze a little thicker, so its colour shows.)
-            m.SetShaderParameter("strength", fan.On * dim * beam.Intensity / LightTuning.BeamIntensity * (rayHue is LightHue.None or LightHue.White ? 1f : ColouredHaze));
+            // (A born ray drawn by the square root of its worth, so even a faint one shows: BornHaze.)
+            float bright = born is null ? beam.Intensity / LightTuning.BeamIntensity
+                : Mathf.Clamp(Mathf.Sqrt(born.Worth / HerLightTuning.BeamShots) * BornHaze, BornLeast, 1.2f);
+            m.SetShaderParameter("strength", fan.On * dim * bright * (rayHue is LightHue.None or LightHue.White ? 1f : ColouredHaze));
             m.SetShaderParameter("origin", origin);
             m.SetShaderParameter("axis", dir);
             m.SetShaderParameter("half_angle", beam.HalfAngle);
@@ -284,6 +313,19 @@ public partial class BeamView : Node3D
                 RenderingServer.GlobalShaderParameterSet(BeamShadowTex, fan.Shadow.Texture);
                 RenderingServer.GlobalShaderParameterSet(BeamFrame, new Vector4(origin.X, origin.Y, origin.Z, range));
                 RenderingServer.GlobalShaderParameterSet(BeamAxis, new Vector4(dir.X, dir.Z, beam.HalfAngle * BeamShadow.Margin, 1f));
+            }
+            // A born ray's glint where her light landed (a ghost's: where it went into the rock).
+            if (born is not null && born.Word != PathWord.Return)
+            {
+                var g = GlintAt(glints++);
+                var at = born.Word == PathWord.Ghost ? born.Into : born.At;
+                var off = born.Word == PathWord.Ghost ? -beam.Direction : (beam.Position - born.At);
+                off = off.LengthSquared() > 1e-6f ? System.Numerics.Vector2.Normalize(off) : System.Numerics.Vector2.Zero;
+                g.Visible = true;
+                g.GlobalPosition = new Vector3(at.X + off.X * 0.35f, LevelMap.SwimBand + 0.35f, at.Y + off.Y * 0.35f);
+                g.LightColor = OctoShoots.Game.Fx.LightColour.Beam(world.RayHue(beam), TopDownMain.ShowcaseOn);
+                g.LightEnergy = GlintEnergy * fan.On * dim * Mathf.Clamp(Mathf.Sqrt(born.Worth / HerLightTuning.BeamShots) * 2f, 0.5f, 1.2f)
+                    * (0.85f + 0.15f * Mathf.Sin(_time * 11f + i * 1.7f));
             }
             if (ofHers && on)
             {
@@ -319,6 +361,7 @@ public partial class BeamView : Node3D
                 ? new Vector4(origin.X, origin.Y + 0.05f, origin.Z, range * stop) : new Vector4(0f, -1000f, 0f, 0f));
         }
         for (int k = i; k < _fans.Count; k++) _fans[k].Volume.Visible = false;
+        for (int k = glints; k < _glints.Count; k++) _glints[k].Visible = false;
         if (_tintBegun) _tintMesh.SurfaceEnd();
         // What her beam shows (her_reveal), the whole of its fan: along her aim, as wide as its rays spread.
         var her = new Vector3(world.Beam.Position.X, LevelMap.SwimBand + 0.3f, world.Beam.Position.Y);

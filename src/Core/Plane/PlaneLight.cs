@@ -298,6 +298,8 @@ public sealed partial class PlaneWorld
             for (int i = 0; i < _rays.Count; i++) yield return (_rays[i], _rayWorth[i] * tick);
             yield return (RearBeam, tick);
             yield return (SweepBeam, tick);
+            // The rays born where her light lands on rock (PlanePaths.cs).
+            for (int i = 0; i < _bornCount; i++) yield return (_born[i].Emitter, _born[i].Worth * tick);
         }
     }
 
@@ -668,6 +670,8 @@ public sealed partial class PlaneWorld
         sweep.HalfAngle = beam.HalfAngle;
         sweep.Active = lighthouse && !Defeated;
         BeamEnd = beam.Active ? FirstBlocked(beam.Position, beam.Position + beam.Direction * beam.Range, 0.1f) : beam.Position;
+        // Her rays born where her light lands on rock (Bounce, Fork, Return, Ghost).
+        SyncPaths();
         // The Anglerfish Lure: a shot of hers left hanging is a decoy, brighter than her.
         bool lure = Run.Loadout.Count("anglerfish_lure") > 0;
         foreach (var s in Shots)

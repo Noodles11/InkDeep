@@ -90,6 +90,7 @@ public sealed partial class PlaneWorld
     public LightHue RayHue(LightEmitter beam)
     {
         if (beam == Beam) return _beamHue;
+        if (BornOf(beam) is { } born) return born.Hue;
         int i = _rays.IndexOf(beam);
         return i >= 0 && i < _rayHue.Count ? _rayHue[i] : HerHue;
     }

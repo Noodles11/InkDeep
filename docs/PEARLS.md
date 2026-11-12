@@ -9,7 +9,7 @@
 | | Passive | Active | All |
 |---|---|---|---|
 | Pearls | 59 | 13 | 72 |
-| Built | 40 | 4 | 44 |
+| Built | 41 | 4 | 45 |
 
 - **Passive** pearls work on their own from the moment she absorbs one: her stats, her bubbles, or something that
   happens when she is hit or frees a creature. They stack.
@@ -128,14 +128,15 @@ comes to it (the level below is laid out while she plays the one above); a run w
 |:---:|:---:|---|---|---|---|---|---|
 | No (+1 chain) |  | **Electric Eel Tail** | *Zzzap!* | Hits chain lightning to 2 foes (50% damage) | ★★★ | treasure |  |
 | Yes |  | **Nautilus Spiral** | *Golden ratio, golden shots* | Shots spiral outward | ★★ | treasure |  |
-| No (+ 1 bounce) | ✅ | **Mirror Scale** | *Shiny side out* | Shots bounce off rock 2× | ★★ | treasure |  |
+| No (+ 1 bounce) | ✅ | **Mirror Scale** | *Shiny side out* | Her light bounces off rock (60% of it) | ★★ | treasure |  |
 | Yes | ✅ | **Anglerfish Lure** | *Follow the light* | Shots home onto foes | ★★★ | treasure |  |
 | Yes | ✅ | **Swordfish Bill** | *En garde* | Shots pierce foes | ★★ | treasure |  |
-| Yes | ✅ | **Mitosis** | *One becomes two* | Bubbles split in two when they pop on a foe or rock | ★★ | treasure | bubble_bath |
+| Yes | ✅ | **Mitosis** | *One becomes two* | Where her light lands on rock it forks in two (70° apart, 30% each) | ★★ | treasure | bubble_bath |
 | No | ✅ | **Frost Kelp** | *Grown in the cold seep* | Her light turns to frost: what it lights slows, and stands still after 2 s | ★★ | treasure, shop |  |
 | No | ✅ | **Fire Coral** | *Don't touch* | Her light turns ember: what it lights keeps burning 2.5 s after it leaves | ★★ | treasure, shop |  |
 | Yes |  | **Sea Nettle Sting** | *It lingers* | 30% chance to poison foes for 4s | ★★ | treasure, curse |  |
-| Yes | ✅ | **Boomerang Shrimp** | *Always comes back* | Shots return to you | ★★ | treasure |  |
+| Yes | ✅ | **Boomerang Shrimp** | *Always comes back* | Her light that lands on rock comes back along its way (50%): lit from both sides | ★★ | treasure |  |
+| Yes | ✅ | **Ghost Jelly** | *Walls are a suggestion* | Her light passes through a wall up to 3 m thick, 50% as strong beyond | ★★ | treasure, secret |  |
 | Yes | ✅ | **Pearl Diver** | *Patience makes pearls* | Hold to charge a pearl (up to ×3 damage) | ★★★ | treasure, boss |  |
 | Yes |  | **Sunbeam** | *A shaft of the surface, bottled* | Hold to charge a laser beam | ★★★★ | treasure, boss, whale |  |
 | Yes | ✅ | **Firefly Squid** | *Never blinks* | Fire pours out a continuous surge of light instead of shots: 90% of your shots' damage per second to all it touches, clearing a little corruption where it ends. Your other pearls shape it | ★★★★ | treasure, boss |  |
@@ -207,6 +208,8 @@ caption reads "Synergy!" with its name, a chime plays and a ring of her light go
 
 | | Synergy | Needs | What happens |
 |:---:|---|---|---|
+| ✅ | **Cathedral** | Mirror Scale + Mitosis | Every bounce forks: a cave fills with a lattice of light |
+| ✅ | **Hall of Mirrors** | Boomerang Shrimp + Mirror Scale | Light caught between two walls: everything between burns from all sides |
 |  | **Pinball Storm** | Electric Eel Tail + Mirror Scale | Each wall bounce emits a lightning arc |
 |  | **Lighthouse** | Sunbeam + Nautilus Spiral | The beam sweeps in a rotating spiral |
 |  | **Cell Bloom** | Mitosis + Starfish Arm | Split shots also grow |

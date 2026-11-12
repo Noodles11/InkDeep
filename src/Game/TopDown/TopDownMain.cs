@@ -334,6 +334,9 @@ public partial class TopDownMain : Node3D
     SecretSeal? _dbgPrismSeal;
     /// <summary>Verification (--dbg-shadow): her beam held along the most open way from her, two murklings held still in it (her beam's shadows).</summary>
     bool _dbgShadow;
+    /// <summary>Verification of her light's paths on rock (--dbg-paths): as --dbg-shadow, aimed at the nearest wall and sweeping slowly across it.</summary>
+    bool _dbgPaths;
+    System.Numerics.Vector2? _dbgPathsAt;
     /// <summary>Verification (--dbg-sense): as --dbg-shadow, her beam dark and the murklings held past her glow, unseen.</summary>
     bool _dbgSense;
     System.Numerics.Vector2? _dbgShadowWay;
@@ -547,6 +550,7 @@ public partial class TopDownMain : Node3D
             else if (arg == "--fire") _autoFire = true;
             else if (arg == "--dbg-shadow") _autoFire = _dbgShadow = true;
             else if (arg == "--dbg-sense") _autoFire = _dbgShadow = _dbgSense = true;
+            else if (arg == "--dbg-paths") _autoFire = _dbgShadow = _dbgPaths = true;
             else if (arg == "--use-active") _autoActive = true;
             else if (arg.StartsWith("--dbg-leaks=")) _dbgLeaks = int.Parse(Value("--dbg-leaks="));
             else if (arg.StartsWith("--dbg-leak-hits=")) _dbgLeakHits = int.Parse(Value("--dbg-leak-hits="));
@@ -4229,17 +4233,44 @@ public partial class TopDownMain : Node3D
         var from = _world.Player.Position;
         if (_dbgShadow)
         {
+            if (_dbgShadowWay is null && _dbgPaths)
+            {
+                // (Paths: moved to open water near her start about 4 m from a wall.)
+                for (float d = 0f; d < 14f && _dbgShadowWay is null; d += 1f)
+                    for (int a = 0; a < 16 && _dbgShadowWay is null; a++)
+                    {
+                        var spot = from + new System.Numerics.Vector2(Mathf.Cos(a * Mathf.Tau / 16f), Mathf.Sin(a * Mathf.Tau / 16f)) * d;
+                        if (!_world.Clear(spot, 1f)) continue;
+                        for (int k = 0; k < 24; k++)
+                        {
+                            var w = new System.Numerics.Vector2(Mathf.Cos(k * Mathf.Tau / 24f), Mathf.Sin(k * Mathf.Tau / 24f));
+                            float r = _world.LineReach(spot, w, 16f, out bool hit);
+                            if (!hit || r < 3.5f || r > 5f || _world.LineReach(spot, -w, 16f, out _) < 6f) continue;
+                            _world.Player.Position = _world.Player.PrevPosition = from = spot;
+                            _dbgShadowWay = w;
+                            break;
+                        }
+                    }
+            }
+            else if (_dbgPaths) _world.Player.Position = _world.Player.PrevPosition = from = _dbgPathsAt ??= from;
             if (_dbgShadowWay is null)
             {
                 float best = -1f;
                 for (int k = 0; k < 36; k++)
                 {
                     var w = new System.Numerics.Vector2(Mathf.Cos(k * Mathf.Tau / 36f), Mathf.Sin(k * Mathf.Tau / 36f));
-                    float r = _world.LineReach(from, w, 16f, out _);
+                    float r = _world.LineReach(from, w, 16f, out bool hit);
+                    // (Paths: the wall nearest past 4 m.)
+                    if (_dbgPaths) r = hit && r > 4f ? 100f - r : -1f;
                     if (r > best) { best = r; _dbgShadowWay = w; }
                 }
             }
             var way = _dbgShadowWay!.Value;
+            if (_dbgPaths)
+            {
+                float swing = 0.45f * Mathf.Sin(_world.Time * 0.5f);
+                way = new System.Numerics.Vector2(way.X * Mathf.Cos(swing) - way.Y * Mathf.Sin(swing), way.X * Mathf.Sin(swing) + way.Y * Mathf.Cos(swing));
+            }
             var side = new System.Numerics.Vector2(-way.Y, way.X);
             System.Numerics.Vector2[] held = _dbgSense ? new[] { from + way * 7.5f, from + way * 10.5f - side * 2f } : new[] { from + way * 3.5f, from + way * 7.5f - side * 1.2f };
             while (_world.Murklings.Count(m => m.Alive && !m.Budding) < held.Length) _world.Murklings.Add(new Murkling { Position = held[0], Bud = 0f, Seed = _world.Murklings.Count });

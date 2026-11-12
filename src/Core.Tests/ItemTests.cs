@@ -18,7 +18,7 @@ public class ItemTests
     public void CatalogLoadsTheFullSet()
     {
         Assert.Equal(76, Catalog.Items.Count);
-        Assert.Equal(23, Catalog.Synergies.Count);
+        Assert.Equal(25, Catalog.Synergies.Count);
         Assert.Equal(5, Catalog.Transformations.Count);
         Assert.Equal(13, Catalog.Items.Count(i => i.Kind == ItemKind.Active));
     }

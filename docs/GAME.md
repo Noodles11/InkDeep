@@ -139,8 +139,11 @@ much corruption is left (CORRUPTION, "Corruption rings").
   rays, a helix, a floodlight (proposals/BEAM-PEARLS-PLAN.md has the rest of the carry-over).
 - **Her light's colours** (LIGHT-AND-GRAPH §10): Fire Coral, Glowing Moss and Frost Kelp tint her light ember, bloom and
   frost; a split beam deals them across its rays, and where they meet on a creature they mix as light does (sunfire,
-  shatter, lull, daybreak), each mix doing more. Coloured light opens coloured seals and colours charge stones. The
-  rest of the light grammar (proposals/LIGHT-GRAMMAR.md) is to come.
+  shatter, lull, daybreak), each mix doing more. Coloured light opens coloured seals and colours charge stones.
+- **Her light's paths on rock** (LIGHT-AND-GRAPH §11): Mirror Scale bounces it, Mitosis forks it, Boomerang Shrimp
+  sends it back along its way, Ghost Jelly takes it through thin walls; the rays born take each other's words where
+  they land (Cathedral, Hall of Mirrors), always with less light than arrived. The rest of the light grammar
+  (proposals/LIGHT-GRAMMAR.md) is to come.
 - **Synergies** announce themselves; **transformations** are designed, not built.
 
 ## 9. Growth and the jelly

@@ -467,7 +467,7 @@ public class CorruptionTests
         Assert.True(run.OfferWeight("mirror_scale") < run.OfferWeight("anglerfish_lure"));
         // A second Mirror Scale adds its stack: one more bounce, not two.
         run.Add("mirror_scale");
-        Assert.Equal(3, run.Loadout.Shot.Bounces);
+        Assert.Equal(2, run.Loadout.Shot.Bounces);
         Assert.Equal(2, run.Loadout.Count("mirror_scale"));
         // A whole extra Shark Tooth stacks its damage.
         float one = Loadout.Build(Catalog.Value, new[] { "shark_tooth" }, new Tuning()).Stats.Damage;

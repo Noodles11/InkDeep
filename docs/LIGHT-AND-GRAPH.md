@@ -409,3 +409,29 @@ The first words of the light grammar (docs/proposals/LIGHT-GRAMMAR.md §5). Thre
   shows); a murkling kindled at its rim in the colour on it, frosted and glinting as frost stills it; shatter a burst
   of steam and a snap, sunfire a ring of light and a chime; a charge stone lit in colour glows in it.
 - Tests: `ColourTests`.
+
+## 11. Her light's paths on rock (built)
+
+The light grammar's second words (docs/proposals/LIGHT-GRAMMAR.md §4). Where a ray of hers lands on rock, a path pearl
+gives it new rays born there (`PlanePaths.cs`, `PathTuning`): real rays of hers (in `HerBeams`) that burn, reveal,
+carry her colours (the ray's, and the prism stones' it passed through), charge stones and strike seals. **Light is
+conserved**: a born ray's worth is a share of the light its ray had left where it landed (its falloff there against
+her bell's), so a lattice is wider and cleverer, never simply more.
+
+| Pearl | Word | Where her light lands on rock |
+|---|---|---|
+| Mirror Scale | **Bounce** | it reflects off the rock as a mirror would (off a seal or a pot, straight back), 60% of its light, 60% of its reach; each copy one more bounce |
+| Mitosis | **Fork** | two short rays fork off it, 70° apart either side of the way a mirror would send it, 30% of its light each, 40% of its reach, narrower |
+| Boomerang Shrimp | **Return** | it comes back along its own way to where it left, 50% of its light: what stands in it is lit from both sides (×1.5 between her and the wall) |
+| Ghost Jelly | **Ghost** | through a wall of the reef up to 3 m thick (not a seal, not a pot) it goes on beyond, 50% as strong; a wall it passes through is not landed on |
+
+- **One line, each word once**: a born ray takes the other words where it lands, never its own again; Bounce as many
+  times as she has Mirror Scales; a Return's ray takes none. At most 24 born rays at once.
+- **Met by rule**: Ghost decides first whether the rock counts; Bounce, Fork and Return then all act at once.
+- **Named when they meet** (synergies, with the banner): **Cathedral** (Mirror Scale + Mitosis: every bounce forks, a
+  lattice of light) and **Hall of Mirrors** (Boomerang Shrimp + Mirror Scale: light caught between walls).
+- **Drawn** (`BeamView`): each born ray a soft cone of her light's haze in its colour, without the shadow grid her own
+  beams cast, ending at the rock its axis meets, drawn by the square root of its worth so even a faint one shows; a
+  glint of light where it was born (a ghost's where it went into the rock). `--dbg-paths` aims her at a wall to see it.
+- Her shots (a charged pearl, the surge) keep their own older paths (bounces, splits, the boomerang loop).
+- Tests: `PathTests`.

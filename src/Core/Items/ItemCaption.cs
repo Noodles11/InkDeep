@@ -103,10 +103,11 @@ public static class ItemCaption
         }
         if (s.Homing) lines.Add($"Shots home onto foes within {N(PlaneCombatTuning.HomingReach)} m (turning {N(PlaneCombatTuning.HomingDegPerSec)}° a second)");
         if (s.Pierce) lines.Add("Shots pierce foes (each foe hit once)");
-        if (s.Spectral) lines.Add("Shots pass through rock");
-        if (s.Bounces > 0) lines.Add($"Shots bounce off rock {s.Bounces}×");
-        if (s.Split) lines.Add($"Bubbles split in two when they pop on a foe or rock ({N(PlaneCombatTuning.SplitAngleDeg)}° apart, each 50% of its damage, flying {N(PlaneCombatTuning.SplitRange)} m)");
-        if (s.Boomerang) lines.Add("Shots turn back at 75% of their range and return to you, hitting again on the way");
+        // Her light's paths on rock (PlanePaths.cs).
+        if (s.Spectral) lines.Add($"Her light passes through a wall up to {N(PathTuning.GhostThick)} m thick, {Pct(PathTuning.Ghost)} as strong beyond");
+        if (s.Bounces > 0) lines.Add(s.Bounces == 1 ? $"Her light bounces off rock ({Pct(PathTuning.Bounce)} of it)" : $"Her light bounces off rock {s.Bounces}× ({Pct(PathTuning.Bounce)} of it each time)");
+        if (s.Split) lines.Add($"Where her light lands on rock it forks in two ({N(PathTuning.ForkDeg * 2)}° apart, {Pct(PathTuning.Fork)} of it each)");
+        if (s.Boomerang) lines.Add($"Her light that lands on rock comes back along its way ({Pct(PathTuning.Return)} of it): what stands in it is lit from both sides");
         if (s.Wave) lines.Add("The beam's rays weave across your aim in a double helix");
         if (s.Spiral) lines.Add("Shots spiral outward");
         if (s.Grow) lines.Add($"Shots grow with distance: up to ×{N(PlaneCombatTuning.GrowMax)} size and damage at full range");
