@@ -29,9 +29,6 @@ between).
     light on pale sand included; she and her light, drawn after the pass, stay the brightest on screen.
   - *Her seat* (`her_seat`): the reef right under her is held up to half darker over about a metre, so her bell stands
     off her own pool of light.
-  - *The walls' line* (`wall_line`): where the reef's surface rises through her plane, a thin pale line runs along
-    it (on whole surfaces only, never at a silhouette's edge), brighter where her light falls. Where she can swim and
-    where she cannot is plain at a glance; pots and stones standing in her plane are ringed the same way.
   - *The camera draws in* in a fight (docs/DIVE.md §3).
 - **Fog under her plane** (`below_fog`): the water thickens below the swim height, 80% of the way to the water's grey
   over the first 5 m down, thinner where her light reaches.

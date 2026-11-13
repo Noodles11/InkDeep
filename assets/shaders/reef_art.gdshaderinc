@@ -85,7 +85,7 @@ float art_paper(vec2 p, float wash) {
 }
 
 // Watercolour (look 7): how much a point of the reef is water (1) or reef (0): all that lies under the line where the
-// reef rises through her plane (the walls' line, topdown_post's wall_line) is water, right up to it.
+// reef rises through her plane is water, right up to it.
 float art_water(vec3 local) {
 	return 1.0 - smoothstep(0.06, 0.14, local.y);
 }

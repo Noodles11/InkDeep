@@ -43,8 +43,8 @@ the leaks still wake it), and changes only the camera and how the reef and the w
 her light and the HUD are as they are.
 
 - **The camera** looks straight down (`CameraRig.Tilt`, 90° in this look), north up, from the same distance.
-- **Water up to the line:** all that lies under the line where the reef rises through her plane (the pale walls'
-  line) is the water's dark wash, right up to it (`art_water`, `art_wash` in `reef_art.gdshaderinc`, painted by the
+- **Water up to the line:** all that lies under the line where the reef rises through her plane is the water's
+  dark wash, right up to it (`art_water`, `art_wash` in `reef_art.gdshaderinc`, painted by the
   reef's own surface, so the creatures in it are untouched): uneven in broad soft clouds, no floor showing. What lies
   deep under her plane still runs soft (`topdown_post.gdshader`'s `paper_blur`).
 - **The reef simple** (`art_paint`): each material one flat wash, a breath of its own colour left; no fine relief, no
@@ -52,7 +52,7 @@ her light and the HUD are as they are.
 - **A few stains for depth:** broad pools where the pigment dried darker, each with a finer dark rim where the wash
   stopped; here and there a paler backrun; and the pigment gathered darker where a wall drops away to the water.
 - **Low contrast until she lights it** (`topdown_ground`, `reef_rock`): out of her light the reef is held near the
-  water's tone, a shade paler, so only the walls' line parts them. Where her light falls (and as the sealed leaks
+  water's tone, a shade paler, so they part only faintly. Where her light falls (and as the sealed leaks
   wake the reef) its wash comes out whole, pale against the dark water.
 - **No decorations:** corals, plants, kelp and the woven reef's pieces are not drawn (`flora.gdshader`,
   `kelp.gdshaderinc`, `woven_reef.gdshaderinc`). The Tide Fan and the reef fish's anemones stay.

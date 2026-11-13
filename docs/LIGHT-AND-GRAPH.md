@@ -291,6 +291,10 @@ inside a reef (a secret, a shop, a shell cache, a Crab Deal on one reef of a dep
 - **Showing where each leads**: each hole's rim is a ring of light in the colour of the reef below (`HoleView`,
   `ReefKinds`): plain reef pale water, clam room gold, curse den red, haven green, boss violet. Faint while sealed, it
   brightens and breathes once the holes open. Over a hole the prompt says it too ("dive · a clam room below").
+- **Its emblem** (`HoleEmblems`): over each open hole, lying flat just over her plane, a faint see-through line
+  drawing in the same colour, breathing with it: a fish for a plain reef, a lantern for a haven, the Leak's
+  five-armed star for the boss, an open clam with its pearl for a clam room, a spiral for a curse den. A fissure,
+  which has no rim, still has its emblem.
 - **The level below**: each hole's reef is made off the main thread, the nearest first; the one under the hole she is
   nearest shows through it, and she dives into whichever she is over.
 - **The chart**: the pause menu's Chart tab (`ChartView`) shows the depth she is in and the next depth's first row: the

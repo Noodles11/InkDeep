@@ -188,7 +188,7 @@ much corruption is left (CORRUPTION, "Corruption rings").
   the screen.
 - **On the reef**: corruption rings round the corrupted she can see; the pearl she is absorbing on its own card.
 - **Readable at a glance** (VISUAL-SHOWCASE, "The order of the eye"): outside her light the reef is grey and quiet and
-  never outshines her; a pale line runs along the walls at her plane; the camera draws in on her in a fight; what she
+  never outshines her; the camera draws in on her in a fight; what she
   cannot see near her troubles the water and is heard (CORRUPTION, "Sensing the unseen"). A wholly cleansed reef gets
   its full colour back.
 - **The pause menu**: Level up, Stats, Pearls, Achievements, Requests, Chart.

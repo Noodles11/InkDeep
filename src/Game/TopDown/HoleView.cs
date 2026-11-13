@@ -43,10 +43,14 @@ public static class ReefKinds
 /// The rims of a reef's holes (docs/LIGHT-AND-GRAPH.md §6.3): a ring of light on each hole's floor and a glow
 /// down in it, in the colour of the reef it leads to (ReefKinds). None while a hole lies shut under its leak's sand;
 /// once its leak is sealed and it opens, its rim lights and breathes. A boss arena's Crack has its own light and gets none.
+/// Over each open hole floats its emblem (HoleEmblems): a faint sign of what lies below, lying flat just over her plane.
 /// </summary>
 public partial class HoleView : Node3D
 {
     const float Lift = 0.35f, OpenEnergy = 1.1f;
+    /// <summary>The emblem: how far over her plane it floats, how wide against the hole, and how strong its light at most.</summary>
+    const float EmblemLift = 0.25f, EmblemSize = 2.6f, EmblemAlpha = 0.42f;
+    readonly List<(MeshInstance3D Quad, StandardMaterial3D Material)> _emblems = new();
 
     readonly List<(MeshInstance3D Ring, OmniLight3D Glow, StandardMaterial3D Material)> _rims = new();
     LevelMap? _map;
@@ -62,6 +66,8 @@ public partial class HoleView : Node3D
             glow.QueueFree();
         }
         _rims.Clear();
+        foreach (var (quad, _) in _emblems) quad.QueueFree();
+        _emblems.Clear();
         _open.Clear();
         _map = map;
         foreach (var hole in map.Holes)
@@ -96,6 +102,23 @@ public partial class HoleView : Node3D
             AddChild(ring);
             AddChild(glow);
             _rims.Add((ring, glow, material));
+            // Its emblem, flat over the hole just above her plane, its top to the north.
+            var sign = new StandardMaterial3D
+            {
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+                BlendMode = BaseMaterial3D.BlendModeEnum.Add, AlbedoTexture = HoleEmblems.Of(hole.Kind),
+                AlbedoColor = new Color(ReefKinds.Colour(hole.Kind), 0f), CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+                TextureFilter = BaseMaterial3D.TextureFilterEnum.LinearWithMipmaps,
+            };
+            float wide = Mathf.Max(sh.HalfWidth * EmblemSize, 2.2f);
+            var quad = new MeshInstance3D
+            {
+                Mesh = new PlaneMesh { Size = new Vector2(wide, wide) }, MaterialOverride = sign,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                Position = new Vector3(sh.Center.X, LevelMap.SwimBand + EmblemLift, sh.Center.Y), Visible = false,
+            };
+            AddChild(quad);
+            _emblems.Add((quad, sign));
             _open.Add(-1f);
         }
     }
@@ -116,6 +139,12 @@ public partial class HoleView : Node3D
             glow.LightEnergy = OpenEnergy * breathe * _open[i];
             bool crack = world.IsCrack(i);
             ring.Visible = glow.Visible = !crack && _open[i] > 0.01f;
+            // Its emblem shows as it opens, breathing a little out of step with its rim.
+            var (quad, sign) = _emblems[i];
+            float pulse = 0.88f + 0.12f * Mathf.Sin(_time * 1.6f + i * 1.3f);
+            sign.AlbedoColor = new Color(colour, EmblemAlpha * pulse * _open[i]);
+            // (A fissure has no rim, but still its emblem.)
+            quad.Visible = _open[i] > 0.01f;
         }
     }
 }

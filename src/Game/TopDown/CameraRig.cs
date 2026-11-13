@@ -94,10 +94,9 @@ public partial class CameraRig : Node3D
     public const float BelowFog = 0.8f, UnlitSaturation = 0.15f, UnlitDim = 0.8f;
     /// <summary>
     /// Readability (docs/GAME.md §11): how far the unlit reef's values are drawn together, the brightness the reef's
-    /// highlights are rolled off from, how strong the pale line along the walls at her plane is, and how much darker
-    /// the reef right under her is held (her seat).
+    /// highlights are rolled off from, and how much darker the reef right under her is held (her seat).
     /// </summary>
-    public const float UnlitFlatten = 0.35f, HighlightKnee = 0.5f, WallLine = 0.4f, HerSeat = 0.5f;
+    public const float UnlitFlatten = 0.35f, HighlightKnee = 0.5f, HerSeat = 0.5f;
 
     public void SetShowcase(bool on)
     {
@@ -111,7 +110,6 @@ public partial class CameraRig : Node3D
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("unlit_dim"), on ? UnlitDim : 1f);
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("unlit_flatten"), on ? UnlitFlatten : 0f);
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("highlight_knee"), on ? HighlightKnee : 0f);
-        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("wall_line"), on ? WallLine : 0f);
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("her_seat"), on ? HerSeat : 0f);
     }
 
