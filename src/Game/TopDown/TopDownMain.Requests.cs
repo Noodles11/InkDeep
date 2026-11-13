@@ -45,6 +45,14 @@ public partial class TopDownMain
             _sfx.PlayPitched("pop", 0.8f, -10f);
             FillPauseRequests();
         };
+        // The brightness calibration: the picture brightens or darkens at once, and is kept.
+        _pause.Brightness = _view.Brightness;
+        _pause.BrightnessChanged += b =>
+        {
+            _view.Brightness = ReefLook.Brightness = b;
+            _environment.Environment.AdjustmentBrightness = b;
+            SettingsStore.Save(_tuning, _view);
+        };
         _pause.RibbonsToggled += on =>
         {
             _view.RequestRibbons = on;

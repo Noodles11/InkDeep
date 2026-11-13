@@ -311,6 +311,9 @@ public sealed record ReefLook
         env.AdjustmentEnabled = true;
         env.AdjustmentContrast = Contrast;
         env.AdjustmentSaturation = OctoShoots.Game.Fx.ArtLook.IsDrawn ? 1.12f : 1f;
-        env.AdjustmentBrightness = 1f;
+        env.AdjustmentBrightness = Brightness;
     }
+
+    /// <summary>The player's brightness calibration (ViewOptions.Brightness, the pause menu's slider).</summary>
+    public static float Brightness = 1f;
 }

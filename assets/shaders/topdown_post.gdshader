@@ -566,7 +566,7 @@ void fragment() {
 	float luma = dot(col, vec3(0.299, 0.587, 0.114));
 	// (Its values drawn together where she does not light it: darks lifted a little, lights held down.)
 	if (unlit_flatten > 0.0) {
-		float flat_to = mix(luma, 0.2, unlit_flatten * (1.0 - shown) * (paper ? 0.0 : 1.0));
+		float flat_to = mix(luma, 0.2 * unlit_dim, unlit_flatten * (1.0 - shown) * (paper ? 0.0 : 1.0));
 		col *= flat_to / max(luma, 1e-3);
 		luma = flat_to;
 	}

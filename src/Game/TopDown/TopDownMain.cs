@@ -424,6 +424,7 @@ public partial class TopDownMain : Node3D
         // Keep the GPU cool: the frame-rate cap from the view options (60 by default; captures run uncapped).
         var view = _view = SettingsStore.LoadView();
         ViewOptions.Shadows = view.LightShadows && System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--dbg-noshadow") < 0;
+        ReefLook.Brightness = Mathf.Clamp(view.Brightness, 0.6f, 1.8f);
         _perf = OS.GetCmdlineUserArgs().Contains("--dbg-perf");
         Engine.MaxFps = _captureDir is null && !_perf ? view.MaxFps : 0;
         if (_captureDir is not null || _perf) RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
@@ -4336,7 +4337,8 @@ public partial class TopDownMain : Node3D
             {
                 m.Position = held[n++];
                 m.Velocity = System.Numerics.Vector2.Zero;
-                m.Corruption.Value = m.Corruption.Max;
+                // (Held alive: filled again once her light has taken most of it, so its burn and its bleeding show.)
+                if (m.Corruption.Value < m.Corruption.Max * 0.3f) m.Corruption.Value = m.Corruption.Max;
             }
             _world.Player.Velocity = System.Numerics.Vector2.Zero;
             input.Aim = way;

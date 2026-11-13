@@ -37,6 +37,8 @@ public sealed class ViewOptions
     /// then reaches through rock as it did, though her glow in the water still stops at the reef (that needs no GPU).
     /// </summary>
     [Tune("Light")] public bool LightShadows = true;
+    /// <summary>The picture's brightness, calibrated in the pause menu (1 as made; the dark reef kept just visible).</summary>
+    [Tune("Light", 0.6f, 1.8f)] public float Brightness = 1f;
     /// <summary>Whether lights made from now on cast shadows (set from the options when a run starts).</summary>
     public static bool Shadows = true;
 }

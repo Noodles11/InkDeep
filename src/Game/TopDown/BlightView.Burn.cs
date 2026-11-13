@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Godot;
 using OctoShoots.Core.Gen.TopDown;
 using OctoShoots.Core.Plane;
@@ -10,7 +11,9 @@ namespace OctoShoots.Game.TopDown;
 /// particles: her light strikes a body as a strong current strikes a stone. Where it meets the side facing it, it splashes
 /// in its own colours, sheeting round the body and shooting off past its sides; streaks of it run on past the body's
 /// edges downstream; and flakes of the ink it wears away are torn off and carried with it. A murkling in it is pressed
-/// back a little and shudders (BlightView.cs). A creature a shot's light dazzles gives one sharp glint and a ring of sparks.
+/// back a little and shudders (BlightView.cs). As its corruption goes, it bleeds it: drops of ink well out of it and are
+/// carried off downstream, with faint violet wisps of the Leak's light, the faster the faster her light takes it
+/// (Bleed). A creature a shot's light dazzles gives one sharp glint and a ring of sparks.
 /// </summary>
 public partial class BlightView
 {
@@ -21,15 +24,69 @@ public partial class BlightView
 
     void SyncBurns(PlaneWorld world, float dt)
     {
+        (_meterWas, _meterNow) = (_meterNow, _meterWas);
+        _meterNow.Clear();
         for (int i = 0; i < _murks.Count && i < world.Murklings.Count; i++)
         {
             var m = world.Murklings[i];
-            if (m.Alive && world.LitFrom(m) is { } from) Sizzle(_murks[i].GlobalPosition, _murks[i].Scale.X, from, world.ColourOn(m), dt);
+            if (!m.Alive) continue;
+            var from = world.LitFrom(m);
+            if (from is { } light) Sizzle(_murks[i].GlobalPosition, _murks[i].Scale.X, light, world.ColourOn(m), dt);
+            if (!m.Budding) Bleed(m, m.Corruption, _murks[i].GlobalPosition, _murks[i].Scale.X, from, dt);
         }
         foreach (var (w, view) in _wardens)
-            if (w.Alive && world.LitFrom(w) is { } from) Sizzle(view.Node.GlobalPosition + (w.Puffer ? Vector3.Zero : Vector3.Up * 0.5f), WardenTuning.Radius, from, world.ColourOn(w), dt);
+        {
+            if (!w.Alive) continue;
+            var at = view.Node.GlobalPosition + (w.Puffer ? Vector3.Zero : Vector3.Up * 0.5f);
+            var from = world.LitFrom(w);
+            if (from is { } light) Sizzle(at, WardenTuning.Radius, light, world.ColourOn(w), dt);
+            Bleed(w, w.Corruption, at, WardenTuning.Radius, from, dt);
+        }
         foreach (var (f, view) in _flounders)
-            if (f.Corrupted && world.LitFrom(f) is { } from) Sizzle(view.Node.GlobalPosition + Vector3.Up * 0.1f, FlounderTuning.Radius, from, world.ColourOn(f), dt);
+        {
+            if (!f.Corrupted) continue;
+            var at = view.Node.GlobalPosition + Vector3.Up * 0.1f;
+            var from = world.LitFrom(f);
+            if (from is { } light) Sizzle(at, FlounderTuning.Radius, light, world.ColourOn(f), dt);
+            Bleed(f, f.Corruption, at, FlounderTuning.Radius, from, dt);
+        }
+    }
+
+    /// <summary>Each creature's corruption as it was last frame (and this frame's, kept for the next).</summary>
+    Dictionary<object, float> _meterWas = new(), _meterNow = new();
+
+    /// <summary>Drops of ink a second a creature bleeds at the least while its corruption goes, and more per share of its meter lost a second.</summary>
+    const float BleedLeast = 24f, BleedPerShare = 120f, BleedMost = 120f;
+
+    /// <summary>
+    /// A creature losing its corruption bleeds it (lit from a light there, on her plane, or from all round): drops of
+    /// dark ink welling out of its body, mostly its side away from the light, carried off downstream and sinking; and
+    /// now and then a faint violet wisp of the Leak's light rising off it.
+    /// </summary>
+    void Bleed(object kin, CorruptionMeter meter, Vector3 at, float radius, System.Numerics.Vector2? light, float dt)
+    {
+        _meterNow[kin] = meter.Value;
+        if (!_meterWas.TryGetValue(kin, out float was) || dt <= 0f || meter.Max <= 0f) return;
+        float lost = was - meter.Value;
+        if (lost <= 0f) return;
+        float rate = Mathf.Min(BleedLeast + BleedPerShare * lost / meter.Max / dt, BleedMost) * Mathf.Clamp(radius / BlightTuning.MurkRadius, 0.6f, 2.5f);
+        int n = (int)(rate * dt) + (_motes.RandRange(0f, 1f) < rate * dt % 1f ? 1 : 0);
+        var flow = light is { } l ? new Vector3(at.X - l.X, 0f, at.Z - l.Y) : Vector3.Zero;
+        flow = flow.LengthSquared() > 0.04f ? flow.Normalized() : Vector3.Zero;
+        for (int k = 0; k < n; k++)
+        {
+            var d = (flow * 0.7f + _droplets.RandDir()).Normalized();
+            var from = at + d * radius * 0.95f;
+            _droplets.Emit(from, d * _droplets.RandRange(0.3f, 0.9f) + flow * _droplets.RandRange(0.6f, 1.4f) + Vector3.Down * 0.15f,
+                _droplets.RandRange(0.7f, 1.2f), _droplets.RandRange(0.06f, 0.1f) * Mathf.Clamp(radius / BlightTuning.MurkRadius, 0.8f, 1.6f), 0.02f,
+                new Color(0.05f, 0.015f, 0.09f, 0.95f), new Color(0.2f, 0.07f, 0.3f, 0f), drag: 1.5f, buoyancy: -0.4f);
+            // (Each drop with the Leak's violet glimmering in it, so it shows on the dark water too.)
+            _motes.Emit(from, d * _motes.RandRange(0.3f, 0.9f) + flow * _motes.RandRange(0.6f, 1.4f) + Vector3.Down * 0.15f, _motes.RandRange(0.5f, 0.9f),
+                _motes.RandRange(0.08f, 0.12f), 0.02f, new Color(0.75f, 0.2f, 1.3f, 0.9f), new Color(0.3f, 0.06f, 0.55f, 0f), drag: 1.5f, buoyancy: -0.3f);
+            if (_motes.RandRange(0f, 1f) < 0.35f)
+                _motes.Emit(from, d * 0.3f + flow * 0.8f + Vector3.Up * 0.3f, _motes.RandRange(0.5f, 0.9f), _motes.RandRange(0.05f, 0.08f), 0.02f,
+                    new Color(1f, 0.45f, 1.6f, 0.9f), new Color(0.3f, 0.08f, 0.5f, 0f), drag: 1.8f, buoyancy: 0.35f);
+        }
     }
 
     /// <summary>A burning body (its middle and radius), lit from a light there (on her plane) in a colour of hers: what her light's current throws off it this frame.</summary>

@@ -31,6 +31,27 @@ public partial class PauseMenu : Control
     /// <summary>The open reef's requests: one she carries let go (back to the Tide Fan), and the HUD's ribbons shown or hidden.</summary>
     public event Action<int>? RequestLetGo;
     public event Action<bool>? RibbonsToggled;
+    /// <summary>The brightness calibration moved (ViewOptions.Brightness).</summary>
+    public event Action<float>? BrightnessChanged;
+    HSlider _bright = null!;
+
+    /// <summary>The brightness the slider shows (set from the options, without raising BrightnessChanged).</summary>
+    public float Brightness
+    {
+        set
+        {
+            _bright?.SetValueNoSignal(value);
+            ShowMarks(value);
+        }
+    }
+
+    /// <summary>The three marks of near-black, as the picture's brightness would show them.</summary>
+    readonly List<(ColorRect Mark, float Value)> _marks = new();
+
+    void ShowMarks(float b)
+    {
+        foreach (var (mark, v) in _marks) mark.Color = new Color(v * b, v * b, v * 1.15f * b);
+    }
 
 
     const float Width = 640f, SlideSeconds = OctoShoots.Game.Ui.DrawerStyle.SlideSeconds;
@@ -136,6 +157,37 @@ public partial class PauseMenu : Control
         lists.AddChild(_chart);
 
         box.AddChild(new HSeparator());
+        // Brightness: a slider, and three marks of near-black beside it; set it so the faintest is just to be seen (the
+        // dark reef, outside her light, is meant to be almost not).
+        var bright = new HBoxContainer();
+        bright.AddThemeConstantOverride("separation", 12);
+        box.AddChild(bright);
+        var brightLabel = new Label { Text = "Brightness", VerticalAlignment = VerticalAlignment.Center };
+        brightLabel.AddThemeColorOverride("font_color", Gold);
+        bright.AddChild(brightLabel);
+        _bright = new HSlider
+        {
+            MinValue = 0.6, MaxValue = 1.8, Step = 0.02, Value = 1.0, SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            SizeFlagsVertical = SizeFlags.ShrinkCenter, CustomMinimumSize = new Vector2(0f, 24f),
+            TooltipText = "Set it so the left mark is only just to be seen.",
+        };
+        _bright.ValueChanged += v =>
+        {
+            ShowMarks((float)v);
+            BrightnessChanged?.Invoke((float)v);
+        };
+        bright.AddChild(_bright);
+        foreach (float v in new[] { 0.03f, 0.06f, 0.12f })
+        {
+            var mark = new ColorRect { CustomMinimumSize = new Vector2(26f, 26f), SizeFlagsVertical = SizeFlags.ShrinkCenter };
+            bright.AddChild(mark);
+            _marks.Add((mark, v));
+        }
+        ShowMarks(1f);
+        var brightHint = new Label { Text = "Set it so the left mark is only just to be seen.", AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        brightHint.AddThemeFontSizeOverride("font_size", 14);
+        brightHint.AddThemeColorOverride("font_color", Soft);
+        box.AddChild(brightHint);
         _resume = new Button { CustomMinimumSize = new Vector2(0f, 40f) };
         _resume.Pressed += () => ResumePressed?.Invoke();
         box.AddChild(_resume);

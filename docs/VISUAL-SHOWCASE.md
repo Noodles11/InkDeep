@@ -19,11 +19,13 @@ between).
   rock, pale grey sand; coral in four colours; a cool pale sun, some god rays, caustics; a heavy vignette. Painted in
   look 0 (`ArtLook.Painted`, set by `TopDownMain.ApplyLook` and the title).
 - **Her light brings the colour** (`topdown_post.gdshader`'s `unlit_saturation`, `unlit_dim`; `CameraRig.SetShowcase`):
-  outside her glow and her beam (and what sealed leaks have woken) the reef keeps 15% of its colour and 80% of its
-  light, so it reads grey until she lights it, and her light is plain to see.
+  outside her glow and her beam (and what sealed leaks have woken) the reef keeps 15% of its colour and 10% of its
+  light: very dark, almost not to be seen, until she lights it, and her light is plain to see. The player calibrates
+  the picture's brightness in the pause menu (`ViewOptions.Brightness`, the environment's brightness: a slider and
+  three marks of near-black, set so the faintest is only just to be seen).
 - **The order of the eye** (`CameraRig.SetShowcase`, `topdown_post.gdshader`; the Bible's Sixth-of-a-Second Test): her
   and her light first, then threats and pickups, then walls and ways, the reef's beauty last.
-  - *Values drawn together* outside her light (`unlit_flatten`, 35% of the way to a quiet mid-dark): the unlit reef
+  - *Values drawn together* outside her light (`unlit_flatten`, 35% of the way to a quiet dark, as dim as the rest): the unlit reef
     is a calm ground, not a picture competing with the play.
   - *Nothing of the reef outshines her* (`highlight_knee`): the reef's brightest is rolled off from 0.5, her pool of
     light on pale sand included; she and her light, drawn after the pass, stay the brightest on screen.
