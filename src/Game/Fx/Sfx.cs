@@ -8,7 +8,9 @@ namespace OctoShoots.Game.Fx;
 /// The game's sounds: synth-style placeholders generated at startup, and recorded ones (audio/sfx), played flat or
 /// positionally. All of them go through the Sfx bus, heard as through water: a low-pass filter takes the treble off,
 /// more the deeper she is (SetDepth). Her light thrown is a pop (PlayThrow: one of the recorded pops at random), and
-/// her light striking anything it can harm a squishy pop (PlayStrike).
+/// her light striking anything it can harm a squishy pop (PlayStrike). Recorded too, and heard whatever OnlyToggle says:
+/// a sealed wall unlocking (PlaySecret), a shell gathered (PlayGather: its chime with one of two gathers at random), and
+/// the roar of her beam's fire while it burns a creature (Burning: a loop, eased in and out).
 /// </summary>
 public partial class Sfx : Node
 {
@@ -19,6 +21,19 @@ public partial class Sfx : Node
     /// <summary>The recorded pops (audio/sfx/pop1–pop10.wav) and the strike (squishpop.mp3).</summary>
     const int Pops = 10;
     const string StrikePath = "res://audio/sfx/squishpop.mp3";
+
+    const string SecretPath = "res://audio/sfx/secret.wav", GatherPath = "res://audio/sfx/gather.wav", FirePath = "res://audio/sfx/fire.ogg";
+    static readonly string[] GatherVariants = { "res://audio/sfx/gather2.ogg", "res://audio/sfx/gather3.ogg" };
+    /// <summary>Gathers no closer together than this (s): a handful of shells at once is one gather, not a pile of them.</summary>
+    const float GatherGap = 0.07f;
+    /// <summary>The beam's fire: its loudness at full (dB), and how fast it swells in and dies away (per second, of its 0..1).</summary>
+    const float FireDb = -6f, FireIn = 6f, FireOut = 3f;
+
+    AudioStream? _secret, _gather, _fire;
+    readonly List<AudioStream> _gathers = new();
+    AudioStreamPlayer? _firePlayer;
+    float _fireOn;
+    ulong _lastGather;
 
     AudioEffectLowPassFilter _water = null!;
     readonly List<AudioStream> _pops = new();
@@ -51,6 +66,17 @@ public partial class Sfx : Node
             if (ResourceLoader.Exists(path)) _pops.Add(GD.Load<AudioStream>(path));
         }
         _strike = ResourceLoader.Exists(StrikePath) ? GD.Load<AudioStream>(StrikePath) : null;
+        _secret = ResourceLoader.Exists(SecretPath) ? GD.Load<AudioStream>(SecretPath) : null;
+        _gather = ResourceLoader.Exists(GatherPath) ? GD.Load<AudioStream>(GatherPath) : null;
+        foreach (string path in GatherVariants)
+            if (ResourceLoader.Exists(path)) _gathers.Add(GD.Load<AudioStream>(path));
+        _fire = ResourceLoader.Exists(FirePath) ? GD.Load<AudioStream>(FirePath) : null;
+        if (_fire is AudioStreamOggVorbis ogg) ogg.Loop = true;
+        if (_fire is not null)
+        {
+            _firePlayer = new AudioStreamPlayer { Bus = Bus, Stream = _fire, VolumeDb = -80f };
+            AddChild(_firePlayer);
+        }
         for (int i = 0; i < 8; i++)
         {
             var p = new AudioStreamPlayer { Bus = Bus };
@@ -172,6 +198,37 @@ public partial class Sfx : Node
     {
         if (OnlyToggle) return;
         if (_strike is not null) PlayRecorded(_strike, volumeDb, 0.9f + (float)_random.NextDouble() * 0.2f);
+    }
+
+    /// <summary>A sealed wall unlocks (its seal opened).</summary>
+    public void PlaySecret()
+    {
+        if (_secret is not null) PlayRecorded(_secret, -2f, 1f);
+    }
+
+    /// <summary>A shell gathered: its chime and one of the two gathers at random, a touch apart in pitch each time.</summary>
+    public void PlayGather()
+    {
+        ulong now = Time.GetTicksMsec();
+        if (now - _lastGather < (ulong)(GatherGap * 1000f)) return;
+        _lastGather = now;
+        float pitch = 0.95f + (float)_random.NextDouble() * 0.1f;
+        if (_gather is not null) PlayRecorded(_gather, -6f, pitch);
+        if (_gathers.Count > 0) PlayRecorded(_gathers[_random.Next(_gathers.Count)], -4f, pitch);
+    }
+
+    /// <summary>Her beam's fire: roaring while it burns a creature (on), swelling in and dying away; paused, it stops.</summary>
+    public void Burning(bool on, float dt)
+    {
+        if (_firePlayer is null) return;
+        _fireOn = Mathf.MoveToward(_fireOn, on ? 1f : 0f, dt * (on ? FireIn : FireOut));
+        if (_fireOn <= 0.001f)
+        {
+            if (_firePlayer.Playing) _firePlayer.Stop();
+            return;
+        }
+        if (!_firePlayer.Playing) _firePlayer.Play();
+        _firePlayer.VolumeDb = FireDb + Mathf.LinearToDb(_fireOn);
     }
 
     void PlayRecorded(AudioStream stream, float volumeDb, float pitch)

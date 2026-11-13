@@ -2333,6 +2333,8 @@ public partial class TopDownMain : Node3D
 
     public override void _Process(double delta)
     {
+        // Her beam's fire roars while it burns a creature (not while paused, dying or diving).
+        if (_sfx is not null && _world is not null) _sfx.Burning(_world.BeamBurns && !Paused && !_world.Defeated && !_diving, (float)delta);
         if (!_perf)
         {
             ProcessFrame(delta);
@@ -2614,6 +2616,7 @@ public partial class TopDownMain : Node3D
                 }
                 else if (e.Type == PlaneEventType.ShellCollected)
                 {
+                    _sfx.PlayGather();
                     // The very shell flies from where she took it to the counter: from where it is shown, its size there,
                     // turned as it lay (as the camera sees it).
                     var cam = _camera.Camera;
@@ -3710,6 +3713,7 @@ public partial class TopDownMain : Node3D
                 _haptics.Pulse(0.7f, 0.5f, 0.45f);
                 _sfx.PlayPitched("pop", 0.35f, -2f);
                 _sfx.PlayPitched("bell_ring", 0.9f, -6f);
+                _sfx.PlaySecret();
                 _minimap.SetMap(_map, _world.SealedCaves);
                 _fullMap.SetMap(_map, _world.SealedCaves);
                 break;
