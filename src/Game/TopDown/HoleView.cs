@@ -43,13 +43,13 @@ public static class ReefKinds
 /// The rims of a reef's holes (docs/LIGHT-AND-GRAPH.md §6.3): a ring of light on each hole's floor and a glow
 /// down in it, in the colour of the reef it leads to (ReefKinds). None while a hole lies shut under its leak's sand;
 /// once its leak is sealed and it opens, its rim lights and breathes. A boss arena's Crack has its own light and gets none.
-/// Over each open hole floats its emblem (HoleEmblems): a faint sign of what lies below, lying flat just over her plane.
+/// In each open hole lies its emblem (HoleEmblems): a faint sign of what lies below, flat in the middle of its rim's ring.
 /// </summary>
 public partial class HoleView : Node3D
 {
     const float Lift = 0.35f, OpenEnergy = 1.1f;
-    /// <summary>The emblem: how far over her plane it floats, how wide against the hole, and how strong its light at most.</summary>
-    const float EmblemLift = 0.25f, EmblemSize = 2.6f, EmblemAlpha = 0.42f;
+    /// <summary>The emblem: how far over its rim's ring it lies, how wide against the hole (at least EmblemLeast m), and how strong its light at most.</summary>
+    const float EmblemLift = 0.05f, EmblemSize = 1.3f, EmblemLeast = 1.1f, EmblemAlpha = 0.42f;
     readonly List<(MeshInstance3D Quad, StandardMaterial3D Material)> _emblems = new();
 
     readonly List<(MeshInstance3D Ring, OmniLight3D Glow, StandardMaterial3D Material)> _rims = new();
@@ -110,12 +110,12 @@ public partial class HoleView : Node3D
                 AlbedoColor = new Color(ReefKinds.Colour(hole.Kind), 0f), CullMode = BaseMaterial3D.CullModeEnum.Disabled,
                 TextureFilter = BaseMaterial3D.TextureFilterEnum.LinearWithMipmaps,
             };
-            float wide = Mathf.Max(sh.HalfWidth * EmblemSize, 2.2f);
+            float wide = Mathf.Max(sh.HalfWidth * EmblemSize, EmblemLeast);
             var quad = new MeshInstance3D
             {
                 Mesh = new PlaneMesh { Size = new Vector2(wide, wide) }, MaterialOverride = sign,
                 CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-                Position = new Vector3(sh.Center.X, LevelMap.SwimBand + EmblemLift, sh.Center.Y), Visible = false,
+                Position = new Vector3(sh.Center.X, floor + Lift + EmblemLift, sh.Center.Y), Visible = false,
             };
             AddChild(quad);
             _emblems.Add((quad, sign));

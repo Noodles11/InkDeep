@@ -12,7 +12,7 @@ namespace OctoShoots.Game.TopDown;
 /// body, and the water glows only where the light gets to (her_beam_volume.gdshader, marched along each pixel's line of
 /// sight): every creature casts its own round shadow down the beam, as wide as its body. Lines of her light across her
 /// plane (PlaneWorld.LineReach, about one a degree) are cast as well, for how far it reaches and for prism stones'
-/// colours. Her own beam also has a spotlight from her bell tilted down along it, lighting the reef it falls on (its
+/// colours. Her own beam also has a spotlight from her bell level along it, lighting the reef it falls on (its
 /// shadows keep it off what lies behind the walls and behind the creatures), and its shadow grid goes to the reef's own
 /// light (her_beam_shadow; reef_show's rs_beam). A split beam's other rays (docs/proposals/BEAM-PEARLS-PLAN.md) are cones of their
 /// own; Rear Fin's and Lighthouse's are fainter. The corrupted show where any of them falls (her_beam_lit: the whole of
@@ -25,7 +25,7 @@ namespace OctoShoots.Game.TopDown;
 public partial class BeamView : Node3D
 {
     /// <summary>The spotlight's strength and how far down it tilts.</summary>
-    const float SpotEnergy = 3.2f, SpotTilt = 0.35f;
+    const float SpotEnergy = 3.2f, SpotTilt = 0f;
     /// <summary>How long a beam takes to shoot out of her bell to its full reach as it comes on (s).</summary>
     const float ExtendTime = 0.14f;
 
@@ -308,7 +308,10 @@ public partial class BeamView : Node3D
             }
             // (Its widest, at its reach: a flaring beam's trumpet mouth. PlaneOpenPaths.cs.)
             float widest = beam.HalfAngle * (1f + beam.Flare);
-            if (born is null) fan.Shadow.Cast(world, beam.Position, origin.Y, beam.Direction, widest, range);
+            // (Cast every other frame, each fan on its own turn: a creature's shadow a frame late does not show; and at once
+            // as a beam comes on.)
+            if (born is null && (fan.On < 0.5f || (Engine.GetProcessFrames() + (ulong)i) % 2 == 0))
+                fan.Shadow.Cast(world, beam.Position, origin.Y, beam.Direction, widest, range);
             fan.VolumeMaterial.SetShaderParameter("shadow", born is null ? fan.Shadow.Texture : _unshadowed);
             if (!Mathf.IsEqualApprox(fan.HullHalf, widest))
             {
@@ -384,7 +387,7 @@ public partial class BeamView : Node3D
                 var back = world.BeamEnd - beam.Direction * 0.6f;
                 _tintLight.GlobalPosition = new Vector3(back.X, LevelMap.SwimBand + 0.4f, back.Y);
             }
-            // Her own beam's spotlight: from her heart, along the beam and a little down onto the reef.
+            // Her own beam's spotlight: from her heart, level along the beam (tilted down, it lit the floor south of it on the screen).
             var look = (dir + Vector3.Down * SpotTilt).Normalized();
             _spot.GlobalTransform = new Transform3D(Basis.LookingAt(look, Vector3.Up), heart);
             _spot.LightColor = OctoShoots.Game.Fx.LightColour.Beam(rayHue, TopDownMain.ShowcaseOn);

@@ -18,7 +18,7 @@ namespace OctoShoots.Game.TopDown;
 public sealed class BeamShadow
 {
     /// <summary>Rays across and up and down the cone (texels), how far apart the samples along the floor are (m).</summary>
-    public const int Size = 64;
+    public const int Size = 48;
     const float Step = 0.25f;
     /// <summary>Rock across her plane stands at least this far above it (m) for her light.</summary>
     const float WallTop = 1.4f;
@@ -29,6 +29,7 @@ public sealed class BeamShadow
     readonly float[] _reach = new float[Size * Size * 2];
     readonly byte[] _bytes = new byte[Size * Size * 8];
     float[] _tops = Array.Empty<float>();
+    readonly System.Collections.Generic.List<(System.Numerics.Vector2 At, float R)> _near = new();
     readonly Image _image;
     public ImageTexture Texture { get; }
 
@@ -49,7 +50,21 @@ public sealed class BeamShadow
         float span = half * Margin;
         int steps = Mathf.CeilToInt(range / Step) + 1;
         if (_tops.Length < steps) _tops = new float[steps];
-        var bodies = world.LightBodies;
+        // Only the bodies that could stand in it: within its reach and near its cone (a plain array: this loop runs for
+        // every ray of the grid, and an interface's enumerator would make garbage each time).
+        var all = world.LightBodies;
+        _near.Clear();
+        float wide = MathF.Sin(MathF.Min(span + 0.15f, 1.5f));
+        for (int b = 0; b < all.Count; b++)
+        {
+            var (_, at, r) = all[b];
+            var to = at - origin;
+            float along = System.Numerics.Vector2.Dot(to, dir);
+            if (along + r < 0f || along - r > range) continue;
+            float across = MathF.Abs(to.X * dir.Y - to.Y * dir.X);
+            if (across - r > MathF.Max(along, 0f) * wide / MathF.Max(MathF.Cos(MathF.Min(span, 1.4f)), 0.2f) + 0.5f) continue;
+            _near.Add((at, r));
+        }
         for (int i = 0; i < Size; i++)
         {
             float az = -span + 2f * span * (i + 0.5f) / Size;
@@ -81,8 +96,9 @@ public sealed class BeamShadow
                 // The creatures' bodies: round, at her plane.
                 float byBodies = range;
                 var d3 = new Vector3(way.X * ce, MathF.Sin(el), way.Y * ce);
-                foreach (var (_, at, r) in bodies)
+                for (int b = 0; b < _near.Count; b++)
                 {
+                    var (at, r) = _near[b];
                     var to = new Vector3(at.X - origin.X, LevelMap.SwimBand - height, at.Y - origin.Y);
                     float along = to.Dot(d3);
                     if (along <= 0f || along - r > byBodies) continue;

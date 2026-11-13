@@ -73,10 +73,22 @@ float rs_beam(vec3 p) {
 	return cone * fall * her_show_dir.y * her_sight(p) * rs_beam_shadow(p);
 }
 
-// How much of her light falls on a point (0..1): her aura's or her beam's.
-float reef_lit(vec3 p) {
+// Where a point of the reef shows on her plane, as the eye sees it from the camera (cam): the point of her plane on the
+// same line of sight. Her light lies on her plane; what lies under it (or over it) is lit as the eye sees it lit, so
+// the light on the reef falls on the screen just where her beam and her glow are, not laid straight down under them
+// (on the tilted view that would show as a pale shape below the beam).
+vec3 rs_seen(vec3 p, vec3 cam) {
+	float plane = her_show_aura.w > 0.0 ? her_show_aura.y : her_beam_show.y;
+	vec3 d = p - cam;
+	if (abs(d.y) < 1e-3) return p;
+	return p + d * ((plane - p.y) / d.y);
+}
+
+// How much of her light falls on a point (0..1): her aura's or her beam's, where the eye sees it on her plane.
+float reef_lit(vec3 p, vec3 cam) {
 	if (reef_showcase <= 0.0) return 0.0;
-	return max(rs_aura(p), rs_beam(p));
+	vec3 q = rs_seen(p, cam);
+	return max(rs_aura(q), rs_beam(q));
 }
 
 // How awake the reef is at a point (0..1): behind a wave's front, as awake as the wave leaves it.
@@ -97,11 +109,11 @@ float reef_wave_front(vec3 p) {
 
 // How much the reef shows as it is at a point (0..1): in her light, and by as much as it is awake: half its colour
 // back while some of its leaks still pour, the whole painting once every one is sealed (the reward of cleansing it).
-float reef_show(vec3 p) {
+float reef_show(vec3 p, vec3 cam) {
 	if (reef_showcase <= 0.0) return 0.0;
 	float awake = reef_awake(p);
 	awake *= 0.5 + 0.5 * smoothstep(0.9, 1.0, awake);
-	return clamp(max(reef_lit(p), max(awake, reef_wave_front(p))), 0.0, 1.0);
+	return clamp(max(reef_lit(p, cam), max(awake, reef_wave_front(p))), 0.0, 1.0);
 }
 
 #endif

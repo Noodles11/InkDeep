@@ -574,7 +574,14 @@ public sealed partial class PlaneWorld
     /// <summary>Whether her light is stopped at a point of her plane (rock, a sealed wall's rock, a pot).</summary>
     public bool StopsLight(Vector2 q) => Stops(q);
 
-    bool Stops(Vector2 q) => !Map.IsOpen(q) || _rocks.Exists(r => r.Contains(q)) || VaseAt(q, 0.05f) is not null;
+    bool Stops(Vector2 q)
+    {
+        if (!Map.IsOpen(q)) return true;
+        // (A plain loop: this is asked thousands of times a frame, and a lambda would make garbage each time.)
+        for (int i = 0; i < _rocks.Count; i++)
+            if (_rocks[i].Contains(q)) return true;
+        return VaseAt(q, 0.05f) is not null;
+    }
 
     /// <summary>Her beam's other ray at this index, made (registered with her as its owner, dark) when first needed.</summary>
     LightEmitter Ray(int index)

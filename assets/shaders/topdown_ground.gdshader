@@ -79,7 +79,7 @@ void fragment() {
 		s.emission = mix(mix(wash * 1.5, nat.albedo, 0.16) * 0.55, wash * 0.8, wk);
 		nat.emission = s.emission;
 	}
-	float show = reef_show_skin(s, nat, world);
+	float show = reef_show_skin(s, nat, world, CAMERA_POSITION_WORLD);
 	float dark = door_count > 0 ? door_dark(local) : 0.0;
 	s.albedo *= 1.0 - 0.95 * dark;
 	s.emission *= 1.0 - dark;

@@ -188,13 +188,13 @@ ReefSkin reef_surface(vec3 local, vec3 n, float time, float px) {
 // The showcase reef (reef_show.gdshaderinc): where her light shows it (and by as much as the reef is awake), the skin as
 // it is (nat) over the drawn one (s), lit from where she is; a wave's front lights it as it passes. Returns how much
 // it shows (0 off a showcase reef), for the light() pass.
-float reef_show_skin(inout ReefSkin s, ReefSkin nat, vec3 world) {
+float reef_show_skin(inout ReefSkin s, ReefSkin nat, vec3 world, vec3 cam) {
 	if (reef_showcase <= 0.0) return 0.0;
-	float show = reef_show(world);
+	float show = reef_show(world, cam);
 	s.albedo = mix(s.albedo, nat.albedo, show);
 	s.normal = normalize(mix(s.normal, nat.normal, show));
 	s.caustic = mix(s.caustic, nat.caustic, show);
-	float lit = reef_lit(world);
+	float lit = reef_lit(world, cam);
 	if (lit > 0.0) {
 		vec3 to = normalize(her_show_aura.xyz + vec3(0.0, 0.8, 0.0) - world);
 		float ndl = clamp(dot(nat.normal, to), 0.0, 1.0);

@@ -38,6 +38,9 @@ public partial class FloraViews : Node3D
     /// <summary>Draw at any distance (the top-down camera sees the whole view at once), and cast shadows.</summary>
     public bool Unlimited { get; set; }
 
+    /// <summary>A level's flora is drawn out to this far from the camera (the camera hangs ~55 m off; the screen's corners are within ~75 m).</summary>
+    const float LevelRange = 85f;
+
     /// <summary>Repaints a species in two variants (low and high ends each), keeping its mesh's light and dark structure.</summary>
     public void SetPalette(FloraKind kind, Color lowA, Color highA, Color lowB, Color highB, float sway = -1f)
     {
@@ -109,7 +112,9 @@ public partial class FloraViews : Node3D
                 MaterialOverride = material,
                 CastShadow = Unlimited ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
                 CustomAabb = new Aabb(new Vector3(-Tile * 0.5f - 3f, -half, -Tile * 0.5f - 3f), new Vector3(Tile + 6f, half * 2f, Tile + 6f)),
-                VisibilityRangeEnd = Unlimited ? 0f : look.Range + Tile * 0.5f,
+                // (A level's own: out to past what the camera can see, ~70 m off, so no tile far beyond the screen is drawn
+                // or casts a shadow.)
+                VisibilityRangeEnd = Unlimited ? LevelRange + Tile * 0.5f : look.Range + Tile * 0.5f,
                 VisibilityRangeEndMargin = 8f,
                 VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self,
             });

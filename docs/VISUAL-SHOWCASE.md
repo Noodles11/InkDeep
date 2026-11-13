@@ -22,7 +22,9 @@ between).
   outside her glow and her beam (and what sealed leaks have woken) the reef keeps 15% of its colour and 20% of its
   light: very dark, almost not to be seen, until she lights it, and her light is plain to see. The player calibrates
   the picture's brightness in the pause menu (`ViewOptions.Brightness`, the environment's brightness: a slider and
-  three marks of near-black, set so the faintest is only just to be seen).
+  three marks of near-black, set so the faintest is only just to be seen). Her light on the reef falls where the eye sees
+  her beam and her glow (`rs_seen`: each point of the reef is lit as the point of her plane on its line of sight is),
+  so nothing lights a patch of floor below the beam on the tilted view. Lantern Bay is always awake: all of it shows.
 - **The order of the eye** (`CameraRig.SetShowcase`, `topdown_post.gdshader`; the Bible's Sixth-of-a-Second Test): her
   and her light first, then threats and pickups, then walls and ways, the reef's beauty last.
   - *Values drawn together* outside her light (`unlit_flatten`, 35% of the way to a quiet dark, as dim as the rest): the unlit reef

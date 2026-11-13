@@ -61,7 +61,7 @@ void fragment() {
 		s.emission = mix(mix(wash * 1.5, nat.albedo, 0.16) * 0.55, wash * 0.8, wk);
 		nat.emission = s.emission;
 	}
-	float show = reef_show_skin(s, nat, world);
+	float show = reef_show_skin(s, nat, world, CAMERA_POSITION_WORLD);
 	// The caustics ride to light() in BACKLIGHT (this shader does its own lighting, so nothing else reads it).
 	// (And how much the showcase shows it as it is, in .y: lit plainly there, not in the drawn look's steps.)
 	BACKLIGHT = vec3(s.caustic * 1.5, reef_art == 7 ? 0.0 : show, 0.0);

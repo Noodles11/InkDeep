@@ -25,6 +25,7 @@ public partial class BellView : Node3D
     const int Hairs = 140, Fibers = 8, OralArms = 3;
     /// <summary>The strands' fixed step: steady motion at any frame rate.</summary>
     const float Step = 1f / 120f;
+    const int MostStrandSteps = 2;
     /// <summary>Her glow in the water (HerColor: derived from her body colour).</summary>
     static Color Glow => OctoShoots.Game.Fx.HerColor.Glow;
 
@@ -46,7 +47,12 @@ public partial class BellView : Node3D
     /// <summary>Whether something is drawn over her now (kelp in front of her): a thin outline then shows round her bell.</summary>
     public bool Covered { get; set; }
     float _outline;
-    ImmediateMesh _strandMesh = null!;
+    /// <summary>Her strands' ribbons, laid out afresh each frame in plain arrays and handed over at once (one call, not one a vertex).</summary>
+    ArrayMesh _strandMesh = null!;
+    Vector3[] _strandAt = System.Array.Empty<Vector3>();
+    Color[] _strandColour = System.Array.Empty<Color>();
+    Vector2[] _strandUv = System.Array.Empty<Vector2>(), _strandUv2 = System.Array.Empty<Vector2>();
+    readonly Godot.Collections.Array _strandArrays = new();
     /// <summary>
     /// Her light is a lamp in her bell (_light): one sphere of it all round her, smooth as a bulb's, from her bell's heart.
     /// It burns nothing (her shots' light does: PlaneHerLight.cs). A faint glow round the bell itself.
@@ -153,9 +159,10 @@ public partial class BellView : Node3D
         _body.AddChild(new MeshInstance3D { Mesh = bell, MaterialOverride = _outlineMaterial, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
 
         _strandMaterial = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/clementine_trail.gdshader"), RenderPriority = 1 };
-        _strandMesh = new ImmediateMesh();
+        _strandMesh = new ArrayMesh();
+        _strandArrays.Resize((int)Mesh.ArrayType.Max);
         // The strands live in world space: they trail where she has been, not where she is.
-        AddChild(new MeshInstance3D { Mesh = _strandMesh, TopLevel = true, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, ExtraCullMargin = 8f });
+        AddChild(new MeshInstance3D { Mesh = _strandMesh, MaterialOverride = _strandMaterial, TopLevel = true, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, ExtraCullMargin = 8f });
         SetArm(AdventureTuning.ArmBase);
         for (int k = 0; k < Hairs; k++)
         {
@@ -862,8 +869,9 @@ public partial class BellView : Node3D
         }
 
         _accum += dt;
-        int steps = Mathf.Min((int)(_accum / Step), 8);
-        _accum = steps == 8 ? 0f : _accum - steps * Step;
+        // (At most MostStrandSteps a frame: a slow frame drops the rest rather than piling up more work.)
+        int steps = Mathf.Min((int)(_accum / Step), MostStrandSteps);
+        _accum = steps == MostStrandSteps ? 0f : _accum - steps * Step;
         float drag = Mathf.Exp(-5f * Step);
         for (int n = 0; n < steps; n++)
         {
@@ -927,8 +935,16 @@ public partial class BellView : Node3D
         var bell = _body.GlobalTransform;
         _strandMaterial.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("bell_centre"), bell.Origin);
         _strandMaterial.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("bell_radius"), BellRadius * bell.Basis.Scale.X);
-        _strandMesh.ClearSurfaces();
-        _strandMesh.SurfaceBegin(Mesh.PrimitiveType.Triangles, _strandMaterial);
+        int need = 0;
+        foreach (var st in _strands) need += (st.Pos.Length - 1) * 6;
+        if (_strandAt.Length != need)
+        {
+            _strandAt = new Vector3[need];
+            _strandColour = new Color[need];
+            _strandUv = new Vector2[need];
+            _strandUv2 = new Vector2[need];
+        }
+        int v = 0;
         foreach (var s in _strands)
         {
             int count = s.Pos.Length;
@@ -965,13 +981,19 @@ public partial class BellView : Node3D
             void Vertex(Vector3 at, float along, float across)
             {
                 // (Red carries how face-on the twist is there: the shader shades the turned-away part.)
-                _strandMesh.SurfaceSetColor(new Color(turn, color.G, color.B, color.A));
-                _strandMesh.SurfaceSetUV(new Vector2(along, across));
-                _strandMesh.SurfaceSetUV2(kind);
-                _strandMesh.SurfaceAddVertex(at);
+                _strandColour[v] = new Color(turn, color.G, color.B, color.A);
+                _strandUv[v] = new Vector2(along, across);
+                _strandUv2[v] = kind;
+                _strandAt[v++] = at;
             }
         }
-        _strandMesh.SurfaceEnd();
+        _strandMesh.ClearSurfaces();
+        if (need == 0) return;
+        _strandArrays[(int)Mesh.ArrayType.Vertex] = _strandAt;
+        _strandArrays[(int)Mesh.ArrayType.Color] = _strandColour;
+        _strandArrays[(int)Mesh.ArrayType.TexUV] = _strandUv;
+        _strandArrays[(int)Mesh.ArrayType.TexUV2] = _strandUv2;
+        _strandMesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, _strandArrays);
     }
 
     // ───────────────────────── ink ─────────────────────────

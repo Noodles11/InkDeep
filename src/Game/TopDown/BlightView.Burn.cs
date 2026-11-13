@@ -18,7 +18,7 @@ namespace OctoShoots.Game.TopDown;
 public partial class BlightView
 {
     /// <summary>Splashes off a burning body a second, for a body of a murkling's size (bigger bodies more).</summary>
-    const float SizzleRate = 34f;
+    const float SizzleRate = 68f;
     /// <summary>How far her light presses a murkling back (m, at its full) and how fast it shudders in it.</summary>
     public const float PressBack = 0.07f, PressShudder = 38f;
 

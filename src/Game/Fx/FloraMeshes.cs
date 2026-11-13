@@ -120,11 +120,11 @@ public static class FloraMeshes
         var rng = new Random(7);
         void Branch(Vector3 from, Vector3 dir, float length, float radius, int depth)
         {
-            var path = new Vector3[4];
-            for (int s = 0; s < 4; s++) path[s] = from + dir * length * s / 3f;
-            b.Tube(path, s => radius * (1f - 0.25f * s / 3f), 5, s =>
+            // (Each branch a straight tube: one length of it, tapering, which is all the eye sees of it from the camera.)
+            var path = new[] { from, from + dir * length };
+            b.Tube(path, s => radius * (1f - 0.25f * s), 5, s =>
             {
-                float pale = depth == 0 ? s / 3f : 0f;
+                float pale = depth == 0 ? s : 0f;
                 return new Color(0.72f, 0.54f, 0.3f).Lerp(new Color(0.96f, 0.92f, 0.82f), pale * 0.85f);
             });
             if (depth == 0) return;
@@ -134,7 +134,7 @@ public static class FloraMeshes
                 var spread = new Vector3((float)rng.NextDouble() - 0.5f, (float)rng.NextDouble() * 0.4f, (float)rng.NextDouble() - 0.5f) * 1.2f;
                 var nd = (dir + spread).Normalized();
                 if (nd.Y < 0.2f) nd = (nd + Vector3.Up * 0.5f).Normalized();
-                Branch(path[3], nd, length * 0.85f, radius * 0.75f, depth - 1);
+                Branch(path[1], nd, length * 0.85f, radius * 0.75f, depth - 1);
             }
         }
         for (int i = 0; i < 4; i++)
@@ -174,7 +174,8 @@ public static class FloraMeshes
     /// <summary>An ellipsoid with a rotation (MeshBuilder's is axis-aligned).</summary>
     static void AddEllipsoid(MeshBuilder b, Vector3 center, Basis basis, Vector3 radii, Color color)
     {
-        const int seg = 8, rings = 5;
+        // (Few faces: the coral's flat lobes are small on the screen, and there are hundreds of them on a reef.)
+        const int seg = 6, rings = 4;
         var ids = new int[rings + 1, seg];
         for (int r = 0; r <= rings; r++)
         {
