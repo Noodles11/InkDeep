@@ -300,14 +300,14 @@ public sealed class SpawnEntry
 }
 
 /// <summary>
-/// One generated level (DESIGN-TOPDOWN §4): a square heightfield on a 1 m grid (140 m a side for a seeded level or a
+/// One generated level (DESIGN-TOPDOWN §4): a square heightfield on a 1 m grid (110 m a side for a seeded level or a
 /// leak cave, larger for a hand-drawn map that asks for it) plus everything the generator decided. Produced only by
 /// <see cref="TopDownGenerator"/>; the game reads it and never generates or scatters.
 /// </summary>
 public sealed class LevelMap
 {
     /// <summary>A seeded level's square (and a leak cave's, and a hand-drawn map's unless it says otherwise), metres a side.</summary>
-    public const int Seeded = 140;
+    public const int Seeded = 110;
 
     public LevelMap(int size = Seeded)
     {

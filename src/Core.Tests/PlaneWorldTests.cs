@@ -182,8 +182,11 @@ public class PlaneWorldTests
     public void HerLightOnTheEmblemFillsItAndTheSealCrumbles()
     {
         var w = new PlaneWorld(TestLevels.Get(TestLevels.Find(p => p.Secrets > 0)), new Tuning());
+        // (Nothing in the way of her shots.)
+        w.Mobs.Clear();
         // (A plain seal: a coloured one takes only light through its prism stones, PrismStoneTests.)
-        var seal = w.Seals.First();
+        // (One with open water before its emblem, to shoot it from.)
+        var seal = w.Seals.First(s => w.Clear(s.Emblem + s.Facing * 1.2f, 0.3f) && w.LineOfSight(s.Emblem + s.Facing * 1.2f, s.Emblem));
         seal.Hue = LightHue.None;
         Assert.False(w.Clear(seal.Rock.Center, w.Radius));
         // A shot flying into the emblem from the canyon side: whatever its damage, it counts once.

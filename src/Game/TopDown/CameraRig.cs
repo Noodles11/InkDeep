@@ -173,8 +173,9 @@ public partial class CameraRig : Node3D
     }
 
     /// <summary>The currents' shimmer (CurrentView): the map of them over her plane, and each one's roll and strength.</summary>
-    public void SetCurrents(Texture2D? map, Vector2[] flows, int count)
+    public void SetCurrents(Texture2D? map, Vector2[] flows, int count, float span = OctoShoots.Core.Gen.TopDown.LevelMap.Seeded)
     {
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("current_span"), span);
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("current_map"), map);
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("current_ids"), map);
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("current_flows"), flows);

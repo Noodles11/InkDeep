@@ -109,7 +109,11 @@ public class SeekerTests
     {
         var w = World();
         var d = Way(w, 13f);
+        // (No light but hers about: a spring or a lamp nearby would feed it instead.)
+        foreach (var other in w.Lights.All.Where(e => e.Owner != w.Her).ToList()) w.Lights.Remove(other);
         var m = Seeker(w, w.Player.Position + d * 11f);
+        // (Too much ink to be freed while it is watched.)
+        m.Corruption.Max = m.Corruption.Value = 100000f;
         Run(w, 0.5f);
         Assert.Equal(MurkState.Searching, m.State);
         float was = Vector2.Distance(m.Position, w.Player.Position);

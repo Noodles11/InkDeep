@@ -59,7 +59,7 @@ public sealed class HandLayout
     public static HandLayout FromJson(string json) => JsonSerializer.Deserialize<HandLayout>(json, Json) ?? throw new JsonException("an empty map");
 }
 
-/// <summary>A chamber at (X, Y) on the 140 m square, R metres across its middle. One is the start, one the exit.</summary>
+/// <summary>A chamber at (X, Y) on its map's square, R metres across its middle. One is the start, one the exit.</summary>
 public sealed class HandChamber
 {
     public string Id { get; set; } = "";

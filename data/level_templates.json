@@ -37,7 +37,7 @@
         "secret": { "chance": 0.2 },
         "curseDen": { "none": true }
       },
-      "layout": { "chamberRadius": 0.6, "tunnelWidth": 0.8, "tunnelLength": 1.4, "loops": 0.0 },
+      "layout": { "chamberRadius": 0.6, "tunnelWidth": 0.8, "tunnelLength": 1.2, "loops": 0.0 },
       "cast": {
         "thumpsquirt": { "count": [2, 3], "anchors": ["tunnels"] },
         "blotter": { "count": [2, 3], "anchors": ["path"] },
@@ -58,7 +58,7 @@
         "shellCache": { "chance": 0.6 },
         "secret": { "chance": 0.3 }
       },
-      "layout": { "chamberRadius": 1.4, "tunnelLength": 0.8, "loops": 1.5 },
+      "layout": { "chamberRadius": 1.15, "tunnelLength": 0.8, "loops": 1.5 },
       "cast": {
         "lashjaw": { "count": [2, 3], "perMenace": 1, "anchors": ["walls"] },
         "blightroot": { "count": [2, 3], "anchors": ["chambers"] },
@@ -80,7 +80,7 @@
         "shop": { "chance": 0.3 },
         "secret": { "chance": 0.2 }
       },
-      "layout": { "chamberRadius": 1.2 },
+      "layout": { "chamberRadius": 1.05 },
       "cast": {
         "blightroot": { "count": [4, 5], "anchors": ["spread"] },
         "blotter": { "count": [3, 4], "anchors": ["chambers"] },
@@ -147,7 +147,7 @@
         "shellCache": { "chance": 0.5 },
         "curseDen": { "none": true }
       },
-      "layout": { "chamberRadius": 1.1, "loops": 1.0 },
+      "layout": { "chamberRadius": 1.0, "loops": 1.0 },
       "cast": {
         "blightroot": { "count": [1, 1], "anchors": ["deadEnds"] },
         "blotter": { "none": true },

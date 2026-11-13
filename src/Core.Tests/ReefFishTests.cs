@@ -43,7 +43,7 @@ public class ReefFishTests
         foreach (var f in w.ReefFish)
         {
             Assert.True(w.Map.IsOpen(f.Position));
-            Assert.True(Vector2.Distance(f.Position, w.Map.Start.Position) > ReefFishTuning.StartClear - 2f);
+            Assert.True(Vector2.Distance(f.Position, w.Map.Start.Position) > ReefFishTuning.StartClear - 4f);
         }
     }
 

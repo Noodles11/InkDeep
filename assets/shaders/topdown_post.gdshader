@@ -116,6 +116,8 @@ uniform sampler2D current_map : filter_linear, repeat_disable;
 uniform sampler2D current_ids : filter_nearest, repeat_disable;
 uniform vec2 current_flows[6];
 uniform int current_count = 0;
+// How many metres a side the currents' map covers (the level's size).
+uniform float current_span = 110.0;
 // The leaks (AdventureView): where each is on her plane (x, z) and how open (0..1).
 uniform vec3 leaks[8];
 uniform int leak_count = 0;
@@ -344,7 +346,7 @@ void fragment() {
 		// The currents: the picture wavers, like the air over a hot road, bent by eddies of denser water rolling down the
 		// course with the flow and boiling as they go. It only bends: the water stays as bright as it is.
 		if (current_count > 0) {
-			vec2 cuv = sp.xz / 140.0;
+			vec2 cuv = sp.xz / current_span;
 			vec4 cm = texture(current_map, cuv);
 			vec2 flow = current_flows[clamp(int(texture(current_ids, cuv).a + 0.5), 0, 5)];
 			if (cm.b * flow.y > 0.001 && cuv.x > 0.0 && cuv.y > 0.0 && cuv.x < 1.0 && cuv.y < 1.0) {

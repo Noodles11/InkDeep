@@ -26,7 +26,7 @@ public static partial class TopDownGenerator
     public const int PassesMin = 2, PassesMax = 4;
     /// <summary>Passes bored past the level's share, as spares: not every one can be roofed (those are filled back in).</summary>
     const int PassSpares = 3;
-    const float PassMin = 10f, PassMax = 36f, PassSaves = 1.6f;
+    const float PassMin = 8f, PassMax = 30f, PassSaves = 1.4f;
     /// <summary>How far an arch spans from footing to footing (metres): over a tunnel, or across a chamber's edge.</summary>
     public const float ArchSpanMin = 10f, ArchSpanMax = 24f;
     /// <summary>Buried coins and sealed pockets a level holds (the validator checks them).</summary>
@@ -679,6 +679,8 @@ public static partial class TopDownGenerator
 
     /// <summary>A sealed wall's half thickness (metres either side of its middle, along its passage), and how far past the passage's half width it reaches across.</summary>
     public const float SealThick = 3.2f, SealPast = 1.5f;
+    /// <summary>Two ways into a boss's arena split by no more than this many of the sweep's rays of rock are one way, barred by one wall.</summary>
+    const int PillarRays = 8;
 
     /// <summary>
     /// Sealed walls on the way into the boss's arena (every passage into it: a sword is carved on them) and, as a level's
@@ -712,9 +714,17 @@ public static partial class TopDownGenerator
                 {
                     int k = (first + n) % Rays;
                     if (!float.IsPositiveInfinity(wall[k]) || float.IsPositiveInfinity(wall[(k - 1 + Rays) % Rays])) continue;
-                    // k opens a run (its ray escapes, the one before meets rock): find where it ends.
+                    // k opens a run (its ray escapes, the one before meets rock): find where it ends — over a thin pillar
+                    // of rock (at most PillarRays rays) to the run beyond it, so one wall bars both (two would overlap).
                     int last = k;
-                    while (float.IsPositiveInfinity(wall[(last + 1) % Rays]) && (last + 1) % Rays != k) last = (last + 1) % Rays;
+                    while (true)
+                    {
+                        while (float.IsPositiveInfinity(wall[(last + 1) % Rays]) && (last + 1) % Rays != k) last = (last + 1) % Rays;
+                        int gap = 1;
+                        while (gap <= PillarRays && !float.IsPositiveInfinity(wall[(last + gap) % Rays])) gap++;
+                        if (gap > PillarRays || (last + gap) % Rays == k || n + (last + gap - k + Rays) % Rays >= Rays) break;
+                        last = (last + gap) % Rays;
+                    }
                     int before = (k - 1 + Rays) % Rays, after = (last + 1) % Rays;
                     Vector2 Dir(int q) => new(MathF.Cos(q * MathF.Tau / Rays), MathF.Sin(q * MathF.Tau / Rays));
                     var m0 = arena.Position + Dir(before) * wall[before];
@@ -724,7 +734,10 @@ public static partial class TopDownGenerator
                     var facing = new Vector2(-acrossDir.Y, acrossDir.X);
                     if (Vector2.Dot(facing, mid - arena.Position) < 0f) facing = -facing;
                     float half = Vector2.Distance(m0, m1) * 0.5f;
-                    map.WeakRocks.Add(new WeakRock(mid + facing * SealThick, half + SealPast, -1, facing, SealThick, SealKind.Boss));
+                    // (Its middle out along the passage; where the passage bends into the rock there, on its line itself.)
+                    var at = mid + facing * SealThick;
+                    if (map.HeightAt(at) >= WallFoot - 0.2f) at = mid;
+                    map.WeakRocks.Add(new WeakRock(at, half + SealPast, -1, facing, SealThick, SealKind.Boss));
                     n += (last - k + Rays) % Rays;
                 }
         }

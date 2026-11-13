@@ -11,11 +11,11 @@ namespace OctoShoots.Core.Gen.TopDown;
 /// </summary>
 public static class LevelValidator
 {
-    public const float MinExitGeodesic = 55f;
+    public const float MinExitGeodesic = 43f;
     /// <summary>The longest spur from the network to a place.</summary>
-    public const float MaxSpur = 34f;
+    public const float MaxSpur = 27f;
     /// <summary>How much nearer than placed a further hole may end up, sunk to its chamber's middle.</summary>
-    const float HoleGive = 10f;
+    const float HoleGive = 4f;
 
     /// <summary>Null when the level keeps every rule; otherwise the first one it breaks.</summary>
     public static string? Validate(LevelMap map)
@@ -47,6 +47,21 @@ public static class LevelValidator
             if (Vector2.Distance(others[i].Position, start.Position) < CaveLayout.FromStart) return $"{others[i].Kind} too close to the start";
             for (int j = i + 1; j < others.Count; j++)
                 if (Vector2.Distance(others[i].Position, others[j].Position) < CaveLayout.Spacing) return $"{others[i].Kind} and {others[j].Kind} closer than {CaveLayout.Spacing:0} m";
+        }
+        // On a boss's reef its other holes lie outside its walls: each is reached from the start while they stand.
+        if (map.HasBoss && holes.Count > 0)
+        {
+            var walls = map.WeakRocks.Where(r => r.Kind == SealKind.Boss).ToList();
+            var reach = Distances(map, start.Position, blocked: q => walls.Exists(r => r.Contains(q)));
+            foreach (var hole in holes)
+                if (float.IsPositiveInfinity(DistanceAt(reach, hole.Position))) return "a hole down behind the boss's walls";
+        }
+        // A shell cache keeps to the middle of the way (30–70% along the start → way down).
+        foreach (var cache in others.Where(p => p.Kind == PoiKind.ShellCache))
+        {
+            var axis = exit.Position - start.Position;
+            float t = Vector2.Dot(cache.Position - start.Position, axis) / MathF.Max(axis.LengthSquared(), 1f);
+            if (t < 0.3f || t > 0.7f) return $"the shell cache {t:0.00} of the way down (want 0.3–0.7)";
         }
         // One place sits early, unless the shell cache (which keeps to the middle of the way) is the level's only place.
         var early = others.Where(p => p.Early).ToList();

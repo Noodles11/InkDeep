@@ -27,7 +27,7 @@ public sealed class CaveLayout
     const float Rim = LevelMap.RimWidth;
 
     /// <summary>Reachable water the level aims for (m²), and how far it may stray (the validator's band).</summary>
-    public const float Area = 4000f, AreaSlack = 0.15f;
+    public const float Area = 2700f, AreaSlack = 0.22f;
     public const float AreaMin = Area * (1f - AreaSlack), AreaMax = Area * (1f + AreaSlack);
     /// <summary>
     /// This layout's share of a level's water (a dive's leak cave half, docs/DIVE.md §6): its area aimed for and its band,
@@ -38,17 +38,17 @@ public sealed class CaveLayout
     float Lo => AreaMin * _scale;
     float Hi => AreaMax * _scale;
     float Reach => MathF.Sqrt(_scale);
-    const float MinPath = LevelValidator.MinExitGeodesic, MinStraight = 56f;
+    const float MinPath = LevelValidator.MinExitGeodesic, MinStraight = 44f;
     /// <summary>How far apart chambers lie: on the route, a quick detour off it, and a special room off it (rooms keep rock round them).</summary>
-    static readonly (float Lo, float Hi) StepMain = (16f, 22f), StepBranch = (11f, 16f), StepRoom = (14f, 21f);
+    static readonly (float Lo, float Hi) StepMain = (14f, 19f), StepBranch = (10f, 14f), StepRoom = (12f, 18f);
     static readonly (float Lo, float Hi) RadiusMain = (6f, 10f), RadiusBranch = (5f, 9f), RadiusStart = (9f, 11f);
     static readonly (float Lo, float Hi) WidthMain = (6f, 9f), WidthBranch = (5f, 7f), WidthLoop = (4.5f, 6f);
-    const float LoopChance = 0.25f, LoopReach = 26f;
+    const float LoopChance = 0.25f, LoopReach = 20f;
     /// <summary>
     /// The side chambers stay round the main route: their middles within RouteReach metres of it, at most BranchDepth
     /// chambers deep (one off the route, one off that), off the route itself RouteParent of the time.
     /// </summary>
-    const float RouteReach = 24f, RouteParent = 0.65f;
+    const float RouteReach = 19f, RouteParent = 0.65f;
     const int BranchDepth = 2;
     /// <summary>The craggy edge: two octaves of noise on the outline (metres).</summary>
     const float Crag = 1.6f, CragFine = 0.6f;
@@ -260,9 +260,9 @@ public sealed class CaveLayout
     void MainChain(Rng rng, bool boss, bool fromArena)
     {
         int side = rng.Int(4);
-        // The start and the way down lie on opposite sides, 38 m in from the edge: about 62 m apart, or more across (a
+        // The start and the way down lie on opposite sides, 30 m in from the edge: about 50 m apart, or more across (a
         // smaller layout's further in).
-        float inset = 38f + (1f - Reach) * 32f, along = rng.Range(0.33f, 0.67f) * Size, far = rng.Range(0.28f, 0.72f) * Size;
+        float inset = 30f + (1f - Reach) * 25f, along = rng.Range(0.33f, 0.67f) * Size, far = rng.Range(0.28f, 0.72f) * Size;
         Vector2 P(int s, float t, float d) => s switch
         {
             0 => new Vector2(t, d),

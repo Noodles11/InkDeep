@@ -255,7 +255,7 @@ A dive is a layered graph of reefs, built from the dive's seed a depth at a time
 
 - **Depths**: the five depths, as before. Each has 4 rows of reefs and ends in its folk boss's reef, one wide (row 5).
   The tutorial is two reefs, one wide; the very first row of the dive (where every dive begins) is one reef.
-- **Lanes**: each row has 2 to 4 reefs. Each reef has 2 to 4 holes down to the nearest reefs of the row below (fewer
+- **Lanes**: each row has 2 to 3 reefs. Each reef has 2 to 3 holes down to the nearest reefs of the row below (fewer
   only where that row is narrower, or is the boss's); the boss's reef leads to every reef of the next depth's first row.
   Now and then (15%) a reef has a **shortcut** past the row below to the one after (never to the boss's).
 - **Menace** comes from a reef's depth alone, never from how many reefs she has crossed. A shortcut is a reef fewer

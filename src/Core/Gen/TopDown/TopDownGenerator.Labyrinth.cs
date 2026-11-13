@@ -13,7 +13,7 @@ public static class LabyrinthTuning
     /// <summary>The open round its heart (the reward) and round its entrance cell.</summary>
     public const float HeartRadius = 3.2f, EntranceRadius = 2.6f;
     /// <summary>Its cells a side: Base + its depth, never fewer than Least nor more than Most.</summary>
-    public const int Base = 8, Least = 9, Most = 13;
+    public const int Base = 8, Least = 9, Most = 11;
     /// <summary>Attempts at one before it gives up (each is checked whole: the heart reached from the way in).</summary>
     public const int Attempts = 8;
 

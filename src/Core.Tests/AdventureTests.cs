@@ -97,7 +97,7 @@ public class AdventureTests
             Assert.Empty(w.Inkwardens);
             // A boss level holds its boss in its arena (Drippus Prime), and nothing else of the war.
             Assert.Equal(boss, w.Boss is not null);
-            Assert.True(w.ReefFish.Count > 60, $"only {w.ReefFish.Count} fish");
+            Assert.True(w.ReefFish.Count > 35, $"only {w.ReefFish.Count} fish");
             Assert.True(w.Dots!.Count > 0);
             // Every leak floats over a hole, in open water.
             foreach (var v in w.Leaks)

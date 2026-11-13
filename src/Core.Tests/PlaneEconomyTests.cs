@@ -26,8 +26,8 @@ public class PlaneEconomyTests
         int expectedMin = w.Map.Pois.Sum(p => p.Kind switch
         {
             PoiKind.ShellCache => PlaneEconomyTuning.CacheMin,
-            // (Unless it holds a pearl instead.)
-            PoiKind.Secret => w.Pearls.Any(q => q.Position == p.Position) ? 0 : PlaneEconomyTuning.SecretMin,
+            // (A secret's lie at its labyrinth's heart, not on the reef.)
+            PoiKind.Secret => 0,
             _ => 0,
         });
         Assert.True(w.Shells.Count >= expectedMin, $"{w.Shells.Count} shells");
@@ -100,7 +100,7 @@ public class PlaneEconomyTests
                 if (w.Hearts.Count > heartsBefore) hearts++;
             }
         }
-        Assert.True(mobs >= 60, $"{mobs} mobs");
+        Assert.True(mobs >= 40, $"{mobs} mobs");
         Assert.InRange(hearts / (float)mobs, 0f, 0.16f);
     }
 

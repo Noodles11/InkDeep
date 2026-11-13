@@ -179,7 +179,7 @@ public class DiveGraphTests
                     Assert.Equal(g.KindOf(hole.To), hole.Kind);
                     Assert.True(map.IsOpen(hole.Shaft.Center), $"{n.Id}: a hole in the rock");
                     Assert.Equal(map.Holes.IndexOf(hole), map.HoleAt(hole.Shaft.Center));
-                    Assert.True(Vector2Dist(hole.Shaft.Center, map.Start.Position) > 25f, $"{n.Id}: a hole by the start");
+                    Assert.True(Vector2Dist(hole.Shaft.Center, map.Start.Position) > 18f, $"{n.Id}: a hole by the start");
                 }
                 checkedReefs++;
             }

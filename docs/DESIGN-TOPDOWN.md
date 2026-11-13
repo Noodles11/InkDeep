@@ -20,7 +20,7 @@
 | Player | **Clementine**, a one-of-her-kind **absorbent jellyfish** — she absorbs the skills locked inside pearls (§2). |
 | Pearls | **Consumed by the bell** — each pearl adds a permanent glowing pattern to the bell (§2.4, §7). |
 | Shooting | **Bubbles**, mouse-aim (twin-stick optional), ammo visible as orbs under the bell. |
-| Levels | **Seeded caves of 6,000 m² of water (±15%) in a 140×140 m square**, reef-ringed; free swimming inside; one way down — a blue hole, or on a depth's boss level the Crack in the boss arena; caves as special rooms (§4). |
+| Levels | **Seeded caves of 2,700 m² of water (±22%) in a 110×110 m square**, reef-ringed; free swimming inside; one way down — a blue hole, or on a depth's boss level the Crack in the boss arena; caves as special rooms (§4). |
 | Level gen | **Plan → POIs → 3–4 intersecting paths → topographic reef**; the rock around the start and the hole shared with the levels above and below; mountains never on paths; arches over paths; caves & passes in ridges (§4.1, §4.6). |
 | Occlusion | Canopy layer (arch bodies, cave roofs, tunnel roofs, overhangs) **fades** while it stands over Clementine or between her and the camera: she is always seen (§3, §4.5). |
 | Lighting | **The core visual pillar.** Atmospheric, volumetric, per-depth darkening (§5). |
@@ -330,9 +330,11 @@ of the corrupted (`PlaneExperience.cs`, `PlaneRun`).
 ## 4. The Level — one seeded square, generated from paths
 
 ### 4.0 The contract
-- **The playable area rule: every level holds 4,000 m² of water she can reach,
-  within 15% (3,400–4,600 m²)**, on every level of every depth. The 140×140 m
-  square (1 m grid) is only its container. Difficulty comes from content,
+- **The playable area rule: every level holds 2,700 m² of water she can reach,
+  within 22% (2,100–3,300 m²)**, on every level of every depth. The 110×110 m
+  square (1 m grid) is only its container. (Its places keep apart by the scaled rules of `PlaceRules`: 22 m from the
+  start and the way down, 12 m apart, 13 m for rooms, 16 m between holes; a reef has at most three holes, a row of the
+  dive at most three reefs.) Difficulty comes from content,
   menace and light — never from map size.
 - The square is **ringed by an impassable reef wall** — cliffs and coral
   ramparts; the rim is scenery and collision, never a soft boundary.
@@ -678,7 +680,7 @@ Running after the checks, it never changes what she can reach.
 
 | Knob | Value | Why |
 |---|---|---|
-| Playable area | **4,000 m² of reachable water ±15%**, in a 140×140 m square | a 4–5-minute clear per level, five to a depth |
+| Playable area | **2,700 m² of reachable water ±22%**, in a 110×110 m square | a 4–5-minute clear per level, five to a depth |
 | View on screen | ~30×22 m | a corridor reads at a glance |
 | Tunnels | main 6–9 m, side 4.5–7 m, craggy | rush speed; nothing blocks |
 | Chambers | 5–10 m radius | natural fight arenas |

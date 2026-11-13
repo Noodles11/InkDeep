@@ -43,7 +43,7 @@ public partial class CurrentView : Node3D
             _rolled[i] += c.Speed * c.Strength * Pace * dt;
             _flows[i] = new Vector2(_rolled[i], c.Strength);
         }
-        camera.SetCurrents(_map, _flows, count);
+        camera.SetCurrents(_map, _flows, count, world.Map.Size);
     }
 
     /// <summary>Each cell: how far along its current (m), how far to its side (m), how strongly it shows, and which current.</summary>

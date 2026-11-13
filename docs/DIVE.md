@@ -11,7 +11,7 @@ reef's map, zones, cave mouths in regions, homeward current, charts, lost light 
 - **A jelly is a save slot.** The title's jellyfish cards (docs/TITLE-MENU.md) are the three slots. Choosing
   one continues her dive where it stands, or starts a new one.
 - **A dive** (`Jelly.Dive`, a `SuspendedRun`) runs Depth 1 to Depth 5 down a graph of reefs (`DiveGraph`,
-  docs/LIGHT-AND-GRAPH.md §6): five rows a depth, the boss alone on the fifth, each reef 2–4 holes down to
+  docs/LIGHT-AND-GRAPH.md §6): five rows a depth, the boss alone on the fifth, each reef 2–3 holes down to
   reefs of the row below, then loops to the next cycle. It is saved at the start of every reef, with the reef she is
   on (its lane) and the reefs she has been on (`SuspendedRun.Lane`, `Reefs`).
 - **Its seed** comes from the jelly's own seed and how many dives she has ended (`Dives.SeedOf`), so every dive is a
@@ -43,7 +43,7 @@ While the reef is calm the camera stands 55 m from her, about 36 × 54 m of grou
 (`CameraRig.Distance`). **In a fight it draws in** to 38 m (`FightZoom`; 47 m in a boss's arena, so the whole arena
 stays in view): as soon as a corrupted creature is within 12 m of her, seen or not, or she is hit (`PlaneWorld.Calm`),
 easing in over about half a second and back out slowly once it is calm again (`CameraRig.Tense`). So she is larger
-when it matters, and the camera drawing in is itself a warning of something near. The sun's shadows reach 140 m to match
+when it matters, and the camera drawing in is itself a warning of something near. The sun's shadows reach 90 m
 (`SunLight`), and the minimap spans 150 m, about the whole level (`MinimapView.Span`). The Sunlit Shallows take
 their dimmed look (`ReefLook.OpenShallows`) so the wider view never washes out.
 

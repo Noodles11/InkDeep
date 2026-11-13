@@ -18,9 +18,9 @@ public static class PlaceRules
     public readonly record struct Rule(PoiKind Kind, PlaceSort Sort, int FromRow, float Chance, float Apart, string Comes = "");
 
     /// <summary>How far every place keeps from the start and the exit, from any other, and two caves or two holes from each other.</summary>
-    public const float FromStart = 30f, FromExit = 30f, Apart = 17f, CaveApart = 20f, HoleApart = 28f;
+    public const float FromStart = 22f, FromExit = 22f, Apart = 12f, CaveApart = 13f, HoleApart = 16f;
     /// <summary>The early place (the one she meets first) stands within this far of the start.</summary>
-    public const float EarlyMax = 38f;
+    public const float EarlyMax = 34f;
     /// <summary>Past the first depth, this often a depth hides one Crab Deal, on one reef of a row short of its boss.</summary>
     public const float CrabDepth = 0.6f;
 

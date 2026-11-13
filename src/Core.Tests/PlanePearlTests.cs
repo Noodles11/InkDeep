@@ -115,7 +115,7 @@ public class PlanePearlTests
     public void LevelsHoldManyMobs()
     {
         var w = new PlaneWorld(Room1.Value, new Tuning(), NewRun());
-        Assert.True(w.Mobs.Count >= 10, $"{w.Mobs.Count} mobs");
+        Assert.True(w.Mobs.Count >= 6, $"{w.Mobs.Count} mobs");
         var reach = LevelValidator.Distances(w.Map, w.Map.Start.Position);
         Assert.All(w.Mobs, m => Assert.False(float.IsPositiveInfinity(LevelValidator.DistanceAt(reach, m.Position))));
     }

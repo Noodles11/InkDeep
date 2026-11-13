@@ -45,18 +45,35 @@ public sealed partial class PlaneWorld
         var steps = _navSteps!;
         int cur = NavNearest(from);
         if (cur < 0) return SafeNormalize(her - from);
-        Vector2? aim = null;
-        if (cur != NavCellOf(from)) aim = NavCentre(cur);
+        // The cells ahead along the way, and which of them the grid sees in a straight line from here.
+        _navAhead.Clear();
+        if (cur != NavCellOf(from)) _navAhead.Add((NavCentre(cur), true));
         for (int s = 0; s < NavTuning.LookAhead && steps[cur] > 0; s++)
         {
             int next = NavDownhill(cur);
             if (next < 0) break;
             cur = next;
             var c = NavCentre(cur);
-            if (aim is null || NavLine(from, c)) aim = c;
+            _navAhead.Add((c, _navAhead.Count == 0 || NavLine(from, c)));
         }
-        if (steps[cur] == 0 && NavLine(from, her)) aim = her;
-        return aim is { } a ? SafeNormalize(a - from) : SafeNormalize(her - from);
+        if (steps[cur] == 0 && NavLine(from, her)) _navAhead.Add((her, true));
+        if (_navAhead.Count == 0) return SafeNormalize(her - from);
+        // The farthest of them it truly fits all the way to (the grid's line is coarse: a nub of rock between its cells
+        // would stop a body pressed on at it); failing all, the first cell on the way.
+        for (int i = _navAhead.Count - 1; i >= 1; i--)
+            if (_navAhead[i].Seen && FitsAlong(from, _navAhead[i].At)) return SafeNormalize(_navAhead[i].At - from);
+        return SafeNormalize(_navAhead[0].At - from);
+    }
+
+    readonly List<(Vector2 At, bool Seen)> _navAhead = new();
+
+    /// <summary>Whether a body fits all along a straight line (a body's half width of open water at every 0.3 m of it).</summary>
+    bool FitsAlong(Vector2 a, Vector2 b)
+    {
+        float d = Vector2.Distance(a, b);
+        for (float t = 0.3f; t < d; t += 0.3f)
+            if (!Clear(Vector2.Lerp(a, b, t / d), NavTuning.Width)) return false;
+        return true;
     }
 
     /// <summary>Whether there is a way through the water from a point to her at all.</summary>

@@ -24,9 +24,9 @@ public enum ReefKind
 public static class DiveTuning
 {
     /// <summary>Reefs across a row (a depth's first row of the whole dive is one wide: where every dive begins).</summary>
-    public const int MinLanes = 2, MaxLanes = 4;
+    public const int MinLanes = 2, MaxLanes = 3;
     /// <summary>Holes out of a reef (fewer only where the row below is narrower, or is the boss's).</summary>
-    public const int MinExits = 2, MaxExits = 4;
+    public const int MinExits = 2, MaxExits = 3;
     /// <summary>A haven's holes: Lantern Bay's map has this many (data/maps/haven.json).</summary>
     public const int HavenExits = 3;
     /// <summary>How often a reef has one exit more, a shortcut past the row below to the one after.</summary>
