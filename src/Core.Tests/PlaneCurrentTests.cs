@@ -10,7 +10,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>The main current, asleep until enough leaks are sealed, and each leak's corrupted one.</summary>
+/// <summary>The reef's water: no current of its own (a labyrinth's way home is LabyrinthTests'), and a leak does not push.</summary>
 public class PlaneCurrentTests
 {
     static readonly Lazy<ItemCatalog> Catalog = new(() =>
@@ -40,57 +40,19 @@ public class PlaneCurrentTests
         }
     }
 
-    static PlaneCurrent Main(PlaneWorld w) => w.Currents.Single();
-
     [Fact]
-    public void TheMainCurrentRunsFromHerStartToTheWayDownThroughWater()
+    public void A_reef_has_no_current_of_its_own_even_with_its_leaks_sealed()
     {
-        var w = World();
-        var main = Main(w);
-        Assert.True(Vector2.Distance(main.Course[0], w.Map.Start.Position) < 2f);
-        Assert.True(Vector2.Distance(main.Course[^1], w.Map.Exit.Position) < 2f);
-        Assert.All(main.Course, q => Assert.True(w.Map.IsOpen(q), $"{q} in rock"));
-        for (int i = 1; i < main.Course.Count; i++) Assert.True(Vector2.Distance(main.Course[i - 1], main.Course[i]) < 4f);
-    }
-
-    [Fact]
-    public void ItSleepsUntilTheFirstLeakIsSealed_ThenWakesAndTellsSo()
-    {
-        var w = World();
-        var mid = Main(w).Course[Main(w).Course.Count / 2];
-        Assert.Equal(0f, Main(w).Strength);
-        Assert.Equal(Vector2.Zero, Main(w).At(mid));
-        Run(w, 1f);
-        Assert.Equal(0f, Main(w).Strength);
-
-        // (The first leak sealed opens a hole: the way on is open, and the water remembers it.)
-        w.DebugSealLeak();
-        Assert.Contains(w.Events, e => e.Type == PlaneEventType.MainCurrentWoke);
-        Run(w, CurrentTuning.MainRise + 0.1f);
-        Assert.Equal(1f, Main(w).Strength);
-        Assert.InRange(Main(w).At(mid).Length(), CurrentTuning.MainSpeed * 0.9f, CurrentTuning.MainSpeed * 1.2f);
-    }
-
-    [Fact]
-    public void RidingItCarriesHerToTheWayDownWithoutASwimStroke()
-    {
-        var w = World();
-        for (int i = 0; i < AdventureTuning.LeaksToClear; i++) w.DebugSealLeak();
-        Run(w, CurrentTuning.MainRise);
-        foreach (var c in w.Currents) c.Strength = 1f;
-        w.Clouds.Clear();
-        w.Player.Position = w.Player.PrevPosition = w.Map.Start.Position;
-        float seconds = Main(w).Length / CurrentTuning.MainSpeed * 1.5f + 5f;
-        Run(w, seconds);
-        Assert.True(Vector2.Distance(w.Player.Position, w.Map.Exit.Position) < CurrentTuning.EndFade + 2f, $"{Vector2.Distance(w.Player.Position, w.Map.Exit.Position)} m short");
-    }
-
-    [Fact]
-    public void OnABossLevelItStopsAtTheArenasEdge()
-    {
-        var w = World(boss: true);
-        var main = Main(w);
-        Assert.InRange(Vector2.Distance(main.Course[^1], w.Map.Exit.Position), w.Map.Exit.Radius, w.Map.Exit.Radius + 4f);
+        foreach (bool boss in new[] { false, true })
+        {
+            var w = World(boss);
+            Assert.Empty(w.Currents);
+            for (int i = 0; i < AdventureTuning.LeaksToClear; i++) w.DebugSealLeak();
+            Run(w, 2f);
+            Assert.Empty(w.Currents);
+            Assert.DoesNotContain(w.Events, e => e.Type == PlaneEventType.MainCurrentWoke);
+            Assert.Equal(Vector2.Zero, w.CurrentAt(w.Map.Start.Position));
+        }
     }
 
     [Fact]
@@ -112,20 +74,6 @@ public class PlaneCurrentTests
         var at = fish.Position;
         Run(w, 0.1f);
         Assert.True(Vector2.Distance(fish.Position, v.Position) >= AdventureTuning.LeakClear - 0.5f);
-    }
-
-    [Fact]
-    public void WhatLivesInTheWaterAndWhatLiesInItStayPut()
-    {
-        var w = World();
-        foreach (var c in w.Currents) c.Strength = 1f;
-        var mid = Main(w).Course[Main(w).Course.Count / 2];
-        var shell = new PlaneShell { Position = mid };
-        w.Shells.Clear();
-        w.Shells.Add(shell);
-        w.Player.Position = w.Player.PrevPosition = w.Map.Start.Position;
-        Run(w, 0.5f);
-        Assert.True(Vector2.Distance(shell.Position, mid) < 0.5f, "only what it carries moves");
     }
 
     [Fact]

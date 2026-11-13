@@ -89,10 +89,46 @@ public class LabyrinthTests
         Assert.Empty(w.ReefFish);
         Assert.Empty(w.Inkwardens);
         Assert.Empty(w.Lashjaws);
-        Assert.Empty(w.Currents);
+        // Its one current, its way home, sleeps while its reward lies at its heart.
+        Assert.True(w.Currents.Single().Guides);
+        Assert.Equal(0f, w.Currents.Single().Strength);
         Assert.Null(w.Boss);
         Assert.False(w.Defeated);
         Assert.Equal(w.Run.MaxHp, w.Player.Hp);
+    }
+
+    [Fact]
+    public void Solved_its_current_carries_her_from_its_heart_home_to_its_way_out()
+    {
+        // (Several mazes, the deeper the bigger.)
+        for (int k = 0; k < 5; k++) Carried(Labyrinth(3 + k, 1 + k));
+    }
+
+    static void Carried(LevelMap map)
+    {
+        var w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), new PlaneOptions { Adventure = true });
+        var heart = map.Pois.Single(p => p.Kind == PoiKind.Secret).Position;
+        var way = map.Way!.Value;
+        // Unsolved, it does not carry her (midway along it, away from the reward).
+        var mid = w.Currents.Single().Course[w.Currents.Single().Course.Count / 2];
+        w.Player.Position = w.Player.PrevPosition = mid;
+        for (int i = 0; i < PlaneWorld.TickRate; i++) w.Step(default);
+        Assert.False(w.LabyrinthSolved);
+        Assert.True(Vector2.Distance(w.Player.Position, mid) < 1f);
+        w.Player.Position = w.Player.PrevPosition = heart;
+        // Its reward taken, it carries her, without a stroke, out to its way.
+        w.Shells.Clear();
+        w.Pearls.Clear();
+        Assert.True(w.LabyrinthSolved);
+        var guide = w.Currents.Single();
+        float seconds = guide.Length / CurrentTuning.GuideSpeed * 2f + 6f;
+        float nearest = float.MaxValue;
+        for (int i = 0; i < seconds * PlaneWorld.TickRate; i++)
+        {
+            w.Step(default);
+            nearest = MathF.Min(nearest, Vector2.Distance(w.Player.Position, way.At));
+        }
+        Assert.True(nearest < 2.5f, $"{nearest} m short of its way out; stopped at {w.Player.Position}, course {guide.Course[0]}..{guide.Course[^1]} n={guide.Course.Count}, flow there {w.CurrentAt(w.Player.Position)}");
     }
 
     [Fact]

@@ -22,6 +22,13 @@ public static class CurrentTuning
     /// running on this far into the cave; once its leak is sealed it dies away over HoldFade s.
     /// </summary>
     public const float HoldSpeed = 11f, HoldOut = 6f, HoldFade = 1.5f;
+    /// <summary>A solved labyrinth's way home: its flow (m/s) and half width (m, within its 4 m passages).</summary>
+    public const float GuideSpeed = 8f, GuideHalfWidth = 1.8f;
+    /// <summary>How far ahead along its middle line a way home pulls (m), and how far off the rock it tries to keep that line (m, the first that finds a way).</summary>
+    public const float GuideAhead = 1.2f;
+    /// <summary>How long a way home that stopped carrying her pushes her aside instead (s).</summary>
+    public const float GuideUnstick = 0.25f;
+    public static readonly float[] GuideClearances = { 1.4f, 1.1f, 0.8f };
 }
 
 /// <summary>The main current: water running along a course, full strength in its middle and fading past its sides.</summary>
@@ -37,6 +44,14 @@ public sealed class PlaneCurrent
     public float Strength;
     /// <summary>A leak cave's way out held shut: it runs while the cave's leak is open, not once it is sealed.</summary>
     public bool Holds;
+    /// <summary>A labyrinth's way home: it runs from its heart to its way out once its reward is taken (LabyrinthSolved).</summary>
+    public bool Guides;
+    /// <summary>
+    /// A way home's line down the middle of its passages (well clear of their rock), and how far along it what rides it
+    /// has come (it only goes on: never jumps across a wall to a later stretch of the way).
+    /// </summary>
+    public List<Vector2>? Middle;
+    public int Progress;
     /// <summary>Its half width this far along its course.</summary>
     public float HalfAt(float along) => HalfStart + (HalfEnd - HalfStart) * MathUtil.Clamp01(along / MathF.Max(Length, 1f));
 
@@ -77,9 +92,58 @@ public sealed class PlaneCurrent
         float half = HalfAt(along);
         float k = (1f - MathUtil.Clamp01((dist - half) / CurrentTuning.Feather)) * MathUtil.Clamp01((Length - along) / CurrentTuning.EndFade) * Strength;
         if (k <= 0f) return Vector2.Zero;
+        // A way home through a maze's turns: it flows toward a point a little further along its course, so what rides it
+        // is steered round each bend rather than pressed into the rock outside it.
+        if (Guides && Middle is { Count: >= 2 } middle) return Pursue(middle, p) * (Speed * k);
         // It holds what rides it: a pull back to its middle, so it stays in as the course bends.
         var hold = dist > 1e-4f ? (nearest - p) / dist * (MathUtil.Clamp01(dist / half) * CurrentTuning.MainHold) : Vector2.Zero;
         return (dir + hold) * (Speed * k);
+    }
+
+    /// <summary>
+    /// A way home's flow at p: toward the point GuideAhead further along its middle line than the nearest point of it to
+    /// p (looked for only a little behind and ahead of how far she has come), so it carries her down the middle of each
+    /// passage and round each turn, never into the rock.
+    /// </summary>
+    Vector2 Pursue(List<Vector2> line, Vector2 p)
+    {
+        int from = Math.Max(0, Progress - 2), to = Math.Min(line.Count - 2, Progress + 6);
+        float best = float.MaxValue;
+        int seg = Progress;
+        float segT = 0f;
+        for (int i = from; i <= to; i++)
+        {
+            var a = line[i];
+            var ab = line[i + 1] - a;
+            float len2 = ab.LengthSquared();
+            float t = len2 > 1e-8f ? MathUtil.Clamp01(Vector2.Dot(p - a, ab) / len2) : 0f;
+            float d = Vector2.DistanceSquared(p, a + ab * t);
+            if (d < best)
+            {
+                best = d;
+                seg = i;
+                segT = t;
+            }
+        }
+        Progress = Math.Max(Progress, seg);
+        // From the nearest point, GuideAhead on along the line.
+        float left = CurrentTuning.GuideAhead;
+        var at = Vector2.Lerp(line[seg], line[seg + 1], segT);
+        int i2 = seg;
+        while (left > 0f && i2 + 1 < line.Count)
+        {
+            float rest = Vector2.Distance(at, line[i2 + 1]);
+            if (rest >= left)
+            {
+                at += (line[i2 + 1] - at) / MathF.Max(rest, 1e-5f) * left;
+                left = 0f;
+                break;
+            }
+            left -= rest;
+            at = line[++i2];
+        }
+        var way = at - p;
+        return way.LengthSquared() > 1e-6f ? Vector2.Normalize(way) : Vector2.Zero;
     }
 }
 
@@ -158,13 +222,16 @@ public sealed partial class PlaneWorld
     }
 
     /// <summary>
-    /// Lays the main current (MainCurrent.Course), asleep until enough leaks are sealed; in a leak cave, the current that
-    /// holds its way out while its leak is open.
+    /// A labyrinth's way home, asleep till its reward is taken; in a leak cave, the current that holds its way out while
+    /// its leak is open. (A reef's main current, waking as its leaks were sealed, is no more: docs/DIVE.md.)
     /// </summary>
     void PlaceCurrents()
     {
-        // A labyrinth's water is still.
-        if (Map.Labyrinth) return;
+        if (Map.Labyrinth)
+        {
+            PlaceGuide();
+            return;
+        }
         // A leak cave has no main current: she swims back out herself, whenever she likes (docs/DIVE.md §6). (A cave that
         // keeps her in till its leak is sealed has water pouring in through its way out, from its back out into the cave.)
         if (Map.Way is { } way && !Options.DiveCave)
@@ -173,13 +240,43 @@ public sealed partial class PlaneWorld
             hold.Lay(new List<Vector2> { way.Back + way.Into * 0.5f, way.At, way.At - way.Into * CurrentTuning.HoldOut });
             Currents.Add(hold);
         }
-        // A region's water has no main current of its own: it would carry her to its station and home.
-        if (Map.Station || Map.LeakCave) return;
-        var course = MainCurrent.Course(Map);
-        if (course.Count < 2) return;
-        var main = new PlaneCurrent { Speed = CurrentTuning.MainSpeed, HalfStart = CurrentTuning.MainHalfWidth, HalfEnd = CurrentTuning.MainHalfWidth, Strength = LeaksLeft == 0 ? 1f : 0f };
-        main.Lay(course);
-        Currents.Add(main);
+    }
+
+    /// <summary>Its reward taken (every shell and pearl at its heart gathered): a labyrinth is solved, and its way home runs.</summary>
+    public bool LabyrinthSolved => Map.Labyrinth && Shells.Count == 0 && Pearls.Count == 0;
+
+    /// <summary>
+    /// A labyrinth's way home (docs/DIVE.md §6.1): a current from its heart along its passages to its way out and through
+    /// it, asleep till it is solved; then it carries her out (and its mouth takes her back to the reef).
+    /// </summary>
+    /// <summary>A way home's middle line: the water's shortest way from the heart to the way out kept as far off the rock as the maze allows, then on through the way out.</summary>
+    List<Vector2>? MiddleOf(Vector2 heart, Doorway way)
+    {
+        foreach (float clearance in CurrentTuning.GuideClearances)
+        {
+            var path = LevelValidator.ShortestPath(Map, heart, way.At, clearance);
+            if (path.Count < 2) continue;
+            path.Add(way.Back);
+            return path;
+        }
+        return null;
+    }
+
+    void PlaceGuide()
+    {
+        if (Map.Way is not { } way) return;
+        var heart = Map.Pois.FirstOrDefault(p => p.Kind == PoiKind.Secret)?.Position ?? Map.Exit.Position;
+        // (Down the middle of its passages, smooth: as the main current was laid.)
+        var path = MainCurrent.Route(Map, way.At, heart, new Dictionary<(Vector2, float), float[]>());
+        if (path.Count < 2) return;
+        path.Add(way.Back);
+        var guide = new PlaneCurrent
+        {
+            Speed = CurrentTuning.GuideSpeed, HalfStart = CurrentTuning.GuideHalfWidth, HalfEnd = CurrentTuning.GuideHalfWidth, Guides = true,
+            Middle = MiddleOf(heart, way),
+        };
+        guide.Lay(path);
+        Currents.Add(guide);
     }
 
     /// <summary>
@@ -193,9 +290,22 @@ public sealed partial class PlaneWorld
         if (Currents.Count == 0 && Leaks.Count == 0) return;
         foreach (var c in Currents)
             c.Strength = c.Holds ? MathUtil.MoveToward(c.Strength, CaveLeakOpen ? 1f : 0f, Dt / CurrentTuning.HoldFade)
-                : MathUtil.MoveToward(c.Strength, LeaksLeft == 0 ? 1f : 0f, Dt / CurrentTuning.MainRise);
+                : c.Guides ? MathUtil.MoveToward(c.Strength, LabyrinthSolved ? 1f : 0f, Dt / CurrentTuning.MainRise)
+                : c.Strength;
         var p = Player;
         Vector2 flow = CurrentAt(p.Position);
+        // A way home that has stopped carrying her (pressed against a nub of rock in its passage) turns its push aside
+        // for a moment, the way there is room, so she slides round it.
+        if (_guideStuck > 0f && flow != Vector2.Zero)
+        {
+            var side = new Vector2(-flow.Y, flow.X);
+            if (!Clear(p.Position + Vector2.Normalize(side) * 0.3f, Radius)) side = -side;
+            flow = side;
+            _guideStuck -= Dt;
+        }
+        // (Stuck: no further on than a tick ago, for all the current's push.)
+        if (LabyrinthSolved && _guideStuck <= 0f && flow.LengthSquared() > 1f && Vector2.DistanceSquared(_guideLast, p.Position) < 1e-4f) _guideStuck = CurrentTuning.GuideUnstick;
+        _guideLast = p.Position;
         if (flow != Vector2.Zero) Move(ref p.Position, ref flow, Radius, report: false);
         foreach (var shot in Shots)
         {
@@ -211,6 +321,10 @@ public sealed partial class PlaneWorld
         }
         if (Leaks.Exists(v => !v.Sealed)) KeepFromLeaks();
     }
+
+    /// <summary>How much longer a way home pushes her aside, round what it pressed her against (s).</summary>
+    float _guideStuck;
+    Vector2 _guideLast;
 
     /// <summary>No creature gets onto a leak: none comes nearer its disc than LeakClear.</summary>
     void KeepFromLeaks()

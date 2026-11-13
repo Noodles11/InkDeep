@@ -4062,12 +4062,8 @@ public partial class TopDownMain : Node3D
         _glowLatched = glow;
         bool use = Input.IsActionPressed(InputSetup.Active);
         input.UseActive = use && !_activeLatched || _autoActive && _world.Run.ActiveCharge >= 1f;
-        // In a labyrinth its key gives the labyrinth up instead (DiveCaveWay).
-        if (InLabyrinth)
-        {
-            _giveUp |= use && !_activeLatched;
-            input.UseActive = false;
-        }
+        // (In a labyrinth there are no actives: she finds its heart, or swims back out by its way.)
+        if (InLabyrinth) input.UseActive = false;
         _activeLatched = use;
         if (AutoFire(ref input)) return input;
         bool shine = Input.IsActionPressed(InputSetup.Beam);

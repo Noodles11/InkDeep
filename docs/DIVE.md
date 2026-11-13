@@ -114,14 +114,17 @@ own sub-seed.
 - **Reliable:** the maze is whole by construction; each attempt is checked whole (the heart swum to from the way in)
   and another attempt made if the walls' wavering pinched a passage shut.
 - **Its reward lies at its heart:** the secret's shells, or now and then a pearl instead (`PlaneWorld.PlaceShells`,
-  `SecretPearl`). Nothing lives in it: no murklings, fish, leaks, springs or currents, and its water does not harm her.
+  `SecretPearl`). Nothing lives in it: no murklings, fish, leaks or springs, and its water does not harm her.
+- **Solved, its water carries her home** (`PlaneWorld.LabyrinthSolved`, its way home: DESIGN-TOPDOWN §4.7): once its
+  reward is taken, a current wakes along the way from its heart to its way out and carries her there and out of its
+  mouth, back onto the reef.
 - **No map in it:** neither the minimap nor the whole level's map shows inside.
-- **She can give up at any time** with the key that uses her active pearl (as bound; Y on the controller): it carries her
-  straight back out of the mouth (`TopDownMain.DiveCaveWay`). She may also swim out by its way out.
+- **She can leave at any time** by swimming out by its way out; there is no key for it (her active pearl's key does
+  nothing in a labyrinth).
 - **The reef waits as she left it**, as for a leak cave. Leaving with the reward still there, the labyrinth waits as she
   left it too; its reward taken, the mouth closes behind her.
 - **Verification:** `--dbg-mazein=seconds` opens a reef's first secret wall and takes her into its labyrinth that long
-  after she is on it; `--dbg-mazeout=seconds` gives it up that long after she is in; `--at=secret-in` starts before an
+  after she is on it; `--dbg-mazeout=seconds` takes her back out that long after she is in; `--at=secret-in` starts before an
   opened secret mouth.
 
 ## 7. Requests and chains

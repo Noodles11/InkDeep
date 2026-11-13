@@ -426,7 +426,7 @@ its own.
   seabed in its middle, where the chamber is widest. She can dive only there,
   within 3 m of the middle; on the depth's boss level the **boss arena**, a round level
   chamber ~34 m across with **the Crack** across its middle, a fissure
-  14–18 m long. Nothing on the screen points the way: the **main current** (§4.7) leads there.
+  14–18 m long. Nothing on the screen points the way: the hole rims and their emblems show it.
 - The cave's records: its tunnels are the level's corridors (main, side, and
   each room's spur), its chambers the plazas.
 
@@ -853,14 +853,15 @@ Deterministic and cheap: the same level always schedules the same events.
 
 **The currents** (`PlaneCurrents.cs`, `CurrentView`) are the level's own water, not events; none is on a timer.
 
-- **The main current** is the level's highway: it runs from her start to the way down, on the shortest route that keeps
-  to the middle of the water (never through a secret room's seal; on a boss level through the boss's walls, to the edge of
-  the arena, so it does not blow through the fight). It lies still until she has sealed the third leak, then wakes over
-  3 s with a low bell and a long swell in the controller, and from then on it always runs. 3.5 m/s (her cruise is 6) in
-  a band 4 m either side of its course, fading 2 m past that and over its last 5 m, with a gentle pull back to its middle
-  so that it holds a rider round a bend: left to itself, it carries her all the way. Sealing the leaks heals the reef's
-  water, and this is what that looks like. It replaces any pointer to the way down, no light spring lies on it, and once it runs Sea Chart Nautilus
-  draws it on both maps.
+- **A reef has no current of its own:** sealing its leaks wakes none (the main current that once carried her to the way
+  down is gone).
+- **A leak cave's way out** is held by a current pouring in through it while its leak is open (docs/DIVE.md §6), when a
+  cave keeps her in.
+- **A secret labyrinth's way home** (docs/DIVE.md §6.1): once its reward is taken, a current runs from its heart down the
+  middle of its passages, out through its way out, at 8 m/s in a band 1.8 m either side: it carries her home without a
+  stroke. It pulls toward a point 1.2 m ahead of how far she has come along its middle line (`PlaneCurrent.Middle`, kept
+  as far off the rock as the maze allows), so it steers her round every turn; pressed against a nub of rock, it turns its
+  push aside for a quarter of a second so she slides round it.
 - **What it carries:** Clementine (sliding along rock), every shot and ink clouds. The creatures live in this water and
   hold their ground in it, and shells, hearts and pearls stay where they lie: a current that never stops would sweep
   them all to the way down.

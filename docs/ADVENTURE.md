@@ -53,7 +53,7 @@ All numbers are first guesses (`AdventureTuning`).
 - **Each one sealed** throws 5 shells out of it, as well as its experience, and **opens the hole under it**
   (`PlaneWorld.HoleOpen`): the sand over the shaft sags, turns and drains away into it, and its rim lights in the colour
   of the reef below. Only that hole: the others stay shut under theirs. **One open hole is enough** to dive on; she need
-  not seal every leak. The first sealed wakes the main current (DESIGN-TOPDOWN §4.7). The rest go on leaking until she
+  not seal every leak. The rest go on leaking until she
   seals them or the boss swallows them.
 - **A boss level:** the Crack opens as its boss is freed; its arena's walls take her light whatever the leaks.
 - **Inkwardens** still guard the leaks in their reach (§4).

@@ -44,8 +44,6 @@ public partial class TopDownMain
     bool InDiveCave => _diveCave >= 0;
     /// <summary>In a secret room's labyrinth (a dive cave behind a secret mouth).</summary>
     bool InLabyrinth => InDiveCave && _map.Labyrinth;
-    /// <summary>She asked to give the labyrinth up (the active pearl's key): carried back out of its mouth.</summary>
-    bool _giveUp;
     /// <summary>Verification (--dbg-mazein=seconds): that long onto a reef with a secret mouth, its wall opens and she is taken into its labyrinth.</summary>
     float _dbgMazeIn;
     /// <summary>Verification (--dbg-mazeout=seconds): that long into a labyrinth, she gives it up.</summary>
@@ -134,15 +132,13 @@ public partial class TopDownMain
                 if (!seal.Open && seal.Rock.Contains(door.At - door.Into * 0.5f)) _world.DebugOpenSeal(seal);
             return (true, maze, map => map.Way is { } way ? Through(way) : null, door, RideWay.Door);
         }
-        // Giving a labyrinth up: straight back out of the mouth she came in by.
-        if (InLabyrinth && (_giveUp || _dbgMazeOut > 0f && _levelTime > _dbgMazeOut))
+        // Verification (--dbg-mazeout): giving a labyrinth up, straight back out of the mouth she came in by.
+        if (InLabyrinth && _dbgMazeOut > 0f && _levelTime > _dbgMazeOut)
         {
-            _giveUp = false;
             _dbgMazeOut = 0f;
             int mouth = _diveCave;
             return (false, mouth, map => mouth < map.Mouths.Count ? Through(map.Mouths[mouth]) : null, null, RideWay.Up);
         }
-        _giveUp = false;
         if (InDiveCave && _dbgCaveBack > 0f && _levelTime > _dbgCaveBack)
         {
             if (_dbgCaveRounds <= 0) _dbgCaveBack = 0f;
@@ -229,7 +225,7 @@ public partial class TopDownMain
     /// <summary>She has come out of the ride: into a cave, word of it; out of one she sealed, its mouth closes behind her.</summary>
     void DiveCaveArrived()
     {
-        if (InLabyrinth) Say($"A secret labyrinth: find its heart · {OctoShoots.Game.Controls.InputSetup.Hint(OctoShoots.Game.Controls.InputSetup.Active)} to give up");
+        if (InLabyrinth) Say("A secret labyrinth: find its heart, and its current will carry you home");
         else if (InDiveCave) Say("A leak cave: its water stings till its leak is sealed · seal it for a pearl and a full heal");
         else if (_caveMouth >= 0 && _caveSealed)
         {
