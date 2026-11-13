@@ -238,8 +238,9 @@ what burn the corrupted. Caves are dark. The sim is in `src/Core/Plane/PlaneHerL
 - **Her beam** (`PlaneWorld.Beam`, held on the left mouse button, the arrow keys or RT): a cone from her along her aim
   (16 m × √ her glow stat, half-angle 22°), whichever way she swims. Shining costs her nothing. Rock stops it
   (`BeamEnd`). It does what her shots' light does, continuously:
-  - burns every corrupted creature some of whose body lies in its cone, in sight of her, as `BeamShots` (2) plain
-    shots would, and opens a boss where a shot would;
+  - burns every corrupted creature some of whose body lies in its cone, in sight of her, as `BeamShots` (6) plain
+    shots would (a middling murkling held 5 m out in her plain beam is freed in about 2 s: `BeamFreeTimeTests`), and
+    opens a boss where a shot would;
   - dazzles a creature once as it comes into it, as a shot does (held in it, it is not dazzled again);
   - fills a sealed wall's carving its axis falls on with `BeamShots` shots' light a second;
   - clears the ink dots along its axis (`BeamDots`, 0.5 m) and the ash it falls on.

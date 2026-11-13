@@ -24,7 +24,7 @@ namespace OctoShoots.Core.Plane;
 public static class GreatLightTuning
 {
     public const float LanceReach = 1.6f, LanceWidth = 0.5f;
-    public const float OrbitIntensity = 0.5f, OrbitReach = 0.7f, OrbitTurn = 0.6f, OrbitShots = 1f;
+    public const float OrbitIntensity = 0.5f, OrbitReach = 0.7f, OrbitTurn = 0.6f, OrbitShots = 3f;
     public const float NeonEvery = 0.8f;
     public const float ReefMend = 3f;
     public const float SharkNarrow = 0.75f, SharkHeat = 1.3f, FrenzyBurn = 1.5f, FrenzyTime = 3f;

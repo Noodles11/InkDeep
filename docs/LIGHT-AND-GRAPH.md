@@ -73,7 +73,7 @@ so the one nearest her shades those behind; Swordfish Bill (her shots pierce) le
 - **Dazzles** a creature once as it comes into the light, as shots do: it holds still for `Dazzle`, then is not
   dazzled again until it has been out of all her light for `Rearm`. A creature kept in the beam is not frozen for
   ever.
-- **Strikes seals, clears ink dots and ash**: a sealed wall's carving its axis falls on gains `BeamShots` *(tune: 2)*
+- **Strikes seals, clears ink dots and ash**: a sealed wall's carving its axis falls on gains `BeamShots` *(tune: 6)*
   plain shots' light a second × the light reaching it; the ink dots along its axis and the ash it falls on clear.
 - **Seals leaks** as her inner light does: `LeakBeamShare` (half) of its burn on the leak's disc, the more the nearer
   her. Her inner light near a leak works on it too, at 1 a metre inside her reach rising to 1.8 right over it; the two
@@ -543,7 +543,7 @@ The light grammar's seventh words (docs/proposals/LIGHT-GRAMMAR.md §9; `PlaneGr
 - **Lance** (Sunbeam): her beam 1.6× as long and half as wide, its carry full (`LightTuning.MostCarry` at its reach:
   `LightEmitter.Carry`). Its split rays are lances too.
 - **Orbit** (Nautilus Spiral): a fainter beam turning round her at 0.6 rad/s, always, beam on or off (50% as bright,
-  70% of her beam's reach, as wide), burning as one shot.
+  70% of her beam's reach, as wide), burning as three shots (half her beam).
 - **Lighthouse** (Lance + Orbit): the turning beam is a full Lance: her beam's reach, width, carry and brightness,
   burning as her whole beam (`HerLightTuning.BeamShots`).
 - **Lantern forms** (three pearls of a tag; the banner names them):

@@ -24,7 +24,7 @@ public static class HerLightTuning
     /// Her beam (docs/LIGHT-AND-GRAPH.md §2.3) burns as BeamShots plain shots would, and strikes a seal it falls on
     /// with that many shots' light a second. Along its axis it clears the ink dots within BeamDots metres.
     /// </summary>
-    public const int BeamShots = 2;
+    public const int BeamShots = 6;
     public const float BeamDots = 0.5f;
     public const float Dazzle = 0.8f, Rearm = 2f;
     /// <summary>Her light's reach on a cave's walls (× √ her glow stat): the ash within it, in sight of her, clears (AshTuning).</summary>

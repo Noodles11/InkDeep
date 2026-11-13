@@ -91,7 +91,7 @@ public partial class CameraRig : Node3D
     /// The game's look: how much fog lies under her plane (thickening over 5 m down), and what is left outside her light
     /// of the reef's colour and of its brightness.
     /// </summary>
-    public const float BelowFog = 0.8f, UnlitSaturation = 0.15f, UnlitDim = 0.1f;
+    public const float BelowFog = 0.8f, UnlitSaturation = 0.15f, UnlitDim = 0.2f;
     /// <summary>
     /// Readability (docs/GAME.md §11): how far the unlit reef's values are drawn together, the brightness the reef's
     /// highlights are rolled off from, and how much darker the reef right under her is held (her seat).
