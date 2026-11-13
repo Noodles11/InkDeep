@@ -24,6 +24,17 @@ public sealed class PlaneOptions
     /// </summary>
     public bool Adventure;
     /// <summary>
+    /// The adventure's murklings (PlaneMurkRoster.cs): every reef buds them out of its ink, the four kinds on every depth,
+    /// bigger and more with the Menace. On in the game; tests of the older loops turn it off.
+    /// </summary>
+    public bool InkMurklings = true;
+    /// <summary>
+    /// The reef's fish turn in the ink (docs/ADVENTURE.md §3: tangs, clownfish and chromis into murklings, flounders into
+    /// Hearthguards, pufferfish into Inkwardens). Off in the game: the only creatures are the murklings budded from the
+    /// ink, and the fish stay healthy. Kept for its tests.
+    /// </summary>
+    public bool FishTurn;
+    /// <summary>
     /// A dive's leak cave (docs/DIVE.md §6): the Leak's water harms her while its leak is open (DiveCaveTuning.Sting);
     /// sealing it heals her whole and leaves a pearl. Her way out is open the whole time.
     /// </summary>

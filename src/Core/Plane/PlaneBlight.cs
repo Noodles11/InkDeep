@@ -212,6 +212,8 @@ public sealed class Murkling
     /// </summary>
     public PlaneReefFish? Fish;
     public bool Lesser => Fish is not null;
+    /// <summary>One of a shoal's school: budded so (MurkKind.Shoal), or a turned chromis.</summary>
+    public bool IsShoal => Kind == MurkKind.Shoal || Fish is { Kind: ReefFishKind.Chromis };
     /// <summary>A lesser murkling's swarm (the school it was turned from), -1 for none: a swarm keeps together.</summary>
     public int Swarm = -1;
     /// <summary>A shoal murkling's own place in its school's ring round her (-1: none yet). It keeps it until it is freed.</summary>
@@ -284,7 +286,7 @@ public sealed class Murkling
 /// throws ink at her; a hunter hunts the reef's fish while she is away (its throws turn them). A prime (Murkling.Prime)
 /// does all of it, and a lesser murkling (a turned fish) keeps its own ways.
 /// </summary>
-public enum MurkKind { Basic, Thrower, Hunter }
+public enum MurkKind { Basic, Thrower, Hunter, Shoal }
 
 /// <summary>A basic murkling's state: holding still and scanning, swimming to a light, feeding on one, shaken off one.</summary>
 public enum MurkState { Searching, Approaching, Attached, Released }
@@ -950,6 +952,11 @@ public sealed partial class PlaneWorld
                 m.Velocity = Vector2.Zero;
                 continue;
             }
+            if (m.Kind == MurkKind.Shoal)
+            {
+                StepShoal(m);
+                continue;
+            }
             if (m.Lesser)
             {
                 StepLesser(m);
@@ -1158,11 +1165,13 @@ public sealed partial class PlaneWorld
             if (draught is null) return null;
         }
         var m = new Murkling { Position = at, Area = area, Seed = _blightRng.Range(0f, 100f), ThrowTimer = BlightTuning.ThrowEvery * _blightRng.Range(0.5f, 1f) };
-        if (!prime) m.Kind = KindAt(m.Seed);
+        if (!prime) m.Kind = Options.Adventure && Options.InkMurklings ? RosterKind(m.Seed) : KindAt(m.Seed);
         float meter = BlightTuning.MurkCorruption * (1f + BlightTuning.MeterPerMenace * Menace);
         m.Corruption.Max = m.Corruption.Value = meter * (prime ? BlightTuning.PrimeMeter : 1f);
-        // Its own full size, its grade and its meter by it (a prime keeps a prime's).
-        if (!prime) Size(m, meter);
+        // Its own full size (bigger with the Menace, in the adventure), its grade and its meter by it (a prime keeps a
+        // prime's; a shoal's is small and quick, one of a school: BudRoster buds the rest of it).
+        if (!prime) Size(m, meter, MurkGrowth);
+        if (m.Kind == MurkKind.Shoal) MakeShoal(m, _nextShoal++, meter);
         if (prime)
         {
             m.Prime = true;

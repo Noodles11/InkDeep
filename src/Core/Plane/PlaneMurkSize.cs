@@ -46,10 +46,10 @@ public enum MurkGrade { Regular, Lesser, Elite }
 
 public sealed partial class PlaneWorld
 {
-    /// <summary>A murkling budded from the ink is given its full size, its grade and its meter (Bud).</summary>
-    static void Size(Murkling m, float menaceMeter)
+    /// <summary>A murkling budded from the ink is given its full size (× growth: the Menace's, in the adventure), its grade and its meter (Bud).</summary>
+    static void Size(Murkling m, float menaceMeter, float growth = 1f)
     {
-        m.Full = MurkSizeTuning.FullOf(m.Seed);
+        m.Full = MurkSizeTuning.FullOf(m.Seed) * growth;
         m.Grade = MurkSizeTuning.GradeOf(m.Full);
         m.Corruption.Max = m.Corruption.Value = menaceMeter * MurkSizeTuning.MeterScale(m.Full);
         m.Radius = m.Body = m.Full;

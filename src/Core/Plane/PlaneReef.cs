@@ -172,7 +172,7 @@ public sealed partial class PlaneWorld
             var at = on + new Vector2(_blightRng.Range(-2f, 2f), _blightRng.Range(-2f, 2f));
             if (!Clear(at, BlightTuning.MurkRadius)) at = on;
             if (!Clear(at, BlightTuning.MurkRadius) || Murklings.Any(m => Vector2.Distance(m.Position, at) < ReefTuning.CaveMurkSpacing)) continue;
-            Bud(at, -1, drink: false, born: true);
+            BudRoster(at, prime: false, born: true);
             placed++;
         }
         _caveBud = ReefTuning.CaveBudEvery * 0.5f;
@@ -197,7 +197,7 @@ public sealed partial class PlaneWorld
             bool prime = _primesBorn < BlightTuning.PrimePerLevel && !Murklings.Any(x => x.Alive && x.Prime)
                 && _blightRng.NextFloat() < BlightTuning.PrimeChance + BlightTuning.PrimeChancePerMenace * Menace
                 && d > BlightTuning.PrimeClearance && Clear(at, BlightTuning.PrimeBody);
-            Bud(at, -1, prime, drink: false);
+            BudRoster(at, prime, born: false);
             // It is made of the cave's ink: the dots round it go into it (a prime's twelve murklings' worth).
             float r = BlightTuning.GatherRadius * (prime ? MathF.Sqrt(BlightTuning.PrimeInk / BlightTuning.Ink) : 1f);
             foreach (int cell in dots.Live.Where(c => Vector2.Distance(InkDots.Centre(c), at) < r).ToList()) dots.Remove(cell);

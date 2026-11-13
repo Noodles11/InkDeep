@@ -386,6 +386,7 @@ public sealed partial class PlaneWorld
         PlaceCurrents();
         PlaceInk(Dots);
         if (Map.LeakCave) PlaceCaveMurklings();
+        else PlaceReefMurklings(Dots);
         ExitOpen = Leaks.Count == 0 && Boss is null;
     }
 
@@ -505,6 +506,7 @@ public sealed partial class PlaneWorld
         StepGauges(dots);
         StepFlounders(dots);
         StepCaveMurklings(dots);
+        StepReefMurklings(dots);
         dots.Regrow(Tick, AdventureTuning.Regrow * Dt);
     }
 
@@ -715,6 +717,7 @@ public sealed partial class PlaneWorld
     void Rouse(PlaneLeak v)
     {
         v.Roused = true;
+        if (!Options.FishTurn) return;
         foreach (var f in ReefFish)
             if (f.Huntable && Vector2.Distance(f.Position, v.Position) <= AdventureTuning.RouseReach) f.Ink = 1f;
     }
@@ -852,7 +855,8 @@ public sealed partial class PlaneWorld
                 Events.Add(new PlaneEvent(PlaneEventType.DotEaten, InkDots.Centre(near), Vector2.Zero));
                 if (!f.Freed) f.Ink += AdventureTuning.FishEat;
             }
-            if (f.Freed) continue;
+            // (Unless the fish turn, the ink never takes them: Options.FishTurn.)
+            if (f.Freed || !Options.FishTurn) continue;
             if (f.Ink < 1f) f.Ink = Math.Clamp(f.Ink + (near >= 0 ? AdventureTuning.FishFill : -AdventureTuning.FishDrain) * Dt, 0f, 1f);
             if (f.Ink < 1f) continue;
             if (f.Kind == ReefFishKind.Chromis)
@@ -872,6 +876,11 @@ public sealed partial class PlaneWorld
                 dots.Remove(near);
                 Events.Add(new PlaneEvent(PlaneEventType.DotEaten, InkDots.Centre(near), Vector2.Zero));
                 f.Ink += AdventureTuning.FishEat;
+            }
+            if (!Options.FishTurn)
+            {
+                f.Ink = 0f;
+                continue;
             }
             if (f.Ink < 1f) f.Ink = Math.Clamp(f.Ink + (near >= 0 ? AdventureTuning.PufferFill : -AdventureTuning.PufferDrain) * Dt, 0f, 1f);
             if (f.Ink < 1f) continue;
@@ -895,6 +904,7 @@ public sealed partial class PlaneWorld
     /// <summary>A spiked murkling's throw strikes a fish: its ink fills the gauges of the fish in its splash.</summary>
     void InkFish(MurkShot s, PlaneReefFish struck)
     {
+        if (!Options.FishTurn) return;
         foreach (var f in ReefFish)
         {
             if (!f.Huntable || (f != struck && Vector2.Distance(f.Position, s.Position) > s.Splash)) continue;
@@ -996,7 +1006,7 @@ public sealed partial class PlaneWorld
             foreach (var list in _shoals.Values) list.Clear();
             foreach (var o in Murklings)
             {
-                if (!o.Alive || o.Fish is not { Kind: ReefFishKind.Chromis }) continue;
+                if (!o.Alive || !o.IsShoal) continue;
                 if (!_shoals.TryGetValue(o.Swarm, out var l)) _shoals[o.Swarm] = l = new List<Murkling>();
                 l.Add(o);
             }

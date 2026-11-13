@@ -91,15 +91,15 @@ the reef was never being called home. It was being kept.
 ## 5. A reef
 
 - **Its leak** (ADVENTURE §1): a brittle star of ink over the shut hole, seen only in light. Its ink spreads as dots
-  through the water and turns the reef's fish one by one. Sealing it with her light opens every hole of the reef, sends
+  through the water, and murklings bud out of it (ADVENTURE §4). Sealing it with her light opens every hole of the reef, sends
   a wave of light out that dissolves the ink and briefly shows the corrupted it touches, and pays her experience.
 - **Its places** (LIGHT-AND-GRAPH §7): secrets (sealed walls with labyrinths behind), shops, shell caches, Crab Deals,
   clam rooms, leak caves (sub-levels with their own leak, harmful until sealed) and the holes. A template gives each reef
   its subject and cast (DESIGN-TOPDOWN §4.8).
 - **Its light**: light springs where she heals, charge stones her beam lights (lures, lamps, and a trio that hides a
   cache), prism stones she pushes into line to colour her light for coloured seals.
-- **Its life**: healthy reef fish (clownfish in anemones, blue tangs, schools of chromis, pufferlings) going about their
-  day until the ink turns them; currents and geysers; the reef director that keeps the reef acting when she is not
+- **Its life**: healthy reef fish (clownfish in anemones, blue tangs, schools of chromis, pufferfish, flounders) going
+  about their day; the ink never turns them; currents and geysers; the reef director that keeps the reef acting when she is not
   there.
 - **Where she is shown**: the minimap (her surroundings, the unseen filled as rock), the Tab map (the whole level under
   fog), the chart (the dive).
@@ -107,13 +107,14 @@ the reef was never being called home. It was being kept.
 ## 6. The corrupted
 
 The Leak's creatures give off no light: they are seen only where light falls on them. Each carries a corruption meter;
-emptied, it is freed and swims off in its true colours, leaving a core of light. A thin ring of ink round it shows how
-much corruption is left (CORRUPTION, "Corruption rings").
+emptied, it is freed, leaving a core of light.
 
-- **Murklings**, balls of ink that hunt light and drink it; throwers, hunters and primes (which break into murklings);
-  lesser murklings (the fish they turned).
-- **The war's creatures** (CORRUPTION): Blightroots, Blotters, Thumpsquirts, Inkwardens, Lashjaws, their dens.
-- **Corrupted fish** (ADVENTURE §4): flounders and Hearthguards, pufferlings.
+- **Murklings only** (ADVENTURE §4): on every reef, at every depth, the only creatures are murklings budded out of the
+  leaks' ink: basic ones that cling and drink her light, throwers, shoals (a whole school at once, ringing her) and
+  primes (which break into murklings). The deeper (the Menace), the bigger and the more of them. Their size is their
+  corruption; they wear no ring.
+- **Kept, switched off** (CORRUPTION; ADVENTURE §3–4): the war's creatures (Blightroots, Blotters, Thumpsquirts,
+  Inkwardens, Lashjaws, their dens) and the fish that turn (spiked, tadpole and shoal murklings, Hearthguards).
 - **Planned** (proposals/DEEP-FISH-PROPOSAL.md): two fish of their own for each depth.
 
 ## 7. Bosses

@@ -1,16 +1,16 @@
 # The adventure
 
 How the adventure (branch `m3-adventure`) plays: the reef is being poisoned from **leaks** floating over its holes; the poison
-spreads as ink dots through the water and turns the reef's fish one by one into the creatures she fights; she opens a
-way on by **sealing a leak** (the hole under it opens), and the fish she frees are fish again (freed, not killed:
-THEME-BIBLE).
+spreads as ink dots through the water, and the **murklings** she fights bud out of it; she opens a way on by **sealing
+a leak** (the hole under it opens), and what she frees is freed, not killed (THEME-BIBLE).
 
 It is on with `PlaneOptions.Adventure` (the game's default). The simulation is in `src/Core/Plane/PlaneAdventure.cs`
-(`AdventureTuning`, `InkDots`, `PlaneVent`, the fish gauges, the three murklings, her oral arm),
+(`AdventureTuning`, `InkDots`, `PlaneVent`, the fish gauges, the three fish murklings, her oral arm),
+`src/Core/Plane/PlaneMurkRoster.cs` (the murklings of the ink, `MurkRosterTuning`),
 `src/Core/Plane/PlaneFlounder.cs` (flounders and Hearthguards) and
 `src/Core/Gen/TopDown/AbyssReef.cs` (the abyss); the presentation in `src/Game/TopDown/AdventureView.cs` (dots, their
 bracket marks, leaks), `BlightView` (the murklings' bodies: `murkling.gdshaderinc` spikes and tadpole tail),
-`BlightView.Flounders` (flounders and Hearthguards), `ReefFishView` (anemone pillars) and `HudView` (the gonad gauge). Tests: `AdventureTests`.
+`BlightView.Flounders` (flounders and Hearthguards), `ReefFishView` (anemone pillars) and `HudView` (the gonad gauge). Tests: `AdventureTests`, `MurkRosterTests`.
 
 All numbers are first guesses (`AdventureTuning`).
 
@@ -73,7 +73,10 @@ All numbers are first guesses (`AdventureTuning`).
 - **Sealing is what ends it:** a leak's ink dissolves outward from it at 12 m/s, and never returns.
 - **Freed fish** stay freed: they eat the ink harmlessly.
 
-## 3. Fish that turn
+## 3. Fish that turn (switched off)
+
+**Off in the game** (`PlaneOptions.FishTurn`): the fish live in the ink untouched, and every creature is a murkling of
+the ink (§4). Kept, with its tests, as it was:
 
 - **Many fish:** a level of the Kelp Jungle has the Shallows' numbers of reef fish three times over — clownfish at
   their anemones, blue tangs, chromis in schools of 12–24 — and no corrupted creatures at its start.
@@ -95,7 +98,25 @@ All numbers are first guesses (`AdventureTuning`).
 - **Pufferfish** (12–18 a level, in ones and twos) fill too: 0.06 a second with a dot within 1.4 m, 0.2 for each dot
   they eat, draining 0.03; full, a pufferfish is an Inkwarden (§4). Anemones are only the reef's: they never turn.
 
-## 4. The corrupted fish
+## 4. The murklings
+
+**The game's only creatures** (`PlaneMurkRoster.cs`, `MurkRosterTuning`; `PlaneOptions.InkMurklings`): on every reef,
+at every depth, murklings bud out of the leaks' ink. No fish turns, and the creatures below (§4's table, the fish that
+turned) are switched off with §3.
+
+- **At a reef's start:** 4 + 8 × Menace of them lie in its ink, 9 m apart, none within 18 m of where she comes in nor
+  by the boss's arena.
+- **While a leak of the reef is open,** one buds out of its ink every 9 s ÷ (1 + Menace), 9–20 m from her, while fewer
+  than 4 + 5 × Menace are within 26 m of her; its ink goes into it. Sealed, the reef buds no more. A leak cave buds as
+  it always has, in the same kinds.
+- **Four kinds, on every depth alike** (from each one's seed): half basic (seeks her light, clings and drinks it), 30%
+  throwers (keep a throw's distance and throw ink at her), 20% shoals: a whole school of 5 + 4 × Menace small, very fast
+  murklings buds at once and rings her as the chromis's shoal did (each with 30% of a murkling's meter). Now and then a
+  **prime** instead (big, rams her, breaks into murklings when freed; at most two a reef).
+- **Bigger with the Menace:** each one's full size (its size is its corruption, CORRUPTION) × (1 + 0.5 × Menace), at
+  most × 1.8; its meter with it, and its grade (and its shells) by it.
+
+### The corrupted fish (switched off with §3)
 
 All of them are fish underneath; freed, they are themselves again and swim off. Her light frees them as
 it frees any corrupted creature: a corruption meter each, emptied by her shots.
@@ -119,8 +140,8 @@ to 60% bigger, with up to 150% more health and up to 100% harder blows. The more
 Not a dot is left on the level afterwards.
 
 Switched off in the adventure (their code kept, to bring back one by one): pufferlings, Blightroots, Blotters,
-Lashjaws, Thumpsquirts, dens and murkling budding (except in the open reef's leak caves, whose only creatures are
-murklings and primes: docs/archive/RPG-PROPOSAL.md). Every level has a light spring (docs/CORRUPTION.md: a god ray onto
+Lashjaws, Thumpsquirts, dens, the fish that turn (§3) and the war's ground budding (the murklings bud from the leaks'
+ink instead, §4). Every level has a light spring (docs/CORRUPTION.md: a god ray onto
 the seabed, a store of healing she may come back to, too bright for any murkling), a second by her luck
 (docs/PEARLS.md, "Luck"); each keeps the seabed under it (§5).
 

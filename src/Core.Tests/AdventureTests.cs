@@ -15,7 +15,8 @@ public class AdventureTests
     static readonly Lazy<ItemCatalog> Catalog = new(() =>
         ItemCatalog.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "items.json"))));
 
-    static readonly PlaneOptions Adventure = new() { Adventure = true };
+    /// <summary>(The fish-turning loop these tests cover is off in the game, and so the ink's own murklings here: MurkRosterTests.)</summary>
+    static readonly PlaneOptions Adventure = new() { Adventure = true, FishTurn = true, InkMurklings = false };
 
     static PlaneWorld World(bool boss = false)
     {

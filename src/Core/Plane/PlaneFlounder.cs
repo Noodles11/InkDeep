@@ -232,6 +232,7 @@ public sealed partial class PlaneWorld
             f.Ink += AdventureTuning.FishEat;
         }
         if (f.Ink < 1f) f.Ink = Math.Clamp(f.Ink + (near >= 0 ? FlounderTuning.Fill : -FlounderTuning.Drain) * Dt, 0f, 1f);
+        if (!Options.FishTurn) f.Ink = 0f;
         if (f.Ink >= 1f)
         {
             f.Ink = 1f;
