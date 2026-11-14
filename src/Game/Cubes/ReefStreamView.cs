@@ -34,13 +34,30 @@ public partial class ReefStreamView : Node3D
     public double LastMs { get; private set; }
     public double WorstMs { get; set; }
 
+    /// <summary>
+    /// The murk under the layer below (CUBE-WORLD-PLAN §5.5): one flat dark floor at that layer's own void, following her,
+    /// so nothing under it is ever drawn or needed.
+    /// </summary>
+    MeshInstance3D _murk = null!;
+    public const float MurkSize = 400f;
+
     public override void _Ready()
     {
         var shader = GD.Load<Shader>("res://assets/shaders/topdown_ground.gdshader");
         _here = new ShaderMaterial { Shader = shader };
         _below = new ShaderMaterial { Shader = shader };
+        _murk = new MeshInstance3D
+        {
+            Mesh = new PlaneMesh { Size = new Vector2(MurkSize, MurkSize) },
+            MaterialOverride = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, AlbedoColor = new Color(0.02f, 0.035f, 0.06f) },
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+        };
+        AddChild(_murk);
         Place();
     }
+
+    /// <summary>The murk kept under her.</summary>
+    public void Follow(Vector3 her) => _murk.Position = new Vector3(her.X, _lift - LayerDrop + VoidHeight + 0.5f, her.Z);
 
     /// <summary>The layer she is on (the one drawn at the swim plane), and the dive's lift.</summary>
     public void SetLayer(int layer, float lift = 0f)
