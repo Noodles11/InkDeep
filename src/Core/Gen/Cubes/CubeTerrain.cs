@@ -33,6 +33,14 @@ public sealed class CubeTerrain
     public required IReadOnlyList<Well> Arrivals { get; init; }
     /// <summary>The tunnels carved through it (global points), for views and tests.</summary>
     public required IReadOnlyList<Vector2[]> Tunnels { get; init; }
+    /// <summary>
+    /// Its sockets (CUBE-WORLD-PLAN §9): up to two alcoves cut into its walls as a cave's opening is (TopDownGenerator's
+    /// doorway), well inside it and away from its gates and wells, where a place granted to it opens its mouth.
+    /// </summary>
+    public IReadOnlyList<Doorway> Sockets { get; init; } = Array.Empty<Doorway>();
+    /// <summary>The rock over its sockets' passages (NaN elsewhere; null with none), as a level's Roof.</summary>
+    public float[]? Roof { get; init; }
+    public float RoofAt(int gx, int gy) => Roof is { } r && Has(gx, gy) ? r[Index(gx, gy)] : float.NaN;
 
     public bool Has(int gx, int gy) => gx >= X0 && gy >= Y0 && gx < X0 + Stride && gy < Y0 + Rows;
     public int Index(int gx, int gy) => (gy - Y0) * Stride + (gx - X0);
@@ -72,6 +80,61 @@ public sealed class CubeTerrain
 
     // Noise fields, one seed each (every cube reads the same at the same global point).
     const int NoiseThroat = 1, NoiseChamber = 2, NoiseTunnel = 3, NoiseShelf = 4, NoiseTop = 5, NoiseFloor = 6, NoiseBays = 7;
+
+    /// <summary>A socket's opening lies at least this far inside its cube, this far from a gate's mouth and from a well, and sockets this far apart.</summary>
+    public const float SocketInside = 12f, SocketFromGate = 14f, SocketFromWell = 9f, SocketApart = 20f;
+
+    /// <summary>
+    /// Up to two sockets cut into the cube's walls (heights and cells changed in place): the classic level's doorway carved
+    /// on a scratch map of the cube, from spots of shelf water deep inside it. Pure: the cube's own rng, after all else.
+    /// </summary>
+    static List<Doorway> CutSockets(ulong seed, CubeId c, CubeCell[] cells, float[] heights, int nw, int nh, int x0, int y0,
+        List<(EdgeId, Gate, Vector2)> gates, List<Well> down, List<Well> arrivals, Rng rng, out float[]? roof)
+    {
+        var sockets = new List<Doorway>();
+        roof = null;
+        var map = new LevelMap(Math.Max(nw, nh) - 1) { Seed = seed };
+        Array.Fill(map.Heights, RockLow + RockRim);
+        for (int j = 0; j < nh; j++)
+        for (int i = 0; i < nw; i++) map[i, j] = heights[j * nw + i];
+        var off = new Vector2(x0, y0);
+        var lo = c.Origin - off;
+        var hi = lo + c.Size;
+        bool Deep(Vector2 p, float inside) => p.X >= lo.X + inside && p.Y >= lo.Y + inside && p.X <= hi.X - inside && p.Y <= hi.Y - inside;
+        bool Clear(Vector2 local)
+        {
+            var g = local + off;
+            foreach (var (_, _, mouth) in gates) if (Vector2.Distance(g, mouth) < SocketFromGate) return false;
+            foreach (var w in down) if (Vector2.Distance(g, w.Center) < SocketFromWell + w.Radius) return false;
+            foreach (var w in arrivals) if (Vector2.Distance(g, w.Center) < SocketFromWell + w.Radius) return false;
+            foreach (var s in sockets) if (Vector2.Distance(g, s.At) < SocketApart) return false;
+            return true;
+        }
+        for (int tries = 0; tries < 60 && sockets.Count < 2; tries++)
+        {
+            var from = new Vector2(rng.Range(lo.X + SocketInside + 6f, hi.X - SocketInside - 6f), rng.Range(lo.Y + SocketInside + 6f, hi.Y - SocketInside - 6f));
+            int fi = (int)MathF.Round(from.X), fj = (int)MathF.Round(from.Y);
+            if (cells[fj * nw + fi] != CubeCell.Shelf || !map.IsOpen(from) || !Clear(from)) continue;
+            float a = rng.Range(0f, MathF.Tau);
+            if (TopDownGenerator.FindDoorway(map, from, 10f, new Vector2(MathF.Cos(a), MathF.Sin(a)), -1.01f) is not { } found) continue;
+            if (!Deep(found.Door.At, SocketInside) || !Deep(found.Door.Back, SocketInside) || !Clear(found.Door.At)) continue;
+            if (TopDownGenerator.CutDoorway(map, from, 10f, new Vector2(MathF.Cos(a), MathF.Sin(a)), -1.01f) is not { } door) continue;
+            sockets.Add(new Doorway(door.At + off, door.Into));
+        }
+        if (sockets.Count == 0) return sockets;
+        roof = new float[nw * nh];
+        for (int j = 0; j < nh; j++)
+        for (int i = 0; i < nw; i++)
+        {
+            int k = j * nw + i;
+            float now = map[i, j];
+            roof[k] = map.RoofAt(i, j);
+            if (now == heights[k]) continue;
+            heights[k] = now;
+            if (now <= 0f && cells[k] == CubeCell.Rock) cells[k] = CubeCell.Shelf;
+        }
+        return sockets;
+    }
 
     public static CubeTerrain Make(CubeSpace space, CubeId c)
     {
@@ -274,9 +337,14 @@ public sealed class CubeTerrain
             };
         }
 
+        // 6. Its sockets, cut into its walls.
+        var sockets = CutSockets(space.Seed, c, outCells, outHeights, nw, nh, c.X * Side - Apron, c.Y * Side - Apron, gates, down, arrivals, rng, out var roof);
+
         return new CubeTerrain
         {
             Cube = c,
+            Sockets = sockets,
+            Roof = roof,
             Stride = nw,
             Rows = nh,
             X0 = c.X * Side - Apron,

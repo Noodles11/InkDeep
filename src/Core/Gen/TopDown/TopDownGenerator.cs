@@ -206,7 +206,7 @@ public static partial class TopDownGenerator
     }
 
     /// <summary>Where <see cref="CutDoorway"/> would cut, not cut yet: the opening, the water's edge before it, and its score (the lower the better).</summary>
-    static (Doorway Door, Vector2 Edge, float Score)? FindDoorway(LevelMap map, Vector2 from, float reach, Vector2 toward, float least)
+    internal static (Doorway Door, Vector2 Edge, float Score)? FindDoorway(LevelMap map, Vector2 from, float reach, Vector2 toward, float least)
     {
         const int ways = 72;
         const float step = 0.25f;

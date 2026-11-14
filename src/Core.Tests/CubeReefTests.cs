@@ -107,3 +107,37 @@ public class CubeStockTests
         Assert.Equal(was, now);
     }
 }
+
+/// <summary>A cube's sockets (CUBE-WORLD-PLAN §9): alcoves cut into its walls, where a granted place opens its mouth.</summary>
+public class CubeSocketTests
+{
+    readonly Xunit.Abstractions.ITestOutputHelper _out;
+    public CubeSocketTests(Xunit.Abstractions.ITestOutputHelper output) => _out = output;
+
+    [Theory]
+    [MemberData(nameof(CubeTerrainTests.Seeds), MemberType = typeof(CubeTerrainTests))]
+    public void Most_cubes_have_a_socket_whose_passage_she_can_swim_into(ulong seed)
+    {
+        var reef = new CubeReef(seed, 5, 2);
+        var map = reef.Layer(1, reef.Start);
+        int cubes = 0, with = 0, sockets = 0;
+        foreach (var cube in reef.Space.CubesOf(1))
+        {
+            var t = reef.Terrain(cube);
+            cubes++;
+            if (t.Sockets.Count > 0) with++;
+            foreach (var door in t.Sockets)
+            {
+                sockets++;
+                Assert.Equal(cube, CubeId.Of(door.At, 1));
+                Assert.All(t.Gates, g => Assert.True(Vector2.Distance(g.Mouth, door.At) >= CubeTerrain.SocketFromGate));
+                // Its passage open on the layer's map, its rock roofed over.
+                Assert.True(map.IsOpen(door.Inside), $"{cube}: socket at {door.At} closed inside");
+                Assert.True(map.IsOpen(door.At - door.Into * 1.5f), $"{cube}: socket at {door.At} closed before it");
+                Assert.False(float.IsNaN(map.RoofAt((int)System.MathF.Round(door.Inside.X), (int)System.MathF.Round(door.Inside.Y))));
+            }
+        }
+        _out.WriteLine($"{with} of {cubes} cubes with sockets, {sockets} in all");
+        Assert.True(with * 3 >= cubes * 2, $"only {with} of {cubes} cubes have a socket");
+    }
+}

@@ -78,7 +78,11 @@ public sealed class CubeReef
             int x0 = (int)c.Origin.X, y0 = (int)c.Origin.Y, x1 = Math.Min(x0 + (int)c.Size.X, last), y1 = Math.Min(y0 + (int)c.Size.Y, last);
             for (int y = y0; y <= y1; y++)
             for (int x = x0; x <= x1; x++)
+            {
                 map[x, y] = t.HeightAt(x, y);
+                // (The rock over its sockets' passages, drawn by the mouths' views as a level's.)
+                if (t.Roof is not null && t.RoofAt(x, y) is var roof && !float.IsNaN(roof)) map.Roof[y * map.Samples + x] = roof;
+            }
         }
         map.Pois.Add(new Poi { Kind = PoiKind.Start, Position = start, Radius = 3f });
         // (No exit: a layer is left by diving or climbing. The game's code asks for one, far off the reef.)
