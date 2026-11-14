@@ -264,6 +264,51 @@ public class CubeTimingTests
     }
 
     [Fact]
+    public void Reading_the_cubes_rock_costs_about_what_reading_a_levels_map_does()
+    {
+        // The same open-water test, a million times, on a level's map and on the cube field (CUBE-WORLD-PLAN §13), read
+        // as collision reads them.
+        var map = TestLevels.Get(TestLevels.Find(p => !p.HasBoss));
+        var space = new CubeSpace(CubeTerrainTests.SeedValues[0], 5, 1);
+        var made = space.CubesOf(0).ToDictionary(c => c, c => CubeTerrain.Make(space, c));
+        var field = new CubeField(c => made.GetValueOrDefault(c), new CellCoord(2, 2, 0));
+        var rng = new Rng(7);
+        // (As a body's collision reads: its middle and eight points round it, 0.35 m out, at a scatter of places.)
+        Vector2[] Clusters(float lo, float hi)
+        {
+            var points = new List<Vector2>();
+            while (points.Count < 4096 - 9)
+            {
+                var at = new Vector2(rng.Range(lo, hi), rng.Range(lo, hi));
+                points.Add(at);
+                for (int i = 0; i < 8; i++) points.Add(at + new Vector2(MathF.Cos(i * MathF.Tau / 8f), MathF.Sin(i * MathF.Tau / 8f)) * 0.35f);
+            }
+            while (points.Count < 4096) points.Add(points[^1]);
+            return points.ToArray();
+        }
+        var mapPoints = Clusters(1f, map.Size - 1f);
+        var cubePoints = Clusters(Side * 1.2f, Side * 3.8f);
+        double Time(Func<Vector2, bool> open, Vector2[] points)
+        {
+            double best = double.MaxValue;
+            for (int round = 0; round < 5; round++)
+            {
+                var watch = Stopwatch.StartNew();
+                int n = 0;
+                for (int k = 0; k < 1_000_000; k++)
+                    if (open(points[k & 4095])) n++;
+                best = Math.Min(best, watch.Elapsed.TotalMilliseconds);
+                Assert.True(n >= 0);
+            }
+            return best;
+        }
+        Gen.IReefField asMap = map;
+        double mapMs = Time(asMap.IsOpen, mapPoints), cubeMs = Time(field.IsOpen, cubePoints);
+        _out.WriteLine($"a million reads: the level's map {mapMs:F1} ms, the cube field {cubeMs:F1} ms ({cubeMs / mapMs:P0})");
+        Assert.True(cubeMs < mapMs * 1.25, $"the cube field {cubeMs:F1} ms against the map's {mapMs:F1} ms");
+    }
+
+    [Fact]
     public void The_stream_keeps_its_books_within_its_budget()
     {
         var space = new CubeSpace(CubeTerrainTests.SeedValues[0], 6, 3);

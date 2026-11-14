@@ -48,6 +48,7 @@ public sealed class CubeField : IReefField
             _slots[(dy + _reach) * _span + dx + _reach] = _terrain(CubeId.Of(new CellCoord(center.X + dx, center.Y + dy, center.Z)));
         if (_filled) Recentres++;
         _filled = true;
+        _last = null;
     }
 
     /// <summary>The window's cubes read again (terrain that has come or gone since); true when any changed.</summary>
@@ -62,6 +63,7 @@ public sealed class CubeField : IReefField
             if (ReferenceEquals(now, _slots[k])) continue;
             _slots[k] = now;
             changed = true;
+            _last = null;
         }
         return changed;
     }
@@ -73,15 +75,35 @@ public sealed class CubeField : IReefField
         return i < 0 || j < 0 || i >= _span || j >= _span ? null : _slots[j * _span + i];
     }
 
+    /// <summary>
+    /// The cube the last read fell in, and its own squares' extent (global metres): reads come in clusters (a body's nine
+    /// round one point), so most need no look-up at all. Which cube holds a cell never changes with the window: it is the
+    /// cube of the cell's square, whichever window slot gave it.
+    /// </summary>
+    CubeTerrain? _last;
+    int _lastX0, _lastY0, _lastX1, _lastY1;
+
     public float HeightAt(Vector2 p)
     {
         int ix = (int)MathF.Floor(p.X), iy = (int)MathF.Floor(p.Y);
-        if (CubeOf(ix, iy) is not { } t) return Missing;
+        CubeTerrain t;
+        if (_last is { } last && ix >= _lastX0 && iy >= _lastY0 && ix < _lastX1 && iy < _lastY1) t = last;
+        else
+        {
+            if (CubeOf(ix, iy) is not { } found) return Missing;
+            t = found;
+            _last = t;
+            _lastX0 = t.Cube.X * Side;
+            _lastY0 = t.Cube.Y * Side;
+            _lastX1 = _lastX0 + t.Cube.Wide * Side;
+            _lastY1 = _lastY0 + t.Cube.Tall * Side;
+        }
         float tx = p.X - ix, ty = p.Y - iy;
-        int k = t.Index(ix, iy), n = t.Stride;
-        float a = MathUtil.Lerp(t.Heights[k], t.Heights[k + 1], tx);
-        float b = MathUtil.Lerp(t.Heights[k + n], t.Heights[k + n + 1], tx);
-        return MathUtil.Lerp(a, b, ty);
+        int n = t.Stride, k = (iy - t.Y0) * n + (ix - t.X0);
+        var h = t.Heights;
+        float a = h[k] + (h[k + 1] - h[k]) * tx;
+        float b = h[k + n] + (h[k + n + 1] - h[k + n]) * tx;
+        return a + (b - a) * ty;
     }
 
     public bool IsOpen(Vector2 p) => HeightAt(p) <= 0f;

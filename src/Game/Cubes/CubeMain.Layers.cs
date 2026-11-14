@@ -222,14 +222,18 @@ public partial class CubeMain
 
     void AutoSteer()
     {
-        if (!_autoDives || _move != Move.None || _plan.Count == 0 || _goal is not null) return;
+        if (!_autoDives || _move != Move.None || _plan.Count == 0) return;
         var her = _world.Player.Position;
         if (_plan.Peek() == Move.Up)
         {
-            _goal = her;
+            // Back up where she came down (the drift will have carried her off it while she waited).
+            _goal ??= _diving.Arrived ?? her;
             _path.Clear();
+            _path.Add(new Vector2(_goal.Value.X, _goal.Value.Y));
+            _pathAt = 0;
             return;
         }
+        if (_goal is not null) return;
         if (_planning is null)
         {
             int layer = _layer;
