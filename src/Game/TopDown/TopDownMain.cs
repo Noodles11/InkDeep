@@ -2404,6 +2404,7 @@ public partial class TopDownMain : Node3D
         float dt = (float)delta;
         SyncPointer();
         SyncHaptics(dt);
+        if (_reef is not null) ShowReef();
         if (InReef) StepReef(dt);
         // Banners run on game time: they wait while paused and under a splash.
         if (!Paused && _transition == Transition.None && !_deathSplash)

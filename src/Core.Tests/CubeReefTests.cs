@@ -4,6 +4,7 @@ using OctoShoots.Core.Gen;
 using OctoShoots.Core.Gen.Cubes;
 using OctoShoots.Core.Gen.TopDown;
 using OctoShoots.Core.Plane;
+using OctoShoots.Core.Run;
 using Xunit;
 using static OctoShoots.Core.Gen.Cubes.CubeTuning;
 
@@ -139,5 +140,66 @@ public class CubeSocketTests
         }
         _out.WriteLine($"{with} of {cubes} cubes with sockets, {sockets} in all");
         Assert.True(with * 3 >= cubes * 2, $"only {with} of {cubes} cubes have a socket");
+    }
+}
+
+/// <summary>The places a layer's claims open (CUBE-WORLD-PLAN §9) and the rooms behind their mouths.</summary>
+public class CubeDirectorTests
+{
+    [Fact]
+    public void Over_many_layers_the_grants_keep_every_limit()
+    {
+        int layers = 0, clamByThird = 0, secrets = 0, claims = 0;
+        for (ulong seed = 1; seed <= 1000; seed++)
+        {
+            var d = new CubeDirector(seed);
+            for (int z = 0; z < 10; z++)
+            {
+                layers++;
+                int clams = 0, havens = 0, curses = 0;
+                for (int claim = 1; claim <= 12; claim++)
+                {
+                    claims++;
+                    var got = d.Claim(z, claim, 2);
+                    Assert.True(got.Count <= CubeDirector.MostPerCube);
+                    clams += got.Count(k => k == PoiKind.TreasureCave);
+                    havens += got.Count(k => k == PoiKind.Haven);
+                    curses += got.Count(k => k == PoiKind.LeakCave);
+                    secrets += got.Count(k => k == PoiKind.Secret);
+                    if (claim == 3 && clams == 1) clamByThird++;
+                }
+                Assert.Equal(1, clams);
+                Assert.True(havens <= CubeDirector.Havens);
+                if (z == 0) Assert.Equal(0, curses);
+            }
+        }
+        // A clam room by the 3rd claim nearly always (unless the cube that rolled it was full).
+        Assert.True(clamByThird > layers * 0.9, $"{clamByThird} of {layers}");
+        Assert.InRange(secrets / (float)claims, 0.2f, 0.36f);
+    }
+
+    [Fact]
+    public void A_cube_without_a_socket_passes_its_place_on()
+    {
+        var d = new CubeDirector(7);
+        var none = d.Claim(1, 3, 0);
+        Assert.Empty(none);
+        var next = d.Claim(1, 4, 2);
+        Assert.Contains(PoiKind.TreasureCave, next);
+    }
+
+    [Fact]
+    public void A_clam_room_holds_its_clam_room_and_a_way_in()
+    {
+        const PoiKind kind = PoiKind.TreasureCave;
+        var seed = SeedCode.Parse("KELP7Q2Z");
+        for (int i = 1; i <= 3; i++)
+        {
+            var map = TopDownGenerator.GenerateRoom(seed, new LevelId(900, 3, i), kind, 0.3f, 3, new Vector2(1f, 0f));
+            Assert.Equal(kind, map.Room);
+            Assert.Contains(map.Pois, p => p.Kind == kind);
+            Assert.NotNull(map.Way);
+            Assert.True(map.Size <= LevelMap.Seeded);
+        }
     }
 }

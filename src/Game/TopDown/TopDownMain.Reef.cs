@@ -33,6 +33,7 @@ public partial class TopDownMain
     CubeDiving _cubeDiving = null!;
     readonly ReefRecords _records = new();
     readonly CubeCurrents _cubeCurrents = new();
+    CubeDirector _director = null!;
     int _layer;
     int _cubeFootprint = CubeTuning.Footprint, _cubeLayers = CubeTuning.Layers;
     bool _classic, _cubeAsked;
@@ -79,11 +80,12 @@ public partial class TopDownMain
         _stream = new ReefStream(_reef.Space, _cubeWorker);
         _cubeWorker.Stream = _stream;
         _cubeDiving = new CubeDiving(_reef.Space.Layers);
+        _director = new CubeDirector(_seed.Value);
         _reefView = new ReefStreamView();
         AddChild(_reefView);
         _currentShader = GD.Load<Shader>("res://assets/shaders/cube_current.gdshader");
         _driftStreaks = Streaks(new Vector2(26f, 26f));
-        Here.Arrive(_reef.Start);
+        if (Here.Arrive(_reef.Start) == Crossing.Claimed) Grant(CubeId.Of(_reef.Start, 0));
         GD.Print($"Cube reef {_seed}: {_reef.Space.Footprint} × {_reef.Space.Footprint} squares, {_reef.Space.Layers} layers, {_reef.Space.CubesOf(0).Count()} cubes a layer");
     }
 
@@ -112,6 +114,8 @@ public partial class TopDownMain
     void EnteredLayer()
     {
         _layerMaps[_layer] = _map;
+        // Its claimed cubes' places, their mouths on its map (those granted before it was made).
+        if (OpenMouths(_map)) ShowReefMouths();
         // Back on a layer: its claimed cubes' stock put back as she left it.
         foreach (var record in Here.Claimed.Values)
             foreach (var left in record.Left ?? Enumerable.Empty<StockLeft>())
@@ -192,6 +196,8 @@ public partial class TopDownMain
             var claimed = CubeId.Of(p.Position, _layer);
             var spots = CubeStock.Spots(_reef.Space.Seed, claimed, Here.Claimed[claimed].Claim, _map.Menace, p.Position, _world.Clear);
             foreach (var s in spots) _world.PlaceStock(claimed, s.Spawn, s.Seed, s.Prime, new[] { s.At }, left: false);
+            Grant(claimed);
+            if (OpenMouths(_map)) ShowReefMouths();
             GD.Print($"Cube reef: {claimed} claimed ({Here.Claims} on layer {_layer}), {spots.Count} of its stock budded");
             if (_autopilot) Route();
         }
@@ -328,7 +334,7 @@ public partial class TopDownMain
         else _cubeDiving.Climbed(_layerFrom, terrain);
         _layer = _cubeDiving.Layer;
         _records.Changed(from, _layer, _cubeDiving.Deepest);
-        Here.Arrive(_layerFrom);
+        if (Here.Arrive(_layerFrom) == Crossing.Claimed) Grant(CubeId.Of(_layerFrom, _layer));
         _layerMove = LayerMove.None;
         _reefView.SetLayer(_layer);
         _reefView.ShowAbove(false);
@@ -365,6 +371,52 @@ public partial class TopDownMain
             if (path.Count > 0) return path;
         }
         return new();
+    }
+
+    /// <summary>The reef's own views shown on its layers, hidden in a place behind a mouth (a level of its own, LevelView's).</summary>
+    void ShowReef()
+    {
+        if (_reefView.Visible == InReef) return;
+        _reefView.Visible = InReef;
+        _driftStreaks.Visible = false;
+        foreach (var s in _wakeStreaks) s.Visible = false;
+        if (!InReef) _hud.LayerPrompt = null;
+    }
+
+    /// <summary>A cube claimed: the places the director grants it, each in one of its sockets (CUBE-WORLD-PLAN §9).</summary>
+    void Grant(CubeId cube)
+    {
+        var record = Here.Claimed[cube];
+        var sockets = _reef!.Terrain(cube).Sockets;
+        var granted = _director.Claim(cube.Z, record.Claim, sockets.Count);
+        for (int i = 0; i < granted.Count; i++) record.Places.Add((granted[i], sockets[i]));
+        if (granted.Count > 0) GD.Print($"Cube reef: {cube} (claim {record.Claim}) opens {string.Join(", ", granted)}");
+    }
+
+    /// <summary>Her layer's granted places not on its map yet, their mouths put on it; whether any were.</summary>
+    bool OpenMouths(LevelMap map)
+    {
+        bool any = false;
+        foreach (var record in Here.Claimed.Values)
+            foreach (var (kind, mouth) in record.Places)
+            {
+                if (map.Mouths.Contains(mouth)) continue;
+                // (Its kinds kept beside its mouths, in step.)
+                while (map.MouthKinds.Count < map.Mouths.Count) map.MouthKinds.Add(PoiKind.LeakCave);
+                map.Mouths.Add(mouth);
+                map.MouthKinds.Add(kind);
+                any = true;
+            }
+        return any;
+    }
+
+    /// <summary>The layer's mouths shown afresh (its view's rock round each, the portals' ink).</summary>
+    void ShowReefMouths()
+    {
+        _levelShape = LevelShape.Bare(_map);
+        _level.Show(_levelShape);
+        _level.Place(Vector3.Zero, _origin);
+        ShowMouths();
     }
 
     /// <summary>Each frame she swims: the reef drawn round her, an arch over her seen through, the currents' streaks.</summary>

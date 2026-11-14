@@ -401,6 +401,8 @@ public sealed class LevelMap : IReefField
     /// reward at its heart (its Secret place), no creatures, no leak, its way out (Way) where she came in.
     /// </summary>
     public bool Labyrinth;
+    /// <summary>A cube reef's room behind a mouth (TopDownGenerator.GenerateRoom): the place it is for; null on any other level.</summary>
+    public PoiKind? Room;
     /// <summary>A leak cave's way out, the opening she came in by (in its start chamber's wall); null elsewhere.</summary>
     public Doorway? Way;
     /// <summary>The bay's mirror (HandLayout.Mirror): swimming onto it, she changes her look. Null elsewhere.</summary>

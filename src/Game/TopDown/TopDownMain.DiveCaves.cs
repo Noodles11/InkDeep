@@ -67,7 +67,7 @@ public partial class TopDownMain
     static PlaneOptions DiveCaveOptions(LevelMap map)
     {
         var d = PlaneOptions.Default;
-        bool calm = map.Labyrinth || map.Haven is not null;
+        bool calm = map.Labyrinth || map.Haven is not null || map.Room is not null;
         return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings && !calm, Vases = d.Vases && !calm, Adventure = d.Adventure, Shots = d.Shots, DiveCave = map.LeakCave };
     }
 
@@ -125,7 +125,15 @@ public partial class TopDownMain
         return LevelShape.Prepare(TopDownGenerator.GenerateLabyrinth(seed, id, reef.LookDepth ?? reef.Id.Depth, reef.Mouths[mouth].Into));
     }
 
+    /// <summary>A cube reef's clam room behind its mouth (TopDownGenerator.GenerateRoom): its own id, the layer's look.</summary>
+    static LevelShape PrepareRoom(SeedCode seed, LevelMap reef, int mouth)
+    {
+        var id = new LevelId(reef.Id.Cycle + 800, reef.Id.Depth, reef.Id.Level * 10 + mouth + 1);
+        return LevelShape.Prepare(TopDownGenerator.GenerateRoom(seed, id, PoiKind.TreasureCave, reef.Menace, reef.LookDepth ?? reef.Id.Depth, reef.Mouths[mouth].Into));
+    }
+
     static LevelShape PrepareBehind(SeedCode seed, LevelMap reef, int mouth) =>
+        mouth < reef.MouthKinds.Count && reef.MouthKinds[mouth] == PoiKind.TreasureCave ? PrepareRoom(seed, reef, mouth) :
         reef.HavenMouth(mouth) ? PrepareHaven(seed, reef, mouth) : reef.LeakMouth(mouth) ? PrepareCave(seed, reef, mouth) : PrepareLabyrinth(seed, reef, mouth);
 
     /// <summary>A reef's caves, made with it (on the same thread, after it).</summary>
@@ -269,6 +277,7 @@ public partial class TopDownMain
     void DiveCaveArrived()
     {
         if (InLabyrinth) Say("A secret labyrinth: find its heart, and its current will carry you home");
+        else if (InDiveCave && _map.Room == PoiKind.TreasureCave) Say("A clam room: its pearl is yours, then swim back out");
         else if (InHavenPlace) Say("A haven: safe water, healed whole, all you carry banked");
         else if (InDiveCave) Say("A leak cave: its water stings till its leak is sealed · seal it for a pearl and a full heal");
         else if (_caveMouth >= 0 && _caveSealed)
