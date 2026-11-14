@@ -3351,7 +3351,8 @@ public partial class TopDownMain : Node3D
     {
         RelightBell();
         DropBelow();
-        _nextMap = Shape(_id);
+        if (_reef is not null) NewReef();
+        _nextMap = _reef is not null ? ReefFirstShape() : Shape(_id);
         _transition = Transition.Loading;
         _transitionTime = 0f;
     }

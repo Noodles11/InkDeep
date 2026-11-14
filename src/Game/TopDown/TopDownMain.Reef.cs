@@ -32,8 +32,8 @@ public partial class TopDownMain
     TaskCubeWorker _cubeWorker = null!;
     ReefStreamView _reefView = null!;
     CubeDiving _cubeDiving = null!;
-    readonly ReefRecords _records = new();
-    readonly CubeCurrents _cubeCurrents = new();
+    ReefRecords _records = new();
+    CubeCurrents _cubeCurrents = new();
     CubeDirector _director = null!;
     /// <summary>The layers whose boss has been rolled (on her first arrival).</summary>
     readonly HashSet<int> _bossRolled = new();
@@ -126,6 +126,30 @@ public partial class TopDownMain
         if (_reefResume is not null) ResumeReef(_reefResume);
         else if (Here.Arrive(_reef.Start) == Crossing.Claimed) Grant(CubeId.Of(_reef.Start, 0));
         GD.Print($"Cube reef {_seed}: {_reef.Space.Footprint} × {_reef.Space.Footprint} squares, {_reef.Space.Layers} layers, {_reef.Space.CubesOf(0).Count()} cubes a layer");
+    }
+
+    /// <summary>
+    /// A new dive after the last ended (CUBE-WORLD-PLAN §10: dying ends the run): the old reef and all it kept let go, a
+    /// new one from the run's seed, she on its warm-up layer.
+    /// </summary>
+    void NewReef()
+    {
+        _reefView.QueueFree();
+        _driftStreaks.QueueFree();
+        foreach (var s in _wakeStreaks) s.QueueFree();
+        _wakeStreaks.Clear();
+        _records = new ReefRecords();
+        _cubeCurrents = new CubeCurrents();
+        _layerMaps.Clear();
+        _making = null;
+        _makingLayer = -1;
+        _bossRolled.Clear();
+        _bossFreed.Clear();
+        _reefResume = null;
+        _layerMove = LayerMove.None;
+        _hud.LayerPrompt = null;
+        ForgetDiveCaves();
+        BuildReef();
     }
 
     /// <summary>The stream's work off the main thread that is the game's: a cube's meshes.</summary>
