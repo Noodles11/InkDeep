@@ -27,28 +27,36 @@ open. Numbers marked *(tune)* are starting values to settle in the prototype.
 
 | Term | Meaning |
 |---|---|
-| **Cube** | One cell of a regular grid, `CubeCoord(X, Y, Z)`: X east, Y south (the map's axes today), Z the layer, 0 at the top, growing downward. |
-| **Layer / depth** | All cubes of one Z. "Depth" in the rules below means a layer. |
-| **S** | A cube's side: **64 m** *(tune)*, two of today's 32 m render chunks. Every cube is S × S and one layer thick. |
-| **Layer drop** | Swim plane to swim plane: 8 m, today's `LevelMap.LevelDrop`. |
-| **Edge** | The face two horizontal neighbours share. `EdgeId(X, Y, Z, axis)`, named from its lower-coordinate cube, so both cubes name it the same. |
-| **Floor face** | The face a cube shares with the one below. `FloorId(X, Y, Z)`, between Z and Z+1. |
-| **Corner** | The vertical line four cubes of a layer meet on. `CornerId(X, Y, Z)`. |
+| **Square** | One cell of a regular grid, `CellCoord(X, Y, Z)`: X east, Y south (the map's axes today), Z the layer, 0 at the top, growing downward. Edges, corners, floors and wells are the squares'. |
+| **S** | A square's side: **64 m** *(tune)*, two of today's 32 m render chunks. |
+| **Cube** | The piece the reef is made, streamed and kept by: a **brick of two squares**, laid in a **herringbone**, half of them lying (east–west, 2S × S) and half on end (north–south, S × 2S). `CubeId(X, Y, Z, OnEnd)`, named by its first square (the west or north one). One layer thick. |
+| **Layer / depth** | All cubes of one Z. "Depth" in the rules below means a layer. Every layer is laid the same. |
+| **Layer drop** | Swim plane to swim plane: 10 m, more than the rock stands tall, so the layer below never reaches up into hers. |
+| **Edge** | The face two horizontal neighbouring squares share. `EdgeId(X, Y, Z, axis)`, named from its lower-coordinate square, so both sides name it the same. A cube has six outer edges; the edge between its own two squares has no wall. |
+| **Floor face** | The face a square shares with the one below. `FloorId(X, Y, Z)`, between Z and Z+1. |
+| **Corner** | A grid point of a layer. A cube has six on its outline: its four corners and the middles of its long sides, where the herringbone's bricks meet in threes. `CornerId(X, Y, Z)`. |
 
-World positions are global: a point of layer Z is `(x, y)` in metres with cube `(floor(x / S), floor(y / S))`.
-Nothing is ever re-based, so shots, particles, lights and creatures cross cube lines without knowing they exist. A
-reef 9 cubes across is under 600 m, well inside what a `float` holds to the millimetre.
+**The herringbone.** Which cube a square belongs to follows from (x − y) mod 4 alone: 0 is a lying cube's west
+square, 1 its east square, 3 a standing cube's north square, 2 its south square. So the lying cubes step down the
+diagonal a square at a time, each with a standing cube under its west half: the herringbone's L-shaped pairs. Finding
+a point's cube is two divisions and a remainder; no table is kept.
 
-**The reef's footprint:** 9 × 9 cubes a layer *(tune)* round the column she first dives into. Edges on the footprint's
-rim are always closed, so the reef has an outside wall rather than an endless plain.
+World positions are global: a point of layer Z is `(x, y)` in metres in square `(floor(x / S), floor(y / S))` and that
+square's cube. Nothing is ever re-based, so shots, particles, lights and creatures cross cube lines without knowing
+they exist. A reef 9 squares across is under 600 m, well inside what a `float` holds to the millimetre.
 
-**Why 64 m.** The camera sees about 62 × 35 m (35° at 55 m). With S = 64 her view never reaches past the eight cubes
-round hers, so a 3 × 3 window of terrain is always enough. At her 4.5 m/s a cube is some 14 s straight across, 30–40 s
-as the water winds: long enough to ready what comes next, short enough that she is always arriving somewhere.
+**The reef's footprint:** 9 × 9 squares a layer *(tune)* round the column she first dives into. The reef is the cubes
+wholly inside it, the largest set of them joined by their sides; a square of the footprint whose cube sticks out is
+rock. Edges on the reef's rim are always closed, so the reef has an outside wall rather than an endless plain.
+
+**Why 64 m squares.** The camera sees about 62 × 35 m (35° at 55 m). With S = 64 her view never reaches past the
+eight squares round hers, so the cubes of a 3 × 3 window of squares are always enough. At her 6 m/s cruise a cube is
+some 10–20 s straight across, 30–60 s as the water winds: long enough to ready what comes next, short enough that she
+is always arriving somewhere.
 
 ## 3. What a cube holds
 
-A cube of layer Z is a heightfield on the 1 m grid, as a level is today, measured from its layer's swim plane, with one
+A cube of layer Z is a heightfield on the 1 m grid over its two squares, as a level is today, measured from its layer's swim plane, with one
 new idea, the **void**:
 
 | At a point | It is |
@@ -72,21 +80,23 @@ made in any order, on any thread, and always agree.
 
 ### 4.1 The connectivity plan (boundary conditions)
 
-Three small specs, each hashed from the seed and the id of the thing two or four cubes **share**:
+Three small specs, each hashed from the seed and the id of the thing two or three cubes **share**:
 
 - **`EdgeSpec(EdgeId)`**: open or closed, and the seed of its shared wall's shape. Each layer's open edges first
-  hold a spanning tree of its cubes (Kruskal in a seeded order), so every cube of a layer can be reached across it;
-  each other edge is open by a 35% chance *(tune)*; edges on the footprint's rim are always closed. An open edge has
-  one gate, or two on 35% of edges, each 6–13 m wide, its sides never nearer a corner than 13 m.
+  hold a spanning tree of its cubes (Kruskal over the edges between them, in a seeded order), so every cube of a
+  layer can be reached across them; each other edge is open by a 35% chance *(tune)*; edges on the reef's rim are
+  always closed. An open edge has one gate, or two on 35% of edges, each 6–13 m wide, its sides never nearer a corner
+  than 13 m. Two cubes may share two edges (along a long side), each with its own gates.
 - **`CornerSpec(CornerId)`**: rock 8–10 m round the corner. With gates kept off the corners, no water ever joins two
   cubes that share only a corner, so she cannot cross diagonally.
-- **`FloorSpec(FloorId)`**: one well, or two (50%), discs 5–7 m in radius where the upper cube must be void and the
-  lower open water. They are the sure ways down; any other spot where §3's rule happens to hold is a way down too.
-  A floor's wells lie in two opposite quadrants of the cube, 9–15 m from its middle along each axis, the pair of
+- **`FloorSpec(FloorId)`**: per square, one well, or two (50%), discs 5–7 m in radius where the upper cube must be
+  void and the lower open water. They are the sure ways down; any other spot where §3's rule happens to hold is a way
+  down too. A square's wells lie in two opposite quadrants of it, 9–15 m from its middle along each axis, the pair of
   quadrants set by the floor's parity: the wells she arrives by and those she may leave by are never in the same
   quadrant, and at least 18 m apart.
 
-A cube's boundary conditions are its four edge specs, four corner specs, the floor spec under it and the one over it.
+A cube's boundary conditions are its six outer edges' specs, its six corners' specs, and the floor specs under and
+over its two squares.
 
 ### 4.2 The geometry
 
@@ -97,8 +107,9 @@ A cube's boundary conditions are its four edge specs, four corner specs, the flo
    - each **gate's throat**, cut through the wall and on 10 m into both cubes, swaying from side to side and flaring
      where it opens into each;
    - each **corner's** rock.
-2. **The cube's own water**, from its own hash, wherever the edges do not decide: a chamber round each well (over it
-   and under it), a pocket hugging each edge (60% of edges), and one to three chambers more, 7–12 m across. Gate
+2. **The cube's own water**, from its own hash, wherever the edges do not decide, across both its squares (no wall
+   between them): a chamber round each well (over it and under it), a pocket hugging each outer edge (60% of edges),
+   and two to five chambers more, 7–12 m across. Gate
    mouths, wells and chambers are joined by a spanning tree of the shortest tunnels (bowed curves 5.6–8.8 m wide)
    plus a loop or two. Rims wobble by low noise; then **bays** are bitten into the rock within 5 m of the water where
    the bay noise is high, so walls wander rather than trace the plan. Every gate of a cube reaches every other and
@@ -106,10 +117,11 @@ A cube's boundary conditions are its four edge specs, four corner specs, the flo
 3. **Shelves, void and arches**: water is shelf or void by a noise mask at global coordinates (so it runs on across
    cube lines); round a well down it is void, wobbling outward from its radius; arches are laid over the middle of
    a tunnel or two away from the wells, and the floor under an arch is a shelf.
-4. **Heights**: all noise (rock relief, shelf floors) is read at **global** coordinates; rock is lowered within 2 m
-   of the water.
-5. **Apron**: the cube's arrays carry 1 m of its neighbours' samples round them, all of it decided by the edges, so
-   normals and soft masks are right up to the line.
+4. **Heights**: all noise (rock relief, shelf floors) is read at **global** coordinates. Rock stands 3–6.5 m, lowered
+   to 1.2 m right beside the water. A shelf's floor drops into the void along the shelf noise's contour, a slope
+   rather than 1 m steps, and sinks smoothly into a well.
+5. **Apron**: the cube's arrays carry 2 m of its neighbours' samples round them (the ground's smoothing reads two
+   samples past a cell), all of it decided by the edges, so meshes, normals and soft masks are right up to the line.
 
 **Generation never retries.** Today's generate-validate-retry cannot run while she swims. The construction above is
 valid by design; `LevelValidator`'s checks move into the test suite, run over thousands of seeds and coordinates.
@@ -129,19 +141,22 @@ Keeping them apart is what makes the preview layer and far neighbours nearly fre
 | State | Holds | Which cubes |
 |---|---|---|
 | **Active** | Terrain, meshes, stocking, full simulation. | The cube she is in. |
-| **Preloaded** | Terrain, meshes, stocking ready; creatures asleep till she is near. | Neighbours she can reach through an open gate that the wake current (§8.2) has not shut. |
-| **Preview** | Terrain and simplified meshes only. | The rest of the 3 × 3 round her in her layer (they are in the camera's view), and the 3 × 3 under it. |
+| **Preloaded** | Terrain, meshes, stocking ready; creatures asleep till she is near. | The cubes across her cube's outer edges that she can reach through an open gate the wake current (§8.2) has not shut. |
+| **Preview** | Terrain and its full ground. | The other cubes of the 3 × 3 squares round hers (they are in the camera's view). |
+| **Below** | Terrain and a simplified ground (2 m grid). | The cubes of the 3 × 3 squares under hers, seen through the void. With a dive coming, they are readied as Preview, the one she lands in as Preloaded. |
+| **Mask** | Terrain only, not drawn. | The cubes of the 3 × 3 squares over hers, while she may climb there (to know where she may). |
 | **Unloaded** | Its record (§10), nothing else. | Everything else. |
 
 Two notes against the first sketch of the idea:
 
-- "The current cube and its six neighbours" is: four across, one below, one above. The cube above is never drawn (it
-  would hide her from a camera looking down); only its dive mask is kept, to know where she may climb.
-- Neighbours she cannot reach still need their **terrain**, because the camera shows 31 m to either side of her. What
+- "The current cube and its six neighbours" is the six outer edges' cubes across (a herringbone brick has six
+  neighbours), plus the cubes below and above. The layer above is never drawn (it would hide her from a camera
+  looking down); only its terrain is kept, to know where she may climb.
+- Neighbours she cannot reach still need their **ground**, because the camera shows 31 m to either side of her. What
   is saved for them is everything else: no stocking, no creatures, no simulation. That is where the cost is.
 
-**Prediction:** the cube beyond a Preloaded neighbour, straight on from the gate she is heading for, has its terrain
-made early once she is within 20 m of that gate and moving toward it.
+**Prediction:** the cube past the square beyond a gate she is heading for has its terrain and ground made early once
+she is within 20 m of that gate and moving toward it.
 
 ### 5.2 The streaming manager
 
@@ -155,9 +170,10 @@ the player code nor the generator knows about loading.
   side and another on the other, does nothing).
 - **Requests:** missing terrain, stocking and meshes go to one worker queue, ordered by need: a dive under way, then
   the cube ahead, then Preloaded, then Preview, then prediction. A request whose cube is no longer wanted is cancelled.
-- **Applying:** finished work is put into the scene on the main thread under a budget of 2 ms a frame: at most one
-  chunk mesh uploaded and 24 nodes shown or hidden a frame *(tune)*. The simulation does its own collision against
-  the heightfield, so there is no physics world to change and collision is ready the moment terrain is.
+- **Applying:** a cube's meshes are made on the worker too (a mesh resource may be made off the main thread), so
+  the main thread only hangs them on nodes from a pool, under a budget of 1.5 ms a frame. The simulation does its own
+  collision against the heightfield, so there is no physics world to change and collision is ready the moment
+  terrain is.
 - **Pins:** a cube is not unloaded while anything depends on it: she is in it, a creature awake is in it, a shot or
   wave is crossing it, a boss battle uses it (the arena and the cubes at both its gates), a seal or reward animation
   is running in it. Each pin is a counted reference with a reason, shown in the debug overlay.
@@ -168,9 +184,10 @@ the player code nor the generator knows about loading.
 `PlaneWorld` takes one `LevelMap` today and many of its parts index a square from (0, 0): collision, the nav grid,
 fog of war, the corruption field, the sun map. The change:
 
-- **`IReefField`**: `Height(p)`, `Blocked(p)`, `Clear(p, r)`, `Void(p)`, in global metres. The cube world answers
-  from a 3 × 3 table of loaded cubes (two integer divisions and an array read); a classic level answers from its one
-  map, so sub-levels (havens, leak caves, labyrinths) keep working unchanged.
+- **`IReefField`**: `HeightAt(p)`, `IsOpen(p)`, `Gradient(p)`, in global metres, with `ReefCollision` for bodies
+  against it. The cube world (`CubeField`) answers from a 3 × 3 table of squares, each holding its loaded cube (two
+  integer divisions and an array read); a classic level answers from its one map, so sub-levels (havens, leak caves,
+  labyrinths) keep working unchanged.
 - **Anything outside loaded terrain reads as rock.**
 - **Per-cube grids:** fog of war and corruption live in the cube (and its record), not in a level-wide array.
 - **Navigation:** the flow field to her is already rebuilt every few ticks; it becomes a 96 × 96 m grid centred on
@@ -193,11 +210,13 @@ fog of war, the corruption field, the sun map. The change:
 
 ### 5.5 Rendering without seams
 
-- **Meshes:** four 32 m chunks a cube, built off the main thread (`LevelShape.Prepare` already is). Chunk edges share
-  their rim samples and take normals from the apron.
+- **Meshes:** eight 32 m chunks a cube and its arches, built off the main thread with the level's own surface builder.
+  Chunk edges share their rim samples and take normals from the apron. Quads all in the void are left out: there the
+  layer below shows.
 - **Map textures** (fog of war, corruption, baked sun shadow) that shaders sample by world position become one
-  192 × 192 texture addressed **toroidally**: cube (X, Y) is written at tile (X mod 3, Y mod 3) and the sampler
-  wraps. When she crosses a line, only the three tiles of newly loaded cubes are rewritten; nothing scrolls.
+  256 × 256 texture addressed **toroidally**: square (X, Y) is written at tile (X mod 4, Y mod 4) and the sampler
+  wraps (four tiles a side, so a cube of two squares never wraps onto itself). When she crosses a line, only the tiles
+  of newly loaded cubes are rewritten; nothing scrolls.
 - **Flora and rocks:** one `MultiMesh` per kind per cube, filled off-thread, shown in one step.
 - **Pools:** creatures' views, pickups, particle emitters and decoration nodes are taken from and returned to pools,
   never created or freed while she swims.
@@ -247,8 +266,8 @@ pouring out of it toward her. It is a wall in effect: the push rises through the
 position is simply held, so no dash or pearl carries her through. It stays shut for as long as she is on that layer.
 
 - She can always go back one cube, never two.
-- A ring still works: (0,0) → (0,1) → (1,1) → (1,0) → (0,0) shuts three edges behind her and brings her into the
-  original (0,0), exactly as she left it (§10), through an edge she has not used.
+- A ring still works: round three or more cubes that meet about a point and back into the first shuts the edges
+  behind her and brings her into the first cube, exactly as she left it (§10), through an edge she has not used.
 - She can never be trapped: the edge she last crossed is always open, and every cube has wells.
 
 *A choice made here:* the first sketch said she may not return to "the cube before last". Read as a rule on cubes it
@@ -362,18 +381,23 @@ prompted 0.44.0's optimisation.
 
 | Work | Where | Budget |
 |---|---|---|
-| Terrain of one cube | worker | ≤ 10 ms |
-| Stocking of one cube | worker | ≤ 10 ms |
-| Chunk meshes of one cube (4) | worker | ≤ 25 ms |
-| Preview meshes of one cube | worker | ≤ 6 ms |
+| Terrain of one cube (two squares) | worker | ≤ 20 ms |
+| Stocking of one cube | worker | ≤ 20 ms |
+| Ground of one cube (8 chunks and arches, as meshes) | worker | ≤ 100 ms |
+| Simplified ground of one cube | worker | ≤ 6 ms |
 | Applying finished work | main | ≤ 2 ms a frame |
 | Stream bookkeeping | main | ≤ 0.1 ms a tick |
 | Field lookup (`IReefField`) | main | within 10% of today's `Map` read |
 
-Steady state in memory: 9 cubes of terrain and meshes in her layer, 9 preview cubes below, 9 dive masks above, at
-most 5 stocked. About 80,000 terrain samples against 12,300 for a level today, but only one cube simulated in full
-and a nav grid smaller than now. Measured so far: a cube's terrain takes 9.5 ms on one thread (best of three rounds
-of 32 cubes).
+Steady state in memory: the cubes of the 3 × 3 squares round her (five to seven cubes) with terrain and ground, as
+many below with a simplified ground, as many above as terrain only, at most seven stocked. Only one cube is simulated
+in full, and the nav grid is smaller than a level's today.
+
+Measured so far (one thread for the terrain; the scene on an RTX 3090): a cube's terrain 21 ms, its ground 72 ms
+(110 ms at most), its simplified ground 1.4 ms; the stream's bookkeeping 18 µs a frame. Swimming a ring of ten cubes
+for 90 s: 3.3 ms a frame on average, 6.1 ms at worst, none over 20 ms; showing a cube's meshes 2.3–2.5 ms at worst in
+a frame; a cube in view undrawn for 0.14 s at most. (Measured with vsync off: Windows paces a window behind another
+down to about 13 frames a second, which reads as 79 ms frames whatever the scene does.)
 
 How it stays cheap, in one list: nothing generated on the main thread; no retries; two-stage generation; preview at
 a quarter of the triangles; pooled nodes; `MultiMesh` flora; toroidal map textures; creatures asleep by distance; an
@@ -387,7 +411,8 @@ On its own branch, `inkdeep-cubes`, forked from `m6-redefine`; nothing merges ba
 
 ### 14.1 Scope
 
-- A 3 × 3 footprint, three layers. Shelves, arches, wells, closed edges, the footprint's rim.
+- A footprint of 5 × 5 squares (the herringbone's cubes wholly inside it), three layers. Shelves, arches, wells,
+  closed edges, the reef's rim.
 - Clementine, her light, her movement and collision, the camera. The debug overlay.
 - Streaming with all four states, the layer below shown, diving and climbing with the camera move, the cooldown and
   the no-chain rule, the frontier drift and the wake current.
@@ -401,12 +426,12 @@ movement and collision are first moved behind `IReefField` so both worlds share 
 
 | # | Step | Done when |
 |---|---|---|
-| 1 | `CubeCoord`, the ids, `ReefHash`, `EdgeSpec`, `CornerSpec`, `FloorSpec` (`src/Core/Gen/Cubes`) | Done: determinism and gate tests pass. |
+| 1 | `CellCoord`, `CubeId` (the herringbone), the edge, corner and floor ids, `ReefHash`, `EdgeSpec`, `CornerSpec`, `FloorSpec` (`src/Core/Gen/Cubes`) | Done: determinism, herringbone and gate tests pass. |
 | 2 | Shared walls and throats, the cube's own carving, bays, shelves, arches, void, apron: `CubeTerrain.Make(space, coord)` | Done: seam, connectivity and well tests pass (`CubeTerrainTests`); terrain within budget. |
-| 3 | A picture of a 3 × 3 × 3 block (one sheet a layer), drawn by `CubeTerrainTests` when `CUBE_SHEET` names a folder | Done. |
+| 3 | A picture of a reef of 6 × 6 squares, three layers (one sheet a layer), drawn by `CubeTerrainTests` when `CUBE_SHEET` names a folder | Done. |
 | 4 | `IReefField` and `ReefCollision` (`src/Core/Gen`); her stroke and her move against what blocks her in `BodyMotion`, shared by `PlaneWorld` and the prototype's `CubeWorld`; `CubeField`, the window of cubes round her | Done (`CubeWorldTests`): through a gate her speed and step hold to 0.1% across the cube line; a long swim over five cubes is the same tick for tick with a 3 × 3 window moving with her as with every cube held. |
 | 5 | `ReefStream`: wants, queue, states, pins, unload delay; `TaskCubeWorker` on the thread pool | Done (`ReefStreamTests`, with a worker the test runs by hand and with the thread pool's): her cube's work first, terrain before what is built on it, two jobs out at a time; crossing a line back and forth lets nothing go; what she leaves goes after 3 s, pinned cubes not; work no longer wanted given up; the layer left kept as masks while she may climb; the bookkeeping 25 µs a frame. |
-| 6 | `ReefStreamView`: per-chunk shapes, pooled chunk views, toroidal textures, frame budget | Swimming a ring shows no seam and no frame over budget. |
+| 6 | `CubeMain` (`--cubes`): Clementine, her light and the camera, the game's own views; `CubeShapes` (a cube's ground and simplified ground, as meshes, on the worker); `ReefStreamView` (pooled nodes, a time budget a frame) | Done: a 90 s swim round a ring of ten cubes (`--cube-route --cube-perf=90`) shows no seam, no missing cube in view, and no frame over 20 ms (§13). The toroidal map textures wait for fog of war (step 9). |
 | 7 | The layer below: preview meshes, depth fog, murk | She sees one layer down everywhere there is void, nothing below it. |
 | 8 | Diving and climbing: the mask, prompt, cooldown, no-chain rule, camera move, layer swap | Down two layers and back up one with no loading and no frame over budget. |
 | 9 | Frontier drift and wake current, with records for claims, fog and shut edges | Ring and wake-current tests pass; the drift reads in play. |
