@@ -62,6 +62,7 @@ public partial class TopDownMain : Node3D
     readonly List<float> _holeOpen = new();
     AbyssView _abyss = null!;
     VaseView _vases = null!;
+    VaultView _bubbleVaults = null!;
     /// <summary>Achievements: their data, what earns them on this run, and the banner that announces them (§8).</summary>
     AchievementCatalog? _achievementData;
     PlaneAchievements _achievements = null!;
@@ -226,7 +227,6 @@ public partial class TopDownMain : Node3D
     InkVapour _vapour = null!;
     /// <summary>Her health last frame: a rise is corruption cleared, which steams off her.</summary>
     float _lastHp = -1f;
-    CleanseMeter _cleanse = null!;
     /// <summary>The HUD's root: its parts laid out on a 1080-line screen, scaled to the window.</summary>
     Control _hudRoot = null!;
     /// <summary>
@@ -457,6 +457,8 @@ public partial class TopDownMain : Node3D
         AddChild(_abyss);
         _vases = new VaseView();
         AddChild(_vases);
+        _bubbleVaults = new VaultView();
+        AddChild(_bubbleVaults);
         _boss = new BossView();
         AddChild(_boss);
         _puffers = new PufferlingView();
@@ -1133,8 +1135,6 @@ public partial class TopDownMain : Node3D
         _hudRoot.AddChild(_hud);
         _arrows = new EdgeArrows();
         _hudRoot.AddChild(_arrows);
-        _cleanse = new CleanseMeter { Visible = false };
-        _hudRoot.AddChild(_cleanse);
         // Tab: the whole level on one sheet (wall edges, fog, places only once spotted).
         _fullMap = new TopoMap
         {
@@ -1622,6 +1622,7 @@ public partial class TopDownMain : Node3D
             if (forced == CurseReward.Pearl) _world.Pearls.Add(new PlanePearl { ItemId = PlaneRun.PortedPearls[0], Position = den.End, Placed = true });
         }
         EnterShowcase();
+        DebugVault();
         if (_dbgChargeStones)
             foreach (var crystal in _world.ChargeStones) crystal.Charge = ChargeStoneTuning.MaxGlow;
         _achievements.EnterLevel();
@@ -1644,6 +1645,7 @@ public partial class TopDownMain : Node3D
         _kelp.Build(map, LookOf(map));
         _abyss.Build(map, LookOf(map));
         _vases.Show(_world);
+        _bubbleVaults.Show(_world);
         _puffers.Show(_world);
         _reefFish.Show(_world);
         _curseDen.Show(_world);
@@ -1993,7 +1995,6 @@ public partial class TopDownMain : Node3D
             _world.Leaks[0].Since = 0f;
         }
         _springs.Sync(dt, _camera.Camera, Focus(alpha) with { Y = LevelMap.SwimBand });
-        _cleanse.Track(_world, dt);
         FillSprings(_fullMap, _world);
     }
 
@@ -2682,6 +2683,22 @@ public partial class TopDownMain : Node3D
                     _haptics.Pulse(0.3f + 0.15f * k, 0.15f + 0.1f * k, 0.1f);
                 }
                 else if (e.Type == PlaneEventType.ShieldBlocked) _bell.ShieldRipple();
+                // A bubble vault pops: a ripple of hot air with a flash at its heart, its sound, and what it held flying out.
+                else if (e.Type == PlaneEventType.VaultPopped)
+                {
+                    _combat.Shockwave(e.Position, 2.6f, 0.42f);
+                    _combat.LightBurst(e.Position, 0.8f);
+                    _camera.AddBlur(e.Position, 1.4f);
+                    _sfx.PlayBubble();
+                    _haptics.Pulse(0.3f, 0.25f, 0.12f);
+                }
+                // Its prank: a blow that knocks her back.
+                else if (e.Type == PlaneEventType.VaultPrank)
+                {
+                    _camera.Shake(0.35f);
+                    _haptics.Pulse(0.6f, 0.7f, 0.25f);
+                    Say("A prank! The bubble held only a gust");
+                }
                 else if (e.Type == PlaneEventType.VaseHit) _vases.Hit(_world, e.Position, e.Direction);
                 else if (e.Type == PlaneEventType.VaseBroken)
                 {
@@ -2789,6 +2806,7 @@ public partial class TopDownMain : Node3D
         Guard("currents", () => _currents.Sync(_world, dt, _camera));
         Guard("abyss", () => _abyss.Sync(_world, dt));
         Guard("vases", () => _vases.Sync(dt));
+        Guard("bubble vaults", () => _bubbleVaults.Sync(_world, dt));
         Guard("pufferlings", () => _puffers.Sync(_world, dt));
         Guard("reef fish", () => _reefFish.Sync(_world, dt));
         Guard("corruption", () => SyncCorruption(dt, alpha));
@@ -2889,8 +2907,6 @@ public partial class TopDownMain : Node3D
         if (_dark.Amount < 0.5f) _fog.Reveal(p.Position, RevealRadius * (1f + 0.5f * (glow - 1f)), RevealSoft);
         // Brass Compass: every place on both maps (secret rooms stay hidden).
         _fullMap.Landmarks = _world.Run.Loadout.Flags.Contains("landmarks");
-        // The dive's look: no cleanse meter (the gonad gauge says it).
-        _cleanse.Visible = !HudView.DiveLook(_world);
         // A place she swims into is visited (the Tab map names it from then on).
         var inside = _map.Pois.Where(poi => System.Numerics.Vector2.Distance(poi.Position, p.Position) <= poi.Radius + 1.5f)
             .OrderBy(poi => System.Numerics.Vector2.Distance(poi.Position, p.Position)).FirstOrDefault();
@@ -3798,6 +3814,9 @@ public partial class TopDownMain : Node3D
     PlaneInput ReadInput()
     {
         var input = new PlaneInput();
+        // Verification (--dbg-vault=…): after a second and a half, her beam held on the vault laid by her.
+        if (_dbgVaultAt is { } vault && _levelTime > 1.5f && _world.Vaults.Exists(v => !v.Popped))
+            return new PlaneInput { Aim = System.Numerics.Vector2.Normalize(vault - _world.Player.Position), Beam = true };
         // Verification (--at=gate): she stops once the battle has begun, just inside, the way in behind her.
         if (_dbgGate && _world.BossBattle) _dbgSteer = null;
         // Verification (--dbg-free=seconds): the boss is freed that long after it lands.

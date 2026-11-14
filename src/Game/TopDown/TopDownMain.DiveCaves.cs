@@ -52,7 +52,7 @@ public partial class TopDownMain
     /// <summary>Verification (--dbg-mazeout=seconds): that long into a labyrinth, she gives it up.</summary>
     float _dbgMazeOut;
     /// <summary>A labyrinth's reward is all taken (its shells and its pearl).</summary>
-    bool LabyrinthEmptied => _world.Shells.Count == 0 && _world.Pearls.Count == 0;
+    bool LabyrinthEmptied => _world.Shells.Count == 0 && _world.Pearls.Count == 0 && _world.Vaults.TrueForAll(v => v.Popped);
 
     /// <summary>Verification (--dbg-caveback=seconds): that long into a cave, she is taken back out of it.</summary>
     float _dbgCaveBack;

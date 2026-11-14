@@ -243,7 +243,7 @@ public sealed partial class PlaneWorld
     }
 
     /// <summary>Its reward taken (every shell and pearl at its heart gathered): a labyrinth is solved, and its way home runs.</summary>
-    public bool LabyrinthSolved => Map.Labyrinth && Shells.Count == 0 && Pearls.Count == 0;
+    public bool LabyrinthSolved => Map.Labyrinth && Shells.Count == 0 && Pearls.Count == 0 && Vaults.TrueForAll(v => v.Popped);
 
     /// <summary>
     /// A labyrinth's way home (docs/DIVE.md §6.1): a current from its heart along its passages to its way out and through

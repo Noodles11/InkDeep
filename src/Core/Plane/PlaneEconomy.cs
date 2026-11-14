@@ -31,7 +31,7 @@ public static class PlaneEconomyTuning
     public const float HealthAmount = 25f;
     public const float PearlOffered = 0.5f;
     /// <summary>The shop's stand slots, left to right: the pearl, the heart, and a third kept for wares to come.</summary>
-    public const int PearlSlot = 0, HeartSlot = 1, Slots = 3;
+    public const int PearlSlot = 0, HeartSlot = 1, VaultSlot = 2, Slots = 3;
     /// <summary>A stand sells when she touches it.</summary>
     public const float StandReach = 0.7f;
 }
@@ -53,7 +53,8 @@ public sealed class PlaneHeart
     public bool Taken;
 }
 
-public enum StandKind { Pearl, Health, Deal }
+/// <summary>A stand's ware: a pearl, a health top-up, the Crab Deal, or a bubble vault with a prize unknown till it pops.</summary>
+public enum StandKind { Pearl, Health, Deal, Vault }
 
 /// <summary>Something for sale in the shop: touch it with enough shells to buy it.</summary>
 public sealed class ShopStand
@@ -111,13 +112,14 @@ public sealed partial class PlaneWorld
             var poi = Map.Pois[pi];
             // A secret room's reward lies at its labyrinth's heart (a level of its own), not on the reef.
             if (poi.Kind == PoiKind.Secret && !Map.Labyrinth) continue;
+            // (Its reward is packed in a bubble vault at its heart: her light pops it.)
             if (poi.Kind == PoiKind.Secret && SecretHoldsPearl(Map.Seed, Map.Depth, Map.Level, Map.Attempt, pi))
             {
                 var offer = PlaneRun.PortedPearls.Where(id => Run.CanOffer(id) && Pearls.All(q => q.ItemId != id)).ToList();
                 if (offer.Count > 0)
                 {
                     var pick = new Rng(SecretSeed(Map.Seed, Map.Depth, Map.Level, Map.Attempt, pi) ^ 0x9E37UL);
-                    Pearls.Add(new PlanePearl { ItemId = Run.Pick(offer, pick), Position = poi.Position });
+                    Vaults.Add(new PlaneVault { Position = poi.Position, Prize = VaultPrize.Pearl, ItemId = Run.Pick(offer, pick), Seed = pi * 7.1f });
                     continue;
                 }
             }
@@ -130,6 +132,11 @@ public sealed partial class PlaneWorld
             int count = min + (max > min ? _drops.Int(max - min + 1) : 0);
             // Pirate's Doubloon: shell caches hold half as many again.
             if (poi.Kind == PoiKind.ShellCache && Run.Loadout.Flags.Contains("richCaches")) count = (int)MathF.Round(count * PlaneEconomyTuning.RichCaches);
+            if (poi.Kind == PoiKind.Secret)
+            {
+                Vaults.Add(new PlaneVault { Position = poi.Position, Prize = VaultPrize.Shells, Shells = count, Seed = pi * 7.1f });
+                continue;
+            }
             for (int i = 0; i < count; i++)
             {
                 float a = _drops.Range(0f, MathF.Tau), r = _drops.Range(0.8f, MathF.Min(3f, poi.Radius - 1f));
@@ -155,6 +162,7 @@ public sealed partial class PlaneWorld
         if (offer.Count > 0 && rng.NextFloat() < PlaneEconomyTuning.PearlOffered)
             Stands.Add(new ShopStand { Kind = StandKind.Pearl, ItemId = Run.Pick(offer, rng), Price = PlaneEconomyTuning.PearlPrice, Position = Slot(PlaneEconomyTuning.PearlSlot) });
         Stands.Add(new ShopStand { Kind = StandKind.Health, Price = PlaneEconomyTuning.HealthPrice, Position = Slot(PlaneEconomyTuning.HeartSlot) });
+        Stands.Add(new ShopStand { Kind = StandKind.Vault, Price = VaultTuning.Price, Position = Slot(PlaneEconomyTuning.VaultSlot) });
     }
 
     /// <summary>A defeated mob leaves shells, flung a little way.</summary>
@@ -242,6 +250,8 @@ public sealed partial class PlaneWorld
             Stats.ShellsSpent += stand.Price;
             stand.Sold = true;
             if (stand.Kind == StandKind.Health) p.Hp = MathF.Min(p.Hp + PlaneEconomyTuning.HealthAmount, Run.MaxHp);
+            // A bought vault floats where it stood, its prize unknown till her light pops it.
+            else if (stand.Kind == StandKind.Vault) Vaults.Add(ShopVault(stand.Position));
             // A bought pearl begins its ritual by her, like a found one.
             else
             {

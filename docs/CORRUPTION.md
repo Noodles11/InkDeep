@@ -9,7 +9,7 @@ How Ink Deep's corruption, its enemies and the boss arena are built. The design 
 Implementation Instruction". The simulation is in `src/Core/Plane/PlaneCorruption.cs` (the field, its tuning and
 `PlaneOptions`) and `src/Core/Plane/PlaneBlight.cs` (Blightroots, murklings, the arena). The
 presentation is in `src/Game/TopDown/BlightView.cs`, `CorruptionView.cs` (the field's
-texture) and `CleanseMeter.cs`, and in the shaders
+texture), and in the shaders
 named below. The pufferling enemies are retracted (`PlaneOptions.Pufferlings = false`): none are placed. The healthy fish still swim the reef, and the murklings hunt them (see Lesser
 murklings).
 
@@ -616,9 +616,8 @@ pops out in a quick swell, a third to two thirds of a second after it appeared.
   own lantern.
 - Other shaders:
   - `ink_ring.gdshader`: pulses, buds, bursts.
-- **HUD** (`CleanseMeter`): a slim bar under the minimap, the level cleansed, its 50% and 75% tipping points notched;
-  captioned only while it moves. Inside the boss's arena a second bar, the arena's, notched at the Crack's 60%. The
-  crust's pips are on the boss's own bar.
+- **HUD:** no bar for how much is cleansed (its tipping points still hold in the sim); the boss's crust's pips are on
+  the boss's own bar.
 - **Maps:** they show neither the corruption nor any corrupted creature; only the light springs, of its works.
 
 ## Not yet

@@ -79,8 +79,12 @@ public class LabyrinthTests
         var map = Labyrinth(3);
         var w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), new PlaneOptions { Adventure = true });
         var heart = map.Pois.Single(p => p.Kind == PoiKind.Secret).Position;
-        Assert.True(w.Shells.Count >= PlaneEconomyTuning.SecretMin || w.Pearls.Count == 1);
-        Assert.All(w.Shells, s => Assert.True(Vector2.Distance(s.Position, heart) < LabyrinthTuning.HeartRadius));
+        // Its reward packed in a bubble vault at its heart.
+        var vault = Assert.Single(w.Vaults);
+        Assert.Equal(heart, vault.Position);
+        Assert.True(vault.Prize == VaultPrize.Pearl || vault.Shells >= PlaneEconomyTuning.SecretMin);
+        Assert.Empty(w.Shells);
+        Assert.Empty(w.Pearls);
         Assert.Equal(0f, Vector2.Distance(w.Player.Position, map.Way!.Value.Inside), 3);
         for (int i = 0; i < 30 * PlaneWorld.TickRate; i++) w.Step(default);
         Assert.Empty(w.Murklings);
@@ -117,6 +121,8 @@ public class LabyrinthTests
         Assert.True(Vector2.Distance(w.Player.Position, mid) < 1f);
         w.Player.Position = w.Player.PrevPosition = heart;
         // Its reward taken, it carries her, without a stroke, out to its way.
+        Assert.False(w.LabyrinthSolved);
+        foreach (var v in w.Vaults) v.Popped = true;
         w.Shells.Clear();
         w.Pearls.Clear();
         Assert.True(w.LabyrinthSolved);

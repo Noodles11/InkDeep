@@ -301,6 +301,8 @@ public partial class CombatView : Node3D
                 });
                 node.AddChild(new OmniLight3D { LightColor = b.Lerp(Colors.White, 0.3f), LightEnergy = WorldPearlLight, OmniRange = WorldPearlReach, ShadowEnabled = false });
             }
+            // A bubble vault, its prize unknown till her light pops it.
+            else if (stand.Kind == StandKind.Vault) node.AddChild(VaultView.Bubble(stand.Position.X * 0.37f));
             else
             {
                 // The top-up: the very light orb the creatures leave, a little larger on its stand.

@@ -22,6 +22,8 @@ public partial class Sfx : Node
     const int Pops = 10;
     const string StrikePath = "res://audio/sfx/squishpop.mp3";
 
+    /// <summary>A bubble vault popping.</summary>
+    const string BubblePath = "res://audio/sfx/big_bubble.mp3";
     const string SecretPath = "res://audio/sfx/secret.wav", GatherPath = "res://audio/sfx/gather.wav", FirePath = "res://audio/sfx/fire.ogg";
     static readonly string[] GatherVariants = { "res://audio/sfx/gather2.ogg", "res://audio/sfx/gather3.ogg" };
     /// <summary>Gathers no closer together than this (s): a handful of shells at once is one gather, not a pile of them.</summary>
@@ -29,7 +31,7 @@ public partial class Sfx : Node
     /// <summary>The beam's fire: its loudness at full (dB), and how fast it swells in and dies away (per second, of its 0..1).</summary>
     const float FireDb = -6f, FireIn = 6f, FireOut = 3f;
 
-    AudioStream? _secret, _gather, _fire;
+    AudioStream? _secret, _gather, _fire, _bubble;
     readonly List<AudioStream> _gathers = new();
     AudioStreamPlayer? _firePlayer;
     float _fireOn;
@@ -67,6 +69,7 @@ public partial class Sfx : Node
         }
         _strike = ResourceLoader.Exists(StrikePath) ? GD.Load<AudioStream>(StrikePath) : null;
         _secret = ResourceLoader.Exists(SecretPath) ? GD.Load<AudioStream>(SecretPath) : null;
+        _bubble = ResourceLoader.Exists(BubblePath) ? GD.Load<AudioStream>(BubblePath) : null;
         _gather = ResourceLoader.Exists(GatherPath) ? GD.Load<AudioStream>(GatherPath) : null;
         foreach (string path in GatherVariants)
             if (ResourceLoader.Exists(path)) _gathers.Add(GD.Load<AudioStream>(path));
@@ -198,6 +201,12 @@ public partial class Sfx : Node
     {
         if (OnlyToggle) return;
         if (_strike is not null) PlayRecorded(_strike, volumeDb, 0.9f + (float)_random.NextDouble() * 0.2f);
+    }
+
+    /// <summary>A bubble vault pops: a big bubble, a touch apart in pitch each time.</summary>
+    public void PlayBubble(float volumeDb = -2f)
+    {
+        if (_bubble is not null) PlayRecorded(_bubble, volumeDb, 0.92f + (float)_random.NextDouble() * 0.16f);
     }
 
     /// <summary>A sealed wall unlocks (its seal opened).</summary>

@@ -48,6 +48,27 @@ public partial class TopDownMain
         }
     }
 
+    /// <summary>Verification (--dbg-vault=shells|orb|prank): a bubble vault of that prize 4 m from her, where she sees it.</summary>
+    string? _dbgVault = System.Linq.Enumerable.FirstOrDefault(OS.GetCmdlineUserArgs(), a => a.StartsWith("--dbg-vault="))?["--dbg-vault=".Length..];
+    System.Numerics.Vector2? _dbgVaultAt;
+
+    void DebugVault()
+    {
+        if (_dbgVault is not { } kind || InDiveCave) return;
+        var prize = kind switch { "orb" => VaultPrize.Orb, "prank" => VaultPrize.Prank, _ => VaultPrize.Shells };
+        var her = _world.Player.Position;
+        for (int k = 0; k < 32; k++)
+        {
+            float a = -Mathf.Pi / 2f + k * Mathf.Tau / 32f;
+            var at = her + new System.Numerics.Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 4f;
+            if (!_world.Clear(at, VaultTuning.Radius) || !_world.LineOfSight(her, at)) continue;
+            _world.Vaults.Add(new PlaneVault { Position = at, Prize = prize, Shells = 10, Seed = 3.3f });
+            _dbgVaultAt = at;
+            _dbgVault = null;
+            return;
+        }
+    }
+
     /// <summary>Copies the world's light springs onto the Tab map (it shows no enemies and no corruption), and the main current once it runs.</summary>
     static void FillSprings(TopoMap map, PlaneWorld world)
     {

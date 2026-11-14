@@ -26,7 +26,7 @@ public partial class RequestRibbons : Control
         SetAnchorsPreset(LayoutPreset.TopRight);
         OffsetLeft = -Width - 18f;
         OffsetRight = -18f;
-        OffsetTop = 18f + 220f + 82f;
+        OffsetTop = 18f;
         OffsetBottom = OffsetTop + RowHeight * 2f + 8f;
     }
 

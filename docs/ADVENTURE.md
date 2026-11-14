@@ -189,8 +189,7 @@ the seabed, a store of healing she may come back to, too bright for any murkling
      spend.
   Beside the bell **her shells** (the shell and its count — shown only once she has collected at least one).
 - **Maps:** the whole level's map (Tab / Select) hidden unless she has absorbed **Sea Chart Nautilus** ("Remembers every current"), which she starts every run with for now. There is no minimap: the arrows at the screen's edges point to the places round her (DESIGN-TOPDOWN §9).
-  Never an experience ring or health bezel round it: a thin outline and the north mark only. The cleansing meter is
-  gone.
+  The cleansing meter is gone.
   The whole level's map is cut out of its square along the level's outline — all its water and a few metres of rock
   round it, seen or not (the unseen under fog) — its edges fading softly into a dimming of the game, framed as large as
   it fits; no legend. Over it, the level's

@@ -1154,7 +1154,7 @@ The FP staging ("look up through the surface") is replaced:
 
 ## 9. UI
 
-- **HUD** (`HudView`, `EdgeArrows`, `CleanseMeter`): minimal — top left her gonad gauge (health, the active pearl's
+- **HUD** (`HudView`, `EdgeArrows`): minimal — top left her gonad gauge (health, the active pearl's
   charge, experience) and her shells, the screen's edges the arrows to the places round her, and the top centre empty
   at rest, for what comes and goes. Health and the active pearl's charge are
   diegetic on the bell (§2.5: gonad rings and rim), bubble orbs under it; no numbers for any of them on the HUD. One
@@ -1189,9 +1189,6 @@ The FP staging ("look up through the surface") is replaced:
   secret pale, the boss's arena violet, a sub-level's way out white, what her requests name in theirs) stands on the
   edge between the screen's middle and the place, pointing at it; a place on the screen has none. As she dives, climbs
   or rides into a place, they slide out past the edges; once she has settled, the new place's slide in from outside.
-- **The cleanse bar** (`CleanseMeter`, docs/CORRUPTION.md; off on the dive's reefs) runs top right, 220 wide: slim, gold over
-  ink, its tipping points notched. No caption at rest; while it moves, "Reef 34%" shows beside it and fades 1.6 s
-  after it settles. Inside a boss's arena a second bar under it, the arena's, captioned the same way.
 - **Pause menu** (`PauseMenu`; Esc or Start): the sea and the clock are held, and she still moves in place. A drawer
   slides in from the right over the reef (0.35 s) as the camera closes in on her (to a third of its distance, 0.5 s) and
   looks past her, so she sits 30% across the screen; closing, both ease back (0.35 s) and play goes on. Its top gives

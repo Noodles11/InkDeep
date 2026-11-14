@@ -43,7 +43,7 @@ public class PlaneEconomyTests
             if (PlaneWorld.SecretHoldsPearl((ulong)i * 7919UL + 13UL, 1 + i % 6, 1 + i % 5, 0, i % 9)) pearls++;
         Assert.InRange(pearls / 4000f, PlaneEconomyTuning.SecretPearl - 0.02f, PlaneEconomyTuning.SecretPearl + 0.02f);
 
-        // Where it does, the secret room (its labyrinth's heart) holds one pearl in its middle and no shells; else its shells.
+        // Where it does, the secret room (its labyrinth's heart) holds a bubble vault with the pearl in it; else with its shells.
         int checkedRooms = 0;
         for (int level = 1; level <= 30; level++)
         {
@@ -55,13 +55,9 @@ public class PlaneEconomyTests
                 if (poi.Kind != PoiKind.Secret) continue;
                 checkedRooms++;
                 bool pearl = PlaneWorld.SecretHoldsPearl(w.Map.Seed, w.Map.Depth, w.Map.Level, w.Map.Attempt, pi);
-                int shells = w.Shells.Count(s => Vector2.Distance(s.Position, poi.Position) < poi.Radius);
-                if (pearl)
-                {
-                    Assert.Contains(w.Pearls, q => q.Position == poi.Position);
-                    Assert.Equal(0, shells);
-                }
-                else Assert.True(shells >= PlaneEconomyTuning.SecretMin, $"{shells} shells");
+                var vault = Assert.Single(w.Vaults, v => v.Position == poi.Position);
+                if (pearl) Assert.Equal(VaultPrize.Pearl, vault.Prize);
+                else Assert.True(vault.Prize == VaultPrize.Shells && vault.Shells >= PlaneEconomyTuning.SecretMin, $"{vault.Shells} shells");
             }
         }
         Assert.True(checkedRooms > 0);

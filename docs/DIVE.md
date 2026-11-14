@@ -128,8 +128,9 @@ A secret room is a sub-level too: a cube she claims opens one time in three, its
   (`LookDepth`). Its way in and out is cut in its entrance cell's outer wall, going the way she swam into the mouth.
 - **Reliable:** the maze is whole by construction; each attempt is checked whole (the heart swum to from the way in)
   and another attempt made if the walls' wavering pinched a passage shut.
-- **Its reward lies at its heart:** the secret's shells, or now and then a pearl instead (`PlaneWorld.PlaceShells`,
-  `SecretPearl`). Nothing lives in it: no murklings, fish, leaks or springs, and its water does not harm her.
+- **Its reward lies at its heart,** packed in a bubble vault (GAME §5): the secret's shells, or now and then a pearl
+  instead (`PlaneWorld.PlaceShells`, `SecretPearl`); her light pops it. It is solved once the vault is popped and its
+  reward taken. Nothing lives in it: no murklings, fish, leaks or springs, and its water does not harm her.
 - **Solved, its water carries her home** (`PlaneWorld.LabyrinthSolved`, its way home: DESIGN-TOPDOWN §4.7): once its
   reward is taken, a current wakes along the way from its heart to its way out and carries her there and out of its
   mouth, back onto the reef.
