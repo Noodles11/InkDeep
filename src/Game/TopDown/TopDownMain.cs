@@ -3457,7 +3457,8 @@ public partial class TopDownMain : Node3D
             // The chart: what she can see below her, two rows more for each cartographer pearl.
             var flags = _world.Run.Loadout.Flags;
             int sight = 1 + (flags.Contains("minimap") ? 2 : 0) + (flags.Contains("landmarks") ? 2 : 0);
-            _pause.FillChart(InDiveCave || _map.Station && !_id.Haven ? null : DiveGraph.Of(_seed), _id, _reefs, sight);
+            if (_reef is not null) _pause.FillChart(ReefChart());
+            else _pause.FillChart(InDiveCave || _map.Station && !_id.Haven ? null : DiveGraph.Of(_seed), _id, _reefs, sight);
             if (_pad) _pause.FocusFirst();
             if (_pauseTab >= 0) _pause.ShowTab(_pauseTab);
         }

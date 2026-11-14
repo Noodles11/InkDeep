@@ -44,6 +44,8 @@ public partial class TopDownMain
     bool _classic, _cubeAsked;
     /// <summary>Verification (--cube-boss): every layer below the warm-up holds a boss (and --autopilot swims to its arena).</summary>
     bool _cubeBoss;
+    /// <summary>Verification (--cube-chart=seconds): that long into the run, the pause menu opens on its chart.</summary>
+    float _cubeChartAt;
     /// <summary>Verification: a haven's checkpoint also written to this file (--cube-save=), and a dive taken up from one (--cube-resume=).</summary>
     string? _cubeSaveTo, _cubeResumeFrom;
 
@@ -86,6 +88,7 @@ public partial class TopDownMain
         if (arg == "--classic") _classic = true;
         else if (arg == "--cube-reef") _cubeAsked = true;
         else if (arg == "--cube-boss") _cubeBoss = true;
+        else if (arg.StartsWith("--cube-chart=") && float.TryParse(arg["--cube-chart=".Length..], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float chartAt)) _cubeChartAt = chartAt;
         else if (arg.StartsWith("--cube-save=")) _cubeSaveTo = arg["--cube-save=".Length..];
         else if (arg.StartsWith("--cube-resume=")) _cubeResumeFrom = arg["--cube-resume=".Length..];
         else if (arg.StartsWith("--cube-footprint=") && int.TryParse(arg["--cube-footprint=".Length..], out int f)) _cubeFootprint = Math.Clamp(f, 2, CubeTuning.Footprint);
@@ -276,6 +279,12 @@ public partial class TopDownMain
     void StepReef(float dt)
     {
         TakeMade();
+        if (_cubeChartAt > 0f && _elapsed > _cubeChartAt)
+        {
+            _cubeChartAt = 0f;
+            _pauseTab = PauseMenu.ChartTab;
+            CallDeferred(MethodName.TogglePause);
+        }
         if (_world.Boss?.Freed == true) _bossFreed.Add(_layer);
         var p = _world.Player;
         _stream.Update(ReefFocus(p), dt);
@@ -538,6 +547,25 @@ public partial class TopDownMain
         _driftStreaks.Visible = false;
         foreach (var s in _wakeStreaks) s.Visible = false;
         if (!InReef) _hud.LayerPrompt = null;
+    }
+
+    /// <summary>
+    /// The pause menu's chart of her layer: its claimed cubes and what they hold, the cubes beside them (seen from them),
+    /// the arena once she has seen it, the shut edges, and where she is (in a place behind a mouth: at its mouth).
+    /// </summary>
+    ChartView.ReefChart ReefChart()
+    {
+        var space = _reef!.Space;
+        var claimed = Here.Claimed;
+        var beside = new HashSet<CubeId>();
+        foreach (var cube in claimed.Keys)
+            foreach (var (edge, _, across) in cube.Outer())
+                if (space.Edge(edge).Open && space.Inside(CubeId.Of(across)) && !claimed.ContainsKey(CubeId.Of(across))) beside.Add(CubeId.Of(across));
+        var cubes = new List<(CubeId, bool, bool, IReadOnlyList<PoiKind>)>();
+        foreach (var (cube, record) in claimed) cubes.Add((cube, true, _reef.IsArena(cube), record.Places.Select(p => p.Kind).ToList()));
+        foreach (var cube in beside) cubes.Add((cube, false, false, Array.Empty<PoiKind>()));
+        var her = InReef ? _world.Player.Position : _caveMouth >= 0 && _layerMaps.TryGetValue(_layer, out var layer) && _caveMouth < layer.Mouths.Count ? layer.Mouths[_caveMouth].At : _reef.Start;
+        return new ChartView.ReefChart(space.Footprint, _layer, _cubeDiving.Deepest, cubes, Here.Shut.ToList(), her);
     }
 
     /// <summary>A cube claimed: the places the director grants it, each in one of its sockets (CUBE-WORLD-PLAN §9).</summary>

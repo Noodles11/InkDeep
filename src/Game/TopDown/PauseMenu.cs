@@ -57,7 +57,7 @@ public partial class PauseMenu : Control
     const float Width = 640f, SlideSeconds = OctoShoots.Game.Ui.DrawerStyle.SlideSeconds;
     /// <summary>The right stick scrolls the list (pixels a second, pushed all the way).</summary>
     const float ScrollSpeed = 900f;
-    const int LevelTab = 0, StatTab = 1, RequestTab = 4, ChartTab = 5, Tabs = 6;
+    internal const int LevelTab = 0, StatTab = 1, RequestTab = 4, ChartTab = 5, Tabs = 6;
 
     static readonly Color Gold = OctoShoots.Game.Ui.DrawerStyle.Gold;
     static readonly Color Soft = OctoShoots.Game.Ui.DrawerStyle.Soft;
@@ -390,6 +390,13 @@ public partial class PauseMenu : Control
     {
         _tabs[ChartTab].Visible = graph is not null;
         if (graph is not null) _chart.Show(graph, at, visited, sight);
+    }
+
+    /// <summary>The Chart tab in the cube reef: her layer's claimed cubes (ChartView.ReefChart).</summary>
+    public void FillChart(ChartView.ReefChart chart)
+    {
+        _tabs[ChartTab].Visible = true;
+        _chart.Show(chart);
     }
 
     public void FillRequests(IReadOnlyList<FanMenu.Entry> carried, bool ribbons, bool reef)
