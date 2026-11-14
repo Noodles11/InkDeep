@@ -130,6 +130,7 @@ public partial class CubeMain : Node3D
         layer.AddChild(_overlay);
         ApplyLook(look);
         BuildLayers(_cooldown);
+        BuildCurrents(start);
         if (_autoDives) PlanDives();
         if (_route) PlanRoute(start);
         if (OS.GetCmdlineUserArgs().Contains("--cube-nodes")) GetTree().CreateTimer(2.0).Timeout += ListProcessing;
@@ -213,10 +214,12 @@ public partial class CubeMain : Node3D
             if (!_ready) _accumulator = 0;
             if (_ready) StepLayers((float)delta);
             AutoSteer();
+            StepRoute();
             int steps = 0;
             while (_accumulator >= PlaneWorld.Dt && steps < 8)
             {
                 _world.Step(ReadInput());
+                StepCurrents();
                 _field.Recenter(CellCoord.Of(p.Position, _layer));
                 _accumulator -= PlaneWorld.Dt;
                 steps++;
@@ -234,6 +237,7 @@ public partial class CubeMain : Node3D
             _seeThrough = Mathf.MoveToward(_seeThrough, hidden ? 1f : 0f, dt * (hidden ? 4.5f : 2.2f));
             _view.SeeThrough(_bell.GlobalPosition, 4.5f, _seeThrough);
             _view.Follow(eye);
+            DrawCurrents(dt, eye);
             if (!Without("snow"))
             {
                 _snow.Her(_bell.GlobalPosition, new Vector3(p.Velocity.X, 0f, p.Velocity.Y));
@@ -344,24 +348,62 @@ public partial class CubeMain : Node3D
     /// Verification (--cube-route): a way round a ring of four cubes and back to where she began, over the water (worked
     /// out here from the whole layer's terrain, which the game itself never holds at once).
     /// </summary>
+    /// <summary>
+    /// The route's stops (a gate's mouth of each cube, in turn about the reef's middle, and back where she began), and
+    /// the leg being worked out. Each leg is found when the one before is swum, off the main thread, round the edges the
+    /// wake current holds by then; a stop she can no longer reach is passed over.
+    /// </summary>
+    readonly Queue<System.Numerics.Vector2> _stops = new();
+    Dictionary<CubeId, CubeTerrain>? _routeTerrain;
+    System.Threading.Tasks.Task<List<Vector2>?>? _leg;
+    int _legs, _legsSkipped;
+
     void PlanRoute(System.Numerics.Vector2 start)
     {
-        var made = _space.CubesOf(0).ToDictionary(c => c, c => CubeTerrain.Make(_space, c));
-        var all = new CubeField(c => made.GetValueOrDefault(c), new CellCoord(_footprint / 2, _footprint / 2, 0), _footprint);
-        var stops = new List<System.Numerics.Vector2> { start };
-        // A ring: round the cubes nearest the middle of the reef, in turn about it, and back.
+        _routeTerrain = _space.CubesOf(0).ToDictionary(c => c, c => CubeTerrain.Make(_space, c));
         var middle = new System.Numerics.Vector2(_footprint * CubeTuning.Side * 0.5f);
-        foreach (var t in made.Values.OrderBy(t => System.Numerics.Vector2.Distance(t.Cube.Middle, middle)).Take(4)
-                     .OrderBy(t => MathF.Atan2(t.Cube.Middle.Y - middle.Y, t.Cube.Middle.X - middle.X)))
-            stops.Add(t.Gates[0].Mouth);
-        stops.Add(start);
-        for (int k = 0; k + 1 < stops.Count; k++)
-            if (PathOver(all, stops[k], stops[k + 1]) is { } leg) _path.AddRange(leg);
-        GD.Print($"Cube route: {_path.Count} m over {stops.Count - 1} legs");
+        foreach (var t in _routeTerrain.Values.OrderBy(t => MathF.Atan2(t.Cube.Middle.Y - middle.Y, t.Cube.Middle.X - middle.X)))
+            _stops.Enqueue(t.Gates[0].Mouth);
+        _stops.Enqueue(start);
+        GD.Print($"Cube route: {_stops.Count} stops");
+    }
+
+    /// <summary>The next leg of the route, once the last is swum (layer 0 only).</summary>
+    void StepRoute()
+    {
+        if (!_route || _routeTerrain is null || _layer != 0) return;
+        var her = _world.Player.Position;
+        bool swum = _path.Count == 0 || _pathAt >= _path.Count - 1 && System.Numerics.Vector2.Distance(her, ToCore(_path[^1])) < 2f;
+        if (_leg is null)
+        {
+            if (!swum || _stops.Count == 0) return;
+            var to = _stops.Dequeue();
+            var shut = Here.Shut.ToList();
+            var made = _routeTerrain;
+            _leg = System.Threading.Tasks.Task.Run(() =>
+            {
+                var all = new CubeField(c => made.GetValueOrDefault(c), new CellCoord(_footprint / 2, _footprint / 2, 0), _footprint);
+                return PathOver(all, her, to, (x, y) => shut.Any(e => MathF.Abs(e.Across(new System.Numerics.Vector2(x, y))) < 1.5f
+                    && e.Along(new System.Numerics.Vector2(x, y)) is float along && along > -2f && along < CubeTuning.Side + 2f));
+            });
+            return;
+        }
+        if (!_leg.IsCompleted) return;
+        var leg = _leg.Result;
+        _leg = null;
+        if (leg is null)
+        {
+            _legsSkipped++;
+            return;
+        }
+        _legs++;
+        _path.Clear();
+        _path.AddRange(leg);
+        _pathAt = 0;
     }
 
     /// <summary>The shortest way over a layer's water that she fits along (8-way steps on the 1 m grid; null where there is none).</summary>
-    List<Vector2>? PathOver(CubeField all, System.Numerics.Vector2 from, System.Numerics.Vector2 to)
+    List<Vector2>? PathOver(CubeField all, System.Numerics.Vector2 from, System.Numerics.Vector2 to, Func<int, int, bool>? blocked = null)
     {
         int n = _footprint * CubeTuning.Side + 1;
         float clearance = _tuning.PlayerRadius + 0.3f;
@@ -370,7 +412,7 @@ public partial class CubeMain : Node3D
         var came = new Dictionary<(int, int), (int, int)> { [a] = a };
         var todo = new Queue<(int X, int Y)>();
         todo.Enqueue(a);
-        bool Free(int x, int y) => x >= 0 && y >= 0 && x < n && y < n && ReefCollision.Clear(all, new System.Numerics.Vector2(x, y), clearance);
+        bool Free(int x, int y) => x >= 0 && y >= 0 && x < n && y < n && ReefCollision.Clear(all, new System.Numerics.Vector2(x, y), clearance) && blocked?.Invoke(x, y) != true;
         while (todo.Count > 0)
         {
             var c = todo.Dequeue();
@@ -439,6 +481,9 @@ public partial class CubeMain : Node3D
             "Cube perf: {0} frames in {1:0.0} s, mean {2:0.00} ms (our frame code {12:0.00} ms + {16:0.00} ms after it, every node's process {14:0.00} ms, render CPU {15:0.00} ms, GPU {13:0.00} ms), worst {3:0.0} ms, over 20 ms: {4}; worst upload {5:0.00} ms; window moves {6}; at {7:0},{8:0} cube {9}; nodes {10} in use, {11} pooled",
             _perfFrames, _perfClock, _perfTotal / _perfFrames, _perfWorst, _perfOver, _view.WorstMs, _field.Recentres, p.X, p.Y, CubeId.Of(p, _layer), _view.InUse, _view.Pooled,
             _cpuTotal / _perfFrames, _gpuTotal / _perfFrames, _allProcessTotal / _perfFrames, _renderCpuTotal / _perfFrames, _tailMs));
+        if (_route)
+            GD.Print(string.Format(CultureInfo.InvariantCulture, "Cube perf: route: {0} legs swum, {1} stops passed over (out of reach behind the wake current), {2} left; claimed {3}, {4} edges shut",
+                _legs, _legsSkipped, _stops.Count, Here.Claims, Here.Shut.Count));
         if (_moves.Count > 0)
             GD.Print(string.Format(CultureInfo.InvariantCulture, "Cube perf: changes of layer: {0}; held for a cube {1:0.00} s in all; the worst frame during them {2:0.0} ms",
                 string.Join(", ", _moves), _heldFor, _moveWorst));
@@ -456,6 +501,7 @@ public partial class CubeMain : Node3D
         sb.Append(CultureInfo.InvariantCulture, $"cube {here}   at {p.X:0.0}, {p.Y:0.0}   window moves {_field.Recentres}\n");
         sb.Append(CultureInfo.InvariantCulture, $"jobs out {_stream.InFlight.Count}   uploads waiting {_view.Pending}   last {_view.LastMs:0.00} ms   worst {_view.WorstMs:0.00} ms\n");
         sb.Append(CultureInfo.InvariantCulture, $"nodes {_view.InUse} in use, {_view.Pooled} pooled   cubes held {_stream.Held.Count()}\n");
+        sb.Append(CultureInfo.InvariantCulture, $"layer {_layer} (deepest {_diving.Deepest})   claimed {Here.Claims}   shut edges {Here.Shut.Count}   drift {_currents.DriftAt(p).Length():0.0} m/s   last {_crossed}\n");
         foreach (int z in new[] { _layer, _layer + 1 })
         {
             sb.Append(z == _layer ? "her layer:\n" : "below:\n");
