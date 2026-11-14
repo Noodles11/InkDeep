@@ -401,8 +401,8 @@ movement and collision are first moved behind `IReefField` so both worlds share 
 |---|---|---|
 | 1 | `CubeCoord`, the ids, `ReefHash`, `EdgeSpec`, `CornerSpec`, `FloorSpec` (`src/Core/Gen/Cubes`) | Done: determinism and gate tests pass. |
 | 2 | Shared walls and throats, the cube's own carving, bays, shelves, arches, void, apron: `CubeTerrain.Make(space, coord)` | Done: seam, connectivity and well tests pass (`CubeTerrainTests`); terrain within budget. |
-| 3 | A picture of a 3 × 3 × 3 block (one sheet a layer), drawn by `CubeTerrainTests` when `CUBE_SHEET` names a folder | Drawn; awaiting approval before going on. |
-| 4 | `IReefField`; her movement and collision on it; `CubeWorld` | She swims across cube lines in a headless test with no hitch in position or speed. |
+| 3 | A picture of a 3 × 3 × 3 block (one sheet a layer), drawn by `CubeTerrainTests` when `CUBE_SHEET` names a folder | Done. |
+| 4 | `IReefField` and `ReefCollision` (`src/Core/Gen`); her stroke and her move against what blocks her in `BodyMotion`, shared by `PlaneWorld` and the prototype's `CubeWorld`; `CubeField`, the window of cubes round her | Done (`CubeWorldTests`): through a gate her speed and step hold to 0.1% across the cube line; a long swim over five cubes is the same tick for tick with a 3 × 3 window moving with her as with every cube held. |
 | 5 | `ReefStream`: wants, queue, states, pins, unload delay | State tests pass with a fake worker. |
 | 6 | `ReefStreamView`: per-chunk shapes, pooled chunk views, toroidal textures, frame budget | Swimming a ring shows no seam and no frame over budget. |
 | 7 | The layer below: preview meshes, depth fog, murk | She sees one layer down everywhere there is void, nothing below it. |

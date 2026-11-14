@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using OctoShoots.Core.Gen;
 using OctoShoots.Core.Gen.TopDown;
 
 namespace OctoShoots.Core.Plane;
@@ -144,7 +145,7 @@ public readonly record struct PlaneEvent(PlaneEventType Type, Vector2 Position, 
 /// Movement, combat (her bubbles and pearls, the pufferlings, Queen Clam) and the way down (PlaneCombat.cs); the rest of
 /// the creatures and items are ported onto it next (DESIGN-TOPDOWN §11.1).
 /// </summary>
-public sealed partial class PlaneWorld
+public sealed partial class PlaneWorld : IBodyBlocker
 {
     public const int TickRate = 60;
     public const float Dt = 1f / TickRate;
@@ -258,52 +259,8 @@ public sealed partial class PlaneWorld
         if (input.Dash && !tumbling) p.Sprinting = true;
         if (!input.DashHeld || tumbling) p.Sprinting = false;
 
-        if (p.DashTimer > 0f)
-        {
-            p.DashTimer -= Dt;
-            if (hasInput)
-            {
-                p.WasMoving = true;
-                p.IdleTime = 0f;
-                p.LastMoveDir = wishDir;
-            }
-        }
-        else if (hasInput)
-        {
-            // Jet start (DESIGN-2D §20): the first stroke from rest, and sharp turns, burst ahead.
-            bool fromRest = !p.WasMoving && p.Velocity.Length() < t.JetRestFraction * cruise;
-            bool sharpTurn = p.WasMoving && Angle(wishDir, p.LastMoveDir) > t.JetTurnAngle * MathUtil.Deg2Rad;
-            if ((fromRest || sharpTurn) && t.JetDuration > 0f)
-            {
-                p.JetTimer = t.JetDuration;
-                Events.Add(new PlaneEvent(PlaneEventType.JetStarted, p.Position, wishDir));
-            }
-            float boost = 1f;
-            if (p.JetTimer > 0f)
-            {
-                float k = MathUtil.Clamp01(p.JetTimer / t.JetDuration);
-                boost = 1f + (t.JetMultiplier - 1f) * k * k * (3f - 2f * k);
-            }
-            float sprint = p.Sprinting ? t.SprintMultiplier : 1f;
-            float maxSpeed = cruise * MathF.Max(boost, sprint);
-            float rate = cruise / t.AccelTime * MathF.Max(boost, sprint);
-            if (p.Velocity.Length() > maxSpeed + 0.01f) rate = MathF.Max(rate, t.OverspeedDecel);
-            p.Velocity = MoveToward(p.Velocity, wish * maxSpeed, rate * Dt);
-            p.IdleTime = 0f;
-            p.WasMoving = true;
-            p.LastMoveDir = wishDir;
-        }
-        else
-        {
-            // Idle drift: she glides to a stop (the visual bob is presentation only; there is no sinking).
-            p.IdleTime += Dt;
-            p.WasMoving = false;
-            p.JetTimer = 0f;
-            float rate = cruise / t.StopTime;
-            if (p.Velocity.Length() > cruise + 0.01f) rate = MathF.Max(rate, t.OverspeedDecel);
-            p.Velocity = MoveToward(p.Velocity, Vector2.Zero, rate * Dt);
-        }
-        p.JetTimer -= Dt;
+        if (BodyMotion.Swim(p, wish, wishLen, t, cruise, Dt))
+            Events.Add(new PlaneEvent(PlaneEventType.JetStarted, p.Position, wish / wishLen));
 
         Move(ref p.Position, ref p.Velocity, Radius);
         StepPrismStones();
@@ -409,12 +366,7 @@ public sealed partial class PlaneWorld
     /// <summary>True when a circle of the given radius at p sits wholly in open water.</summary>
     public bool Clear(Vector2 p, float radius)
     {
-        if (!Map.IsOpen(p)) return false;
-        for (int i = 0; i < 8; i++)
-        {
-            float a = i * MathF.Tau / 8f;
-            if (!Map.IsOpen(p + new Vector2(MathF.Cos(a), MathF.Sin(a)) * radius)) return false;
-        }
+        if (!ReefCollision.Clear(Map, p, radius)) return false;
         foreach (var rock in _rocks)
             if (rock.Contains(p, radius)) return false;
         if (ShutMouths.Count > 0 && Plug(p, radius) is not null) return false;
@@ -429,77 +381,17 @@ public sealed partial class PlaneWorld
                 return rock.Inward(p);
         if (VaseAt(p, radius) is { } vase) return SafeNormalize(vase.Position - p);
         if (ShutMouths.Count > 0 && Plug(p, radius) is { } plug) return plug;
-        // The wall lies where the rim of the circle meets high ground (a trench's downhill slope beside it must not count).
-        Vector2 blocked = Vector2.Zero;
-        for (int i = 0; i < 16; i++)
-        {
-            float a = i * MathF.Tau / 16f;
-            Vector2 d = new(MathF.Cos(a), MathF.Sin(a));
-            if (!Map.IsOpen(p + d * radius)) blocked += d;
-        }
-        return blocked.LengthSquared() > 1e-6f ? SafeNormalize(blocked) : SafeNormalize(Map.Gradient(p));
+        return ReefCollision.WallNormal(Map, p, radius);
     }
 
     /// <summary>Moves a circle along its velocity, blocking against high terrain and sliding along the slope.</summary>
     public void Move(ref Vector2 position, ref Vector2 velocity, float radius, bool report = true)
     {
-        // Pushed out of a wall (a crater or a spawn) first.
-        for (int i = 0; i < 20 && !Clear(position, radius); i++) position -= WallNormal(position, radius) * 0.05f;
-
-        Vector2 delta = velocity * Dt;
-        int steps = Math.Max(1, (int)MathF.Ceiling(delta.Length() / (radius * 0.5f)));
-        Vector2 step = delta / steps;
-        bool hit = false;
-        for (int s = 0; s < steps; s++)
-        {
-            Vector2 next = position + step;
-            if (Clear(next, radius))
-            {
-                position = next;
-                continue;
-            }
-            hit = true;
-            Vector2 n = WallNormal(next, radius);
-            float into = Vector2.Dot(step, n);
-            if (into > 0f) step -= n * into;
-            float vInto = Vector2.Dot(velocity, n);
-            if (vInto > 0f) velocity -= n * vInto;
-            next = position + step;
-            if (Clear(next, radius))
-            {
-                position = next;
-                continue;
-            }
-            // In a bend the averaged wall normal can come out square to the push, leaving nothing to slide along: try
-            // the step's two axis parts and its slide along the wall, and take what goes furthest her way.
-            Vector2 wish = delta / steps;
-            Vector2 tangent = new(-n.Y, n.X);
-            Vector2 best = Vector2.Zero;
-            float bestGain = 1e-5f;
-            // (And, on a bump of rock that juts into the way along a wall, that slide eased off the wall, round it.)
-            foreach (var t in new[] { new Vector2(wish.X, 0f), new Vector2(0f, wish.Y), tangent * Vector2.Dot(wish, tangent), tangent * Vector2.Dot(wish, tangent) - n * wish.Length() })
-            {
-                float gain = Vector2.Dot(t, wish);
-                if (gain <= bestGain || !Clear(position + t, radius)) continue;
-                best = t;
-                bestGain = gain;
-            }
-            if (best != Vector2.Zero)
-            {
-                position += best;
-                step = best;
-                // Keep only the velocity along the way she could go.
-                Vector2 dir = Vector2.Normalize(best);
-                velocity = dir * MathF.Max(Vector2.Dot(velocity, dir), 0f);
-            }
-            else
-            {
-                velocity = Vector2.Zero;
-                break;
-            }
-        }
+        bool hit = BodyMotion.Move(this, ref position, ref velocity, radius, Dt);
         if (hit && report) Events.Add(new PlaneEvent(PlaneEventType.HitWall, position, velocity));
     }
+
+    Vector2 IBodyBlocker.WallNormal(Vector2 p, float radius) => WallNormal(p, radius);
 
     static Vector2 MoveToward(Vector2 from, Vector2 to, float maxDelta)
     {

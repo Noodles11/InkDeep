@@ -304,7 +304,7 @@ public sealed class SpawnEntry
 /// leak cave, larger for a hand-drawn map that asks for it) plus everything the generator decided. Produced only by
 /// <see cref="TopDownGenerator"/>; the game reads it and never generates or scatters.
 /// </summary>
-public sealed class LevelMap
+public sealed class LevelMap : IReefField
 {
     /// <summary>A seeded level's square (and a leak cave's, and a hand-drawn map's unless it says otherwise), metres a side.</summary>
     public const int Seeded = 110;
