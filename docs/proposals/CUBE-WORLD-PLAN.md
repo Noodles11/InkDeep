@@ -432,7 +432,7 @@ movement and collision are first moved behind `IReefField` so both worlds share 
 | 4 | `IReefField` and `ReefCollision` (`src/Core/Gen`); her stroke and her move against what blocks her in `BodyMotion`, shared by `PlaneWorld` and the prototype's `CubeWorld`; `CubeField`, the window of cubes round her | Done (`CubeWorldTests`): through a gate her speed and step hold to 0.1% across the cube line; a long swim over five cubes is the same tick for tick with a 3 × 3 window moving with her as with every cube held. |
 | 5 | `ReefStream`: wants, queue, states, pins, unload delay; `TaskCubeWorker` on the thread pool | Done (`ReefStreamTests`, with a worker the test runs by hand and with the thread pool's): her cube's work first, terrain before what is built on it, two jobs out at a time; crossing a line back and forth lets nothing go; what she leaves goes after 3 s, pinned cubes not; work no longer wanted given up; the layer left kept as masks while she may climb; the bookkeeping 25 µs a frame. |
 | 6 | `CubeMain` (`--cubes`): Clementine, her light and the camera, the game's own views; `CubeShapes` (a cube's ground and simplified ground, as meshes, on the worker); `ReefStreamView` (pooled nodes, a time budget a frame) | Done: a 90 s swim round a ring of ten cubes (`--cube-route --cube-perf=90`) shows no seam, no missing cube in view, and no frame over 20 ms (§13). The toroidal map textures wait for fog of war (step 9). |
-| 7 | The layer below: preview meshes, depth fog, murk | She sees one layer down everywhere there is void, nothing below it. |
+| 7 | The layer below: its simplified ground (its full one once a dive is coming), the water's fog under her plane, one flat murk floor following her at that layer's own void | Done: through the void she sees the layer below, blurred, and murk under it; nothing deeper is drawn. Over the ring swim no cube within 40 m of her, on her layer or below it, is ever undrawn. |
 | 8 | Diving and climbing: the mask, prompt, cooldown, no-chain rule, camera move, layer swap | Down two layers and back up one with no loading and no frame over budget. |
 | 9 | Frontier drift and wake current, with records for claims, fog and shut edges | Ring and wake-current tests pass; the drift reads in play. |
 | 10 | Measure against §13 with the overlay and `--capture` runs; write up | Numbers in hand for the decision. |
@@ -466,6 +466,9 @@ Each has the default this plan assumes; none blocks the prototype.
 2. **How deep the reef goes** ("dozens"): 36 layers assumed. It only sets where the bottom is.
 3. **The warm-up layer's places:** assumed to be as anywhere (secrets, clam room, havens) but no curse rooms.
 4. **The footprint** (9 × 9) and **S** (64 m) are the two numbers the prototype is most likely to change.
-5. **The cube grid's trace:** the shared walls along cube lines still show, faintly, as a grid of rock fins between
+5. **Stair-stepped cliffs:** where rock drops into the void its face shows 1 m steps, the rock/water outline being
+   a yes/no on the 1 m grid. The fix is to carve with a continuous margin (signed distance to the chambers, tunnels,
+   bays, walls and throats) and lay heights on it, as the game's own reef terrain does; the seam tests guard it.
+6. **The cube grid's trace:** the shared walls along cube lines still show, faintly, as a grid of rock fins between
    the caverns. If it reads in play, the next tries are fewer walls (open edges with wide gates) and chambers written
    by the edge across an open line.

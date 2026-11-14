@@ -195,7 +195,8 @@ public partial class CubeMain : Node3D
         if (_field.Refresh()) _fieldChanged = true;
 
         // She waits for her own cube and what she can swim into (the first frames only).
-        if (!_ready) _ready = _stream.State(CubeId.Of(p.Position, _layer)) == CubeState.Active && _stream.Held.All(c => c.Z != _layer || _stream.Terrain(c) is not null) && _view.Pending == 0;
+        // (Every cube wanted at its state: her cube, what she sees, the layer below.)
+        if (!_ready) _ready = _stream.InFlight.Count == 0 && _view.Pending == 0 && _stream.Wanted.All(w => _stream.State(w.Key) == w.Value);
         _accumulator += delta;
         if (!_ready) _accumulator = 0;
         int steps = 0;
@@ -218,6 +219,7 @@ public partial class CubeMain : Node3D
         bool hidden = _stream.Terrain(CubeId.Of(p.Position, _layer))?.CanopyAt(Mathf.RoundToInt(p.Position.X), Mathf.RoundToInt(p.Position.Y)) == true;
         _seeThrough = Mathf.MoveToward(_seeThrough, hidden ? 1f : 0f, dt * (hidden ? 4.5f : 2.2f));
         _view.SeeThrough(_bell.GlobalPosition, 4.5f, _seeThrough);
+        _view.Follow(eye);
         if (!Without("snow"))
         {
             _snow.Her(_bell.GlobalPosition, new Vector3(p.Velocity.X, 0f, p.Velocity.Y));
@@ -232,6 +234,8 @@ public partial class CubeMain : Node3D
     }
 
     double _tailMs, _lateFor, _lateMost;
+    string _worstAt = "";
+    double _sinceReady;
     int _lateFrames;
     int _errorsShown;
 
@@ -370,12 +374,19 @@ public partial class CubeMain : Node3D
 
     void Measure(double delta)
     {
-        if (!_ready || _frame < 30) return;
+        // (From half a second after the first whole view: its first frame compiles the shaders.)
+        if (!_ready) return;
+        _sinceReady += delta;
+        if (_sinceReady < 0.5) return;
         double ms = delta * 1000.0;
         _perfFrames++;
         _perfTotal += ms;
         _perfClock += delta;
-        if (ms > _perfWorst) _perfWorst = ms;
+        if (ms > _perfWorst)
+        {
+            _perfWorst = ms;
+            _worstAt = $"{_perfClock:0.0} s in, at {_world.Player.Position.X:0},{_world.Player.Position.Y:0}";
+        }
         if (ms > 20.0) _perfOver++;
         // A cube in her view on her layer not drawn yet: late.
         var cell = CellCoord.Of(_world.Player.Position, _layer);
@@ -384,7 +395,14 @@ public partial class CubeMain : Node3D
         for (int dx = -1; dx <= 1 && !late; dx++)
         {
             var c = CubeId.Of(new CellCoord(cell.X + dx, cell.Y + dy, _layer));
+            // (Only what the camera can see: a cube within 40 m of her.)
+            var her = _world.Player.Position;
+            var nearest = System.Numerics.Vector2.Clamp(her, c.Origin, c.Origin + c.Size);
+            if (System.Numerics.Vector2.Distance(her, nearest) > 40f) continue;
             if (_space.Inside(c) && !_stream.Has(c, CubeWork.Mesh)) late = true;
+            // (And under it: the layer below, seen through the void.)
+            var under = c.OnLayer(_layer + 1);
+            if (_space.Inside(under) && !_stream.Has(under, CubeWork.PreviewMesh) && !_stream.Has(under, CubeWork.Mesh)) late = true;
         }
         _lateFor = late ? _lateFor + delta : 0;
         if (late) _lateFrames++;
@@ -399,8 +417,8 @@ public partial class CubeMain : Node3D
             "Cube perf: {0} frames in {1:0.0} s, mean {2:0.00} ms (our frame code {12:0.00} ms + {16:0.00} ms after it, every node's process {14:0.00} ms, render CPU {15:0.00} ms, GPU {13:0.00} ms), worst {3:0.0} ms, over 20 ms: {4}; worst upload {5:0.00} ms; window moves {6}; at {7:0},{8:0} cube {9}; nodes {10} in use, {11} pooled",
             _perfFrames, _perfClock, _perfTotal / _perfFrames, _perfWorst, _perfOver, _view.WorstMs, _field.Recentres, p.X, p.Y, CubeId.Of(p, _layer), _view.InUse, _view.Pooled,
             _cpuTotal / _perfFrames, _gpuTotal / _perfFrames, _allProcessTotal / _perfFrames, _renderCpuTotal / _perfFrames, _tailMs));
-        GD.Print(string.Format(CultureInfo.InvariantCulture, "Cube perf: a cube in view undrawn on {0} frames, {1:0.00} s at most; jobs: {2}", _lateFrames, _lateMost,
-            string.Join(", ", _worker.Timing.Select(t => $"{t.Key} {t.Value.Count} × {t.Value.Total / t.Value.Count:0.0} ms (most {t.Value.Most:0.0})"))));
+        GD.Print(string.Format(CultureInfo.InvariantCulture, "Cube perf: the worst frame {3}; a cube in view undrawn on {0} frames, {1:0.00} s at most; jobs: {2}", _lateFrames, _lateMost,
+            string.Join(", ", _worker.Timing.Select(t => $"{t.Key} {t.Value.Count} × {t.Value.Total / t.Value.Count:0.0} ms (most {t.Value.Most:0.0})")), _worstAt));
         GetTree().Quit();
     }
 
