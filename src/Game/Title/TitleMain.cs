@@ -204,7 +204,19 @@ public partial class TitleMain : Node3D
         BuildUi();
     }
 
-    void SkipToGame() => GetTree().ChangeSceneToFile(RunLaunch.GameScene);
+    void SkipToGame()
+    {
+        // The cube world's prototype (docs/proposals/CUBE-WORLD-PLAN.md §14): `--cubes`.
+        if (OS.GetCmdlineUserArgs().Contains("--cubes"))
+        {
+            var cubes = new OctoShoots.Game.Cubes.CubeMain();
+            GetTree().Root.AddChild(cubes);
+            GetTree().CurrentScene = cubes;
+            QueueFree();
+            return;
+        }
+        GetTree().ChangeSceneToFile(RunLaunch.GameScene);
+    }
 
     public override void _ExitTree()
     {

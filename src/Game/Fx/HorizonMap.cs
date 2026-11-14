@@ -29,6 +29,43 @@ public sealed class HorizonMap
     /// The map for a light at <paramref name="light"/> (level coordinates: x, height, z) reaching <paramref name="range"/>
     /// metres. Redone only when the light has moved a few centimetres, its reach changed or the level is new.
     /// </summary>
+    /// <summary>
+    /// The same over any field of rock (the cube world's): redone when the light has moved, or <paramref name="changed"/>
+    /// (the rock round her is not what it was: a cube came or went).
+    /// </summary>
+    public bool Update(OctoShoots.Core.Gen.IReefField field, Vector3 light, float range, bool changed)
+    {
+        if (!changed && _image is not null && light.DistanceSquaredTo(_for) < 0.0025f && Mathf.Abs(range - _rangeFor) < 0.05f) return false;
+        _mapFor = null;
+        _for = light;
+        _rangeFor = range;
+        float step = range / Rings * 0.5f;
+        for (int a = 0; a < Angles; a++)
+        {
+            float angle = ((a + 0.5f) / Angles - 0.5f) * Mathf.Tau;
+            float dx = MathF.Cos(angle) * step, dz = MathF.Sin(angle) * step;
+            float steepest = float.NegativeInfinity;
+            for (int k = 1; k <= Rings * 2; k++)
+            {
+                float h = field.HeightAt(new System.Numerics.Vector2(light.X + dx * k, light.Z + dz * k));
+                steepest = MathF.Max(steepest, (h - light.Y) / (step * k));
+                if ((k & 1) == 0) _slopes[(k / 2 - 1) * Angles + a] = steepest;
+            }
+        }
+        Buffer.BlockCopy(_slopes, 0, _bytes, 0, _bytes.Length);
+        if (_image is null)
+        {
+            _image = Image.CreateFromData(Angles, Rings, false, Image.Format.Rf, _bytes);
+            Texture.SetImage(_image);
+        }
+        else
+        {
+            _image.SetData(Angles, Rings, false, Image.Format.Rf, _bytes);
+            Texture.Update(_image);
+        }
+        return true;
+    }
+
     public bool Update(LevelMap map, Vector3 light, float range)
     {
         if (map == _mapFor && light.DistanceSquaredTo(_for) < 0.0025f && Mathf.Abs(range - _rangeFor) < 0.05f) return false;

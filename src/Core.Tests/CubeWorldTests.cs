@@ -146,6 +146,33 @@ public class CubeWorldTests
         Assert.False(field.IsOpen(mouth));
     }
 
+    [Fact]
+    public void The_reef_world_swims_and_shines_against_the_cubes_rock_when_given_their_field()
+    {
+        var terrain = Layer(7UL);
+        var cube = terrain(new CubeCoord(1, 1, 0))!;
+        var mouth = cube.Gates[0].Mouth;
+        var world = CubeShell.Make(F, mouth, new Tuning());
+        var field = new CubeField(terrain, CubeCoord.Of(mouth, 0));
+        world.Field = field;
+        // Straight at the rock nearest her: she stops at it, as the slim world does.
+        var slim = new CubeWorld(terrain, mouth, 0, world.Tuning);
+        var way = new Vector2(0.6f, 0.8f);
+        for (int k = 0; k < 600; k++)
+        {
+            var input = new PlaneInput { Move = way, Aim = way };
+            field.Recenter(CubeCoord.Of(world.Player.Position, 0));
+            world.Step(input);
+            slim.Step(input);
+            Assert.True(ReefCollision.Clear(field, world.Player.Position, world.Radius - 0.01f));
+        }
+        Assert.Equal(slim.Player.Position, world.Player.Position);
+        Assert.False(world.Defeated);
+        // Her light stops at the cubes' rock.
+        Assert.True(world.StopsLight(cube.Coord.Origin + new Vector2(1f, 1f)));
+        Assert.False(world.StopsLight(mouth));
+    }
+
     /// <summary>The shortest way over the water a body of <paramref name="clearance"/> fits (8-way steps, 1 m grid).</summary>
     static List<Vector2>? Path(IReefField field, Vector2 from, Vector2 to, float clearance)
     {
