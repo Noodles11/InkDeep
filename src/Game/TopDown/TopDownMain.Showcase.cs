@@ -32,8 +32,11 @@ public partial class TopDownMain
     /// <summary>Whether the showcase is on (her beam's view asks).</summary>
     public static bool ShowcaseOn { get; internal set; }
 
-    /// <summary>How much of the place is awake: its share of leaks sealed; Lantern Bay always all of it (it is never dark).</summary>
-    float LeaksSealedShare => _world.Map.Haven is not null ? 1f : _world.Leaks.Count == 0 ? 0f : _world.Leaks.Count(v => v.Sealed) / (float)_world.Leaks.Count;
+    /// <summary>
+    /// How much of the place is awake: its share of leaks sealed; Lantern Bay always all of it (it is never dark), and the
+    /// cube reef's warm-up layer (its layers below have no leaks to seal: dark but for her light).
+    /// </summary>
+    float LeaksSealedShare => _world.Map.Haven is not null || InReef && _layer == 0 ? 1f : _world.Leaks.Count == 0 ? 0f : _world.Leaks.Count(v => v.Sealed) / (float)_world.Leaks.Count;
 
     /// <summary>A new place: the showcase on if it is one of its reefs, as awake as its leaks are sealed.</summary>
     void EnterShowcase()

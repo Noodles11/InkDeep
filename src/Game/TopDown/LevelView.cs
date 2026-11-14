@@ -35,6 +35,9 @@ public sealed class LevelShape
     /// </summary>
     public IReadOnlyList<LevelShape> Caves { get; set; } = Array.Empty<LevelShape>();
 
+    /// <summary>A map whose rock other views draw (a cube reef's layer: ReefStreamView): the map alone, nothing of its own.</summary>
+    public static LevelShape Bare(LevelMap map) => new() { Map = map };
+
     /// <summary>Pure work on the map: safe to run on any thread.</summary>
     public static LevelShape Prepare(LevelMap map)
     {

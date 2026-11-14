@@ -252,7 +252,7 @@ public partial class HudView : Control
     string _bossName = "";
     int _bossCrust;
     bool _bossFight;
-    string _prompt = "";
+    string _prompt = "", _promptAction = OctoShoots.Game.Controls.InputSetup.Dive;
     bool _promptReady;
     float _promptShown;
 
@@ -335,8 +335,15 @@ public partial class HudView : Control
         }
         SyncShells(dt);
         // Over the shaft: how to dive, or why not yet.
-        bool over = world.OverShaft && !world.Defeated && !Diving;
-        if (over)
+        bool over = (world.OverShaft || LayerPrompt is not null) && !world.Defeated && !Diving;
+        _promptAction = OctoShoots.Game.Controls.InputSetup.Dive;
+        if (LayerPrompt is { } layer)
+        {
+            _prompt = layer.Text;
+            _promptReady = layer.Ready;
+            _promptAction = layer.Action;
+        }
+        else if (over)
         {
             _promptReady = world.CanDive;
             // (Where the hole leads: its rim's kind, said.)
@@ -350,6 +357,12 @@ public partial class HudView : Control
 
     /// <summary>She is diving: no prompt.</summary>
     public bool Diving { get; set; }
+
+    /// <summary>
+    /// The cube reef's prompt over a way to another layer (docs/proposals/CUBE-WORLD-PLAN.md §7): what it says, whether
+    /// the way is open (then the key cap of its action shows), and the action (dive or climb). Null: none.
+    /// </summary>
+    public (string Text, bool Ready, string Action)? LayerPrompt { get; set; }
 
     /// <summary>
     /// A shell was just collected at that point of the screen, this many pixels across, turned so (as the camera sees it;
@@ -634,7 +647,7 @@ public partial class HudView : Control
             float a = _promptShown;
             const int fs = 18;
             // The key cap: whatever dive is bound to on the device in use (RB on a controller, SHIFT on the keyboard…).
-            string key = OctoShoots.Game.Controls.InputSetup.Hint(OctoShoots.Game.Controls.InputSetup.Dive);
+            string key = OctoShoots.Game.Controls.InputSetup.Hint(_promptAction);
             var ks = font.GetStringSize(key, HorizontalAlignment.Left, -1, 14);
             var ws = font.GetStringSize(_prompt, HorizontalAlignment.Left, -1, fs);
             float w = (_promptReady ? ks.X + 22f : 0f) + ws.X + 28f;

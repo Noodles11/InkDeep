@@ -27,6 +27,8 @@ public static class InputSetup
 	public const string Glow = "toggle_glow";
 	public const string Dash = "dash";
 	public const string Dive = "dive";
+	/// <summary>The cube reef: up a well to the layer above (docs/proposals/CUBE-WORLD-PLAN.md §7).</summary>
+	public const string Climb = "climb";
 	public const string Active = "use_active";
 	public const string Review = "review_pearls";
 	public const string Pause = "pause";
@@ -60,7 +62,8 @@ public static class InputSetup
 		new(Beam, "Shine the beam (hold)", "mouse:Left", "axis:TriggerRight:+"),
 		new(Dash, "Dash", "key:Space", "axis:TriggerLeft:+"),
 		new(Glow, "Glow on / off (dark, beam off: unseen)", "key:Ctrl", "button:RightShoulder"),
-		new(Dive, "Dive down the shaft", "key:Shift", "button:X"),
+		new(Dive, "Dive to the layer below", "key:Shift", "button:DpadDown"),
+		new(Climb, "Climb to the layer above", "key:Q", "button:DpadUp"),
 		new(Active, "Use the active pearl (first slot)", "key:F", "button:Y"),
 		new(Review, "Level map (hold)", "key:Tab", "button:Back"),
 		// Esc always pauses (and cancels a rebind), so its key stays.

@@ -354,6 +354,8 @@ public partial class TopDownMain : Node3D
     /// <summary>Verification: the first seal starts with this many hits less one, and takes the last a second in (0: off).</summary>
     int _dbgSeal;
     bool _autopilot, _autoDive, _calm;
+    /// <summary>This launch's dive is in the cube reef (TopDownMain.Reef.cs).</summary>
+    bool _reefWanted;
     /// <summary>
     /// Where on the open reef she is (docs/archive/RPG-PROPOSAL.md §2): Lantern Bay, a region, or a leak cave behind one of a
     /// region's mouths; Run is the old run of seeded levels. From the title's Lantern Bay, or `--reef=bay|shallows|cave`.
@@ -527,6 +529,7 @@ public partial class TopDownMain : Node3D
         if (OS.GetCmdlineUserArgs().Contains("--dbg-noshadow"))
             foreach (var l in sun.FindChildren("*", "DirectionalLight3D", true, false)) ((DirectionalLight3D)l).ShadowEnabled = false;
         BuildUi();
+        if (_reefWanted) BuildReef();
         // From the title: the first level is shaped off the main thread behind the splash.
         if (_persist) StartFirstLevel();
         else Regenerate();
@@ -538,6 +541,7 @@ public partial class TopDownMain : Node3D
         foreach (string arg in OS.GetCmdlineUserArgs())
         {
             string Value(string prefix) => arg[prefix.Length..];
+            ParseReefArg(arg);
             if (arg.StartsWith("--seed=") && SeedCode.TryParse(Value("--seed="), out var seed)) _seed = seed;
             else if (arg.StartsWith("--cycle=") && int.TryParse(Value("--cycle="), out int c)) _id = _id with { Cycle = Math.Max(1, c) };
             else if (arg.StartsWith("--depth=") && int.TryParse(Value("--depth="), out int d)) _id = _id with { Depth = Math.Clamp(d, 1, LevelPlan.Depths) };
@@ -656,6 +660,7 @@ public partial class TopDownMain : Node3D
             if (OS.GetCmdlineUserArgs().Contains("--dbg-dive")) _jelly = new Jelly { Name = "Clementine", Seed = _seed.ToString(), Tutored = _id.Depth > LevelPlan.Tutorial };
             // (--dbg-freed=tull,…: these of the bay's folk freed, home in the bay.)
             if (_jelly is not null) foreach (string id in _dbgFreed) _jelly.Freed.Add(id);
+            _reefWanted = WantsReef(newDive: false);
             return;
         }
         RunLaunch.Pending = null;
@@ -669,6 +674,9 @@ public partial class TopDownMain : Node3D
             RunLaunch.Jelly = -1;
             (_seed, _id, _) = DiveStart(_jelly);
             _resume = _jelly.Dive;
+            // A new dive is in the cube reef (a dive under way in the seeded levels carries on there).
+            _reefWanted = WantsReef(newDive: _jelly.Dive is null);
+            if (_reefWanted) _resume = null;
             return;
         }
         if (mode == LaunchMode.Continue && GameSave.Current.Run is { } saved && SeedCode.TryParse(saved.Seed, out var seed))
@@ -720,6 +728,8 @@ public partial class TopDownMain : Node3D
     /// <summary>Saves the run as it stands at the start of this level (continuing puts her back here).</summary>
     void SaveRun()
     {
+        // (A dive in the cube reef is saved at its havens: CUBE-WORLD-PLAN §10, §15.5.)
+        if (_reef is not null) return;
         if (_jelly is { } diver)
         {
             SaveDive(diver, ended: false);
@@ -771,7 +781,7 @@ public partial class TopDownMain : Node3D
         _splash.Modulate = Colors.White;
         _splash.Visible = true;
         // The title has it under way when it started the run.
-        _firstMap = RunLaunch.Shaping is { } made && made.Seed.Equals(_seed) && made.Id == _id && made.Luck == Luck ? made.Shape
+        _firstMap = _reef is not null ? ReefFirstShape() : RunLaunch.Shaping is { } made && made.Seed.Equals(_seed) && made.Id == _id && made.Luck == Luck ? made.Shape
             : Shape(_id);
         RunLaunch.Shaping = null;
     }
@@ -1323,7 +1333,7 @@ public partial class TopDownMain : Node3D
             _seed = parsed;
         }
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        var shape = _id.Haven ? Shape(_id).Result : LevelShape.Prepare(Abyss(TopDownGenerator.Generate(new RunStreams(_seed), _id, luck: Luck)));
+        var shape = _reef is not null ? LevelShape.Bare(LayerMap(_layer)) : _id.Haven ? Shape(_id).Result : LevelShape.Prepare(Abyss(TopDownGenerator.Generate(new RunStreams(_seed), _id, luck: Luck)));
         ShowLevel(shape, keepRun, watch.ElapsedMilliseconds);
     }
 
@@ -1566,7 +1576,8 @@ public partial class TopDownMain : Node3D
         if (!InDiveCave) _reefs.Add(_id with { Haven = false });
         // Waking in a haven (Lantern Bay): she is healed whole.
         if (map.InHaven(arriveAt ?? map.Start.Position)) _run.Hp = _run.MaxHp;
-        _world = new PlaneWorld(_map, _tuning, _run, InDiveCave ? DiveCaveOptions(_map) : DebugBoss() ?? DiveBoss());
+        _world = new PlaneWorld(_map, _tuning, _run, InDiveCave ? DiveCaveOptions(_map) : InReef ? ReefOptions() : DebugBoss() ?? DiveBoss());
+        if (InReef) EnteredLayer();
         ShowMouths();
         if (_captureDir is not null)
             foreach (var door in map.Way is { } way ? map.Mouths.Append(way) : map.Mouths) GD.Print($"Ride door at {door.At} into {door.Into}");
@@ -2393,6 +2404,7 @@ public partial class TopDownMain : Node3D
         float dt = (float)delta;
         SyncPointer();
         SyncHaptics(dt);
+        if (InReef) StepReef(dt);
         // Banners run on game time: they wait while paused and under a splash.
         if (!Paused && _transition == Transition.None && !_deathSplash)
         {
@@ -2430,6 +2442,12 @@ public partial class TopDownMain : Node3D
             }
         }
         if (_transition == Transition.None) StepHoles();
+        if (_layerMove != LayerMove.None)
+        {
+            StepLayerMove(dt);
+            Capture();
+            return;
+        }
         if (_diving)
         {
             StepDive(dt);
@@ -2500,6 +2518,7 @@ public partial class TopDownMain : Node3D
             long simStart = _perf ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
             long simBytes = _perf ? GC.GetAllocatedBytesForCurrentThread() : 0;
             _world.Step(ReadInput());
+            if (InReef) StepReefCurrents();
             if (_perf) PerfAdd("sim", simStart, simBytes);
             _recorder.Observe(_world);
             Earned(_achievements.Observe(_world));
@@ -2786,6 +2805,7 @@ public partial class TopDownMain : Node3D
             BeginDive();
             return;
         }
+        if (InReef && !held && !_world.Defeated && StepLayers(dt)) return;
         // Out of light: it goes out, then the run is over.
         if (_world.Defeated)
         {
@@ -2913,6 +2933,7 @@ public partial class TopDownMain : Node3D
         bool hidden = _level.Hides(_bell.GlobalPosition, _camera.Camera.GlobalPosition);
         _seeThrough = Mathf.MoveToward(_seeThrough, hidden ? 1f : 0f, dt * (hidden ? 4.5f : 2.2f));
         _level.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, _dbgNoCarve ? 0f : _seeThrough);
+        if (InReef) SyncReefView(dt, Focus(alpha));
         // In the curse den's dark her own light is dimmed too, to about half.
         _bell.Dim = 1f - 0.475f * _dark.Amount;
         _minimap.Blackout = _dark.Amount;
