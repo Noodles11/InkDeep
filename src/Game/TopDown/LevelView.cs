@@ -40,8 +40,23 @@ public sealed class LevelShape
     {
         var shape = new LevelShape { Map = map };
         foreach (var door in map.Mouths) shape.Doors.Add(LevelView.DoorSurfaces(map, door));
+        // Its reef life as a level's (the coral gardens on its walls and ledges, the scattered rocks), worked out once.
+        var (flora, rocks, glows) = Life.GetValue(map, m =>
+        {
+            var f = new List<FloraItem>();
+            var r = new List<Transform3D>();
+            var g = new List<Transform3D>();
+            if (!OS.GetCmdlineUserArgs().Contains("--dbg-nodecor")) LevelView.DecorItems(m, f, r, g);
+            return new Tuple<List<FloraItem>, List<Transform3D>, List<Transform3D>>(f, r, g);
+        }) is var t ? (t.Item1, t.Item2, t.Item3) : default;
+        shape.Flora.AddRange(flora);
+        shape.Rocks.AddRange(rocks);
+        shape.Glows.AddRange(glows);
         return shape;
     }
+
+    /// <summary>A bare map's reef life, worked out the first time it is shown (or warmed off the main thread).</summary>
+    static readonly System.Runtime.CompilerServices.ConditionalWeakTable<LevelMap, Tuple<List<FloraItem>, List<Transform3D>, List<Transform3D>>> Life = new();
 
     /// <summary>Pure work on the map: safe to run on any thread.</summary>
     public static LevelShape Prepare(LevelMap map)
@@ -1089,10 +1104,25 @@ public partial class LevelView : Node3D
         _ground.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("doors"), dark);
         _ground.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("door_count"), Math.Min(doors.Count, dark.Length));
         _ground.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("door_size"), new Vector3(Doorway.Depth, Doorway.HalfWidth, Doorway.ArchTop));
-        for (int k = 0; k < doors.Count && k < shape.Doors.Count; k++)
+        for (int k = 0; k < doors.Count && k < shape.Doors.Count; k++) AddDoor(map, doors[k], shape.Doors[k], k);
+    }
+
+    /// <summary>
+    /// Mouths opened on the map since it was shown (the cube reef's, as she claims cubes), from the <paramref name="from"/>-th
+    /// on: each one's rock added as a shown map's are, the rest of the view untouched.
+    /// </summary>
+    public void AddMouths(LevelMap map, int from)
+    {
+        var dark = new Vector4[8];
+        for (int k = 0; k < map.Mouths.Count && k < dark.Length; k++) dark[k] = new Vector4(map.Mouths[k].At.X, map.Mouths[k].At.Y, map.Mouths[k].Into.X, map.Mouths[k].Into.Y);
+        _ground.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("doors"), dark);
+        _ground.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("door_count"), Math.Min(map.Mouths.Count, dark.Length));
+        for (int k = from; k < map.Mouths.Count; k++) AddDoor(map, map.Mouths[k], DoorSurfaces(map, map.Mouths[k]), k);
+    }
+
+    void AddDoor(LevelMap map, Doorway door, DoorRock rock, int k)
+    {
         {
-            var door = doors[k];
-            var rock = shape.Doors[k];
             // In the reef's own ground, so the rock over it is one with the wall it is cut in.
             var skin = _ground;
             if (rock.Roof is { } roof) AddChild(new MeshInstance3D { Mesh = ToMesh(roof), MaterialOverride = skin });
@@ -1102,7 +1132,7 @@ public partial class LevelView : Node3D
             var fwd = new Vector3(door.Into.X, 0f, door.Into.Y);
             float floor = SmoothHeight(map, at.X, at.Y) - 0.4f;
             AddChild(new MeshInstance3D { Mesh = GateMesh(new Vector3(at.X, 0f, at.Y), side, fwd, DoorArchHalf + 0.1f, floor, DoorSpring), MaterialOverride = Rock(0.25f) });
-            if (k >= map.Mouths.Count || rock.Plug is not { } plug) continue;
+            if (k >= map.Mouths.Count || rock.Plug is not { } plug) return;
             var shut = new MeshInstance3D { Mesh = ToMesh(plug), MaterialOverride = skin, Visible = false };
             AddChild(shut);
             while (_doorPlugs.Count < k) _doorPlugs.Add(null!);

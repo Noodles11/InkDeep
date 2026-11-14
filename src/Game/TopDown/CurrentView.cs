@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 using OctoShoots.Core.Gen.TopDown;
 using OctoShoots.Core.Plane;
@@ -46,25 +47,76 @@ public partial class CurrentView : Node3D
         camera.SetCurrents(_map, _flows, count, world.Map.Size);
     }
 
+    /// <summary>A stretch of moving water to show that is no level current (the cube reef's): its course, half its width, its pace and how strongly it shows.</summary>
+    public readonly record struct Flow(IReadOnlyList<System.Numerics.Vector2> Course, float Half, float Speed, float Strength);
+
+    System.Numerics.Vector2 _origin;
+    float _span;
+    float _sinceBake = 99f;
+
+    /// <summary>
+    /// The cube reef's moving water (its currents are no level's): baked into a window round her of <paramref name="span"/>
+    /// metres from <paramref name="origin"/>, again every half second or when asked (it moves with her).
+    /// </summary>
+    public void SyncFlows(IReadOnlyList<Flow> flows, System.Numerics.Vector2 origin, float span, bool rebake, float dt, CameraRig camera)
+    {
+        _world = null;
+        _sinceBake += dt;
+        int count = Math.Min(flows.Count, Most);
+        if (rebake || _sinceBake > 0.5f || _map is null)
+        {
+            _sinceBake = 0f;
+            _origin = origin;
+            _span = span;
+            var list = new List<(IReadOnlyList<System.Numerics.Vector2>, float, float)>();
+            for (int i = 0; i < count; i++) list.Add((flows[i].Course, flows[i].Half, CourseLength(flows[i].Course)));
+            BakeCourses(list, origin, span);
+        }
+        for (int i = 0; i < count; i++)
+        {
+            _rolled[i] += flows[i].Speed * flows[i].Strength * Pace * dt;
+            _flows[i] = new Vector2(_rolled[i], flows[i].Strength);
+        }
+        camera.SetCurrents(_map, _flows, count, _span, new Vector2(_origin.X, _origin.Y));
+    }
+
+    static float CourseLength(IReadOnlyList<System.Numerics.Vector2> course)
+    {
+        float s = 0f;
+        for (int i = 0; i + 1 < course.Count; i++) s += System.Numerics.Vector2.Distance(course[i], course[i + 1]);
+        return s;
+    }
+
     /// <summary>Each cell: how far along its current (m), how far to its side (m), how strongly it shows, and which current.</summary>
     void Bake(PlaneWorld world)
     {
         _world = world;
         Array.Clear(_rolled);
-        int n = world.Map.Size * PerMetre;
-        var cells = new float[n * n * 4];
-        var nearest = new float[n * n];
-        var own = new float[n * n * 3];
+        var list = new List<(IReadOnlyList<System.Numerics.Vector2>, float, float)>();
         for (int id = 0; id < Math.Min(world.Currents.Count, Most); id++)
         {
             var c = world.Currents[id];
-            float half = Mathf.Max(c.HalfStart, c.HalfEnd), reach = half + Past, channel = half / reach;
+            list.Add((c.Course, Mathf.Max(c.HalfStart, c.HalfEnd), c.Length));
+        }
+        BakeCourses(list, System.Numerics.Vector2.Zero, world.Map.Size);
+    }
+
+    void BakeCourses(List<(IReadOnlyList<System.Numerics.Vector2> Course, float Half, float Length)> courses, System.Numerics.Vector2 origin, float span)
+    {
+        int n = (int)(span * PerMetre);
+        var cells = new float[n * n * 4];
+        var nearest = new float[n * n];
+        var own = new float[n * n * 3];
+        for (int id = 0; id < courses.Count; id++)
+        {
+            var c = courses[id];
+            float half = c.Half, reach = half + Past, channel = half / reach;
             Array.Fill(nearest, float.MaxValue);
             Array.Clear(own);
             float s = 0f;
             for (int i = 0; i + 1 < c.Course.Count; i++)
             {
-                System.Numerics.Vector2 a = c.Course[i], b = c.Course[i + 1], ab = b - a;
+                System.Numerics.Vector2 a = c.Course[i] - origin, b = c.Course[i + 1] - origin, ab = b - a;
                 float len = ab.Length();
                 if (len < 1e-5f) continue;
                 int x0 = Cell(Mathf.Min(a.X, b.X) - reach, n), x1 = Cell(Mathf.Max(a.X, b.X) + reach, n);

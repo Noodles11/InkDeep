@@ -2803,7 +2803,11 @@ public partial class TopDownMain : Node3D
         Guard("kelp", () => _kelp.Sync(_world, dt, _bell.GlobalPosition, _swells, _camera.Camera));
         // Behind a blade, she wears a thin outline.
         _bell.Covered = _kelp.Covers(_bell.GlobalPosition, _camera.Camera) || _blight.Covers(_bell.GlobalPosition, _camera.Camera);
-        Guard("currents", () => _currents.Sync(_world, dt, _camera));
+        Guard("currents", () =>
+        {
+            if (InReef) SyncReefCurrents(dt);
+            else _currents.Sync(_world, dt, _camera);
+        });
         Guard("abyss", () => _abyss.Sync(_world, dt));
         Guard("vases", () => _vases.Sync(dt));
         Guard("bubble vaults", () => _bubbleVaults.Sync(_world, dt));

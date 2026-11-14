@@ -113,6 +113,8 @@ public sealed class CubeReef
         map.Pois.Add(new Poi { Kind = PoiKind.Start, Position = start, Radius = 3f });
         // (No exit: a layer is left by diving or climbing. The game's code asks for one, far off the reef.)
         map.Pois.Add(new Poi { Kind = PoiKind.Exit, Position = new Vector2(-1000f, -1000f), Radius = 1f });
+        // (Nor a shaft: one far off it, so nothing on the layer counts as standing in it.)
+        map.Shaft = new Shaft(new Vector2(-1000f, -1000f), Vector2.UnitX, 1f, 1f);
         return map;
     }
 }

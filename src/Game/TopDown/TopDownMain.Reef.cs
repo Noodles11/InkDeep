@@ -272,7 +272,7 @@ public partial class TopDownMain
     {
         _layerMaps[_layer] = _map;
         // Its claimed cubes' places, their mouths on its map (those granted before it was made).
-        if (OpenMouths(_map)) ShowReefMouths();
+        if (_map.Mouths.Count is var mouthsWere && OpenMouths(_map)) ShowReefMouths(mouthsWere);
         // Back on a layer: its claimed cubes' stock put back as she left it.
         foreach (var record in restored ? Enumerable.Empty<CubeRecord>() : Here.Claimed.Values)
             foreach (var left in record.Left ?? Enumerable.Empty<StockLeft>())
@@ -290,7 +290,13 @@ public partial class TopDownMain
     {
         if (_reef is not { } reef || z >= reef.Space.Layers || _layerMaps.ContainsKey(z) || _makingLayer == z) return;
         _makingLayer = z;
-        _making = Task.Run(() => reef.Layer(z, reef.Start));
+        // (Its reef life worked out with it, off the main thread.)
+        _making = Task.Run(() =>
+        {
+            var map = reef.Layer(z, reef.Start);
+            LevelShape.Bare(map);
+            return map;
+        });
     }
 
     /// <summary>The layer being made, once made, kept.</summary>
@@ -370,7 +376,7 @@ public partial class TopDownMain
             var spots = _reef.IsArena(claimed) ? new List<StockSpot>() : CubeStock.Spots(_reef.Space.Seed, claimed, Here.Claimed[claimed].Claim, _map.Menace, p.Position, _world.Clear);
             foreach (var s in spots) _world.PlaceStock(claimed, s.Spawn, s.Seed, s.Prime, new[] { s.At }, left: false);
             if (!_reef.IsArena(claimed)) Grant(claimed);
-            if (OpenMouths(_map)) ShowReefMouths();
+            if (_map.Mouths.Count is var mouthsWere && OpenMouths(_map)) ShowReefMouths(mouthsWere);
             GD.Print($"Cube reef: {claimed} claimed ({Here.Claims} on layer {_layer}), {spots.Count} of its stock budded");
             if (_autopilot) Route();
         }
@@ -484,6 +490,8 @@ public partial class TopDownMain
         float radius = t < 0.35f ? Mathf.Lerp(-3f, 6f, Ease(t / 0.35f)) : Mathf.Lerp(6f, 150f, Mathf.Pow(Ease((t - 0.35f) / 0.9f), 2f));
         var at = new Vector2(_layerFrom.X, _layerFrom.Y);
         _reefView.SetPortal(at, radius, _layerMove == LayerMove.Up);
+        // (Her layer's reef life goes with its rock, through the same iris; climbing, it stays till she is up.)
+        if (_layerMove == LayerMove.Down) _level.SetPortal(at, radius, 1);
         // What lived on the layer she leaves goes with it, as on the game's dive.
         float stay = 1f - Ease((t - 0.3f) / 1.0f);
         FadeLevelLife(at, Mathf.Lerp(-5f, radius, Ease(t / 0.45f)), stay);
@@ -530,6 +538,7 @@ public partial class TopDownMain
         _reefView.SetLayer(_layer);
         _reefView.ShowAbove(false);
         _reefView.SetPortal(Vector2.Zero, -1f, false);
+        _level.SetPortal(Vector2.Zero, -1f, 0);
         _bell.DiveDepth = 0f;
         _bell.DiveTurn = 0f;
         _camera.Zoom = 1f;
@@ -621,12 +630,46 @@ public partial class TopDownMain
     }
 
     /// <summary>The layer's mouths shown afresh (its view's rock round each, the portals' ink).</summary>
-    void ShowReefMouths()
+    void ShowReefMouths(int from)
     {
-        _levelShape = LevelShape.Bare(_map);
-        _level.Show(_levelShape);
-        _level.Place(Vector3.Zero, _origin);
+        _level.AddMouths(_map, from);
         ShowMouths();
+    }
+
+    /// <summary>How wide the window round her is that the reef's currents are shown in (metres).</summary>
+    const float CurrentWindow = 96f;
+    readonly List<CurrentView.Flow> _reefFlows = new();
+
+    /// <summary>
+    /// The reef's currents seen as the game's moving water is (CurrentView's shimmer, like the air over a hot road): the
+    /// wake current pouring out of each shut throat of her cube, and the frontier drift, a gentle stream from her along
+    /// its way toward new water.
+    /// </summary>
+    void SyncReefCurrents(float dt)
+    {
+        _reefFlows.Clear();
+        var her = _world.Player.Position;
+        var cube = CubeId.Of(her, _layer);
+        foreach (var (edge, inside, _) in cube.Outer())
+        {
+            if (!Here.IsShut(edge)) continue;
+            float into = edge.High == inside ? 1f : -1f;
+            foreach (var gate in _reef!.Space.Edge(edge).Gates)
+                _reefFlows.Add(new CurrentView.Flow(new[] { edge.Point(gate.Along, 0f), edge.Point(gate.Along, into * CubeCurrents.WakeReach) },
+                    gate.Width * 0.5f, 4f, 1f));
+        }
+        var drift = new List<System.Numerics.Vector2> { her };
+        var at = her;
+        for (int i = 0; i < 16; i++)
+        {
+            var d = _cubeCurrents.DriftAt(at);
+            if (d.LengthSquared() < 1e-6f) break;
+            at += System.Numerics.Vector2.Normalize(d) * 2.5f;
+            drift.Add(at);
+        }
+        if (drift.Count >= 3) _reefFlows.Add(new CurrentView.Flow(drift, 2.5f, 1.2f, 0.45f));
+        var origin = her - new System.Numerics.Vector2(CurrentWindow * 0.5f);
+        _currents.SyncFlows(_reefFlows, origin, CurrentWindow, false, dt, _camera);
     }
 
     /// <summary>Each frame she swims: the reef drawn round her, an arch over her seen through, the currents' streaks.</summary>
