@@ -19,7 +19,8 @@ public partial class ReefStreamView : Node3D
     public const int MostUploads = 8;
     public const double UploadBudget = 1.5;
 
-    ShaderMaterial _here = null!, _below = null!;
+    ShaderMaterial _here = null!, _below = null!, _above = null!;
+    bool _showAbove;
     readonly Dictionary<(CubeId Cube, CubeWork Work), List<MeshInstance3D>> _shown = new();
     readonly LinkedList<(CubeId Cube, CubeWork Work, ArrayMesh Mesh)> _pending = new();
     readonly Stack<MeshInstance3D> _pool = new();
@@ -46,6 +47,7 @@ public partial class ReefStreamView : Node3D
         var shader = GD.Load<Shader>("res://assets/shaders/topdown_ground.gdshader");
         _here = new ShaderMaterial { Shader = shader };
         _below = new ShaderMaterial { Shader = shader };
+        _above = new ShaderMaterial { Shader = shader };
         _murk = new MeshInstance3D
         {
             Mesh = new PlaneMesh { Size = new Vector2(MurkSize, MurkSize) },
@@ -66,6 +68,26 @@ public partial class ReefStreamView : Node3D
         _layer = layer;
         _lift = lift;
         Place();
+    }
+
+    /// <summary>The layer above hers drawn (only while she climbs to it), or not.</summary>
+    public void ShowAbove(bool on)
+    {
+        if (on == _showAbove) return;
+        _showAbove = on;
+        Place();
+    }
+
+    /// <summary>
+    /// The iris of a change of layer (level_frame's portal): her layer cut away round <paramref name="at"/> out to
+    /// <paramref name="radius"/> as she dives through it; the layer above drawn only inside it as she climbs into it.
+    /// Radius below 0: none.
+    /// </summary>
+    public void SetPortal(Vector2 at, float radius, bool climbing)
+    {
+        var off = new Vector4(0f, 0f, 0f, 0f);
+        _here.SetShaderParameter(SN.Of("portal"), radius < 0f || climbing ? off : new Vector4(at.X, at.Y, radius, 1f));
+        _above.SetShaderParameter(SN.Of("portal"), radius < 0f || !climbing ? off : new Vector4(at.X, at.Y, radius, 2f));
     }
 
     /// <summary>What stands between the camera and her (an arch) cut open round her (level_frame's see_through).</summary>
@@ -147,6 +169,7 @@ public partial class ReefStreamView : Node3D
     {
         _here.SetShaderParameter(SN.Of("level_offset"), new Vector3(0f, _lift, 0f));
         _below.SetShaderParameter(SN.Of("level_offset"), new Vector3(0f, _lift - LayerDrop, 0f));
+        _above.SetShaderParameter(SN.Of("level_offset"), new Vector3(0f, _lift + LayerDrop, 0f));
         var seen = new HashSet<CubeId>();
         foreach (var key in _shown.Keys)
             if (seen.Add(key.Cube)) Show(key.Cube);
@@ -158,8 +181,8 @@ public partial class ReefStreamView : Node3D
         _shown.TryGetValue((cube, CubeWork.Mesh), out var full);
         _shown.TryGetValue((cube, CubeWork.PreviewMesh), out var simple);
         int rel = cube.Z - _layer;
-        bool fullShown = full is { Count: > 0 } && rel is 0 or 1;
-        var material = rel == 0 ? _here : _below;
+        bool fullShown = full is { Count: > 0 } && (rel is 0 or 1 || rel == -1 && _showAbove);
+        var material = rel == 0 ? _here : rel < 0 ? _above : _below;
         float y = _lift - rel * LayerDrop;
         if (full is not null)
             foreach (var m in full)
