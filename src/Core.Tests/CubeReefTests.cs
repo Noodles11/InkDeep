@@ -203,3 +203,58 @@ public class CubeDirectorTests
         }
     }
 }
+
+/// <summary>A layer's boss and its arena (CUBE-WORLD-PLAN §9.1).</summary>
+public class CubeArenaTests
+{
+    [Theory]
+    [MemberData(nameof(CubeTerrainTests.Seeds), MemberType = typeof(CubeTerrainTests))]
+    public void The_arena_lies_away_from_her_and_every_gate_reaches_its_basin(ulong seed)
+    {
+        var reef = new CubeReef(seed, 7, 3);
+        var director = new CubeDirector(seed);
+        var arrival = CubeId.Of(reef.Start, 1);
+        var arena = director.ArenaFor(reef.Space, arrival);
+        Assert.NotNull(arena);
+        var a = arena!.Value;
+        Assert.NotEqual(arrival, a);
+        var plain = reef.Terrain(a);
+        var map = reef.Layer(1, reef.Start);
+        reef.SetArena(a, map);
+        var t = reef.Terrain(a);
+        Assert.True(t.Arena);
+        Assert.Empty(t.Sockets);
+        Assert.True(map.IsOpen(a.Middle));
+        // Its seams as they were: its apron and seam band untouched.
+        for (int x = (int)a.Origin.X; x <= (int)(a.Origin.X + a.Size.X); x++)
+        {
+            Assert.Equal(plain.HeightAt(x, (int)a.Origin.Y), t.HeightAt(x, (int)a.Origin.Y));
+            Assert.Equal(plain.HeightAt(x, (int)(a.Origin.Y + a.Size.Y)), t.HeightAt(x, (int)(a.Origin.Y + a.Size.Y)));
+        }
+        foreach (var (_, _, mouth) in t.Gates)
+        {
+            var path = LevelValidator.ShortestPath(map, mouth, a.Middle, clearance: 1f);
+            Assert.True(path.Count > 0, $"no way from {mouth} to the arena's middle {a.Middle}");
+        }
+    }
+
+    [Fact]
+    public void The_boss_table_holds_its_shares()
+    {
+        int[] bosses = new int[4];
+        for (ulong seed = 1; seed <= 2000; seed++)
+        {
+            var d = new CubeDirector(seed);
+            Assert.False(d.BossOn(0));
+            for (int streak = 0; streak < 4; streak++)
+            {
+                if (d.BossOn(1 + streak)) bosses[streak]++;
+                d.LeftLayer(1 + streak, freed: false);
+            }
+        }
+        Assert.InRange(bosses[0] / 2000f, 0.3f, 0.4f);
+        Assert.InRange(bosses[1] / 2000f, 0.7f, 0.8f);
+        Assert.InRange(bosses[2] / 2000f, 0.92f, 0.98f);
+        Assert.Equal(2000, bosses[3]);
+    }
+}

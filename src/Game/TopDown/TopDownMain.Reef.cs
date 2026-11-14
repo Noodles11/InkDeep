@@ -34,9 +34,15 @@ public partial class TopDownMain
     readonly ReefRecords _records = new();
     readonly CubeCurrents _cubeCurrents = new();
     CubeDirector _director = null!;
+    /// <summary>The layers whose boss has been rolled (on her first arrival).</summary>
+    readonly HashSet<int> _bossRolled = new();
+    /// <summary>Her layer's arena while its boss is unfreed: its wells sealed; while the battle runs, its edges too.</summary>
+    bool InArena(System.Numerics.Vector2 p, int layer) => _reef!.IsArena(CubeId.Of(p, layer));
     int _layer;
     int _cubeFootprint = CubeTuning.Footprint, _cubeLayers = CubeTuning.Layers;
     bool _classic, _cubeAsked;
+    /// <summary>Verification (--cube-boss): every layer below the warm-up holds a boss (and --autopilot swims to its arena).</summary>
+    bool _cubeBoss;
     /// <summary>Her layer's map and the one above's (kept to climb back to), and the next one down being made.</summary>
     readonly Dictionary<int, LevelMap> _layerMaps = new();
     Task<LevelMap>? _making;
@@ -63,6 +69,7 @@ public partial class TopDownMain
     {
         if (arg == "--classic") _classic = true;
         else if (arg == "--cube-reef") _cubeAsked = true;
+        else if (arg == "--cube-boss") _cubeBoss = true;
         else if (arg.StartsWith("--cube-footprint=") && int.TryParse(arg["--cube-footprint=".Length..], out int f)) _cubeFootprint = Math.Clamp(f, 2, CubeTuning.Footprint);
         else if (arg.StartsWith("--cube-layers=") && int.TryParse(arg["--cube-layers=".Length..], out int l)) _cubeLayers = Math.Clamp(l, 2, CubeTuning.Layers);
     }
@@ -176,7 +183,15 @@ public partial class TopDownMain
     {
         var p = _world.Player;
         var cube = CubeId.Of(p.Position, _layer);
-        if (_reef!.Made(cube) is { } here)
+        // The battle on: the arena's ways out are shut until it ends.
+        if (_world.BossBattle && InArena(p.PrevPosition, _layer) && !InArena(p.Position, _layer))
+        {
+            p.Position = p.PrevPosition;
+            p.Velocity = System.Numerics.Vector2.Zero;
+            _heldShown = 2f;
+            return;
+        }
+        if (_reef!.Made(cube) is { } here && !InArena(p.Position, _layer))
         {
             _cubeCurrents.Prepare(here, _reef.Space, Here);
             var flow = _cubeCurrents.DriftAt(p.Position) + CubeCurrents.WakeAt(p.Position, cube, _reef.Space, Here);
@@ -194,9 +209,10 @@ public partial class TopDownMain
         else if (crossed == Crossing.Claimed)
         {
             var claimed = CubeId.Of(p.Position, _layer);
-            var spots = CubeStock.Spots(_reef.Space.Seed, claimed, Here.Claimed[claimed].Claim, _map.Menace, p.Position, _world.Clear);
+            // (The arena holds its boss alone: no stock, no places.)
+            var spots = _reef.IsArena(claimed) ? new List<StockSpot>() : CubeStock.Spots(_reef.Space.Seed, claimed, Here.Claimed[claimed].Claim, _map.Menace, p.Position, _world.Clear);
             foreach (var s in spots) _world.PlaceStock(claimed, s.Spawn, s.Seed, s.Prime, new[] { s.At }, left: false);
-            Grant(claimed);
+            if (!_reef.IsArena(claimed)) Grant(claimed);
             if (OpenMouths(_map)) ShowReefMouths();
             GD.Print($"Cube reef: {claimed} claimed ({Here.Claims} on layer {_layer}), {spots.Count} of its stock budded");
             if (_autopilot) Route();
@@ -217,11 +233,14 @@ public partial class TopDownMain
         _up = _cubeDiving.CanClimb(p, _world.Radius, _reef.Made);
         // (The layer she would arrive on must be made too.)
         if (_down == LayerBlock.None && !_layerMaps.ContainsKey(_layer + 1)) _down = LayerBlock.NotReady;
+        // The arena's wells are sealed over until its boss is freed; nothing comes down into an arena from above.
+        if (_down is LayerBlock.None or LayerBlock.Cooldown && (InArena(p, _layer) && _world.Boss is { Freed: false } || InArena(p, _layer + 1))) _down = LayerBlock.NoWay;
         if (_up == LayerBlock.None && !_layerMaps.ContainsKey(_layer - 1)) _up = LayerBlock.NotReady;
+        if (_up is LayerBlock.None or LayerBlock.Cooldown && InArena(p, _layer) && _world.Boss is { Freed: false }) _up = LayerBlock.NoWay;
         _hoverDown = _down is LayerBlock.None or LayerBlock.Cooldown ? _hoverDown + dt : 0f;
         _hoverUp = _up is LayerBlock.None or LayerBlock.Cooldown ? _hoverUp + dt : 0f;
         string wait = $"{Mathf.Ceil(_cubeDiving.CooldownLeft):0} s";
-        _hud.LayerPrompt = _heldShown > 0f ? ("A current holds the way back", false, InputSetup.Dive)
+        _hud.LayerPrompt = _heldShown > 0f ? (_world.BossBattle ? "The arena is sealed till the fight is over" : "A current holds the way back", false, InputSetup.Dive)
             : _down switch
             {
                 LayerBlock.None => ("dive", true, InputSetup.Dive),
@@ -234,7 +253,7 @@ public partial class TopDownMain
                     _ => null,
                 },
             };
-        bool downKey = Input.IsActionPressed(InputSetup.Dive) || _autoDive && _down == LayerBlock.None;
+        bool downKey = Input.IsActionPressed(InputSetup.Dive) || _autoDive && _down == LayerBlock.None && !(_cubeBoss && _world.Boss is { Freed: false });
         bool upKey = Input.IsActionPressed(InputSetup.Climb);
         bool begun = false;
         if (downKey && !_downLatch && _down == LayerBlock.None) begun = BeginLayerMove(LayerMove.Down);
@@ -328,11 +347,27 @@ public partial class TopDownMain
         var terrain = _reef!.Terrain(arrival);
         bool down = _layerMove == LayerMove.Down;
         int from = _layer;
+        // A boss freed stays freed: the layer, should she climb back to it, has none.
+        if (_world.Boss?.Freed == true) _map.HasBoss = false;
         // The layer left: what is left of each claimed cube's stock, kept for her return.
         foreach (var record in Here.Claimed.Values) record.Left = _world.StockLeft(record.Cube);
         if (down) _cubeDiving.Dived(_layerFrom, terrain);
         else _cubeDiving.Climbed(_layerFrom, terrain);
         _layer = _cubeDiving.Layer;
+        // A new deepest layer: the one left counts toward the boss streak, and this one rolls its boss (§9.1).
+        if (down && _layer == _cubeDiving.Deepest && _bossRolled.Add(_layer))
+        {
+            _director.LeftLayer(from, _world.Boss?.Freed == true);
+            if ((_director.BossOn(_layer) || _cubeBoss) && _director.ArenaFor(_reef.Space, arrival) is { } arena)
+            {
+                var layerMap = _layerMaps[_layer];
+                _reef.SetArena(arena, layerMap);
+                layerMap.HasBoss = true;
+                layerMap.Exit.Position = arena.Middle;
+                layerMap.Exit.Radius = CubeTerrain.ArenaRadius;
+                GD.Print($"Cube reef: layer {_layer} holds a boss, its arena {arena} (streak {_director.Streak})");
+            }
+        }
         _records.Changed(from, _layer, _cubeDiving.Deepest);
         if (Here.Arrive(_layerFrom) == Crossing.Claimed) Grant(CubeId.Of(_layerFrom, _layer));
         _layerMove = LayerMove.None;
@@ -360,6 +395,8 @@ public partial class TopDownMain
     {
         var her = _world.Player.Position;
         var cube = CubeId.Of(her, _layer);
+        if (_cubeBoss && _world.Boss is { Freed: false } && _reef!.ArenaOf(_layer) is { } arena)
+            return LevelValidator.ShortestPath(_map, her, arena.Middle, clearance: 1f);
         foreach (var (edge, gate, _) in _reef!.Terrain(cube).Gates.OrderBy(g => System.Numerics.Vector2.Distance(g.Mouth, her)))
         {
             if (Here.IsShut(edge)) continue;

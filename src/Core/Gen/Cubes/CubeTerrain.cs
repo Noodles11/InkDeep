@@ -38,6 +38,8 @@ public sealed class CubeTerrain
     /// doorway), well inside it and away from its gates and wells, where a place granted to it opens its mouth.
     /// </summary>
     public IReadOnlyList<Doorway> Sockets { get; init; } = Array.Empty<Doorway>();
+    /// <summary>The layer's boss arena (its basin in its middle).</summary>
+    public bool Arena { get; init; }
     /// <summary>The rock over its sockets' passages (NaN elsewhere; null with none), as a level's Roof.</summary>
     public float[]? Roof { get; init; }
     public float RoofAt(int gx, int gy) => Roof is { } r && Has(gx, gy) ? r[Index(gx, gy)] : float.NaN;
@@ -80,6 +82,25 @@ public sealed class CubeTerrain
 
     // Noise fields, one seed each (every cube reads the same at the same global point).
     const int NoiseThroat = 1, NoiseChamber = 2, NoiseTunnel = 3, NoiseShelf = 4, NoiseTop = 5, NoiseFloor = 6, NoiseBays = 7;
+
+    /// <summary>The arena's basin: open floor out to ArenaRadius round its middle, and a way that wide from each gate's mouth to it.</summary>
+    static void Basin(CubeId c, CubeCell[] cells, float[] heights, bool[] canopy, int nw, int nh, int x0, int y0, List<(EdgeId, Gate, Vector2)> gates, uint floorSeed)
+    {
+        var middle = c.Middle;
+        float r = MathF.Min(ArenaRadius, MathF.Min(c.Size.X, c.Size.Y) * 0.5f - 6f);
+        for (int j = 0; j < nh; j++)
+        for (int i = 0; i < nw; i++)
+        {
+            var p = new Vector2(x0 + i, y0 + j);
+            bool open = Vector2.Distance(p, middle) < r;
+            foreach (var (_, _, mouth) in gates) open |= Geo.SegmentDistance(p, mouth, middle) < ArenaWay * 0.5f;
+            if (!open) continue;
+            int k = j * nw + i;
+            cells[k] = CubeCell.Shelf;
+            canopy[k] = false;
+            heights[k] = ShelfHeight + 0.3f * TerrainNoise.Perlin(p.X * 0.18f, p.Y * 0.18f, floorSeed);
+        }
+    }
 
     /// <summary>A socket's opening lies at least this far inside its cube, this far from a gate's mouth and from a well, and sockets this far apart.</summary>
     public const float SocketInside = 12f, SocketFromGate = 14f, SocketFromWell = 9f, SocketApart = 20f;
@@ -136,7 +157,11 @@ public sealed class CubeTerrain
         return sockets;
     }
 
-    public static CubeTerrain Make(CubeSpace space, CubeId c)
+    /// <summary>A boss arena's basin (CUBE-WORLD-PLAN §9.1): its radius, and the width of the way cut to it from each gate.</summary>
+    public const float ArenaRadius = 24f, ArenaWay = 5.6f;
+
+    /// <param name="arena">The layer's boss arena: a basin opened in its middle, a way cut to it from every gate, no sockets.</param>
+    public static CubeTerrain Make(CubeSpace space, CubeId c, bool arena = false)
     {
         // Its size (metres), and the grid it is worked on: its own samples, the apron and the rim pass's margin round them.
         int w = c.Wide * Side, h = c.Tall * Side;
@@ -337,13 +362,17 @@ public sealed class CubeTerrain
             };
         }
 
-        // 6. Its sockets, cut into its walls.
-        var sockets = CutSockets(space.Seed, c, outCells, outHeights, nw, nh, c.X * Side - Apron, c.Y * Side - Apron, gates, down, arrivals, rng, out var roof);
+        // 6. A boss arena's basin; else its sockets, cut into its walls.
+        float[]? roof = null;
+        var sockets = new List<Doorway>();
+        if (arena) Basin(c, outCells, outHeights, outCanopy, nw, nh, c.X * Side - Apron, c.Y * Side - Apron, gates, floorSeed);
+        else sockets = CutSockets(space.Seed, c, outCells, outHeights, nw, nh, c.X * Side - Apron, c.Y * Side - Apron, gates, down, arrivals, rng, out roof);
 
         return new CubeTerrain
         {
             Cube = c,
             Sockets = sockets,
+            Arena = arena,
             Roof = roof,
             Stride = nw,
             Rows = nh,

@@ -62,6 +62,60 @@ public sealed class CubeDirector
         return granted;
     }
 
+    /// <summary>The chance a layer holds a boss, by the layers she has left without freeing one (§9.1).</summary>
+    public static readonly float[] BossChance = { 0.35f, 0.75f, 0.95f, 1f };
+
+    /// <summary>Layers she has left without freeing a boss (the warm-up layer counts neither way).</summary>
+    public int Streak { get; private set; }
+
+    /// <summary>She arrives on a layer for the first time: whether it holds a boss (never the warm-up layer).</summary>
+    public bool BossOn(int layer)
+    {
+        if (layer == 0) return false;
+        var rng = ReefHash.Rng(_seed, ReefHash.Layer, layer, 0, 0xB055);
+        return rng.NextFloat() < BossChance[Math.Min(Streak, BossChance.Length - 1)];
+    }
+
+    /// <summary>She leaves a layer for a deeper one: it counts against the streak unless its boss was freed.</summary>
+    public void LeftLayer(int layer, bool freed)
+    {
+        if (layer == 0) return;
+        Streak = freed ? 0 : Streak + 1;
+    }
+
+    /// <summary>
+    /// The arena on a layer she has arrived on in <paramref name="arrival"/>: a cube two to four cubes from hers along open
+    /// edges, with at least two open edges, none of its squares within two of hers (so never drawn yet); failing that, any
+    /// two or more away. Null: none fits.
+    /// </summary>
+    public CubeId? ArenaFor(CubeSpace space, CubeId arrival)
+    {
+        var steps = new Dictionary<CubeId, int> { [arrival] = 0 };
+        var todo = new Queue<CubeId>();
+        todo.Enqueue(arrival);
+        while (todo.Count > 0)
+        {
+            var c = todo.Dequeue();
+            foreach (var (edge, _, across) in c.Outer())
+            {
+                if (!space.Edge(edge).Open) continue;
+                var next = CubeId.Of(across);
+                if (!space.Inside(next) || steps.ContainsKey(next)) continue;
+                steps[next] = steps[c] + 1;
+                todo.Enqueue(next);
+            }
+        }
+        int Gates(CubeId c) => c.Outer().Count(o => space.Edge(o.Edge).Open);
+        static int Apart(CellCoord a, CellCoord b) => Math.Max(Math.Abs(a.X - b.X), Math.Abs(a.Y - b.Y));
+        bool Far(CubeId c) => Math.Min(Math.Min(Apart(c.First, arrival.First), Apart(c.First, arrival.Second)),
+            Math.Min(Apart(c.Second, arrival.First), Apart(c.Second, arrival.Second))) >= 3;
+        var fits = steps.Where(s => s.Value is >= 2 and <= 4 && Gates(s.Key) >= 2 && Far(s.Key)).Select(s => s.Key).OrderBy(c => c.Y).ThenBy(c => c.X).ToList();
+        if (fits.Count == 0) fits = steps.Where(s => s.Value >= 2 && Gates(s.Key) >= 2 && Far(s.Key)).Select(s => s.Key).OrderBy(c => c.Y).ThenBy(c => c.X).ToList();
+        if (fits.Count == 0) return null;
+        var rng = ReefHash.Rng(_seed, ReefHash.Layer, arrival.Z, arrival.X, arrival.Y, 0xA2E);
+        return fits[rng.Int(fits.Count)];
+    }
+
     /// <summary>A layer she can never come back to: its counts let go.</summary>
     public void Forget(int layer) => _layers.Remove(layer);
 }

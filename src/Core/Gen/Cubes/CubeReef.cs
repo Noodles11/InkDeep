@@ -33,9 +33,40 @@ public sealed class CubeReef
 
     readonly ConcurrentDictionary<CubeId, Lazy<CubeTerrain>> _made = new();
 
-    /// <summary>A cube's terrain, made the first time it is asked for (once, whichever thread asks).</summary>
+    /// <summary>A cube's terrain, made the first time it is asked for (once, whichever thread asks); a layer's arena with its basin.</summary>
     public CubeTerrain Terrain(CubeId c) =>
-        _made.GetOrAdd(c, id => new Lazy<CubeTerrain>(() => CubeTerrain.Make(Space, id), System.Threading.LazyThreadSafetyMode.ExecutionAndPublication)).Value;
+        _made.GetOrAdd(c, id => new Lazy<CubeTerrain>(() => CubeTerrain.Make(Space, id, IsArena(id)), System.Threading.LazyThreadSafetyMode.ExecutionAndPublication)).Value;
+
+    readonly ConcurrentDictionary<int, CubeId> _arenas = new();
+
+    /// <summary>A layer's boss arena (CUBE-WORLD-PLAN §9.1), if it has one.</summary>
+    public CubeId? ArenaOf(int z) => _arenas.TryGetValue(z, out var c) ? c : null;
+    public bool IsArena(CubeId c) => _arenas.TryGetValue(c.Z, out var a) && a == c;
+
+    /// <summary>
+    /// A layer's arena fixed (as she arrives on it, before its cube is ever drawn): its terrain made again with its basin,
+    /// and laid over the layer's map.
+    /// </summary>
+    public void SetArena(CubeId cube, LevelMap layer)
+    {
+        _arenas[cube.Z] = cube;
+        _made.TryRemove(cube, out _);
+        Lay(layer, cube, Terrain(cube));
+    }
+
+    /// <summary>A cube's heights (and the rock over its sockets) laid onto its layer's map.</summary>
+    void Lay(LevelMap map, CubeId c, CubeTerrain t)
+    {
+        int last = Size;
+        int x0 = (int)c.Origin.X, y0 = (int)c.Origin.Y, x1 = Math.Min(x0 + (int)c.Size.X, last), y1 = Math.Min(y0 + (int)c.Size.Y, last);
+        for (int y = y0; y <= y1; y++)
+        for (int x = x0; x <= x1; x++)
+        {
+            map[x, y] = t.HeightAt(x, y);
+            // (The rock over its sockets' passages, drawn by the mouths' views as a level's.)
+            if (t.Roof is not null && t.RoofAt(x, y) is var roof && !float.IsNaN(roof)) map.Roof[y * map.Samples + x] = roof;
+        }
+    }
 
     /// <summary>A cube's terrain if it is made already (never makes it).</summary>
     public CubeTerrain? Made(CubeId c) => _made.TryGetValue(c, out var l) && l.IsValueCreated ? l.Value : null;
@@ -71,19 +102,7 @@ public sealed class CubeReef
             Title = z == 0 ? "The warm-up reef" : $"Layer {z}",
         };
         Array.Fill(map.Heights, OutsideHeight);
-        int last = Size;
-        foreach (var c in cubes)
-        {
-            var t = Terrain(c);
-            int x0 = (int)c.Origin.X, y0 = (int)c.Origin.Y, x1 = Math.Min(x0 + (int)c.Size.X, last), y1 = Math.Min(y0 + (int)c.Size.Y, last);
-            for (int y = y0; y <= y1; y++)
-            for (int x = x0; x <= x1; x++)
-            {
-                map[x, y] = t.HeightAt(x, y);
-                // (The rock over its sockets' passages, drawn by the mouths' views as a level's.)
-                if (t.Roof is not null && t.RoofAt(x, y) is var roof && !float.IsNaN(roof)) map.Roof[y * map.Samples + x] = roof;
-            }
-        }
+        foreach (var c in cubes) Lay(map, c, Terrain(c));
         map.Pois.Add(new Poi { Kind = PoiKind.Start, Position = start, Radius = 3f });
         // (No exit: a layer is left by diving or climbing. The game's code asks for one, far off the reef.)
         map.Pois.Add(new Poi { Kind = PoiKind.Exit, Position = new Vector2(-1000f, -1000f), Radius = 1f });

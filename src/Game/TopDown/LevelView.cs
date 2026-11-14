@@ -314,7 +314,8 @@ public partial class LevelView : Node3D
         _sandFall = null;
         _crackOpen = 0f;
         _crackFade = 1f;
-        if (map.HasBoss) ShowCover(map);
+        // (A boss over the Crack; a cube reef's arena has no shaft, and no Crack.)
+        if (map.HasBoss && map.Shaft.HalfLength > 0f) ShowCover(map);
         ShowHoleCovers(map);
         if (!below) ShowCrack(map);
         if (OS.GetCmdlineUserArgs().Contains("--dbg-nocanopy")) foreach (var c in _canopies) c.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("fade"), 0f);
@@ -1309,8 +1310,8 @@ public partial class LevelView : Node3D
     /// </summary>
     void ShowCrack(LevelMap map)
     {
-        // A blue hole is plain water; only a boss level's exit is the Crack.
-        if (!map.HasBoss) return;
+        // A blue hole is plain water; only a boss level's exit is the Crack (a cube reef's arena has none).
+        if (!map.HasBoss || map.Shaft.HalfLength <= 0f) return;
         var rift = map.Exit.Position;
         var floor = new Vector3(rift.X, -6f, rift.Y);
         AddChild(_crackLight = new OmniLight3D
