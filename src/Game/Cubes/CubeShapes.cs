@@ -7,8 +7,22 @@ using static OctoShoots.Core.Gen.Cubes.CubeTuning;
 
 namespace OctoShoots.Game.Cubes;
 
-/// <summary>A cube's ground as meshes to be: its four 32 m chunks (null where a chunk is all void) and its arches.</summary>
-public sealed record CubeShape(List<LevelShape.Surface> Surfaces);
+/// <summary>
+/// A cube's ground: its 32 m chunks (none where a chunk is all void) and its arches, as surfaces and as the meshes made
+/// of them. The meshes are made on the worker too (a mesh resource may be made off the main thread), so showing one costs
+/// the main thread next to nothing.
+/// </summary>
+public sealed class CubeShape
+{
+    public CubeShape(List<LevelShape.Surface> surfaces)
+    {
+        Surfaces = surfaces;
+        Meshes = surfaces.ConvertAll(LevelView.ToMesh);
+    }
+
+    public List<LevelShape.Surface> Surfaces { get; }
+    public List<ArrayMesh> Meshes { get; }
+}
 
 /// <summary>
 /// A cube's meshes worked out from its terrain (CUBE-WORLD-PLAN §5.5): plain arrays in global metres, safe on any thread.
@@ -21,12 +35,13 @@ public static class CubeShapes
 
     public static CubeShape Ground(CubeTerrain t)
     {
-        int x0 = t.Coord.X * CubeTuning.Side, y0 = t.Coord.Y * CubeTuning.Side;
+        int x0 = t.Cube.X * CubeTuning.Side, y0 = t.Cube.Y * CubeTuning.Side;
+        int w = t.Cube.Wide * CubeTuning.Side, h = t.Cube.Tall * CubeTuning.Side;
         float Height(float x, float y) => Smooth(t, x, y);
         bool Keep(float x, float y) => Height(x, y) > VoidHeight + 0.3f;
         var surfaces = new List<LevelShape.Surface>();
-        for (int cy = 0; cy < CubeTuning.Side; cy += Chunk)
-        for (int cx = 0; cx < CubeTuning.Side; cx += Chunk)
+        for (int cy = 0; cy < h; cy += Chunk)
+        for (int cx = 0; cx < w; cx += Chunk)
             if (LevelView.SurfaceMesh(1 << 20, Height, x0 + cx, y0 + cy, x0 + cx + Chunk, y0 + cy + Chunk, Keep) is { } s) surfaces.Add(s);
         if (Arches(t) is { } arches) surfaces.Add(arches);
         return new CubeShape(surfaces);
@@ -36,7 +51,7 @@ public static class CubeShapes
     static LevelShape.Surface? Arches(CubeTerrain t)
     {
         int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
-        int n = CubeTerrain.N;
+        int n = t.Stride;
         for (int k = 0; k < t.Canopy.Length; k++)
         {
             if (!t.Canopy[k]) continue;
@@ -63,11 +78,12 @@ public static class CubeShapes
     public static CubeShape Preview(CubeTerrain t)
     {
         const int step = 2;
-        int x0 = t.Coord.X * CubeTuning.Side, y0 = t.Coord.Y * CubeTuning.Side, w = CubeTuning.Side / step + 1;
-        var verts = new Vector3[w * w];
-        var normals = new Vector3[w * w];
-        var colors = new Color[w * w];
-        for (int j = 0; j < w; j++)
+        int x0 = t.Cube.X * CubeTuning.Side, y0 = t.Cube.Y * CubeTuning.Side;
+        int w = t.Cube.Wide * CubeTuning.Side / step + 1, rows = t.Cube.Tall * CubeTuning.Side / step + 1;
+        var verts = new Vector3[w * rows];
+        var normals = new Vector3[w * rows];
+        var colors = new Color[w * rows];
+        for (int j = 0; j < rows; j++)
         for (int i = 0; i < w; i++)
         {
             int gx = x0 + i * step, gy = y0 + j * step;
@@ -76,9 +92,9 @@ public static class CubeShapes
             normals[j * w + i] = new Vector3(t.HeightAt(gx - step, gy) - t.HeightAt(gx + step, gy), 2f * step, t.HeightAt(gx, gy - step) - t.HeightAt(gx, gy + step)).Normalized();
             colors[j * w + i] = Colors.White;
         }
-        var indices = new int[(w - 1) * (w - 1) * 6];
+        var indices = new int[(w - 1) * (rows - 1) * 6];
         int o = 0;
-        for (int j = 0; j + 1 < w; j++)
+        for (int j = 0; j + 1 < rows; j++)
         for (int i = 0; i + 1 < w; i++)
         {
             int a = j * w + i, b = a + 1, c = a + w, d = c + 1;
@@ -99,8 +115,8 @@ public static class CubeShapes
     /// </summary>
     static float Smooth(CubeTerrain t, float x, float y)
     {
-        int n = CubeTerrain.N;
-        int ix = Math.Clamp(Mathf.FloorToInt(x), t.X0 + 1, t.X0 + n - 3), iy = Math.Clamp(Mathf.FloorToInt(y), t.Y0 + 1, t.Y0 + n - 3);
+        int n = t.Stride;
+        int ix = Math.Clamp(Mathf.FloorToInt(x), t.X0 + 1, t.X0 + n - 3), iy = Math.Clamp(Mathf.FloorToInt(y), t.Y0 + 1, t.Y0 + t.Rows - 3);
         float fx = x - ix, fy = y - iy;
         int k = (iy - t.Y0) * n + (ix - t.X0);
         var h = t.Heights;

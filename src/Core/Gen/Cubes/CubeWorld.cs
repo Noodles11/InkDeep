@@ -13,12 +13,12 @@ public sealed class CubeWorld : IBodyBlocker
 {
     public const float Dt = PlaneWorld.Dt;
 
-    public CubeWorld(Func<CubeCoord, CubeTerrain?> terrain, Vector2 start, int layer, Tuning? tuning = null, int reach = 1)
+    public CubeWorld(Func<CubeId, CubeTerrain?> terrain, Vector2 start, int layer, Tuning? tuning = null, int reach = 1)
     {
         Tuning = tuning ?? new Tuning();
         Layer = layer;
         Player = new PlaneBody { Position = start, PrevPosition = start };
-        Field = new CubeField(terrain, CubeCoord.Of(start, layer), reach);
+        Field = new CubeField(terrain, CellCoord.Of(start, layer), reach);
     }
 
     public Tuning Tuning { get; }
@@ -31,8 +31,9 @@ public sealed class CubeWorld : IBodyBlocker
 
     public float Radius => Tuning.PlayerRadius;
     public float CruiseSpeed => Tuning.PlaneCruiseSpeed;
-    /// <summary>The cube she is in.</summary>
-    public CubeCoord Cube => CubeCoord.Of(Player.Position, Layer);
+    /// <summary>The square she is in, and its cube.</summary>
+    public CellCoord Cell => CellCoord.Of(Player.Position, Layer);
+    public CubeId Cube => CubeId.Of(Cell);
 
     public void Step(in PlaneInput input)
     {
@@ -64,7 +65,7 @@ public sealed class CubeWorld : IBodyBlocker
         if (!input.DashHeld) p.Sprinting = false;
         BodyMotion.Swim(p, wish, wishLen, t, cruise, Dt);
         // (The window round the cube she starts the tick in: it reaches a whole cube past her every way.)
-        Field.Recenter(Cube);
+        Field.Recenter(Cell);
         HitWall = BodyMotion.Move(this, ref p.Position, ref p.Velocity, Radius, Dt);
     }
 

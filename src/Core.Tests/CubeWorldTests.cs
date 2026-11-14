@@ -19,35 +19,31 @@ public class CubeWorldTests
 
     public static IEnumerable<object[]> Seeds => CubeTerrainTests.Seeds;
 
-    const int F = 3;
+    const int F = 5;
 
-    static Func<CubeCoord, CubeTerrain?> Layer(ulong seed, int z = 0)
+    /// <summary>A layer's cubes, made, in the order the space lists them, and the look-up the world reads them by.</summary>
+    static (Func<CubeId, CubeTerrain?> Terrain, List<CubeTerrain> Cubes) Layer(ulong seed, int z = 0)
     {
         var space = new CubeSpace(seed, F, 3);
-        var made = new Dictionary<CubeCoord, CubeTerrain>();
-        for (int y = 0; y < F; y++)
-        for (int x = 0; x < F; x++)
-            made[new CubeCoord(x, y, z)] = CubeTerrain.Make(space, new CubeCoord(x, y, z));
-        return c => made.TryGetValue(c, out var t) ? t : null;
+        var made = space.CubesOf(z).OrderBy(c => c.Y).ThenBy(c => c.X).ToDictionary(c => c, c => CubeTerrain.Make(space, c));
+        return (c => made.TryGetValue(c, out var t) ? t : null, made.Values.ToList());
     }
 
     [Theory]
     [MemberData(nameof(Seeds))]
     public void She_swims_straight_through_a_gate_at_an_even_speed(ulong seed)
     {
-        var terrain = Layer(seed);
+        var (terrain, all) = Layer(seed);
         var tuning = new Tuning();
         float r = tuning.PlayerRadius;
         int crossed = 0;
-        for (int y = 0; y < F; y++)
-        for (int x = 0; x < F; x++)
+        foreach (var cube in all)
         {
-            var cube = terrain(new CubeCoord(x, y, 0))!;
             foreach (var (edge, gate, _) in cube.Gates)
             {
-                if (edge.Low != cube.Coord) continue;
+                if (!cube.Cube.Holds(edge.Low)) continue;
                 // A straight line through its throat that she fits along with room to spare.
-                var probe = new CubeField(terrain, cube.Coord);
+                var probe = new CubeField(terrain, edge.Low);
                 float? clear = null;
                 for (float off = 0f; off <= 3f && clear is null; off += 0.25f)
                 foreach (float o in new[] { off, -off })
@@ -84,7 +80,7 @@ public class CubeWorldTests
                 }
                 Assert.False(hit, $"{edge}: she met rock");
                 Assert.True(edge.Across(world.Player.Position) >= 9f, $"{edge}: she did not get through");
-                Assert.Equal(edge.High, world.Cube);
+                Assert.Equal(CubeId.Of(edge.High), world.Cube);
                 Assert.NotEmpty(speeds);
                 foreach (var s in speeds) Assert.InRange(s, tuning.PlaneCruiseSpeed * 0.999f, tuning.PlaneCruiseSpeed * 1.001f);
                 foreach (var d in steps) Assert.InRange(d, steps[0] * 0.999f, steps[0] * 1.001f);
@@ -99,17 +95,17 @@ public class CubeWorldTests
     [MemberData(nameof(Seeds))]
     public void A_long_swim_across_the_layer_is_the_same_whatever_window_holds_the_cubes(ulong seed)
     {
-        var terrain = Layer(seed);
-        var start = terrain(new CubeCoord(0, 0, 0))!.Gates[0].Mouth;
-        var goal = terrain(new CubeCoord(F - 1, F - 1, 0))!.Gates[0].Mouth;
+        var (terrain, all) = Layer(seed);
+        var start = all[0].Gates[0].Mouth;
+        var goal = all.OrderByDescending(t => Vector2.Distance(t.Cube.Middle, all[0].Cube.Middle)).First().Gates[0].Mouth;
         var tuning = new Tuning();
-        var path = Path(new CubeField(terrain, new CubeCoord(1, 1, 0), reach: 3), start, goal, tuning.PlayerRadius + 0.25f);
+        var path = Path(new CubeField(terrain, new CellCoord(F / 2, F / 2, 0), reach: F), start, goal, tuning.PlayerRadius + 0.25f);
         Assert.NotNull(path);
 
         // The window round her (moving as she goes), and one holding every cube from the start.
         var near = new CubeWorld(terrain, start, 0, tuning);
-        var all = new CubeWorld(terrain, start, 0, tuning, reach: 3);
-        var cubes = new HashSet<CubeCoord>();
+        var whole = new CubeWorld(terrain, start, 0, tuning, reach: F);
+        var cubes = new HashSet<CubeId>();
         int at = 0, ticks = 0;
         var rng = new Rng(seed);
         bool sprint = false;
@@ -121,9 +117,9 @@ public class CubeWorldTests
             var wish = Vector2.Normalize(path[at] - near.Player.Position + new Vector2(1e-4f, 0f));
             var input = new PlaneInput { Move = wish, Dash = sprint && ticks % 90 == 1, DashHeld = sprint };
             near.Step(input);
-            all.Step(input);
-            Assert.Equal(all.Player.Position, near.Player.Position);
-            Assert.Equal(all.Player.Velocity, near.Player.Velocity);
+            whole.Step(input);
+            Assert.Equal(whole.Player.Position, near.Player.Position);
+            Assert.Equal(whole.Player.Velocity, near.Player.Velocity);
             Assert.True(near.Clear(near.Player.Position, near.Radius - 0.01f), $"in the rock at {near.Player.Position}");
             cubes.Add(near.Cube);
         }
@@ -136,24 +132,27 @@ public class CubeWorldTests
     [Fact]
     public void Outside_the_window_and_the_reef_is_rock()
     {
-        var terrain = Layer(7UL);
-        var field = new CubeField(terrain, new CubeCoord(0, 0, 0));
+        var (terrain, all) = Layer(7UL);
+        var first = all[0];
+        var field = new CubeField(terrain, first.Cube.First);
         Assert.False(field.IsOpen(new Vector2(-5f, 30f)));
         Assert.False(field.IsOpen(new Vector2(30f, -5f)));
-        // (Cube (2, 2) is beyond the window round (0, 0): rock, though it is made.)
-        var mouth = terrain(new CubeCoord(2, 2, 0))!.Gates[0].Mouth;
-        Assert.True(new CubeField(terrain, new CubeCoord(2, 2, 0)).IsOpen(mouth));
+        // (A cube whose squares all lie beyond the window round the first: rock, though it is made.)
+        var far = all.First(t => Math.Abs(t.Cube.First.X - first.Cube.First.X) > 2 && Math.Abs(t.Cube.Second.X - first.Cube.First.X) > 2
+            || Math.Abs(t.Cube.First.Y - first.Cube.First.Y) > 2 && Math.Abs(t.Cube.Second.Y - first.Cube.First.Y) > 2);
+        var mouth = far.Gates[0].Mouth;
+        Assert.True(new CubeField(terrain, CellCoord.Of(mouth, 0)).IsOpen(mouth));
         Assert.False(field.IsOpen(mouth));
     }
 
     [Fact]
     public void The_reef_world_swims_and_shines_against_the_cubes_rock_when_given_their_field()
     {
-        var terrain = Layer(7UL);
-        var cube = terrain(new CubeCoord(1, 1, 0))!;
+        var (terrain, all) = Layer(7UL);
+        var cube = all[all.Count / 2];
         var mouth = cube.Gates[0].Mouth;
         var world = CubeShell.Make(F, mouth, new Tuning());
-        var field = new CubeField(terrain, CubeCoord.Of(mouth, 0));
+        var field = new CubeField(terrain, CellCoord.Of(mouth, 0));
         world.Field = field;
         // Straight at the rock nearest her: she stops at it, as the slim world does.
         var slim = new CubeWorld(terrain, mouth, 0, world.Tuning);
@@ -161,7 +160,7 @@ public class CubeWorldTests
         for (int k = 0; k < 600; k++)
         {
             var input = new PlaneInput { Move = way, Aim = way };
-            field.Recenter(CubeCoord.Of(world.Player.Position, 0));
+            field.Recenter(CellCoord.Of(world.Player.Position, 0));
             world.Step(input);
             slim.Step(input);
             Assert.True(ReefCollision.Clear(field, world.Player.Position, world.Radius - 0.01f));
@@ -169,7 +168,7 @@ public class CubeWorldTests
         Assert.Equal(slim.Player.Position, world.Player.Position);
         Assert.False(world.Defeated);
         // Her light stops at the cubes' rock.
-        Assert.True(world.StopsLight(cube.Coord.Origin + new Vector2(1f, 1f)));
+        Assert.True(world.StopsLight(cube.Cube.Origin + new Vector2(1f, 1f)));
         Assert.False(world.StopsLight(mouth));
     }
 

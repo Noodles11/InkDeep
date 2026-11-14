@@ -9,19 +9,19 @@ using static OctoShoots.Core.Gen.Cubes.CubeTuning;
 namespace OctoShoots.Game.Cubes;
 
 /// <summary>
-/// The stream's cubes on screen (CUBE-WORLD-PLAN §5.2, §5.5): it follows <see cref="ReefStream.Changes"/>, turning each
-/// cube's finished shapes into meshes a few a frame (the upload is the main thread's cost), on nodes taken from and
-/// returned to a pool. Her layer is drawn at the swim plane in the reef's own skin; the layer under it LayerDrop below,
+/// The stream's cubes on screen (CUBE-WORLD-PLAN §5.2, §5.5): it follows <see cref="ReefStream.Changes"/>, showing each
+/// cube's meshes (made on the worker) a few a frame, on nodes taken from and returned to a pool. Her layer is drawn at the swim plane in the reef's own skin; the layer under it LayerDrop below,
 /// its simplified ground (or its full one, once a dive is coming).
 /// </summary>
 public partial class ReefStreamView : Node3D
 {
-    /// <summary>Meshes uploaded a frame at most.</summary>
-    public const int MostUploads = 2;
+    /// <summary>Meshes shown a frame at most (each made already, on the worker), and the time they may take (ms; one at least).</summary>
+    public const int MostUploads = 8;
+    public const double UploadBudget = 1.5;
 
     ShaderMaterial _here = null!, _below = null!;
-    readonly Dictionary<(CubeCoord Cube, CubeWork Work), List<MeshInstance3D>> _shown = new();
-    readonly LinkedList<(CubeCoord Cube, CubeWork Work, LevelShape.Surface Surface)> _pending = new();
+    readonly Dictionary<(CubeId Cube, CubeWork Work), List<MeshInstance3D>> _shown = new();
+    readonly LinkedList<(CubeId Cube, CubeWork Work, ArrayMesh Mesh)> _pending = new();
     readonly Stack<MeshInstance3D> _pool = new();
     int _layer;
     /// <summary>How far the layers are drawn off their own heights (a dive under way: the world sinking past her).</summary>
@@ -68,7 +68,7 @@ public partial class ReefStreamView : Node3D
             if (change.Added)
             {
                 if (change.Result is not CubeShape shape) continue;
-                foreach (var surface in shape.Surfaces) _pending.AddLast((change.Cube, change.Work, surface));
+                foreach (var mesh in shape.Meshes) _pending.AddLast((change.Cube, change.Work, mesh));
                 continue;
             }
             for (var node = _pending.First; node is not null;)
@@ -97,6 +97,7 @@ public partial class ReefStreamView : Node3D
         long start = Stopwatch.GetTimestamp();
         for (int n = 0; n < MostUploads && _pending.Count > 0; n++)
         {
+            if (n > 0 && (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency > UploadBudget) break;
             var pick = _pending.First!;
             for (var node = _pending.First; node is not null; node = node.Next)
                 if (node.Value.Cube.Z == _layer)
@@ -105,9 +106,9 @@ public partial class ReefStreamView : Node3D
                     break;
                 }
             _pending.Remove(pick);
-            var (cube, work, surface) = pick.Value;
+            var (cube, work, mesh) = pick.Value;
             var instance = _pool.Count > 0 ? _pool.Pop() : NewNode();
-            instance.Mesh = LevelView.ToMesh(surface);
+            instance.Mesh = mesh;
             InUse++;
             var key = (cube, work);
             if (!_shown.TryGetValue(key, out var list)) _shown[key] = list = new List<MeshInstance3D>();
@@ -129,13 +130,13 @@ public partial class ReefStreamView : Node3D
     {
         _here.SetShaderParameter(SN.Of("level_offset"), new Vector3(0f, _lift, 0f));
         _below.SetShaderParameter(SN.Of("level_offset"), new Vector3(0f, _lift - LayerDrop, 0f));
-        var seen = new HashSet<CubeCoord>();
+        var seen = new HashSet<CubeId>();
         foreach (var key in _shown.Keys)
             if (seen.Add(key.Cube)) Show(key.Cube);
     }
 
     /// <summary>A cube's meshes shown as its layer stands to hers: its full ground on her layer; under it, its full ground if it has one, else its simplified one.</summary>
-    void Show(CubeCoord cube)
+    void Show(CubeId cube)
     {
         _shown.TryGetValue((cube, CubeWork.Mesh), out var full);
         _shown.TryGetValue((cube, CubeWork.PreviewMesh), out var simple);
