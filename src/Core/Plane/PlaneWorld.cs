@@ -189,6 +189,16 @@ public sealed partial class PlaneWorld : IBodyBlocker
     }
 
     public LevelMap Map { get; }
+    /// <summary>
+    /// The rock she and her light meet (CUBE-WORLD-PLAN §5.3): the level's own map, unless the cube world's field is put
+    /// in its place (the prototype: her movement and her light's stops; everything else still reads the map).
+    /// </summary>
+    public IReefField Field
+    {
+        get => _field ?? Map;
+        set => _field = value;
+    }
+    IReefField? _field;
     public Tuning Tuning { get; set; }
     public long Tick { get; private set; }
     /// <summary>Time on this level (s), from when it was entered.</summary>
@@ -366,7 +376,7 @@ public sealed partial class PlaneWorld : IBodyBlocker
     /// <summary>True when a circle of the given radius at p sits wholly in open water.</summary>
     public bool Clear(Vector2 p, float radius)
     {
-        if (!ReefCollision.Clear(Map, p, radius)) return false;
+        if (!ReefCollision.Clear(Field, p, radius)) return false;
         foreach (var rock in _rocks)
             if (rock.Contains(p, radius)) return false;
         if (ShutMouths.Count > 0 && Plug(p, radius) is not null) return false;
@@ -381,7 +391,7 @@ public sealed partial class PlaneWorld : IBodyBlocker
                 return rock.Inward(p);
         if (VaseAt(p, radius) is { } vase) return SafeNormalize(vase.Position - p);
         if (ShutMouths.Count > 0 && Plug(p, radius) is { } plug) return plug;
-        return ReefCollision.WallNormal(Map, p, radius);
+        return ReefCollision.WallNormal(Field, p, radius);
     }
 
     /// <summary>Moves a circle along its velocity, blocking against high terrain and sliding along the slope.</summary>

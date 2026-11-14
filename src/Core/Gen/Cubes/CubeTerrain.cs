@@ -59,7 +59,7 @@ public sealed class CubeTerrain
     }
 
     /// <summary>Points of the rock's rim pass (lower rock beside water) reach this far from the water.</summary>
-    const int Lip = 2;
+    const int Lip = 1;
 
     // Noise fields, one seed each (every cube reads the same at the same global point).
     const int NoiseThroat = 1, NoiseChamber = 2, NoiseTunnel = 3, NoiseShelf = 4, NoiseTop = 5, NoiseFloor = 6, NoiseBays = 7;
@@ -206,7 +206,7 @@ public sealed class CubeTerrain
         {
             int u = i - m, v = j - m, k = j * g + i;
             var p = new Vector2(gx0 + i, gy0 + j);
-            top[k] = 1.3f + 2.4f * (TerrainNoise.Fbm(p.X * 0.06f, p.Y * 0.06f, topSeed, 3) * 0.5f + 0.5f);
+            top[k] = RockLow + RockRise * Math.Clamp(TerrainNoise.Fbm(p.X * 0.06f, p.Y * 0.06f, topSeed, 3) * 0.5f + 0.5f, 0f, 1f);
             var shared = Shared(p, edges, corners, throatSeed);
             bool ownPoint = u >= 0 && v >= 0 && u <= Side && v <= Side;
             bool wet = shared ?? (ownPoint && water[v * own + u]);
@@ -347,7 +347,7 @@ public sealed class CubeTerrain
             near = Math.Min(near, Math.Max(Math.Abs(x - i), Math.Abs(y - j)));
         }
         float h = top[j * g + i];
-        return near switch { 1 => MathF.Min(h, 0.6f), 2 => MathF.Min(h, 1.1f), _ => h };
+        return near == 1 ? MathF.Min(h, RockRim) : h;
     }
 
     /// <summary>A tunnel from a to b: a curve bowed to one side, kept inside the cube's middle, 11 points.</summary>

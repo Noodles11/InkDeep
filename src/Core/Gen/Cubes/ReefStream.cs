@@ -8,10 +8,11 @@ namespace OctoShoots.Core.Gen.Cubes;
 
 /// <summary>
 /// How much of a cube is in hand (CUBE-WORLD-PLAN §5.1), least first. Mask: its terrain only, not drawn (the layer
-/// above, read to know where she may climb). Preview: terrain and simplified meshes (the cubes round hers she cannot
-/// reach, and the layer below). Preloaded: terrain, meshes and stocking, its creatures asleep. Active: the cube she is in.
+/// above, read to know where she may climb). Below: terrain and a simplified mesh (the layer under hers, seen through
+/// the void). Preview: terrain and its full ground (the cubes round hers she sees but cannot reach). Preloaded: with its
+/// stocking too, its creatures asleep. Active: the cube she is in.
 /// </summary>
-public enum CubeState : byte { Unloaded, Mask, Preview, Preloaded, Active }
+public enum CubeState : byte { Unloaded, Mask, Below, Preview, Preloaded, Active }
 
 /// <summary>A piece of work on a cube: its terrain first, then what is built from it.</summary>
 public enum CubeWork : byte { Terrain, PreviewMesh, Mesh, Stock }
@@ -115,23 +116,22 @@ public sealed class ReefStream
     public CubeState State(CubeCoord c)
     {
         if (!_cubes.TryGetValue(c, out var e)) return CubeState.Unloaded;
+        if (_wanted.TryGetValue(c, out var w) && Ready(e, w)) return w;
         var ready = CubeState.Unloaded;
-        foreach (var s in new[] { CubeState.Mask, CubeState.Preview, CubeState.Preloaded })
+        foreach (var s in Lesser)
             if (Ready(e, s)) ready = s;
-        if (ready == CubeState.Preloaded && _wanted.TryGetValue(c, out var w) && w == CubeState.Active) return CubeState.Active;
         return ready;
     }
+
+    static readonly CubeState[] Lesser = { CubeState.Mask, CubeState.Below, CubeState.Preview, CubeState.Preloaded };
 
     /// <summary>The work a state needs.</summary>
     public static IEnumerable<CubeWork> Needs(CubeState s)
     {
         if (s >= CubeState.Mask) yield return CubeWork.Terrain;
-        if (s == CubeState.Preview) yield return CubeWork.PreviewMesh;
-        if (s >= CubeState.Preloaded)
-        {
-            yield return CubeWork.Mesh;
-            yield return CubeWork.Stock;
-        }
+        if (s == CubeState.Below) yield return CubeWork.PreviewMesh;
+        if (s >= CubeState.Preview) yield return CubeWork.Mesh;
+        if (s >= CubeState.Preloaded) yield return CubeWork.Stock;
     }
 
     static bool Ready(Entry e, CubeState s)
@@ -244,8 +244,9 @@ public sealed class ReefStream
         for (int dx = -1; dx <= 1; dx++)
         {
             Mark(new CubeCoord(here.X + dx, here.Y + dy, here.Z), CubeState.Preview, 2);
-            Mark(new CubeCoord(here.X + dx, here.Y + dy, here.Z + 1), CubeState.Preview, 3);
-            if (f.Climbable) Mark(new CubeCoord(here.X + dx, here.Y + dy, here.Z - 1), CubeState.Mask, 4);
+            // (A dive or a climb coming: the layer she will arrive on readied in full, the cube she lands in first.)
+            Mark(new CubeCoord(here.X + dx, here.Y + dy, here.Z + 1), f.ReadyBelow ? CubeState.Preview : CubeState.Below, f.ReadyBelow ? 1 : 3);
+            if (f.Climbable) Mark(new CubeCoord(here.X + dx, here.Y + dy, here.Z - 1), f.ReadyAbove ? CubeState.Preview : CubeState.Mask, f.ReadyAbove ? 1 : 4);
         }
         if (f.ReadyBelow) Mark(here with { Z = here.Z + 1 }, CubeState.Preloaded, 0);
         if (f.ReadyAbove && f.Climbable) Mark(here with { Z = here.Z - 1 }, CubeState.Preloaded, 0);

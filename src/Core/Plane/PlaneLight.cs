@@ -576,7 +576,7 @@ public sealed partial class PlaneWorld
 
     bool Stops(Vector2 q)
     {
-        if (!Map.IsOpen(q)) return true;
+        if (!Field.IsOpen(q)) return true;
         // (A plain loop: this is asked thousands of times a frame, and a lambda would make garbage each time.)
         for (int i = 0; i < _rocks.Count; i++)
             if (_rocks[i].Contains(q)) return true;
