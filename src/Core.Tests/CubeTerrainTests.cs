@@ -246,4 +246,31 @@ public class CubeTimingTests
         // (CUBE-WORLD-PLAN §13: 10 ms on a worker; the test machine is given room.)
         Assert.True(best < 20.0, $"{best:F2} ms a cube");
     }
+
+    [Fact]
+    public void The_stream_keeps_its_books_within_its_budget()
+    {
+        var space = new CubeSpace(CubeTerrainTests.SeedValues[0], 5, 3);
+        var worker = new TaskCubeWorker(space);
+        var stream = new ReefStream(space, worker);
+        worker.Stream = stream;
+        var focus = new StreamFocus { Position = new System.Numerics.Vector2(2.5f * Side, 2.5f * Side), Velocity = new System.Numerics.Vector2(6f, 0f) };
+        var watch = Stopwatch.StartNew();
+        while (watch.Elapsed.TotalSeconds < 20 && (stream.Held.Count() < 18 || stream.InFlight.Count > 0))
+        {
+            stream.Update(focus, 1f / 60f);
+            worker.Drain(stream);
+            System.Threading.Thread.Sleep(1);
+        }
+        double best = double.MaxValue;
+        for (int round = 0; round < 3; round++)
+        {
+            watch.Restart();
+            for (int k = 0; k < 600; k++) stream.Update(focus, 1f / 60f);
+            best = Math.Min(best, watch.Elapsed.TotalMilliseconds / 600);
+        }
+        _out.WriteLine($"{best * 1000:F1} µs a frame");
+        // (CUBE-WORLD-PLAN §13: 0.1 ms a tick.)
+        Assert.True(best < 0.1, $"{best * 1000:F1} µs a frame");
+    }
 }

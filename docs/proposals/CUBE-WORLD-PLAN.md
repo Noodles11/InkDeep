@@ -149,8 +149,10 @@ made early once she is within 20 m of that gate and moving toward it.
 the player code nor the generator knows about loading.
 
 - **Wants:** each tick it derives the wanted state of every cube from her position, her heading, the open edges and
-  the wake current. A cube's state rises as soon as its data is ready and falls only after it has been unwanted for
-  3 s (so crossing a line back and forth does nothing).
+  the wake current. A cube's work is kept in pieces (terrain, preview mesh, full mesh, stocking); its state rises as
+  soon as the pieces it needs are ready, and each piece is let go only once it has gone unneeded for 3 s, what is
+  built on the terrain before the terrain (so crossing a line back and forth, where a cube is wanted one way on one
+  side and another on the other, does nothing).
 - **Requests:** missing terrain, stocking and meshes go to one worker queue, ordered by need: a dive under way, then
   the cube ahead, then Preloaded, then Preview, then prediction. A request whose cube is no longer wanted is cancelled.
 - **Applying:** finished work is put into the scene on the main thread under a budget of 2 ms a frame: at most one
@@ -403,7 +405,7 @@ movement and collision are first moved behind `IReefField` so both worlds share 
 | 2 | Shared walls and throats, the cube's own carving, bays, shelves, arches, void, apron: `CubeTerrain.Make(space, coord)` | Done: seam, connectivity and well tests pass (`CubeTerrainTests`); terrain within budget. |
 | 3 | A picture of a 3 × 3 × 3 block (one sheet a layer), drawn by `CubeTerrainTests` when `CUBE_SHEET` names a folder | Done. |
 | 4 | `IReefField` and `ReefCollision` (`src/Core/Gen`); her stroke and her move against what blocks her in `BodyMotion`, shared by `PlaneWorld` and the prototype's `CubeWorld`; `CubeField`, the window of cubes round her | Done (`CubeWorldTests`): through a gate her speed and step hold to 0.1% across the cube line; a long swim over five cubes is the same tick for tick with a 3 × 3 window moving with her as with every cube held. |
-| 5 | `ReefStream`: wants, queue, states, pins, unload delay | State tests pass with a fake worker. |
+| 5 | `ReefStream`: wants, queue, states, pins, unload delay; `TaskCubeWorker` on the thread pool | Done (`ReefStreamTests`, with a worker the test runs by hand and with the thread pool's): her cube's work first, terrain before what is built on it, two jobs out at a time; crossing a line back and forth lets nothing go; what she leaves goes after 3 s, pinned cubes not; work no longer wanted given up; the layer left kept as masks while she may climb; the bookkeeping 25 µs a frame. |
 | 6 | `ReefStreamView`: per-chunk shapes, pooled chunk views, toroidal textures, frame budget | Swimming a ring shows no seam and no frame over budget. |
 | 7 | The layer below: preview meshes, depth fog, murk | She sees one layer down everywhere there is void, nothing below it. |
 | 8 | Diving and climbing: the mask, prompt, cooldown, no-chain rule, camera move, layer swap | Down two layers and back up one with no loading and no frame over budget. |
