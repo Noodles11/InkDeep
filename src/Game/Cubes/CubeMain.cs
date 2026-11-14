@@ -30,6 +30,7 @@ public partial class CubeMain : Node3D
 {
     SeedCode _seed = SeedCode.Parse("KELP7Q2Z");
     int _footprint = 5, _layers = 3;
+    float _cooldown = CubeDiving.Cooldown;
     bool _route;
     float _perfFor;
     string? _captureDir;
@@ -74,6 +75,8 @@ public partial class CubeMain : Node3D
             else if (arg.StartsWith("--cube-footprint=") && int.TryParse(Value("--cube-footprint="), out int f)) _footprint = Math.Clamp(f, 1, Footprint);
             else if (arg.StartsWith("--cube-layers=") && int.TryParse(Value("--cube-layers="), out int l)) _layers = Math.Clamp(l, 1, Layers);
             else if (arg == "--cube-route") _route = true;
+            else if (arg == "--cube-dives") _autoDives = true;
+            else if (arg.StartsWith("--cube-cooldown=") && float.TryParse(Value("--cube-cooldown="), NumberStyles.Float, CultureInfo.InvariantCulture, out float cd)) _cooldown = cd;
             else if (arg.StartsWith("--cube-perf=") && float.TryParse(Value("--cube-perf="), NumberStyles.Float, CultureInfo.InvariantCulture, out float p)) _perfFor = p;
             else if (arg.StartsWith("--capture=")) _captureDir = Value("--capture=");
             else if (arg.StartsWith("--frames="))
@@ -126,6 +129,8 @@ public partial class CubeMain : Node3D
         _overlay.AddThemeFontSizeOverride("font_size", 13);
         layer.AddChild(_overlay);
         ApplyLook(look);
+        BuildLayers(_cooldown);
+        if (_autoDives) PlanDives();
         if (_route) PlanRoute(start);
         if (OS.GetCmdlineUserArgs().Contains("--cube-nodes")) GetTree().CreateTimer(2.0).Timeout += ListProcessing;
         if (OS.GetCmdlineUserArgs().Contains("--cube-nomusic") && GetTree().Root.GetNodeOrNull("MusicManager") is { } music) music.SetProcess(false);
@@ -184,7 +189,7 @@ public partial class CubeMain : Node3D
         var p = _world.Player;
 
         // The stream: what is wanted round her, finished work taken in, a few meshes uploaded.
-        var focus = new StreamFocus { Position = p.Position, Velocity = p.Velocity, Layer = _layer };
+        var focus = LayerFocus(p);
         _stream.Update(focus, dt);
         _worker.Drain(_stream);
         while (_worker.Errors.TryDequeue(out var error))
@@ -197,33 +202,44 @@ public partial class CubeMain : Node3D
         // She waits for her own cube and what she can swim into (the first frames only).
         // (Every cube wanted at its state: her cube, what she sees, the layer below.)
         if (!_ready) _ready = _stream.InFlight.Count == 0 && _view.Pending == 0 && _stream.Wanted.All(w => _stream.State(w.Key) == w.Value);
-        _accumulator += delta;
-        if (!_ready) _accumulator = 0;
-        int steps = 0;
-        while (_accumulator >= PlaneWorld.Dt && steps < 8)
+        if (_move != Move.None)
         {
-            _world.Step(ReadInput());
-            _field.Recenter(CellCoord.Of(p.Position, _layer));
-            _accumulator -= PlaneWorld.Dt;
-            steps++;
+            _accumulator = 0;
+            StepMove(dt);
         }
-        float alpha = (float)(_accumulator / PlaneWorld.Dt);
-
-        var at = System.Numerics.Vector2.Lerp(p.PrevPosition, p.Position, alpha);
-        var eye = new Vector3(at.X, LevelMap.SwimBand, at.Y);
-        if (!Without("bell")) _bell.Sync(_world, alpha, dt);
-        if (!Without("light")) SyncLight(dt);
-        if (!Without("beam")) _beam.Sync(_world, _bell.LightPosition, dt);
-        _camera.Track(eye, dt, snap: _frame <= 2);
-        // Under an arch she is seen through it.
-        bool hidden = _stream.Terrain(CubeId.Of(p.Position, _layer))?.CanopyAt(Mathf.RoundToInt(p.Position.X), Mathf.RoundToInt(p.Position.Y)) == true;
-        _seeThrough = Mathf.MoveToward(_seeThrough, hidden ? 1f : 0f, dt * (hidden ? 4.5f : 2.2f));
-        _view.SeeThrough(_bell.GlobalPosition, 4.5f, _seeThrough);
-        _view.Follow(eye);
-        if (!Without("snow"))
+        else
         {
-            _snow.Her(_bell.GlobalPosition, new Vector3(p.Velocity.X, 0f, p.Velocity.Y));
-            _snow.Tick(dt, eye + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
+            _accumulator += delta;
+            if (!_ready) _accumulator = 0;
+            if (_ready) StepLayers((float)delta);
+            AutoSteer();
+            int steps = 0;
+            while (_accumulator >= PlaneWorld.Dt && steps < 8)
+            {
+                _world.Step(ReadInput());
+                _field.Recenter(CellCoord.Of(p.Position, _layer));
+                _accumulator -= PlaneWorld.Dt;
+                steps++;
+            }
+            float alpha = (float)(_accumulator / PlaneWorld.Dt);
+
+            var at = System.Numerics.Vector2.Lerp(p.PrevPosition, p.Position, alpha);
+            var eye = new Vector3(at.X, LevelMap.SwimBand, at.Y);
+            if (!Without("bell")) _bell.Sync(_world, alpha, dt);
+            if (!Without("light")) SyncLight(dt);
+            if (!Without("beam")) _beam.Sync(_world, _bell.LightPosition, dt);
+            _camera.Track(eye, dt, snap: _frame <= 2);
+            // Under an arch she is seen through it.
+            bool hidden = _stream.Terrain(CubeId.Of(p.Position, _layer))?.CanopyAt(Mathf.RoundToInt(p.Position.X), Mathf.RoundToInt(p.Position.Y)) == true;
+            _seeThrough = Mathf.MoveToward(_seeThrough, hidden ? 1f : 0f, dt * (hidden ? 4.5f : 2.2f));
+            _view.SeeThrough(_bell.GlobalPosition, 4.5f, _seeThrough);
+            _view.Follow(eye);
+            if (!Without("snow"))
+            {
+                _snow.Her(_bell.GlobalPosition, new Vector3(p.Velocity.X, 0f, p.Velocity.Y));
+                _snow.Tick(dt, eye + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
+            }
+
         }
 
         _cpuMs = (System.Diagnostics.Stopwatch.GetTimestamp() - processStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
@@ -263,7 +279,7 @@ public partial class CubeMain : Node3D
     {
         var input = new PlaneInput();
         var pos = _world.Player.Position;
-        if (_route && _path.Count > 0)
+        if ((_route || _autoDives) && _path.Count > 0)
         {
             while (_pathAt + 1 < _path.Count && System.Numerics.Vector2.Distance(pos, ToCore(_path[_pathAt])) < 2.5f) _pathAt++;
             var to = ToCore(_path[_pathAt]) - pos;
@@ -339,37 +355,42 @@ public partial class CubeMain : Node3D
                      .OrderBy(t => MathF.Atan2(t.Cube.Middle.Y - middle.Y, t.Cube.Middle.X - middle.X)))
             stops.Add(t.Gates[0].Mouth);
         stops.Add(start);
+        for (int k = 0; k + 1 < stops.Count; k++)
+            if (PathOver(all, stops[k], stops[k + 1]) is { } leg) _path.AddRange(leg);
+        GD.Print($"Cube route: {_path.Count} m over {stops.Count - 1} legs");
+    }
+
+    /// <summary>The shortest way over a layer's water that she fits along (8-way steps on the 1 m grid; null where there is none).</summary>
+    List<Vector2>? PathOver(CubeField all, System.Numerics.Vector2 from, System.Numerics.Vector2 to)
+    {
         int n = _footprint * CubeTuning.Side + 1;
         float clearance = _tuning.PlayerRadius + 0.3f;
-        for (int s = 0; s + 1 < stops.Count; s++)
+        var a = (X: Mathf.RoundToInt(from.X), Y: Mathf.RoundToInt(from.Y));
+        var b = (X: Mathf.RoundToInt(to.X), Y: Mathf.RoundToInt(to.Y));
+        var came = new Dictionary<(int, int), (int, int)> { [a] = a };
+        var todo = new Queue<(int X, int Y)>();
+        todo.Enqueue(a);
+        bool Free(int x, int y) => x >= 0 && y >= 0 && x < n && y < n && ReefCollision.Clear(all, new System.Numerics.Vector2(x, y), clearance);
+        while (todo.Count > 0)
         {
-            var a = (X: Mathf.RoundToInt(stops[s].X), Y: Mathf.RoundToInt(stops[s].Y));
-            var b = (X: Mathf.RoundToInt(stops[s + 1].X), Y: Mathf.RoundToInt(stops[s + 1].Y));
-            var came = new Dictionary<(int, int), (int, int)> { [a] = a };
-            var todo = new Queue<(int X, int Y)>();
-            todo.Enqueue(a);
-            bool Free(int x, int y) => x >= 0 && y >= 0 && x < n && y < n && ReefCollision.Clear(all, new System.Numerics.Vector2(x, y), clearance);
-            while (todo.Count > 0)
+            var c = todo.Dequeue();
+            if (c == b) break;
+            for (int dy = -1; dy <= 1; dy++)
+            for (int dx = -1; dx <= 1; dx++)
             {
-                var c = todo.Dequeue();
-                if (c == b) break;
-                for (int dy = -1; dy <= 1; dy++)
-                for (int dx = -1; dx <= 1; dx++)
-                {
-                    var next = (X: c.X + dx, Y: c.Y + dy);
-                    if ((dx == 0 && dy == 0) || came.ContainsKey(next) || !Free(next.X, next.Y)) continue;
-                    if (dx != 0 && dy != 0 && (!Free(c.X + dx, c.Y) || !Free(c.X, c.Y + dy))) continue;
-                    came[next] = c;
-                    todo.Enqueue(next);
-                }
+                var next = (X: c.X + dx, Y: c.Y + dy);
+                if ((dx == 0 && dy == 0) || came.ContainsKey(next) || !Free(next.X, next.Y)) continue;
+                if (dx != 0 && dy != 0 && (!Free(c.X + dx, c.Y) || !Free(c.X, c.Y + dy))) continue;
+                came[next] = c;
+                todo.Enqueue(next);
             }
-            if (!came.ContainsKey(b)) continue;
-            var leg = new List<Vector2>();
-            for (var c = b; c != a; c = came[c]) leg.Add(new Vector2(c.Item1, c.Item2));
-            leg.Reverse();
-            _path.AddRange(leg);
         }
-        GD.Print($"Cube route: {_path.Count} m over {stops.Count - 1} legs");
+        if (!came.ContainsKey(b)) return null;
+        var leg = new List<Vector2>();
+        for (var c = b; c != a; c = came[c]) leg.Add(new Vector2(c.Item1, c.Item2));
+        leg.Reverse();
+        leg.Add(new Vector2(to.X, to.Y));
+        return leg;
     }
 
     void Measure(double delta)
@@ -382,6 +403,7 @@ public partial class CubeMain : Node3D
         _perfFrames++;
         _perfTotal += ms;
         _perfClock += delta;
+        if (_move != Move.None) _moveWorst = Math.Max(_moveWorst, ms);
         if (ms > _perfWorst)
         {
             _perfWorst = ms;
@@ -417,6 +439,9 @@ public partial class CubeMain : Node3D
             "Cube perf: {0} frames in {1:0.0} s, mean {2:0.00} ms (our frame code {12:0.00} ms + {16:0.00} ms after it, every node's process {14:0.00} ms, render CPU {15:0.00} ms, GPU {13:0.00} ms), worst {3:0.0} ms, over 20 ms: {4}; worst upload {5:0.00} ms; window moves {6}; at {7:0},{8:0} cube {9}; nodes {10} in use, {11} pooled",
             _perfFrames, _perfClock, _perfTotal / _perfFrames, _perfWorst, _perfOver, _view.WorstMs, _field.Recentres, p.X, p.Y, CubeId.Of(p, _layer), _view.InUse, _view.Pooled,
             _cpuTotal / _perfFrames, _gpuTotal / _perfFrames, _allProcessTotal / _perfFrames, _renderCpuTotal / _perfFrames, _tailMs));
+        if (_moves.Count > 0)
+            GD.Print(string.Format(CultureInfo.InvariantCulture, "Cube perf: changes of layer: {0}; held for a cube {1:0.00} s in all; the worst frame during them {2:0.0} ms",
+                string.Join(", ", _moves), _heldFor, _moveWorst));
         GD.Print(string.Format(CultureInfo.InvariantCulture, "Cube perf: the worst frame {3}; a cube in view undrawn on {0} frames, {1:0.00} s at most; jobs: {2}", _lateFrames, _lateMost,
             string.Join(", ", _worker.Timing.Select(t => $"{t.Key} {t.Value.Count} × {t.Value.Total / t.Value.Count:0.0} ms (most {t.Value.Most:0.0})")), _worstAt));
         GetTree().Quit();
