@@ -51,3 +51,55 @@ public class CubeReefTests
         foreach (var c in outside) Assert.False(map.IsOpen(c.Origin + new Vector2(Side / 2f)));
     }
 }
+
+/// <summary>A layer's cubes stocked as she claims them (CUBE-WORLD-PLAN §15.2), and put back as she left them.</summary>
+public class CubeStockTests
+{
+    static PlaneWorld LayerWorld(CubeReef reef, int z) =>
+        new(reef.Layer(z, reef.Start), new Tuning(), options: new PlaneOptions { Corruption = false, Cubes = true });
+
+    [Theory]
+    [MemberData(nameof(CubeTerrainTests.Seeds), MemberType = typeof(CubeTerrainTests))]
+    public void A_claimed_cube_is_stocked_alike_each_time_and_never_on_the_warm_up_layer(ulong seed)
+    {
+        var reef = new CubeReef(seed, 5, 4);
+        var world = LayerWorld(reef, 2);
+        foreach (var cube in reef.Space.CubesOf(2))
+        {
+            var entry = cube.Origin + new Vector2(2f, 2f);
+            var a = CubeStock.Spots(seed, cube, 3, world.Map.Menace, entry, world.Clear);
+            var b = CubeStock.Spots(seed, cube, 3, world.Map.Menace, entry, world.Clear);
+            Assert.Equal(a, b);
+            Assert.True(a.Count >= CubeStockTuning.Least, $"{cube}: {a.Count} stocked");
+            Assert.All(a, s => Assert.True(Vector2.Distance(s.At, entry) >= CubeStockTuning.FromEntry));
+            Assert.True(a.Count(s => s.Prime) <= 1);
+            Assert.Empty(CubeStock.Spots(seed, cube.OnLayer(0), 3, 0f, entry, (_, _) => true));
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(CubeTerrainTests.Seeds), MemberType = typeof(CubeTerrainTests))]
+    public void Its_stock_lives_sleeps_far_from_her_and_is_put_back_as_left(ulong seed)
+    {
+        var reef = new CubeReef(seed, 5, 4);
+        var world = LayerWorld(reef, 2);
+        Assert.NotNull(world.Corruption);
+        var cubes = reef.Space.CubesOf(2).ToList();
+        foreach (var cube in cubes)
+            foreach (var s in CubeStock.Spots(seed, cube, 1, world.Map.Menace, reef.Start, world.Clear))
+                world.PlaceStock(cube, s.Spawn, s.Prime, s.At);
+        Assert.True(world.Murklings.Count >= cubes.Count * CubeStockTuning.Least);
+        var before = world.Murklings.ToDictionary(m => m, m => m.Position);
+        for (int i = 0; i < 240; i++) world.Step(new PlaneInput());
+        var her = world.Player.Position;
+        foreach (var m in world.Murklings.Where(m => Vector2.Distance(before[m], her) > ReefTuning.Awake + 10f))
+            Assert.Equal(before[m], m.Position);
+        var again = LayerWorld(reef, 2);
+        foreach (var cube in cubes)
+            foreach (var left in world.StockLeft(cube))
+                again.PlaceStock(cube, left.Spawn, left.Prime, left.At);
+        var was = world.Murklings.Where(m => m.Alive && m.Stocked is not null).Select(m => (m.Position, m.Prime, m.Stocked)).OrderBy(x => x.Position.X).ThenBy(x => x.Position.Y);
+        var now = again.Murklings.Select(m => (m.Position, m.Prime, m.Stocked)).OrderBy(x => x.Position.X).ThenBy(x => x.Position.Y);
+        Assert.Equal(was, now);
+    }
+}

@@ -165,7 +165,7 @@ public sealed partial class PlaneWorld : IBodyBlocker
         if (Options.Vases) PlaceVases();
         PlaceSprings();
         PlaceSeals();
-        if (Options.Corruption || adventure) PlaceCorruption();
+        if (Options.Corruption || adventure || Options.Cubes) PlaceCorruption();
         if (adventure) PlaceAdventure();
         // The reef's zones: its murkling packs.
         if (Options.Reef && Map.Station && Map.Zones.Count > 0) PlaceReefPacks();

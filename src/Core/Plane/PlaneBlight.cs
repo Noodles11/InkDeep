@@ -246,6 +246,8 @@ public sealed class Murkling
     public Blotter? Guarding;
     /// <summary>A den's murkling: its nave (centre and radius), where it drifts back to while she is away.</summary>
     public Vector2? Home;
+    /// <summary>The cube reef: the cube whose stock it is, and which of its stock (CubeStock); null for one born otherwise.</summary>
+    public (OctoShoots.Core.Gen.Cubes.CubeId Cube, int Spawn)? Stocked;
     public float HomeRadius;
     /// <summary>Thrown off her by a dash (counting down): it tumbles away and cannot cling or chase until it recovers.</summary>
     public float Shaken;
@@ -321,8 +323,8 @@ public sealed partial class PlaneWorld
     {
         _blightRng = new Rng(Map.Seed ^ 0xB1167UL ^ ((ulong)Map.Level << 22) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Attempt << 46));
         // The adventure's ink is in the water (InkDots), not on the ground: its field starts clean.
-        var field = Corruption = Options.Adventure ? new CorruptionField() : CorruptionField.ForMap(Map);
-        if (Options.Adventure) return;
+        var field = Corruption = Options.Adventure || Options.Cubes ? new CorruptionField() : CorruptionField.ForMap(Map);
+        if (Options.Adventure || Options.Cubes) return;
         // The tutorial's open rift has no arena to cleanse: its Crack is open from the start.
         if (Map.HasBoss && !Map.Rift)
         {

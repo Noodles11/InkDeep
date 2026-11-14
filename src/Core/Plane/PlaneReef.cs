@@ -322,7 +322,7 @@ public sealed partial class PlaneWorld
     public bool Unseen => Player.CloakTimer > 0f;
 
     /// <summary>On the zoned reef, too far from her to live just now (ReefTuning.Awake): it holds still where it is.</summary>
-    bool Asleep(Vector2 at) => Map.Zones.Count > 0 && Vector2.DistanceSquared(at, Player.Position) > ReefTuning.Awake * ReefTuning.Awake;
+    bool Asleep(Vector2 at) => (Map.Zones.Count > 0 || Options.Cubes) && Vector2.DistanceSquared(at, Player.Position) > ReefTuning.Awake * ReefTuning.Awake;
 
     float _caveBud;
 

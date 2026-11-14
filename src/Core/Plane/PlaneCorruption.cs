@@ -31,6 +31,11 @@ public sealed class PlaneOptions
     /// </summary>
     public bool Reef;
     /// <summary>
+    /// A layer of the cube reef (docs/proposals/CUBE-WORLD-PLAN.md §15.2): its water clean (no leaks, no corruption on the
+    /// ground), its murklings stocked into each cube as she claims it (PlaceStock); those far from her asleep.
+    /// </summary>
+    public bool Cubes;
+    /// <summary>
     /// A dive's leak cave (docs/DIVE.md §6): the Leak's water harms her while its leak is open (DiveCaveTuning.Sting);
     /// sealing it heals her whole and leaves a pearl. Her way out is open the whole time.
     /// </summary>

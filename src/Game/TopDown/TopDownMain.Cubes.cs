@@ -105,13 +105,17 @@ public partial class TopDownMain
         return Task.Run(() => LevelShape.Bare(reef.Layer(0, reef.Start)));
     }
 
-    /// <summary>The world's options on a layer: no creatures yet, no corruption, no leaks (§15.2 brings them).</summary>
-    static PlaneOptions CubeReefOptions() => new() { Corruption = false, Pufferlings = false, Vases = false, Adventure = false };
+    /// <summary>The world's options on a layer: the cube reef's (its murklings stocked as she claims cubes), no leaks, no corruption on the ground.</summary>
+    static PlaneOptions CubeReefOptions() => new() { Corruption = false, Pufferlings = false, Vases = false, Adventure = false, Cubes = true };
 
     /// <summary>A layer entered (the first, or after a change of layer): its map kept, the next one down begun.</summary>
     void EnteredLayer()
     {
         _layerMaps[_layer] = _map;
+        // Back on a layer: its claimed cubes' stock put back as she left it.
+        foreach (var record in Here.Claimed.Values)
+            foreach (var left in record.Left ?? Enumerable.Empty<StockLeft>())
+                _world.PlaceStock(record.Cube, left.Spawn, left.Prime, left.At);
         // (Only her layer and the one above are ever needed again: §10.)
         foreach (int z in _layerMaps.Keys.Where(z => z < _layer - 1).ToList())
         {
@@ -175,11 +179,21 @@ public partial class TopDownMain
             if (flow != System.Numerics.Vector2.Zero) _world.Move(ref p.Position, ref flow, _world.Radius, report: false);
         }
         var to = p.Position;
-        if (Here.Move(p.PrevPosition, ref to) == Crossing.Held)
+        var crossed = Here.Move(p.PrevPosition, ref to);
+        if (crossed == Crossing.Held)
         {
             p.Position = to;
             p.Velocity = System.Numerics.Vector2.Zero;
             _heldShown = 2f;
+        }
+        // A cube claimed: its stock buds (never the warm-up layer's, nor the cube she arrived in).
+        else if (crossed == Crossing.Claimed)
+        {
+            var claimed = CubeId.Of(p.Position, _layer);
+            var spots = CubeStock.Spots(_cubes.Space.Seed, claimed, Here.Claimed[claimed].Claim, _map.Menace, p.Position, _world.Clear);
+            foreach (var s in spots) _world.PlaceStock(claimed, s.Spawn, s.Prime, s.At);
+            GD.Print($"Cube reef: {claimed} claimed ({Here.Claims} on layer {_layer}), {spots.Count} of its stock budded");
+            if (_autopilot) Route();
         }
         if (++_revealTick % 6 == 0) Here.Reveal(p.Position, 12f);
     }
@@ -308,6 +322,8 @@ public partial class TopDownMain
         var terrain = _cubes!.Terrain(arrival);
         bool down = _layerMove == LayerMove.Down;
         int from = _layer;
+        // The layer left: what is left of each claimed cube's stock, kept for her return.
+        foreach (var record in Here.Claimed.Values) record.Left = _world.StockLeft(record.Cube);
         if (down) _cubeDiving.Dived(_layerFrom, terrain);
         else _cubeDiving.Climbed(_layerFrom, terrain);
         _layer = _cubeDiving.Layer;
@@ -328,6 +344,27 @@ public partial class TopDownMain
         _minimap.Arrive();
         foreach (var view in LevelLife) ResetFade(view);
         GD.Print($"Cube reef: {(down ? "dived" : "climbed")} to layer {_layer} (deepest {_cubeDiving.Deepest})");
+    }
+
+    /// <summary>
+    /// Verification (--autopilot): her way through a gate of her cube into one she has not claimed (across a shut edge
+    /// never), 8 m past its line.
+    /// </summary>
+    List<System.Numerics.Vector2> CubeRoute()
+    {
+        var her = _world.Player.Position;
+        var cube = CubeId.Of(her, _layer);
+        foreach (var (edge, gate, _) in _cubes!.Terrain(cube).Gates.OrderBy(g => System.Numerics.Vector2.Distance(g.Mouth, her)))
+        {
+            if (Here.IsShut(edge)) continue;
+            var inside = CubeId.Of(edge.High) == cube ? edge.High : new CellCoord(edge.High.X - (edge.Axis == EdgeAxis.X ? 1 : 0), edge.High.Y - (edge.Axis == EdgeAxis.Y ? 1 : 0), _layer);
+            float into = edge.High == inside ? 1f : -1f;
+            var across = edge.Point(gate.Along, -into * 8f);
+            if (Here.IsClaimed(CubeId.Of(across, _layer))) continue;
+            var path = LevelValidator.ShortestPath(_map, her, across, clearance: 1f);
+            if (path.Count > 0) return path;
+        }
+        return new();
     }
 
     /// <summary>Each frame she swims: the reef drawn round her, an arch over her seen through, the currents' streaks.</summary>

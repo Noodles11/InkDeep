@@ -24,6 +24,11 @@ public sealed class CubeRecord
     public int Claim { get; }
     /// <summary>Seen, a bit a metre over its squares (row by row across the cube).</summary>
     public ulong[] Seen { get; }
+    /// <summary>
+    /// Its stock as she last left the layer (CubeStock: the murklings still living, where they were); null while she has
+    /// not left it since claiming it. A cube she arrived in by a dive or a climb has none.
+    /// </summary>
+    public List<StockLeft>? Left { get; set; }
 
     int Bit(int gx, int gy)
     {
