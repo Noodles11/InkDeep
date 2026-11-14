@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using OctoShoots.Core.Gen.TopDown;
@@ -40,7 +41,7 @@ public sealed partial class PlaneWorld
     bool InkMurklings => Options.Adventure && Options.InkMurklings && !Map.LeakCave && !Map.Station && !Map.Labyrinth && Map.Haven is null;
 
     /// <summary>How much bigger a budded murkling grows with the Menace (the adventure's; 1 elsewhere).</summary>
-    float MurkGrowth => Options.Adventure && Options.InkMurklings ? MathF.Min(1f + MurkRosterTuning.SizePerMenace * Menace, MurkRosterTuning.MostGrowth) : 1f;
+    float MurkGrowth => Options.Adventure && Options.InkMurklings || Options.Reef ? MathF.Min(1f + MurkRosterTuning.SizePerMenace * Menace, MurkRosterTuning.MostGrowth) : 1f;
 
     /// <summary>The next shoal's school (apart from the reef fish's schools).</summary>
     int _nextShoal = 1 << 20;
@@ -78,6 +79,46 @@ public sealed partial class PlaneWorld
             if (!Clear(p, AdventureTuning.ShoalRadius)) p = at;
             if (Bud(p, -1, drink: false, born: born) is { } o) MakeShoal(o, m.Swarm, meter);
         }
+    }
+
+    /// <summary>A murkling of the cube reef this far from her (squared) sleeps.</summary>
+    const float Asleep = OctoShoots.Core.Gen.Cubes.CubeStockTuning.SleepReach * OctoShoots.Core.Gen.Cubes.CubeStockTuning.SleepReach;
+
+    /// <summary>
+    /// One of a cube's stock buds (born, as at a reef's start): at <paramref name="at"/>[0] by its seed's kind, a shoal its
+    /// whole school round it; or, put back as it was left (<paramref name="left"/>), each of its living murklings where it
+    /// stood (a shoal's school together again). Every murkling made is marked as that cube's.
+    /// </summary>
+    /// <param name="shoal">Put back: a shoal's school (whatever its first's seed would make it).</param>
+    public void PlaceStock(OctoShoots.Core.Gen.Cubes.CubeId cube, int spawn, float seed, bool prime, IReadOnlyList<Vector2> at, bool left, bool shoal = false)
+    {
+        if (at.Count == 0) return;
+        int from = Murklings.Count;
+        _budSeed = seed;
+        if (!left) BudRoster(at[0], prime, born: true);
+        else if (!shoal) Bud(at[0], -1, prime, drink: false, born: true);
+        else
+        {
+            _budSeed = null;
+            float meter = BlightTuning.MurkCorruption * (1f + BlightTuning.MeterPerMenace * Menace);
+            int school = _nextShoal++;
+            foreach (var p in at)
+                if (Bud(p, -1, drink: false, born: true) is { } o) MakeShoal(o, school, meter);
+        }
+        for (int i = from; i < Murklings.Count; i++) Murklings[i].Stocked = (cube, spawn);
+    }
+
+    /// <summary>What is left of a cube's stock: each of its spawns with murklings still living, where they are.</summary>
+    public List<OctoShoots.Core.Gen.Cubes.StockLeft> StockLeft(OctoShoots.Core.Gen.Cubes.CubeId cube)
+    {
+        var left = new List<OctoShoots.Core.Gen.Cubes.StockLeft>();
+        foreach (var group in Murklings.Where(m => m.Alive && m.Stocked?.Cube == cube).GroupBy(m => m.Stocked!.Value.Spawn))
+        {
+            // (Its first: the one whose seed set the kind, a shoal's own leader.)
+            var first = group.First();
+            left.Add(new OctoShoots.Core.Gen.Cubes.StockLeft(group.Key, first.Seed, first.Prime, first.Kind == MurkKind.Shoal, group.Select(m => m.Position).ToArray()));
+        }
+        return left;
     }
 
     /// <summary>A reef's murklings at its start: scattered through its ink, away from where she comes in and from the boss's arena.</summary>

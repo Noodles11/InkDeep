@@ -262,6 +262,8 @@ public sealed class Murkling
     public Blotter? Guarding;
     /// <summary>A den's murkling: its nave (centre and radius), where it drifts back to while she is away.</summary>
     public Vector2? Home;
+    /// <summary>The cube reef: the cube whose stock it is, and which of its stock (CubeStock); null for one born otherwise.</summary>
+    public (OctoShoots.Core.Gen.Cubes.CubeId Cube, int Spawn)? Stocked;
     public float HomeRadius;
     /// <summary>Thrown off her by a dash (counting down): it tumbles away and cannot cling or chase until it recovers.</summary>
     public float Shaken;
@@ -356,8 +358,8 @@ public sealed partial class PlaneWorld
     {
         _blightRng = new Rng(Map.Seed ^ 0xB1167UL ^ ((ulong)Map.Level << 22) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Attempt << 46));
         // The adventure's ink is in the water (InkDots), not on the ground: its field starts clean.
-        var field = Corruption = Options.Adventure ? new CorruptionField() : CorruptionField.ForMap(Map);
-        if (Options.Adventure) return;
+        var field = Corruption = Options.Adventure || Options.Reef ? new CorruptionField() : CorruptionField.ForMap(Map);
+        if (Options.Adventure || Options.Reef) return;
         // The tutorial's open rift has no arena to cleanse: its Crack is open from the start.
         if (Map.HasBoss && !Map.Rift)
         {
@@ -904,6 +906,8 @@ public sealed partial class PlaneWorld
         foreach (var m in Murklings)
         {
             if (!m.Alive) continue;
+            // On the cube reef, one far from her sleeps where it is (and one clinging to her is never far).
+            if (Options.Reef && !m.Clinging && Vector2.DistanceSquared(m.Position, p.Position) > Asleep) continue;
             if (m.Budding)
             {
                 // It drinks the ink round it up into itself: the ground it takes is left empty (no gold: she did not cleanse it).
@@ -1156,16 +1160,21 @@ public sealed partial class PlaneWorld
     /// longer holds that much. Without drink it is made of nothing from the ground (a prime's pieces).
     /// Born, it is out at once, out of a body rather than the ground (Drippus Prime's brood): no bud.
     /// </summary>
+    /// <summary>The next bud's seed, when it must be this one (a cube's stock: its kind by its seed); used once.</summary>
+    float? _budSeed;
+
     Murkling? Bud(Vector2 at, int area, bool prime = false, bool drink = true, bool born = false)
     {
+        float? seed = _budSeed;
+        _budSeed = null;
         InkDraw? draught = null;
         if (drink && Corruption is { } ground)
         {
             draught = ground.Plan(at, prime ? BlightTuning.PrimeInk : BlightTuning.Ink);
             if (draught is null) return null;
         }
-        var m = new Murkling { Position = at, Area = area, Seed = _blightRng.Range(0f, 100f), ThrowTimer = BlightTuning.ThrowEvery * _blightRng.Range(0.5f, 1f) };
-        if (!prime) m.Kind = Options.Adventure && Options.InkMurklings ? RosterKind(m.Seed) : KindAt(m.Seed);
+        var m = new Murkling { Position = at, Area = area, Seed = seed ?? _blightRng.Range(0f, 100f), ThrowTimer = BlightTuning.ThrowEvery * _blightRng.Range(0.5f, 1f) };
+        if (!prime) m.Kind = Options.Adventure && Options.InkMurklings || Options.Reef ? RosterKind(m.Seed) : KindAt(m.Seed);
         float meter = BlightTuning.MurkCorruption * (1f + BlightTuning.MeterPerMenace * Menace);
         m.Corruption.Max = m.Corruption.Value = meter * (prime ? BlightTuning.PrimeMeter : 1f);
         // Its own full size (bigger with the Menace, in the adventure), its grade and its meter by it (a prime keeps a

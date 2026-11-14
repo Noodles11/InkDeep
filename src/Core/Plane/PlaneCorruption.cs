@@ -47,6 +47,11 @@ public sealed class PlaneOptions
     public bool Shots = true;
     /// <summary>The reef's bubble geysers (PlaneGeysers.cs): off (none are placed or spray); on only for their own tests.</summary>
     public bool Geysers;
+    /// <summary>
+    /// A layer of the cube reef (docs/proposals/CUBE-WORLD-PLAN.md §15.2): its water clean (no leaks, no ink on the
+    /// ground), its murklings the roster's, stocked into each cube as she claims it (PlaceStock); those far from her asleep.
+    /// </summary>
+    public bool Reef;
 
     public static PlaneOptions Default { get; set; } = new() { Adventure = true, Shots = false };
 

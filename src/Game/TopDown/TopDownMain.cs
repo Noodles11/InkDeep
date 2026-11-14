@@ -1932,7 +1932,7 @@ public partial class TopDownMain : Node3D
     /// <summary>Verification: the autopilot's way to the exit.</summary>
     void Route()
     {
-        _route = _autopilot ? LevelValidator.ShortestPath(_map, _world.Player.Position, _map.Exit.Position, clearance: 1f) : new();
+        _route = !_autopilot ? new() : InReef ? ReefRoute() : LevelValidator.ShortestPath(_map, _world.Player.Position, _map.Exit.Position, clearance: 1f);
         _routeProgress = 0;
     }
 

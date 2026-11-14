@@ -181,7 +181,7 @@ public sealed partial class PlaneWorld : IBodyBlocker
         PlaceChargeStones();
         PlaceSeals();
         PlacePrismStones();
-        if (Options.Corruption || adventure) PlaceCorruption();
+        if (Options.Corruption || adventure || Options.Reef) PlaceCorruption();
         if (adventure) PlaceAdventure();
         // The reef's zones: its murkling packs.
         PlaceAsh();
