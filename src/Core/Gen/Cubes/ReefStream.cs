@@ -254,6 +254,12 @@ public sealed class ReefStream
             Mark(CubeId.Of(near with { Z = cell.Z + 1 }), f.ReadyBelow ? CubeState.Preview : CubeState.Below, f.ReadyBelow ? 1 : 3);
             if (f.Climbable) Mark(CubeId.Of(near with { Z = cell.Z - 1 }), f.ReadyAbove ? CubeState.Preview : CubeState.Mask, f.ReadyAbove ? 1 : 4);
         }
+        // The layer below seen further through the void (a tilted view reaches it beyond her own squares): a ring of its
+        // squares two out, simplified, so its edge is never in view.
+        for (int dy = -2; dy <= 2; dy++)
+        for (int dx = -2; dx <= 2; dx++)
+            if (Math.Max(Math.Abs(dx), Math.Abs(dy)) == 2)
+                Mark(CubeId.Of(new CellCoord(cell.X + dx, cell.Y + dy, cell.Z + 1)), CubeState.Below, 5);
         if (f.ReadyBelow) Mark(CubeId.Of(cell with { Z = cell.Z + 1 }), CubeState.Preloaded, 0);
         if (f.ReadyAbove && f.Climbable) Mark(CubeId.Of(cell with { Z = cell.Z - 1 }), CubeState.Preloaded, 0);
     }

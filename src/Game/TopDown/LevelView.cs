@@ -754,8 +754,15 @@ public partial class LevelView : Node3D
     }
 
     /// <summary>A triangle is kept when any of its corners passes <paramref name="keep"/>.</summary>
-    internal static LevelShape.Surface? SurfaceMesh(int size, Func<float, float, float> height, int x0, int y0, int x1, int y1, Func<float, float, bool>? keep)
+    /// <param name="field">
+    /// Instead of <paramref name="keep"/>: a continuous field, kept where above 0. The surface's outline is then smooth: each
+    /// vertex outside it that a kept square holds is slid onto the field's zero line (between it and its neighbours inside),
+    /// so the edge runs between the grid's points instead of along them (the cube reef: its void, its arches).
+    /// </param>
+    internal static LevelShape.Surface? SurfaceMesh(int size, Func<float, float, float> height, int x0, int y0, int x1, int y1, Func<float, float, bool>? keep,
+        Func<float, float, float>? field = null)
     {
+        if (field is not null) keep = (x, y) => field(x, y) > 0f;
         int w = (x1 - x0) * Sub + 1, h = (y1 - y0) * Sub + 1;
         var verts = new Vector3[w * h];
         var normals = new Vector3[w * h];
@@ -784,7 +791,60 @@ public partial class LevelView : Node3D
             else indices.AddRange(new[] { a, b, c, b, d, c });
         }
         if (indices.Count == 0) return null;
+        if (field is not null) SnapOutline(verts, normals, colors, indices, w, h, height, field, size);
         return new LevelShape.Surface(verts, normals, colors, indices.ToArray());
+    }
+
+    /// <summary>
+    /// A kept surface's outline slid onto its field's zero line: each vertex outside the field that a kept square uses
+    /// moves to the mean of the crossings toward its neighbours inside (the nearer side ones, else the diagonal ones), its
+    /// height, normal and colour worked out again there.
+    /// </summary>
+    static void SnapOutline(Vector3[] verts, Vector3[] normals, Color[] colors, List<int> indices, int w, int h,
+        Func<float, float, float> height, Func<float, float, float> field, int size)
+    {
+        var value = new float[verts.Length];
+        for (int k = 0; k < verts.Length; k++) value[k] = field(verts[k].X, verts[k].Z);
+        var used = new bool[verts.Length];
+        foreach (int k in indices) used[k] = true;
+        var moved = new Vector3[verts.Length];
+        var move = new bool[verts.Length];
+        for (int j = 0; j < h; j++)
+        for (int i = 0; i < w; i++)
+        {
+            int k = j * w + i;
+            if (!used[k] || value[k] > 0f) continue;
+            Vector2 sum = Vector2.Zero;
+            int n = 0;
+            for (int pass = 0; pass < 2 && n == 0; pass++)
+                for (int dy = -1; dy <= 1; dy++)
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    if (dx == 0 && dy == 0) continue;
+                    if (pass == 0 && dx != 0 && dy != 0) continue;
+                    if (pass == 1 && (dx == 0 || dy == 0)) continue;
+                    int x = i + dx, y = j + dy;
+                    if (x < 0 || y < 0 || x >= w || y >= h) continue;
+                    int q = y * w + x;
+                    if (value[q] <= 0f) continue;
+                    float t = value[k] / (value[k] - value[q]);
+                    sum += new Vector2(Mathf.Lerp(verts[k].X, verts[q].X, t), Mathf.Lerp(verts[k].Z, verts[q].Z, t));
+                    n++;
+                }
+            if (n == 0) continue;
+            var at = sum / n;
+            moved[k] = new Vector3(at.X, height(at.X, at.Y), at.Y);
+            move[k] = true;
+        }
+        const float e = 0.35f;
+        for (int k = 0; k < verts.Length; k++)
+        {
+            if (!move[k]) continue;
+            var p = verts[k] = moved[k];
+            float hl = height(p.X - e, p.Z), hr = height(p.X + e, p.Z), hd = height(p.X, p.Z - e), hu = height(p.X, p.Z + e);
+            normals[k] = new Vector3(hl - hr, 2f * e, hd - hu).Normalized();
+            colors[k] = Band(p.Y, p.X, p.Z, size);
+        }
     }
 
     // ───────────────────────── canopy ─────────────────────────

@@ -18,10 +18,11 @@ public static class CubeTuning
     /// <summary>How far either side of an edge a gate's throat is written from the edge alone.</summary>
     public const float ThroatReach = 10f;
     /// <summary>
-    /// An edge's shared wall: it always covers WallCore either side of the line (so a cube's apron, and the rim pass
-    /// round it, are made from the edge alone), its line wandering up to WallShift and swelling by up to WallSwell.
+    /// An edge's shared wall: it always covers WallCore either side of the line (so a cube's apron is made from the edge
+    /// alone), its line wandering up to WallShift and each of its faces swelling by up to WallSwell on its own, so the
+    /// wall's faces wander and it never reads as a straight fin.
     /// </summary>
-    public const float WallCore = 3.05f, WallShift = 1f, WallSwell = 1.5f;
+    public const float WallCore = 3.05f, WallShift = 1f, WallSwell = 3f;
     public const float WallMax = WallCore + 2f * WallShift + WallSwell;
     /// <summary>A gate's edge is never nearer a corner than this; its width.</summary>
     public const float GateMargin = 13f, GateMinWidth = 6f, GateMaxWidth = 13f;

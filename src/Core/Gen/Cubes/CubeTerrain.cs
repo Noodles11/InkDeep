@@ -69,7 +69,7 @@ public sealed class CubeTerrain
     }
 
     /// <summary>The shelf noise's band over which a shelf's floor drops into the void (so its edge is a slope, not a step).</summary>
-    const float ShelfEdge = 0.05f;
+    const float ShelfEdge = 0.14f;
 
     static float Smooth(float a, float b, float x)
     {
@@ -82,25 +82,6 @@ public sealed class CubeTerrain
 
     // Noise fields, one seed each (every cube reads the same at the same global point).
     const int NoiseThroat = 1, NoiseChamber = 2, NoiseTunnel = 3, NoiseShelf = 4, NoiseTop = 5, NoiseFloor = 6, NoiseBays = 7;
-
-    /// <summary>The arena's basin: open floor out to ArenaRadius round its middle, and a way that wide from each gate's mouth to it.</summary>
-    static void Basin(CubeId c, CubeCell[] cells, float[] heights, bool[] canopy, int nw, int nh, int x0, int y0, List<(EdgeId, Gate, Vector2)> gates, uint floorSeed)
-    {
-        var middle = c.Middle;
-        float r = MathF.Min(ArenaRadius, MathF.Min(c.Size.X, c.Size.Y) * 0.5f - 6f);
-        for (int j = 0; j < nh; j++)
-        for (int i = 0; i < nw; i++)
-        {
-            var p = new Vector2(x0 + i, y0 + j);
-            bool open = Vector2.Distance(p, middle) < r;
-            foreach (var (_, _, mouth) in gates) open |= Geo.SegmentDistance(p, mouth, middle) < ArenaWay * 0.5f;
-            if (!open) continue;
-            int k = j * nw + i;
-            cells[k] = CubeCell.Shelf;
-            canopy[k] = false;
-            heights[k] = ShelfHeight + 0.3f * TerrainNoise.Perlin(p.X * 0.18f, p.Y * 0.18f, floorSeed);
-        }
-    }
 
     /// <summary>A socket's opening lies at least this far inside its cube, this far from a gate's mouth and from a well, and sockets this far apart.</summary>
     public const float SocketInside = 12f, SocketFromGate = 14f, SocketFromWell = 9f, SocketApart = 20f;
@@ -203,10 +184,11 @@ public sealed class CubeTerrain
             wellNode.Add(true);
             chambers.Add((well.Center - origin, well.Radius + 4f, well.Radius + 1.5f));
         }
-        // Pockets hugging its edges (so a closed edge is often a thin fin of rock with water both sides, not a band).
+        // Pockets near its edges, but clear of their walls (so the rock between joins the wall, and no wall stands as a
+        // straight fin with water either side).
         for (int e = 0; e < edges.Length; e++)
         {
-            float along = rng.Range(16f, Side - 16f), inset = rng.Range(9f, 12f), radius = rng.Range(5f, 8f);
+            float along = rng.Range(16f, Side - 16f), inset = rng.Range(15f, 19f), radius = rng.Range(5f, 8f);
             if (rng.NextFloat() < 0.4f) continue;
             var at = edges[e].Id.Point(along, inward[e] * inset) - origin;
             if (nodes.Exists(n => Vector2.Distance(n, at) < 11f)) continue;
@@ -297,9 +279,23 @@ public sealed class CubeTerrain
             StampLine(t.Points, t.Half + 1.5f, (x, y, d) =>
                 d < t.Half + 1.1f * TerrainNoise.Fbm((origin.X + x) * 0.1f, (origin.Y + y) * 0.1f, tunnelSeed, 2), water, ow, oh);
         Bays(water, origin, space.NoiseSeed(NoiseBays), ow, oh);
+        // A boss arena's basin and the ways to it from its gates, carved as its own water is.
+        if (arena)
+        {
+            var middle = c.Middle - origin;
+            float r = MathF.Min(ArenaRadius, MathF.Min(c.Size.X, c.Size.Y) * 0.5f - 6f);
+            Stamp(middle, r + 1f, (x, y) => Vector2.Distance(new Vector2(x, y), middle) < r, water, ow, oh);
+            foreach (var (_, _, mouth) in gates)
+                StampLine(new[] { mouth - origin, middle }, ArenaWay, (x, y, d) => d < ArenaWay * 0.5f, water, ow, oh);
+        }
         foreach (var a in arches) StampLine(a.Points, a.Half, (x, y, d) => d < a.Half, arch, ow, oh);
 
-        // 4. Every point: what the edges and corners decide (shared with the neighbours), else what was carved.
+        // 4. Every point's signed distance to the rock's face (CUBE-WORLD-PLAN §4.2; positive in rock): near its outer
+        // edges what the edges and corners decide (shared with the neighbours, so its apron is theirs too), further in
+        // that and its own carving, blurred so the face runs smoothly between the grid's points.
+        var own = OwnField(water, ow, oh, gw, gh, m);
+        var (allEdges, allCorners) = SharedNear(space, c.Z, gx0, gy0, gw, gh);
+        var field = new float[gw * gh];
         var cell = new CubeCell[gw * gh];
         var shelf = new float[gw * gh];
         var top = new float[gw * gh];
@@ -310,9 +306,15 @@ public sealed class CubeTerrain
             int u = i - m, v = j - m, k = j * gw + i;
             var p = new Vector2(gx0 + i, gy0 + j);
             top[k] = RockLow + RockRise * Math.Clamp(TerrainNoise.Fbm(p.X * 0.06f, p.Y * 0.06f, topSeed, 3) * 0.5f + 0.5f, 0f, 1f);
-            var shared = Shared(p, edges, corners, throatSeed);
+            var (wall, throat) = SharedField(gx0 + i, gy0 + j, allEdges, allCorners, throatSeed);
+            float near = float.MaxValue;
+            foreach (var e in edges) near = MathF.Min(near, MathF.Abs(e.Id.Across(p)));
+            float line = MathF.Min(wall, throat);
+            float carved = MathF.Min(MathF.Max(wall, own[k]), throat);
+            float s = field[k] = Lerp(line, carved, Smooth(Apron, Apron + BlendWidth, near));
+            var shared = throat < 0f ? true : wall > 0f ? false : (bool?)null;
             bool ownPoint = u >= 0 && v >= 0 && u <= w && v <= h;
-            bool wet = shared ?? (ownPoint && water[v * ow + u]);
+            bool wet = s <= 0f;
             if (!wet)
             {
                 cell[k] = CubeCell.Rock;
@@ -342,7 +344,8 @@ public sealed class CubeTerrain
             shelf[k] = inWell ? 0f : canopy[k] ? rise : MathF.Min(rise, Smooth(ShelfCut - ShelfEdge, ShelfCut + ShelfEdge, shelfNoise));
         }
 
-        // 5. Heights, cropped to the apron: the rock lower at its rim, a shelf's floor a little uneven, the void deep.
+        // 5. Heights, cropped to the apron, laid on the field: the rock rising from its face over RockRamp to its own
+        // height, the floor falling from it to a shelf's (a little uneven) or the void's depth, the deeper the further.
         int nw = w + 1 + 2 * Apron, nh = h + 1 + 2 * Apron;
         var outCells = new CubeCell[nw * nh];
         var outHeights = new float[nw * nh];
@@ -355,18 +358,19 @@ public sealed class CubeTerrain
             outCells[o] = kind;
             outCanopy[o] = canopy[k];
             float gx = gx0 + si, gy = gy0 + sj;
-            outHeights[o] = kind switch
+            float s = field[k];
+            if (kind == CubeCell.Rock) outHeights[o] = top[k] * Smooth(0f, RockRamp, s);
+            else
             {
-                CubeCell.Void or CubeCell.Shelf => VoidHeight + (ShelfHeight + 0.3f * TerrainNoise.Perlin(gx * 0.18f, gy * 0.18f, floorSeed) - VoidHeight) * shelf[k],
-                _ => Rim(cell, top, gw, gh, si, sj),
-            };
+                float floor = VoidHeight + (ShelfHeight + 0.3f * TerrainNoise.Perlin(gx * 0.18f, gy * 0.18f, floorSeed) - VoidHeight) * shelf[k];
+                outHeights[o] = floor * Smooth(0f, FloorRamp + FloorRampPerMetre * -floor, -s);
+            }
         }
 
         // 6. A boss arena's basin; else its sockets, cut into its walls.
         float[]? roof = null;
         var sockets = new List<Doorway>();
-        if (arena) Basin(c, outCells, outHeights, outCanopy, nw, nh, c.X * Side - Apron, c.Y * Side - Apron, gates, floorSeed);
-        else sockets = CutSockets(space.Seed, c, outCells, outHeights, nw, nh, c.X * Side - Apron, c.Y * Side - Apron, gates, down, arrivals, rng, out roof);
+        if (!arena) sockets = CutSockets(space.Seed, c, outCells, outHeights, nw, nh, c.X * Side - Apron, c.Y * Side - Apron, gates, down, arrivals, rng, out roof);
 
         return new CubeTerrain
         {
@@ -388,38 +392,116 @@ public sealed class CubeTerrain
         };
     }
 
+    /// <summary>How far in from its outer edges a cube's own carving blends in (past its apron), and the rock's and floor's ramps from the face.</summary>
+    const float BlendWidth = 3f, RockRamp = 2.5f, FloorRamp = 0.8f, FloorRampPerMetre = 0.3f;
+    /// <summary>A throat runs on this far past its mouth, closing as it goes, into the cube's own water there.</summary>
+    const float ThroatPast = 2f;
+    /// <summary>The cube's own water widened by this much (metres), so the blur never pinches a narrow way shut.</summary>
+    const float Widen = 0.6f;
+
+    static float Lerp(float a, float b, float t) => a + (b - a) * t;
+
     /// <summary>
-    /// What a point's edges and corners make it, the same for every cube that holds it: a gate's throat (shelf), the
-    /// edge's wall or a corner's rock; null where the cube's own carving decides.
+    /// Every edge and corner of the layer whose wall or throat can reach the worked grid: one field for the whole layer,
+    /// so where two cubes both hold a point they work out the same. (Between the two squares of one cube there is none.)
     /// </summary>
-    static bool? Shared(Vector2 p, EdgeSpec[] edges, CornerSpec[] corners, uint throatSeed)
+    /// <summary>
+    /// An edge near the worked grid, with its wall's wander worked out once a metre along it (the grid's points lie on whole
+    /// metres along and across every line): its line's shift and each face's swell, and its throats' sway across it.
+    /// </summary>
+    sealed class NearEdge
     {
-        foreach (var e in edges)
+        public required EdgeSpec Spec;
+        public required int S0;
+        /// <summary>Its line, where it starts along it, and whether it runs north-south (an X edge).</summary>
+        public required float Line, Start;
+        public required bool IsX;
+        public required float[] Shift, SwellLow, SwellHigh, Sway;
+    }
+
+    static (NearEdge[] Edges, CornerSpec[] Corners) SharedNear(CubeSpace space, int z, int gx0, int gy0, int gw, int gh)
+    {
+        int reach = (int)MathF.Ceiling(WallMax + FieldReach);
+        int x0 = FloorDiv(gx0 - reach, Side) - 1, x1 = FloorDiv(gx0 + gw + reach, Side) + 1;
+        int y0 = FloorDiv(gy0 - reach, Side) - 1, y1 = FloorDiv(gy0 + gh + reach, Side) + 1;
+        var edges = new List<NearEdge>();
+        var corners = new List<CornerSpec>();
+        for (int y = y0; y <= y1; y++)
+        for (int x = x0; x <= x1; x++)
         {
-            float t = e.Id.Across(p);
-            if (!e.Open || MathF.Abs(t) > ThroatReach) continue;
-            float along = e.Id.Along(p);
+            foreach (var axis in new[] { EdgeAxis.X, EdgeAxis.Y })
+            {
+                var id = new EdgeId(x, y, z, axis);
+                if (CubeId.Of(id.Low) == CubeId.Of(id.High)) continue;
+                // (Only one whose line passes near the grid.)
+                float line = id.Line, lo = axis == EdgeAxis.X ? gx0 : gy0, hi = lo + (axis == EdgeAxis.X ? gw : gh);
+                float start = id.Start, alo = axis == EdgeAxis.X ? gy0 : gx0, ahi = alo + (axis == EdgeAxis.X ? gh : gw);
+                if (line < lo - reach || line > hi + reach || start + Side < alo - reach || start > ahi + reach) continue;
+                var spec = space.Edge(id);
+                int s0 = (int)alo, n = (int)(ahi - alo) + 1, swayN = 2 * ((int)ThroatReach + (int)ThroatPast) + 1;
+                var near = new NearEdge { Spec = spec, S0 = s0, Line = id.Line, Start = id.Start, IsX = axis == EdgeAxis.X, Shift = new float[n], SwellLow = new float[n], SwellHigh = new float[n], Sway = new float[swayN] };
+                for (int q = 0; q < n; q++)
+                {
+                    float g = s0 + q;
+                    near.Shift[q] = WallShift * Math.Clamp(TerrainNoise.Perlin(g * 0.05f, 0.5f, spec.WallSeed), -1f, 1f);
+                    // (Each face swells on its own, so the wall's two faces wander apart.)
+                    near.SwellLow[q] = WallSwell * Math.Clamp(TerrainNoise.Fbm(g * 0.13f, 3.7f, spec.WallSeed + 1u, 2) * 0.6f + 0.5f, 0f, 1f);
+                    near.SwellHigh[q] = WallSwell * Math.Clamp(TerrainNoise.Fbm(g * 0.13f, 11.3f, spec.WallSeed + 1u, 2) * 0.6f + 0.5f, 0f, 1f);
+                }
+                if (spec.Open)
+                    for (int q = 0; q < swayN; q++) near.Sway[q] = 2.2f * TerrainNoise.Perlin((q - swayN / 2) * 0.11f, 7.3f, spec.WallSeed + 5u);
+                edges.Add(near);
+            }
+            var corner = new CornerId(x, y, z);
+            if (corner.Point.X >= gx0 - CornerMax - 1 && corner.Point.X <= gx0 + gw + CornerMax + 1 && corner.Point.Y >= gy0 - CornerMax - 1 && corner.Point.Y <= gy0 + gh + CornerMax + 1)
+                corners.Add(space.Corner(corner));
+        }
+        return (edges.ToArray(), corners.ToArray());
+    }
+
+    static int FloorDiv(int a, int b) => a >= 0 ? a / b : -((-a + b - 1) / b);
+
+    /// <summary>
+    /// What the edges and corners decide at a point, as signed distances (the same field for every cube): the shared
+    /// walls' and corners' rock (positive inside), and the gates' throats' water (negative inside, closing over their last
+    /// metres). An edge's wall and throat hold along its own stretch of line (and a little past its ends).
+    /// </summary>
+    static (float Wall, float Throat) SharedField(int gx, int gy, NearEdge[] edges, CornerSpec[] corners, uint throatSeed)
+    {
+        var p = new Vector2(gx, gy);
+        float wall = -FieldReach, throat = 1e6f;
+        const float Reach = WallMax + FieldReach;
+        for (int n = 0; n < edges.Length; n++)
+        {
+            var near = edges[n];
+            float t = (near.IsX ? gx : gy) - near.Line;
+            if (t > Reach || t < -Reach) continue;
+            float along = (near.IsX ? gy : gx) - near.Start;
+            if (along < -Reach || along > Side + Reach) continue;
+            var e = near.Spec;
+            int q = (near.IsX ? gy : gx) - near.S0;
+            float shift = near.Shift[q];
+            float swell = t < shift ? near.SwellLow[q] : near.SwellHigh[q];
+            // (Past its own stretch of line it tapers away, so no wall ever ends in a cut.)
+            float past = MathF.Max(0f, MathF.Max(-along, along - Side));
+            wall = MathF.Max(wall, WallCore + MathF.Abs(shift) + swell - MathF.Abs(t - shift) - past);
+            if (!e.Open || MathF.Abs(t) > ThroatReach + ThroatPast) continue;
             // (Swaying from side to side as it goes through, and flaring where it opens into each cube.)
-            float sway = 2.2f * TerrainNoise.Perlin(t * 0.11f, 7.3f, e.WallSeed + 5u);
+            float sway = near.Sway[(int)MathF.Round(t) + near.Sway.Length / 2];
             float flare = 1f + 0.5f * (t / ThroatReach) * (t / ThroatReach);
+            float closing = 6f * MathF.Max(0f, MathF.Abs(t) - ThroatReach);
+            float wobble = float.NaN;
             foreach (var gate in e.Gates)
             {
-                float half = gate.Width * 0.5f * flare + 0.9f * TerrainNoise.Perlin(p.X * 0.15f, p.Y * 0.15f, throatSeed);
-                if (MathF.Abs(along - gate.Along - sway) < half) return true;
+                float off = MathF.Abs(along - gate.Along - sway);
+                // (Far from the gate it is rock whatever the wobble: the noise only where it may matter.)
+                if (off > gate.Width * flare + 2f) continue;
+                if (float.IsNaN(wobble)) wobble = 0.9f * TerrainNoise.Perlin(p.X * 0.15f, p.Y * 0.15f, throatSeed);
+                throat = MathF.Min(throat, off - (gate.Width * 0.5f * flare + wobble) + closing);
             }
         }
-        foreach (var e in edges)
-        {
-            float t = e.Id.Across(p);
-            if (MathF.Abs(t) > WallMax) continue;
-            float s = e.Id.AlongGlobal(p);
-            float shift = WallShift * Math.Clamp(TerrainNoise.Perlin(s * 0.05f, 0.5f, e.WallSeed), -1f, 1f);
-            float swell = WallSwell * Math.Clamp(TerrainNoise.Perlin(s * 0.09f, 3.7f, e.WallSeed + 1u) * 0.5f + 0.5f, 0f, 1f);
-            if (MathF.Abs(t - shift) < WallCore + MathF.Abs(shift) + swell) return false;
-        }
-        foreach (var k in corners)
-            if (Vector2.Distance(p, k.Id.Point) < k.Radius) return false;
-        return null;
+        foreach (var k in corners) wall = MathF.Max(wall, k.Radius - Vector2.Distance(p, k.Id.Point));
+        return (wall, throat);
     }
 
     /// <summary>
@@ -459,21 +541,88 @@ public sealed class CubeTerrain
 
     static readonly (int, int)[] Steps = { (1, 0), (-1, 0), (0, 1), (0, -1) };
 
-    /// <summary>A rock point's height: its own, lowered where water is within Lip of it.</summary>
-    static float Rim(CubeCell[] cell, float[] top, int gw, int gh, int i, int j)
+    /// <summary>Distances on the grid to the nearest point that is <paramref name="of"/> (8-way chamfer, 1 and √2).</summary>
+    static float[] Chamfer(bool[] wet, int gw, int gh, bool of)
     {
-        int near = Lip + 1;
-        for (int y = j - Lip; y <= j + Lip; y++)
-        for (int x = i - Lip; x <= i + Lip; x++)
+        const float Diagonal = 1.41421356f;
+        var d = new float[gw * gh];
+        for (int k = 0; k < d.Length; k++) d[k] = wet[k] == of ? 0f : 1e6f;
+        for (int j = 0; j < gh; j++)
+        for (int i = 0; i < gw; i++)
         {
-            if (x < 0 || y < 0 || x >= gw || y >= gh || cell[y * gw + x] == CubeCell.Rock) continue;
-            near = Math.Min(near, Math.Max(Math.Abs(x - i), Math.Abs(y - j)));
+            int k = j * gw + i;
+            float v = d[k];
+            if (i > 0) v = MathF.Min(v, d[k - 1] + 1f);
+            if (j > 0)
+            {
+                v = MathF.Min(v, d[k - gw] + 1f);
+                if (i > 0) v = MathF.Min(v, d[k - gw - 1] + Diagonal);
+                if (i < gw - 1) v = MathF.Min(v, d[k - gw + 1] + Diagonal);
+            }
+            d[k] = v;
         }
-        float h = top[j * gw + i];
-        return near == 1 ? MathF.Min(h, RockRim) : h;
+        for (int j = gh - 1; j >= 0; j--)
+        for (int i = gw - 1; i >= 0; i--)
+        {
+            int k = j * gw + i;
+            float v = d[k];
+            if (i < gw - 1) v = MathF.Min(v, d[k + 1] + 1f);
+            if (j < gh - 1)
+            {
+                v = MathF.Min(v, d[k + gw] + 1f);
+                if (i < gw - 1) v = MathF.Min(v, d[k + gw + 1] + Diagonal);
+                if (i > 0) v = MathF.Min(v, d[k + gw - 1] + Diagonal);
+            }
+            d[k] = v;
+        }
+        return d;
     }
 
-    /// <summary>A tunnel from a to b: a curve bowed to one side, kept inside the cube's middle, 11 points.</summary>
+    /// <summary>How far a face is sought (the field is clamped there), and the blur's passes.</summary>
+    const int FieldReach = 6, BlurPasses = 2;
+
+    /// <summary>
+    /// The cube's own carving as a signed distance on the worked grid (positive in rock, metres to the nearest point of the
+    /// other kind less half a metre, clamped to FieldReach), blurred so its face is a smooth line, not the grid's steps.
+    /// Outside its own square it is rock.
+    /// </summary>
+    static float[] OwnField(bool[] water, int ow, int oh, int gw, int gh, int m)
+    {
+        var wet = new bool[gw * gh];
+        for (int j = 0; j < gh; j++)
+        for (int i = 0; i < gw; i++)
+        {
+            int u = i - m, v = j - m;
+            wet[j * gw + i] = u >= 0 && v >= 0 && u < ow && v < oh && water[v * ow + u];
+        }
+        // Each point's distance to the nearest point of the other kind (two passes of an 8-way chamfer), less half a metre.
+        var toWet = Chamfer(wet, gw, gh, true);
+        var toDry = Chamfer(wet, gw, gh, false);
+        var f = new float[gw * gh];
+        for (int k = 0; k < f.Length; k++)
+            f[k] = wet[k] ? -MathF.Min(toDry[k] - 0.5f, FieldReach) - Widen : MathF.Min(toWet[k] - 0.5f, FieldReach) - Widen;
+        var tmp = new float[gw * gh];
+        ReadOnlySpan<float> kernel = stackalloc float[] { 1f / 16f, 4f / 16f, 6f / 16f, 4f / 16f, 1f / 16f };
+        for (int pass = 0; pass < BlurPasses; pass++)
+        {
+            for (int j = 0; j < gh; j++)
+            for (int i = 0; i < gw; i++)
+            {
+                float sum = 0f;
+                for (int q = -2; q <= 2; q++) sum += kernel[q + 2] * f[j * gw + Math.Clamp(i + q, 0, gw - 1)];
+                tmp[j * gw + i] = sum;
+            }
+            for (int j = 0; j < gh; j++)
+            for (int i = 0; i < gw; i++)
+            {
+                float sum = 0f;
+                for (int q = -2; q <= 2; q++) sum += kernel[q + 2] * tmp[Math.Clamp(j + q, 0, gh - 1) * gw + i];
+                f[j * gw + i] = sum;
+            }
+        }
+        return f;
+    }
+
     static (Vector2[] Points, float Half, bool Wells) Tunnel(Vector2 a, Vector2 b, Rng rng, bool wells, int w, int h)
     {
         var along = b - a;

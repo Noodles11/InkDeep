@@ -13,14 +13,17 @@ namespace OctoShoots.Game.Fx;
 /// </summary>
 public static class SunMap
 {
-    /// <summary>Texels across the level's square (a texel about 0.75 m).</summary>
-    public const int Size = 200;
+    /// <summary>Texels across a level's square: at least Size, else about a texel to TexelMetres (a cube reef's layer), at most MostSize.</summary>
+    public const int Size = 200, MostSize = 768;
+    public const float TexelMetres = 0.9f;
+
+    static int SizeFor(LevelMap map) => Math.Clamp((int)MathF.Ceiling(map.Size / TexelMetres), Size, MostSize);
     /// <summary>The sea surface the map is cast from (ReefLook.SetDrop with no drop).</summary>
     public const float Surface = 18f;
 
     static ImageTexture? _texture;
     static Image? _image;
-    static System.Threading.Tasks.Task<byte[]>? _pending;
+    static System.Threading.Tasks.Task<(byte[] Bytes, int Size)>? _pending;
     static LevelMap? _pendingFor;
     static bool _wanted;
 
@@ -42,15 +45,15 @@ public static class SunMap
             if (task.IsFaulted) GD.PushError(task.Exception?.ToString());
             return;
         }
-        var bytes = task.Result;
-        if (_image is null || _texture is null)
+        var (bytes, size) = task.Result;
+        if (_image is null || _texture is null || _image.GetWidth() != size)
         {
-            _image = Image.CreateFromData(Size, Size, false, Image.Format.Rf, bytes);
+            _image = Image.CreateFromData(size, size, false, Image.Format.Rf, bytes);
             _texture = ImageTexture.CreateFromImage(_image);
         }
         else
         {
-            _image.SetData(Size, Size, false, Image.Format.Rf, bytes);
+            _image.SetData(size, size, false, Image.Format.Rf, bytes);
             _texture.Update(_image);
         }
         RenderingServer.GlobalShaderParameterSet(SN.Of("sun_shadow"), _texture);
@@ -58,8 +61,9 @@ public static class SunMap
         Apply();
     }
 
-    static byte[] Cast(LevelMap map, Vector3 sunDir)
+    static (byte[] Bytes, int Size) Cast(LevelMap map, Vector3 sunDir)
     {
+        int size = SizeFor(map);
         int n = map.Samples;
         // What overhangs each metre of the reef: a cave roof (its old mountain), a tunnel's roof, or an arch or overhang's span.
         var roof = new float[n * n];
@@ -92,12 +96,13 @@ public static class SunMap
         var l = sunDir.Normalized();
         float step = 0.5f;
         float extent = map.Size;
-        var data = new float[Size * Size];
-        for (int v = 0; v < Size; v++)
-        for (int u = 0; u < Size; u++)
+        var data = new float[size * size];
+        System.Threading.Tasks.Parallel.For(0, size, v =>
+        {
+        for (int u = 0; u < size; u++)
         {
             // Where this ray enters at the surface (texel centre), then down along the sun.
-            float ex = (u + 0.5f) / Size * extent, ez = (v + 0.5f) / Size * extent;
+            float ex = (u + 0.5f) / size * extent, ez = (v + 0.5f) / size * extent;
             float hit = -100f;
             for (float t = 0f; t < 80f; t += step)
             {
@@ -116,12 +121,13 @@ public static class SunMap
                     break;
                 }
             }
-            data[v * Size + u] = hit;
+            data[v * size + u] = hit;
         }
+        });
 
         var bytes = new byte[data.Length * 4];
         Buffer.BlockCopy(data, 0, bytes, 0, bytes.Length);
-        return bytes;
+        return (bytes, size);
     }
 
     /// <summary>The terrain's height at (x, z): bilinear on the grid, read directly.</summary>
