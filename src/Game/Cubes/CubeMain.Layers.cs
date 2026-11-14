@@ -58,7 +58,7 @@ public partial class CubeMain
         bool soon = _diving.CooldownLeft < 5f;
         return new StreamFocus
         {
-            Position = p.Position, Velocity = p.Velocity, Layer = _layer, Climbable = _diving.Climbable,
+            Position = p.Position, Velocity = p.Velocity, Layer = _layer, Climbable = _diving.Climbable, Shut = Here.IsShut,
             ReadyBelow = _hoverDown >= 0.5f || soon && _layer + 1 < _layers,
             ReadyAbove = _diving.Climbable && (_hoverUp >= 0.5f || soon),
         };
@@ -78,7 +78,7 @@ public partial class CubeMain
         }
         _hoverDown = _down is LayerBlock.None or LayerBlock.Cooldown ? _hoverDown + dt : 0f;
         _hoverUp = _up is LayerBlock.None or LayerBlock.Cooldown ? _hoverUp + dt : 0f;
-        _prompt.Text = _down switch
+        _prompt.Text = _heldShown > 0f ? "A current holds the way back" : _down switch
         {
             LayerBlock.None => "Dive  [Shift / D-pad ↓]",
             LayerBlock.Cooldown => string.Format(CultureInfo.InvariantCulture, "Dive in {0:0} s", Mathf.Ceil(_diving.CooldownLeft)),
@@ -170,9 +170,12 @@ public partial class CubeMain
     {
         var terrain = _stream.Terrain(arrival)!;
         bool down = _move == Move.Down;
+        int from = _layer;
         if (down) _diving.Dived(_moveFrom, terrain);
         else _diving.Climbed(_moveFrom, terrain);
         _layer = _diving.Layer;
+        _records.Changed(from, _layer, _diving.Deepest);
+        Here.Arrive(_moveFrom);
         _move = Move.None;
         _view.SetLayer(_layer);
         _view.ShowAbove(false);

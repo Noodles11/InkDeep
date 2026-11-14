@@ -13,8 +13,11 @@ public sealed class CubeWorld : IBodyBlocker
 {
     public const float Dt = PlaneWorld.Dt;
 
+    readonly Func<CubeId, CubeTerrain?> _terrain;
+
     public CubeWorld(Func<CubeId, CubeTerrain?> terrain, Vector2 start, int layer, Tuning? tuning = null, int reach = 1)
     {
+        _terrain = terrain;
         Tuning = tuning ?? new Tuning();
         Layer = layer;
         Player = new PlaneBody { Position = start, PrevPosition = start };
@@ -28,6 +31,16 @@ public sealed class CubeWorld : IBodyBlocker
     public long Tick { get; private set; }
     /// <summary>She met rock in the last tick.</summary>
     public bool HitWall { get; private set; }
+
+    /// <summary>
+    /// The layer's records and the reef's plan, when the currents are on (CUBE-WORLD-PLAN §8): she claims cubes as she
+    /// enters them, is held at shut edges, and the drift and the wake current move her.
+    /// </summary>
+    public LayerRecords? Records { get; set; }
+    public CubeSpace? Space { get; set; }
+    public CubeCurrents Currents { get; } = new();
+    /// <summary>What her last tick did at a cube line.</summary>
+    public Crossing Crossed { get; private set; }
 
     public float Radius => Tuning.PlayerRadius;
     public float CruiseSpeed => Tuning.PlaneCruiseSpeed;
@@ -67,6 +80,22 @@ public sealed class CubeWorld : IBodyBlocker
         // (The window round the cube she starts the tick in: it reaches a whole cube past her every way.)
         Field.Recenter(Cell);
         HitWall = BodyMotion.Move(this, ref p.Position, ref p.Velocity, Radius, Dt);
+        if (Records is null || Space is null) return;
+        // The currents: the drift toward the frontier, and out of the shut edges' throats.
+        if (_terrain(Cube) is { } here)
+        {
+            Currents.Prepare(here, Space, Records);
+            var flow = Currents.DriftAt(p.Position) + CubeCurrents.WakeAt(p.Position, Cube, Space, Records);
+            if (flow != Vector2.Zero) BodyMotion.Move(this, ref p.Position, ref flow, Radius, Dt);
+        }
+        // Across a cube line: claimed, or held at a shut edge.
+        var to = p.Position;
+        Crossed = Records.Move(p.PrevPosition, ref to);
+        if (Crossed == Crossing.Held)
+        {
+            p.Position = to;
+            p.Velocity = Vector2.Zero;
+        }
     }
 
     public bool Clear(Vector2 p, float radius) => ReefCollision.Clear(Field, p, radius);
