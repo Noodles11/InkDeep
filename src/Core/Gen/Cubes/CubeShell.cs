@@ -18,7 +18,7 @@ public static class CubeShell
         for (int i = 0; i < map.Heights.Length; i++) map.Heights[i] = -2f;
         map.Pois.Add(new Poi { Kind = PoiKind.Start, Position = start, Radius = 3f });
         map.Pois.Add(new Poi { Kind = PoiKind.Exit, Position = new Vector2(-1000f, -1000f), Radius = 1f });
-        var options = new PlaneOptions { Corruption = false, Pufferlings = false, Vases = false, Adventure = false, InkMurklings = false, Shots = false };
+        var options = new PlaneOptions { Corruption = false, Pufferlings = false, Vases = false, Adventure = false };
         return new PlaneWorld(map, tuning, run, options);
     }
 }

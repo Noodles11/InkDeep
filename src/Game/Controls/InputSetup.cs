@@ -26,6 +26,8 @@ public static class InputSetup
 	public const string Fire = "fire";
 	public const string Dash = "dash";
 	public const string Dive = "dive";
+	/// <summary>The cube reef: up a well to the layer above (docs/proposals/CUBE-WORLD-PLAN.md §7).</summary>
+	public const string Climb = "climb";
 	public const string Active = "use_active";
 	/// <summary>The open reef's second and third active slots (docs/RPG-PROPOSAL.md §5.2).</summary>
 	public const string Active2 = "use_active_2";
@@ -63,7 +65,8 @@ public static class InputSetup
 		new(AimRight, "Aim right", "key:Right", "axis:RightX:+"),
 		new(Fire, "Shoot (hold)", "mouse:Left", "axis:TriggerRight:+"),
 		new(Dash, "Dash", "key:Space", "axis:TriggerLeft:+"),
-		new(Dive, "Dive down the shaft", "key:Shift", "button:X"),
+		new(Dive, "Dive to the layer below", "key:Shift", "button:DpadDown"),
+		new(Climb, "Climb to the layer above", "key:C", "button:DpadUp"),
 		new(Active, "Use the active pearl (first slot)", "key:F", "button:Y"),
 		new(Active2, "Use the second slot's pearl", "key:Q", "button:LeftShoulder"),
 		new(Active3, "Use the third slot's pearl", "key:E", "button:RightShoulder"),

@@ -366,10 +366,14 @@ public sealed class TaskCubeWorker : ICubeWorker
     /// <summary>What went wrong in a job (each failed job is tried again while it is wanted): for the game to report.</summary>
     public ConcurrentQueue<string> Errors { get; } = new();
 
-    public TaskCubeWorker(CubeSpace space, Func<CubeJob, CubeTerrain, object?>? build = null)
+    readonly Func<CubeId, CubeTerrain>? _terrain;
+
+    /// <param name="terrain">Where a cube's terrain comes from (a reef that keeps each cube's once made: CubeReef); by default made afresh.</param>
+    public TaskCubeWorker(CubeSpace space, Func<CubeJob, CubeTerrain, object?>? build = null, Func<CubeId, CubeTerrain>? terrain = null)
     {
         _space = space;
         _build = build;
+        _terrain = terrain;
     }
 
     /// <summary>Set once the stream exists (the worker asks it what has been given up).</summary>
@@ -386,7 +390,7 @@ public sealed class TaskCubeWorker : ICubeWorker
         try
         {
             long start = System.Diagnostics.Stopwatch.GetTimestamp();
-            object? result = job.Work == CubeWork.Terrain ? CubeTerrain.Make(_space, job.Cube) : _build?.Invoke(job, terrain!);
+            object? result = job.Work == CubeWork.Terrain ? _terrain?.Invoke(job.Cube) ?? CubeTerrain.Make(_space, job.Cube) : _build?.Invoke(job, terrain!);
             double ms = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
             Timing.AddOrUpdate(job.Work, (1, ms, ms), (_, t) => (t.Count + 1, t.Total + ms, Math.Max(t.Most, ms)));
             _done.Enqueue((job, result, false));
