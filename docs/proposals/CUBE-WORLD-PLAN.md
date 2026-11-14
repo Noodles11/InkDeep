@@ -19,7 +19,9 @@ open. Numbers marked *(tune)* are starting values to settle in the prototype.
   back one layer, never two.
 - A gentle current leans her toward water she has not seen. Behind her, two cubes back, a strong current shuts the
   way: the reef is explored onward, not farmed.
-- Havens are her checkpoints.
+- The first layer is a warm-up: bright, low in menace, no creatures. A first run learns to swim, light and dive there;
+  a veteran dives straight through it.
+- Havens are where the dive is saved, to be continued after quitting. Dying ends the run: the next starts from the top.
 
 ## 2. Terms and coordinates
 
@@ -72,33 +74,42 @@ made in any order, on any thread, and always agree.
 
 Three small specs, each hashed from the seed and the id of the thing two or four cubes **share**:
 
-- **`EdgeSpec(EdgeId)`**: open or closed (65% open *(tune)*; always closed on the footprint's rim). When open: one
-  gate, or two on 20% of edges; each gate's position along the edge, **only in its middle 60%** (never nearer a corner
-  than 13 m); its width (6–10 m); and the profile of its throat. When closed: nothing but rock.
-- **`CornerSpec(CornerId)`**: a rock pillar, 8–11 m in radius. With gates kept to the middle of edges this is what
-  makes diagonal travel impossible.
-- **`FloorSpec(FloorId)`**: two or three **wells**, discs 5–8 m in radius where the upper cube must be void and the
-  lower must be open water. They are the guaranteed ways down; any other spot where §3's rule happens to hold is a way
-  down too.
+- **`EdgeSpec(EdgeId)`**: open or closed, and the seed of its shared wall's shape. Each layer's open edges first
+  hold a spanning tree of its cubes (Kruskal in a seeded order), so every cube of a layer can be reached across it;
+  each other edge is open by a 35% chance *(tune)*; edges on the footprint's rim are always closed. An open edge has
+  one gate, or two on 35% of edges, each 6–13 m wide, its sides never nearer a corner than 13 m.
+- **`CornerSpec(CornerId)`**: rock 8–10 m round the corner. With gates kept off the corners, no water ever joins two
+  cubes that share only a corner, so she cannot cross diagonally.
+- **`FloorSpec(FloorId)`**: one well, or two (50%), discs 5–7 m in radius where the upper cube must be void and the
+  lower open water. They are the sure ways down; any other spot where §3's rule happens to hold is a way down too.
+  A floor's wells lie in two opposite quadrants of the cube, 9–15 m from its middle along each axis, the pair of
+  quadrants set by the floor's parity: the wells she arrives by and those she may leave by are never in the same
+  quadrant, and at least 18 m apart.
 
 A cube's boundary conditions are its four edge specs, four corner specs, the floor spec under it and the one over it.
 
 ### 4.2 The geometry
 
-1. **Seam bands.** Within 8 m of an edge the heights are written by a function of the **edge** alone (`SeamBand`),
-   reaching 8 m into both cubes: a closed edge is rock, a gate is a straight throat 8 m long each side. Both cubes call
-   the same function for the same strip, so they match sample for sample. Corners are written the same way from the
-   corner spec.
-2. **Interior** (the 48 m square inside the bands), from the cube's own hash: one to three chambers, plus a chamber at
-   each well of the floor spec over it and under it. Gate throats, chambers and wells are joined by a spanning tree of
-   tunnels plus one loop, carved with today's `CaveLayout` chamber and tunnel carving. Every gate of a cube reaches
-   every other and every well.
-3. **Shelves and arches**: shelves from the chambers' own floors and a noise mask (never over a well); arches as
-   canopies across tunnels.
-4. **Surface detail**: all noise (rock relief, strata, flora density) is sampled at **global** coordinates, so texture
-   runs across cube lines with no blend.
-5. **Apron**: the cube's arrays carry 2 m of its neighbours' samples round them (read from the seam functions and the
-   global noise, not from the neighbours), so normals, baked shadow and soft masks are right up to the line.
+1. **What the edges decide** (`CubeTerrain.Shared`), a function of the edge alone, so both cubes write the same:
+   - its **wall**, a fin of rock along the line whose middle wanders up to 1 m off it and which swells by up to
+     1.5 m, but always covers at least 3 m either side (so the apron, and the rock's rim pass round it, are made from
+     the edge alone): from 6 m to 13 m thick;
+   - each **gate's throat**, cut through the wall and on 10 m into both cubes, swaying from side to side and flaring
+     where it opens into each;
+   - each **corner's** rock.
+2. **The cube's own water**, from its own hash, wherever the edges do not decide: a chamber round each well (over it
+   and under it), a pocket hugging each edge (60% of edges), and one to three chambers more, 7–12 m across. Gate
+   mouths, wells and chambers are joined by a spanning tree of the shortest tunnels (bowed curves 5.6–8.8 m wide)
+   plus a loop or two. Rims wobble by low noise; then **bays** are bitten into the rock within 5 m of the water where
+   the bay noise is high, so walls wander rather than trace the plan. Every gate of a cube reaches every other and
+   every well.
+3. **Shelves, void and arches**: water is shelf or void by a noise mask at global coordinates (so it runs on across
+   cube lines); round a well down it is void, wobbling outward from its radius; arches are laid over the middle of
+   a tunnel or two away from the wells, and the floor under an arch is a shelf.
+4. **Heights**: all noise (rock relief, shelf floors) is read at **global** coordinates; rock is lowered within 2 m
+   of the water.
+5. **Apron**: the cube's arrays carry 1 m of its neighbours' samples round them, all of it decided by the edges, so
+   normals and soft masks are right up to the line.
 
 **Generation never retries.** Today's generate-validate-retry cannot run while she swims. The construction above is
 valid by design; `LevelValidator`'s checks move into the test suite, run over thousands of seeds and coordinates.
@@ -202,6 +213,7 @@ rules below means a claim.
 ## 7. Diving and climbing
 
 - **Where:** §3's rule. Over a spot that allows it the HUD's dive prompt shows, as over a hole today.
+- **Controls:** down and up on the controller's d-pad dive and climb (on the keyboard, the dive key and a climb key).
 - **Cooldown:** 30 s after any change of layer before the next, either way. The prompt shows the time left.
 - **No chain dives:** after arriving, she may not dive within S / 2 (32 m) of where she arrived. If no reachable
   spot in her cube is that far (a small sealed pocket), the limit shrinks to 80% of the distance of the farthest
@@ -212,8 +224,8 @@ rules below means a claim.
   blur beneath her.
 - **No loading:** the cube under her has its stocking readied as soon as she has hovered over divable water for half
   a second or the cooldown has under 5 s to run. Arrival cubes hold no creatures (§9), so this is light. If it is
-  somehow not ready, the animation holds its last frame (she keeps sinking through murk) rather than showing a
-  splash.
+  somehow not ready, the animation's middle loops, Clementine sinking (or rising) through murk, until it is; there
+  is never a splash or a loading screen.
 - **What changes underneath:** the layer she leaves becomes "the layer above": its cubes' records are kept, their
   nodes freed, only dive masks held. Shots and particles in flight are dropped, hidden by the animation.
 
@@ -258,6 +270,7 @@ a granted place opens its mouth in a socket. A cube with no free socket passes i
 | **Haven** | Each claim: 1 in 4, until the layer has two; then 0. |
 | **Boss** | At most one a layer; §9.1. |
 | **Arrival cube** | The cube she dives into: no creatures, ever. Not a haven. It may hold mouths. |
+| **The warm-up layer** | Layer 0: bright, its menace low, no creatures anywhere, no curse rooms and no boss. Its other places as anywhere. |
 
 At most two places a cube; when more are rolled, the order kept is haven, clam room, curse room, secret.
 
@@ -268,7 +281,7 @@ one:
 
 | Layers left without freeing a boss | Chance this layer |
 |---|---|
-| 0 (she freed the last one, or the dive has just begun) | 35% *(open, §16)* |
+| 0 (she freed the last one, or this is layer 1) | 35% *(open, §16)* |
 | 1 | 75% |
 | 2 | 95% |
 | 3 or more | 100%, and it is her 2nd claim on the layer |
@@ -283,7 +296,8 @@ When a layer holds one, it is her 2nd to 5th claim (rolled), the 2nd when certai
 - Nothing else is in it: no creatures, no mouths, no drift. Its wells are sealed over until the boss is freed.
 - Both gates seal when the battle begins (today's boss seals) and open when it ends.
 
-Leaving the layer with its boss unfreed, or before meeting it, counts as a layer left without one.
+Leaving the layer with its boss unfreed, or before meeting it, counts as a layer left without one. The warm-up layer
+counts as neither.
 
 ## 10. Memory and persistence
 
@@ -304,7 +318,8 @@ over them. That is how (0,0) is the same (0,0) after the ring in §8.2.
 return there. Kept for the whole dive: the director's counters and the boss streak.
 
 **Checkpoints:** entering a haven writes the save: seed, her run (as banked there), the director, the records of her
-layer and the one above, and the haven's cube and mouth. Continuing a dive puts her back in that haven.
+layer and the one above, and the haven's cube and mouth. Continuing a dive after quitting puts her back in that
+haven. Dying ends the run, and the save with it: the next run starts at the top.
 
 ## 11. What happens to today's systems
 
@@ -315,10 +330,11 @@ layer and the one above, and the haven's cube and mouth. Continuing a dive puts 
 | `CaveLayout` carving, `TerrainNoise`, `WallStrata`, `ReefTerrain` | Kept, called per cube with global coordinates. |
 | `LevelValidator` | Becomes tests (§4.2). |
 | Havens, leak caves, labyrinths (`PrepareBehind`) | Kept as they are: classic `LevelMap`s behind mouths. |
-| Leaks and the awake / asleep reef | Per cube: a cube's leaks light that cube. To settle after the prototype (§16). |
+| Leaks and the awake / asleep reef | Leaks only in leak caves. The open layers have no awake / asleep state. |
 | `LevelView`, `LevelShape` | Split into per-chunk shape building and a pooled chunk view. |
 | `PlaneWorld` | Reads `IReefField`; owns creatures globally (§5.3, §5.4). |
 | Snapshot saves of a level in play | Replaced by records and haven checkpoints (§10). |
+| The tutorial's two levels | Retired: the warm-up layer (§9) is where she learns. |
 
 ## 12. Tests that define "correct"
 
@@ -353,8 +369,9 @@ prompted 0.44.0's optimisation.
 | Field lookup (`IReefField`) | main | within 10% of today's `Map` read |
 
 Steady state in memory: 9 cubes of terrain and meshes in her layer, 9 preview cubes below, 9 dive masks above, at
-most 5 stocked. About 76,000 terrain samples against 12,300 for a level today, but only one cube simulated in full
-and a nav grid smaller than now.
+most 5 stocked. About 80,000 terrain samples against 12,300 for a level today, but only one cube simulated in full
+and a nav grid smaller than now. Measured so far: a cube's terrain takes 9.5 ms on one thread (best of three rounds
+of 32 cubes).
 
 How it stays cheap, in one list: nothing generated on the main thread; no retries; two-stage generation; preview at
 a quarter of the triangles; pooled nodes; `MultiMesh` flora; toroidal map textures; creatures asleep by distance; an
@@ -364,7 +381,7 @@ The prototype's overlay shows each row of the table live, plus the pins and ever
 
 ## 14. The prototype
 
-On its own branch, `cube-proto`, forked from `m6-redefine`; nothing merges back until §14.3 is met.
+On its own branch, `inkdeep-cubes`, forked from `m6-redefine`; nothing merges back until §14.3 is met.
 
 ### 14.1 Scope
 
@@ -382,9 +399,9 @@ movement and collision are first moved behind `IReefField` so both worlds share 
 
 | # | Step | Done when |
 |---|---|---|
-| 1 | `CubeCoord`, the ids, `ReefHash`, `EdgeSpec`, `CornerSpec`, `FloorSpec` | Determinism and gate tests pass. |
-| 2 | `SeamBand`, interior carving, shelves, arches, void, apron: `CubeTerrain.Make(seed, coord)` | Seam, connectivity and well tests pass; terrain within budget. |
-| 3 | A debug image of a 3 × 3 × 3 block (one sheet a layer) written from a test | The reef reads as continuous by eye; shown for approval before going on. |
+| 1 | `CubeCoord`, the ids, `ReefHash`, `EdgeSpec`, `CornerSpec`, `FloorSpec` (`src/Core/Gen/Cubes`) | Done: determinism and gate tests pass. |
+| 2 | Shared walls and throats, the cube's own carving, bays, shelves, arches, void, apron: `CubeTerrain.Make(space, coord)` | Done: seam, connectivity and well tests pass (`CubeTerrainTests`); terrain within budget. |
+| 3 | A picture of a 3 × 3 × 3 block (one sheet a layer), drawn by `CubeTerrainTests` when `CUBE_SHEET` names a folder | Drawn; awaiting approval before going on. |
 | 4 | `IReefField`; her movement and collision on it; `CubeWorld` | She swims across cube lines in a headless test with no hitch in position or speed. |
 | 5 | `ReefStream`: wants, queue, states, pins, unload delay | State tests pass with a fake worker. |
 | 6 | `ReefStreamView`: per-chunk shapes, pooled chunk views, toroidal textures, frame budget | Swimming a ring shows no seam and no frame over budget. |
@@ -420,8 +437,8 @@ Each has the default this plan assumes; none blocks the prototype.
 
 1. **The boss chance after she has just freed one** is not given in the rules; 35% is assumed.
 2. **How deep the reef goes** ("dozens"): 36 layers assumed. It only sets where the bottom is.
-3. **What dying does:** back to the last haven checkpoint, what she carried un-banked lost, is assumed.
-4. **Leaks and the sleeping reef:** per cube is assumed (seal a cube's leaks and that cube wakes). The alternative is
-   to drop the awake / asleep reef on the open layers and keep leaks only in leak caves.
-5. **The tutorial:** assumed to stay a pair of classic levels that end in the first dive into the reef.
-6. **The footprint** (9 × 9) and **S** (64 m) are the two numbers the prototype is most likely to change.
+3. **The warm-up layer's places:** assumed to be as anywhere (secrets, clam room, havens) but no curse rooms.
+4. **The footprint** (9 × 9) and **S** (64 m) are the two numbers the prototype is most likely to change.
+5. **The cube grid's trace:** the shared walls along cube lines still show, faintly, as a grid of rock fins between
+   the caverns. If it reads in play, the next tries are fewer walls (open edges with wide gates) and chambers written
+   by the edge across an open line.
