@@ -13,7 +13,7 @@ public static class CubeTuning
     /// <summary>A layer's cubes a side (the reef's footprint), and how many layers it goes down.</summary>
     public const int Footprint = 9, Layers = 36;
     /// <summary>The samples of its neighbours a cube's arrays carry round it.</summary>
-    public const int Apron = 1;
+    public const int Apron = 2;
 
     /// <summary>How far either side of an edge a gate's throat is written from the edge alone.</summary>
     public const float ThroatReach = 10f;
@@ -32,8 +32,12 @@ public static class CubeTuning
     /// <summary>A well's radius; how far it lies from the cube's middle along each axis (into its quadrant); a second well's chance.</summary>
     public const float WellMin = 5f, WellMax = 7f, WellNear = 9f, WellFar = 15f, SecondWell = 0.5f;
 
+    /// <summary>How far below a layer's swim plane the next one's lies (more than the rock stands tall, so the layer below never reaches up into hers).</summary>
+    public const float LayerDrop = 10f;
     /// <summary>Heights: a shelf's floor, and the void (water with nothing under it, the layer below showing through).</summary>
-    public const float ShelfHeight = -1.1f, VoidHeight = -8f;
+    public const float ShelfHeight = -1.1f, VoidHeight = -LayerDrop;
+    /// <summary>The rock's top: from RockLow to RockLow + RockRise by its relief; RockRim right beside the water.</summary>
+    public const float RockLow = 3f, RockRise = 3.5f, RockRim = 1.2f;
     /// <summary>The share of open water that is shelf rather than void, set by the shelf noise's cut.</summary>
     public const float ShelfCut = 0.1f;
 }

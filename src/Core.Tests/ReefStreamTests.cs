@@ -87,7 +87,7 @@ public class ReefStreamTests
             Assert.Equal(CubeState.Preview, stream.State(new CubeCoord(2 + dx, 2 + dy, 0)));
         for (int dy = -1; dy <= 1; dy++)
         for (int dx = -1; dx <= 1; dx++)
-            Assert.Equal(CubeState.Preview, stream.State(new CubeCoord(2 + dx, 2 + dy, 1)));
+            Assert.Equal(CubeState.Below, stream.State(new CubeCoord(2 + dx, 2 + dy, 1)));
         // Nothing beyond: no layer below that, none above, nothing two cubes off.
         Assert.Equal(18, stream.Held.Count());
         Assert.All(stream.Held, c => Assert.Equal(stream.Wanted[c], stream.State(c)));
@@ -189,6 +189,7 @@ public class ReefStreamTests
         focus.ReadyBelow = true;
         Settle(stream, worker, focus);
         Assert.Equal(CubeState.Preloaded, stream.State(new CubeCoord(2, 2, 1)));
+        Assert.Equal(CubeState.Preview, stream.State(new CubeCoord(1, 1, 1)));
 
         // Down a layer, the one she left above to climb back to.
         Run(stream, worker, At(Middle(2, 2), 1, climbable: true), ReefStream.UnloadDelay + 0.2f);
