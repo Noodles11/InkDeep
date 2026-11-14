@@ -435,7 +435,7 @@ movement and collision are first moved behind `IReefField` so both worlds share 
 | 7 | The layer below: its simplified ground (its full one once a dive is coming), the water's fog under her plane, one flat murk floor following her at that layer's own void | Done: through the void she sees the layer below, blurred, and murk under it; nothing deeper is drawn. Over the ring swim no cube within 40 m of her, on her layer or below it, is ever undrawn. |
 | 8 | Diving and climbing: `CubeDiving` (§3's rule both ways, the 30 s cooldown, the no-chain reach, climbing only from the deepest layer; `CubeDivingTests`); the prompt; Shift or d-pad ↓ to dive, Q or d-pad ↑ to climb; the game's dive with the camera drawing in to 60% and out, the iris, the layer swap; the middle looping while the cube she arrives in is not ready | Done: `--cube-dives` dives twice and climbs once by itself; with the 30 s cooldown (105 s run) nothing waited for a cube (held 0.00 s), the worst frame 16.8 ms, the worst during a change of layer 6.7 ms. |
 | 9 | `LayerRecords` and `ReefRecords` (claims, shut edges, fog of war a bit a metre, the layer left opened again and records two above her deepest let go); `CubeCurrents` (the drift down a field of steps over the water to the nearest gate into unclaimed water, else a way down; the wake current out of each shut edge's throats, with her held at its line); streaks of brighter water for both (`cube_current.gdshader`); the route planned leg by leg round shut edges | Done (`CubeRecordTests`): claimed once, kept as she left it, the ring of three cubes back into the first, the edge two crossings back shut, no dash through it, the drift leading her 18 m nearer new water in 40 s idle. In the scene, two minutes of the route: six cubes claimed, four edges shut, no frame over 20 ms. Fog of war is kept but not yet drawn (the prototype has no map). |
-| 10 | Measure against §13 with the overlay and `--capture` runs; write up | Numbers in hand for the decision. |
+| 10 | Measure against §13 with the overlay and `--capture` runs; write up | Done: §14.4. |
 
 ### 14.3 The decision
 
@@ -443,6 +443,41 @@ Go on to §15 when: every test of §12 that the prototype covers passes; every r
 and three layers shows no seam, pop or pause; and the reef is worth exploring by eye. If terrain reads as boxes (a
 grid visible in where the walls are), the fix is tried in the prototype first: wider gate ranges, seam bands of
 varying depth, chambers allowed to straddle an open edge by being written from the edge spec.
+
+### 14.4 Where the prototype stands
+
+Measured on the development machine (RTX 3090), vsync off while measuring: a 120 s swim of the route
+(`--cubes --cube-route --cube-perf=120`: 13 moves of the window, 6 cubes claimed, 4 edges shut behind her) and a 105 s
+run down two layers and back up one with the real 30 s cooldown (`--cubes --cube-dives --cube-perf=105`).
+
+| §13's row | Budget | Measured | |
+|---|---|---|---|
+| A frame | none over 20 ms | 3.2 ms on average, 7.2 ms at worst swimming, 13 ms at worst with the dives; none over 20 ms | met |
+| A frame during a change of layer | none over 20 ms | 7.2 ms at worst; nothing ever waited for a cube (held 0.00 s) | met |
+| A cube in view not drawn | never | never, on her layer or the one below | met |
+| Terrain of one cube | 20 ms | 21–24 ms on average, 30 ms at most | a little over |
+| Ground of one cube | 100 ms | 72 ms on average, 120 ms at most | over at worst |
+| Simplified ground | 6 ms | 1.1 ms | met |
+| Applying a frame's work | 2 ms | 2.3–2.6 ms at worst (one mesh shown) | a little over |
+| Stream bookkeeping | 0.1 ms | 21 µs | met |
+| Reading the field | within 10% of a map's read | 73% of it, read as collision reads | met |
+
+The three rows over budget are all work the frame never waits for: terrain and ground are made on the worker, a
+cube's ahead of when she can see it (no cube in view was ever undrawn); and the 2.5 ms of showing a mesh is the one
+mesh a frame that passes the 1.5 ms budget, the worst of it the first time a kind of mesh is drawn. The ways to bring
+them in, if wanted: the carving's distance tests by the cube's grid rather than per primitive; 16 m ground chunks
+(half the cost each to show).
+
+Against §14.3:
+- **Tests:** every test of §12 the prototype covers passes (determinism, seams, gates and corners, connectivity,
+  wells, the ring, the wake current); the rest (creatures, the director, the long random walk) wait for §15.
+- **§13:** met, but for the three worker-side rows above.
+- **Ten cubes and three layers:** no seam, no missing cube, no pause, the ring and the dives as above.
+- **Worth exploring by eye:** for you to judge. Two looks are still open (§16): the cliffs into the void show 1 m
+  steps, and the cube lines still faintly show as fins of rock.
+
+How to see it: `godot -- --cubes` (WASD, the mouse to aim, Shift or the d-pad's down to dive, Q or its up to climb,
+F3 for the overlay), `--cube-route` or `--cube-dives` to watch her do it, `--cube-perf=seconds` for the numbers.
 
 ## 15. After the prototype
 
