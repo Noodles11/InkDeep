@@ -245,7 +245,8 @@ public partial class TopDownMain
             }
         }
         marks.AddRange(ChainMarks());
-        _minimap.SetMarks(marks);
+        _marks.Clear();
+        _marks.AddRange(marks);
         _fullMap.Marks.Clear();
         _fullMap.Marks.AddRange(marks);
     }

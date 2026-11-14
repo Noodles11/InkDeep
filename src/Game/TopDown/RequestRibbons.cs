@@ -17,16 +17,16 @@ public partial class RequestRibbons : Control
 
     readonly List<Ribbon> _ribbons = new();
     readonly List<Label> _labels = new();
-    const float Width = MinimapView.Diameter + 20f, RowHeight = 40f, Knot = 11f;
+    const float Width = 220f + 20f, RowHeight = 40f, Knot = 11f;
     float _time;
 
     public override void _Ready()
     {
         MouseFilter = MouseFilterEnum.Ignore;
         SetAnchorsPreset(LayoutPreset.TopRight);
-        OffsetLeft = -Width - MinimapView.Margin;
-        OffsetRight = -MinimapView.Margin;
-        OffsetTop = MinimapView.Margin + MinimapView.Diameter + 82f;
+        OffsetLeft = -Width - 18f;
+        OffsetRight = -18f;
+        OffsetTop = 18f + 220f + 82f;
         OffsetBottom = OffsetTop + RowHeight * 2f + 8f;
     }
 

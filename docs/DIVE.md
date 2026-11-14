@@ -52,7 +52,7 @@ While the reef is calm the camera stands 55 m from her, about 36 × 54 m of grou
 stays in view): as soon as a corrupted creature is within 12 m of her, seen or not, or she is hit (`PlaneWorld.Calm`),
 easing in over about half a second and back out slowly once it is calm again (`CameraRig.Tense`). So she is larger
 when it matters, and the camera drawing in is itself a warning of something near. The sun's shadows reach 90 m
-(`SunLight`), and the minimap spans 150 m (`MinimapView.Span`). The Sunlit Shallows take
+(`SunLight`). The Sunlit Shallows take
 their dimmed look (`ReefLook.OpenShallows`) so the wider view never washes out.
 
 ## 4. Havens
@@ -133,7 +133,7 @@ A secret room is a sub-level too: a cube she claims opens one time in three, its
 - **Solved, its water carries her home** (`PlaneWorld.LabyrinthSolved`, its way home: DESIGN-TOPDOWN §4.7): once its
   reward is taken, a current wakes along the way from its heart to its way out and carries her there and out of its
   mouth, back onto the reef.
-- **No map in it:** neither the minimap nor the whole level's map shows inside.
+- **No map in it:** neither the arrows nor the whole level's map show inside.
 - **She can leave at any time** by swimming out by its way out; there is no key for it (her active pearl's key does
   nothing in a labyrinth).
 - **The reef waits as she left it**, as for a leak cave. Leaving with the reward still there, the labyrinth waits as she
@@ -152,7 +152,7 @@ A secret room is a sub-level too: a cube she claims opens one time in three, its
   - **Ash:** wash a number of patches of ash off leak caves' walls.
   The posters' lines speak of the deep instead of a mouth. On a level, what a carried ask wants is ringed on the maps
   (the open leaks for a seal ask, the open leak caves' mouths for a cave or ash ask), and
-  the minimap's pointers show the way to each.
+  the arrows at the screen's edges point the way to each.
 - **Requests and chains are saved at once** (`KeepJelly`): writing them never banks what she carries. In a haven, what
   she buys, absorbs or is paid is banked as it happens (`KeepBanked`).
 - **The folk's chains** (`Chains.All`) lead on down the depth below the one their neighbour was the boss of, their

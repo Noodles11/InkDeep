@@ -11,7 +11,7 @@ namespace OctoShoots.Game.TopDown;
 /// </summary>
 public partial class CleanseMeter : Control
 {
-    const float Width = MinimapView.Diameter, BarHeight = 5f, Gap = 14f;
+    const float Width = 220f, BarHeight = 5f, Gap = 14f;
     static readonly Color Gold = new(1f, 0.78f, 0.36f);
     static readonly Color InkBar = new(0.07f, 0.04f, 0.1f, 0.85f);
     static readonly Color Text = new(0.95f, 0.92f, 0.85f);
@@ -25,10 +25,10 @@ public partial class CleanseMeter : Control
     {
         MouseFilter = MouseFilterEnum.Ignore;
         SetAnchorsPreset(LayoutPreset.TopRight);
-        OffsetLeft = -Width - MinimapView.Margin;
-        OffsetRight = -MinimapView.Margin;
+        OffsetLeft = -Width - 18f;
+        OffsetRight = -18f;
         // Clear of the experience ring round the map.
-        OffsetTop = MinimapView.Margin + MinimapView.Diameter + 22f;
+        OffsetTop = 18f + 220f + 22f;
         OffsetBottom = OffsetTop + 50f;
     }
 

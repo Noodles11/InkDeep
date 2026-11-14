@@ -55,8 +55,7 @@ the reef was never being called home. It was being kept.
     leaks, opens seals, clears ink and ash, charges stones and opens bosses, by how much of its light reaches. It is a
     real light: rock, the seabed and every creature's body stop it and cast shadows (VISUAL-SHOWCASE);
   - her **glow can be put out**: dark, she is hidden from the Leak's creatures and sees almost nothing.
-- **Her life is her light.** What hurts her corrupts her; her corruption meter is the minimap's bezel and the gauge on
-  the HUD. Murklings drink her light. It comes back from cores (the light freed creatures leave), light orbs, light
+- **Her life is her light.** What hurts her corrupts her; her corruption meter is the gauge on the HUD. Murklings drink her light. It comes back from cores (the light freed creatures leave), light orbs, light
   springs, healing pearls, havens and a sealed leak cave. Full of corruption, she dims and the dive ends (DIVE §2).
 - **Her active pearl** is used with its own button and recharges; she carries one at a time.
 - **Controls:** move, aim, beam, glow, dash, dive, active pearl, review pearls, pause. Every one can be rebound, on the
@@ -110,8 +109,8 @@ the reef was never being called home. It was being kept.
 - **Its life**: healthy reef fish (clownfish in anemones, blue tangs, schools of chromis, pufferfish, flounders) going
   about their day; the ink never turns them; currents and geysers; the reef director that keeps the reef acting when she is not
   there.
-- **Where she is shown**: the minimap (her surroundings, the unseen filled as rock), the Tab map (the whole layer under
-  fog), the chart (her layer's claimed cubes).
+- **Where she is shown**: no minimap; the arrows at the screen's edges point to the places round her, the Tab map
+  shows the whole layer under fog, the chart her layer's claimed cubes.
 
 ## 6. The corrupted
 
@@ -193,8 +192,8 @@ emptied, it is freed, leaving a core of light.
 ## 11. On the screen
 
 - **The HUD** (DESIGN-TOPDOWN §9, ADVENTURE §6): top left, Clementine seen from above with her four oral arms as her
-  stats (health, inner light, the active pearl's charge, experience) and her shells beside her; top right the minimap,
-  its bezel her corruption meter; top centre a dot per leak. Messages slide down from the top edge. Nothing else stays on
+  stats (health, inner light, the active pearl's charge, experience) and her shells beside her; at the screen's edges
+  the arrows to the places round her; top centre a dot per leak. Messages slide down from the top edge. Nothing else stays on
   the screen.
 - **On the reef**: corruption rings round the corrupted she can see; the pearl she is absorbing on its own card.
 - **Readable at a glance** (VISUAL-SHOWCASE, "The order of the eye"): outside her light the reef is grey and quiet and

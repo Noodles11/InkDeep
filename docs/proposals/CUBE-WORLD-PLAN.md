@@ -265,7 +265,7 @@ rules below means a claim.
 In the Active cube a flow field points along the water toward the nearest gate into an **unclaimed** cube (when there
 is none, toward the nearest unvisited well). It pushes her at 0.6 m/s *(tune)*, 13% of her swim speed: felt when she
 drifts, trivial to swim against. It fades to nothing within 10 m of a mouth, a reward or a haven, and in a boss arena.
-It is drawn with `CurrentView`'s streaks, faint.
+It is not drawn: it is felt (in the game, neither current shows; the prompt says when one holds her back).
 
 ### 8.2 The wake current
 

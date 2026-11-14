@@ -73,9 +73,6 @@ public partial class TopDownMain
     LayerBlock _down = LayerBlock.NotReady, _up = LayerBlock.NotReady;
     ReefLook? _layerLookFrom, _layerLookTo;
     int _revealTick;
-    MeshInstance3D _driftStreaks = null!;
-    readonly List<MeshInstance3D> _wakeStreaks = new();
-    Shader _currentShader = null!;
 
     LayerRecords Here => _records.Of(_layer);
     int LayerTarget => _layer + (_layerMove == LayerMove.Down ? 1 : -1);
@@ -120,8 +117,6 @@ public partial class TopDownMain
         _director = new CubeDirector(_seed.Value);
         _reefView = new ReefStreamView();
         AddChild(_reefView);
-        _currentShader = GD.Load<Shader>("res://assets/shaders/cube_current.gdshader");
-        _driftStreaks = Streaks(new Vector2(26f, 26f));
         if (_reefResume is not null) ResumeReef(_reefResume);
         else if (Here.Arrive(_reef.Start) == Crossing.Claimed) Grant(CubeId.Of(_reef.Start, 0));
         GD.Print($"Cube reef {_seed}: {_reef.Space.Footprint} × {_reef.Space.Footprint} squares, {_reef.Space.Layers} layers, {_reef.Space.CubesOf(0).Count()} cubes a layer");
@@ -134,9 +129,6 @@ public partial class TopDownMain
     void NewReef()
     {
         _reefView.QueueFree();
-        _driftStreaks.QueueFree();
-        foreach (var s in _wakeStreaks) s.QueueFree();
-        _wakeStreaks.Clear();
         _records = new ReefRecords();
         _cubeCurrents = new CubeCurrents();
         _layerMaps.Clear();
@@ -434,8 +426,6 @@ public partial class TopDownMain
         _hud.Diving = true;
         _hud.LayerPrompt = null;
         _reefView.ShowAbove(move == LayerMove.Up);
-        _driftStreaks.Visible = false;
-        foreach (var s in _wakeStreaks) s.Visible = false;
         GD.Print($"Cube reef: {(move == LayerMove.Down ? "dive" : "climb")} from layer {_layer} at {_layerFrom}");
         return true;
     }
@@ -484,7 +474,8 @@ public partial class TopDownMain
         // What lived on the layer she leaves goes with it, as on the game's dive.
         float stay = 1f - Ease((t - 0.3f) / 1.0f);
         FadeLevelLife(at, Mathf.Lerp(-5f, radius, Ease(t / 0.45f)), stay);
-        _minimap.DiveOut(Ease(t / 0.9f));
+        _arrows.DiveOut(Ease(t / 0.6f));
+        _arrows.Sync(_camera.Camera, HudScale, dt);
         _snow.Tick(dt, focus + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
         _plankton.Tick(dt, focus + Vector3.Up * 2f, _camera.Camera.GlobalBasis);
         _damage.Tick(dt);
@@ -534,7 +525,7 @@ public partial class TopDownMain
         _hoverDown = _hoverUp = 0f;
         _id = CubeReef.IdOf(_layer);
         ShowLevel(LevelShape.Bare(_layerMaps[_layer]), keepRun: true, 0, _layerFrom);
-        _minimap.Arrive();
+        _arrows.Arrive();
         foreach (var view in LevelLife) ResetFade(view);
         GD.Print($"Cube reef: {(down ? "dived" : "climbed")} to layer {_layer} (deepest {_cubeDiving.Deepest})");
     }
@@ -567,8 +558,6 @@ public partial class TopDownMain
     {
         if (_reefView.Visible == InReef) return;
         _reefView.Visible = InReef;
-        _driftStreaks.Visible = false;
-        foreach (var s in _wakeStreaks) s.Visible = false;
         if (!InReef) _hud.LayerPrompt = null;
     }
 
@@ -635,50 +624,6 @@ public partial class TopDownMain
         bool hidden = _reef!.Made(CubeId.Of(p, _layer))?.CanopyAt(Mathf.RoundToInt(p.X), Mathf.RoundToInt(p.Y)) == true;
         _reefSeeThrough = Mathf.MoveToward(_reefSeeThrough, hidden ? 1f : 0f, dt * (hidden ? 4.5f : 2.2f));
         _reefView.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, _reefSeeThrough);
-        DrawReefCurrents(eye);
     }
 
-    MeshInstance3D Streaks(Vector2 size)
-    {
-        var m = new MeshInstance3D
-        {
-            Mesh = new PlaneMesh { Size = size },
-            MaterialOverride = new ShaderMaterial { Shader = _currentShader },
-            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-            Visible = false,
-        };
-        AddChild(m);
-        return m;
-    }
-
-    /// <summary>The streaks where the currents run: the drift faint round her, the wake current plain at each shut throat of her cube.</summary>
-    void DrawReefCurrents(Vector3 her)
-    {
-        var p = _world.Player.Position;
-        var drift = _cubeCurrents.DriftAt(p);
-        _driftStreaks.Visible = drift != System.Numerics.Vector2.Zero;
-        _driftStreaks.Position = new Vector3(her.X, LevelMap.SwimBand + 0.25f, her.Z);
-        _driftStreaks.SetInstanceShaderParameter("flow", new Vector2(drift.X, drift.Y));
-        _driftStreaks.SetInstanceShaderParameter("strength", 0.2f);
-        var cube = CubeId.Of(p, _layer);
-        int n = 0;
-        foreach (var (edge, inside, _) in cube.Outer())
-        {
-            if (!Here.IsShut(edge)) continue;
-            float into = edge.High == inside ? 1f : -1f;
-            foreach (var gate in _reef!.Space.Edge(edge).Gates)
-            {
-                if (n == _wakeStreaks.Count) _wakeStreaks.Add(Streaks(Vector2.One));
-                var s = _wakeStreaks[n++];
-                var at = edge.Point(gate.Along, into * CubeCurrents.WakeReach * 0.5f);
-                bool acrossX = edge.Axis == EdgeAxis.X;
-                ((PlaneMesh)s.Mesh).Size = acrossX ? new Vector2(CubeCurrents.WakeReach, gate.Width + 4f) : new Vector2(gate.Width + 4f, CubeCurrents.WakeReach);
-                s.Position = new Vector3(at.X, LevelMap.SwimBand + 0.25f, at.Y);
-                s.SetInstanceShaderParameter("flow", acrossX ? new Vector2(into * CubeCurrents.Wake, 0f) : new Vector2(0f, into * CubeCurrents.Wake));
-                s.SetInstanceShaderParameter("strength", 1f);
-                s.Visible = true;
-            }
-        }
-        for (int i = n; i < _wakeStreaks.Count; i++) _wakeStreaks[i].Visible = false;
-    }
 }

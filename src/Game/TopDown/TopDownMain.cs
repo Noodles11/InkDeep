@@ -155,7 +155,10 @@ public partial class TopDownMain : Node3D
     readonly OctoShoots.Game.Fx.HorizonMap _lantern = new();
     CameraRig _camera = null!;
     DebugMapOverlay _debugMap = null!;
-    MinimapView _minimap = null!;
+    /// <summary>The places round her, as arrows at the screen's edges (in place of a minimap).</summary>
+    EdgeArrows _arrows = null!;
+    /// <summary>What her requests and chains name, pointed at (and ringed on the Tab map).</summary>
+    readonly List<(System.Numerics.Vector2 At, Color Colour)> _marks = new();
     TopoMap _fullMap = null!;
     readonly HashSet<int> _visited = new();
     readonly FogOfWar _fog = new();
@@ -1128,24 +1131,19 @@ public partial class TopDownMain : Node3D
         layer.AddChild(_hudRoot);
         // (Under the rest of the HUD.)
         _hudRoot.AddChild(_hud);
-        _minimap = new MinimapView();
-        _hudRoot.AddChild(_minimap);
-        _cleanse = new CleanseMeter();
+        _arrows = new EdgeArrows();
+        _hudRoot.AddChild(_arrows);
+        _cleanse = new CleanseMeter { Visible = false };
         _hudRoot.AddChild(_cleanse);
-        // Tab: the whole level on one sheet, drawn by the minimap's rules (wall edges, fog, places only once spotted).
+        // Tab: the whole level on one sheet (wall edges, fog, places only once spotted).
         _fullMap = new TopoMap
         {
             Visible = OS.GetCmdlineUserArgs().Contains("--map"), Cutout = true, EmblemScale = 1.5f, MetresAcross = LevelMap.Seeded + 4f,
             ShowDetail = false, EdgesOnly = true, ArrowScale = 1.3f, ArrowColor = new Color(1f, 0.72f, 0.35f),
         };
         layer.AddChild(_fullMap);
-        // Her arrow on both maps follows her colour.
-        void Arrows()
-        {
-            var arrow = OctoShoots.Game.Fx.HerColor.Light.Lerp(OctoShoots.Game.Fx.HerColor.Body, 0.35f);
-            _minimap.ArrowColor = arrow;
-            _fullMap.ArrowColor = arrow;
-        }
+        // Her arrow on the map follows her colour.
+        void Arrows() => _fullMap.ArrowColor = OctoShoots.Game.Fx.HerColor.Light.Lerp(OctoShoots.Game.Fx.HerColor.Body, 0.35f);
         Arrows();
         OctoShoots.Game.Fx.HerColor.Changed += Arrows;
         TreeExiting += () => OctoShoots.Game.Fx.HerColor.Changed -= Arrows;
@@ -1675,7 +1673,6 @@ public partial class TopDownMain : Node3D
         _boss.Show(_world);
         if (_bossHp is { } bossHp && _world.Boss is { } queen) queen.Hp = bossHp;
         _debugMap.SetMap(_map);
-        _minimap.SetMap(_map, _world.SealedCaves);
         // The Tab map spans the whole level, however big.
         _fullMap.MetresAcross = _map.Size + 4f;
         _fullMap.Center = new System.Numerics.Vector2(_map.Size / 2f);
@@ -1683,12 +1680,10 @@ public partial class TopDownMain : Node3D
         // Places are unknown ("?") until visited; she starts at the start.
         _visited.Clear();
         _visited.Add(_map.Pois.IndexOf(_map.Start));
-        _minimap.SetVisited(_visited);
         _fog.Reset(map.Samples);
         if (moment is not null)
         {
             foreach (int place in moment.Visited) _visited.Add(place);
-            _minimap.SetVisited(_visited);
             _fog.Load(moment.Fog);
             _levelTime = (float)moment.LevelTime;
         }
@@ -1698,9 +1693,7 @@ public partial class TopDownMain : Node3D
             _fog.RevealBox(haven.Min, haven.Max, 6f);
             for (int i = 0; i < _map.Pois.Count; i++)
                 if (_map.InHaven(_map.Pois[i].Position)) _visited.Add(i);
-            _minimap.SetVisited(_visited);
         }
-        _minimap.SetFog(_fog);
         _fullMap.Fog = _fog;
         _fullMap.Seen = _fog;
         _fullMap.Visited = _visited;
@@ -1835,7 +1828,8 @@ public partial class TopDownMain : Node3D
             float stay = 1f - Ease(t / 1.2f);
             FadeLevelLife(from, radius, stay);
             _corruption.Fade(stay);
-            _minimap.DiveOut(Ease(t / 0.9f));
+            _arrows.DiveOut(Ease(t / 0.6f));
+            _arrows.Sync(_camera.Camera, HudScale, dt);
         }
         _hud.Elapsed = _elapsed;
         _hud.Track(_world, _catalog, dt);
@@ -1865,7 +1859,7 @@ public partial class TopDownMain : Node3D
         DiveCaveArrived();
         foreach (var view in LevelLife) ResetFade(view);
         ResetFade(_level);
-        _minimap.Arrive();
+        _arrows.Arrive();
         _portalsArmed = false;
         _arriving = true;
         _arriveTime = 0f;
@@ -2000,8 +1994,7 @@ public partial class TopDownMain : Node3D
         }
         _springs.Sync(dt, _camera.Camera, Focus(alpha) with { Y = LevelMap.SwimBand });
         _cleanse.Track(_world, dt);
-        MinimapView.FillSprings(_fullMap, _world);
-        _minimap.SetSprings(_world);
+        FillSprings(_fullMap, _world);
     }
 
     /// <summary>Verification: start somewhere interesting.</summary>
@@ -2389,6 +2382,7 @@ public partial class TopDownMain : Node3D
         {
             if (_riding) StepRide(dt);
             else StepArrive(dt);
+            _arrows.Sync(_camera.Camera, HudScale, dt);
             Capture();
             return;
         }
@@ -2753,8 +2747,6 @@ public partial class TopDownMain : Node3D
         _hud.Elapsed = _elapsed;
         _hud.Track(_world, _catalog, dt);
         float health = _world.Run.MaxHp > 0f ? _world.Player.Hp / _world.Run.MaxHp : 0f;
-        _minimap.SetHealth(health);
-        _minimap.SetExperience(_world.Run.Xp / (float)Math.Max(_world.Run.XpNeeded, 1), _world.Run.XpLevel, _world.Run.Points > 0);
         _lowHealth.Sync(health, dt);
         // Each view on its own: one that fails is reported (once) and the rest carry on.
         Guard("bell", () => _bell.Sync(_world, alpha, dt));
@@ -2854,7 +2846,6 @@ public partial class TopDownMain : Node3D
         if (InReef) SyncReefView(dt, Focus(alpha));
         // In the curse den's dark her own light is dimmed too, to about half.
         _bell.Dim = 1f - 0.475f * _dark.Amount;
-        _minimap.Blackout = _dark.Amount;
         // The water she stirs (FlowField): her wake, and the creatures'; soft things bend in it.
         _flow.Follow(Focus(alpha));
         _flow.Stir(_world.Player.Position, _world.Player.Velocity, 1.3f + 0.12f * _world.Player.Velocity.Length(), 0.55f);
@@ -2892,27 +2883,22 @@ public partial class TopDownMain : Node3D
         }
         var p = _world.Player;
         _debugMap.SetPlayer(_world.Player.Position);
-        _minimap.Track(p.Position, p.Velocity);
         // Lantern Pearl: a brighter glow shows more of the level around her.
         float glow = _world.Run.Loadout.Stats[Stat.Glow];
         // In the curse den's dark she learns nothing of the map.
-        if (_dark.Amount < 0.5f) _fog.Reveal(p.Position, MinimapView.RevealRadius * (1f + 0.5f * (glow - 1f)), MinimapView.RevealSoft);
+        if (_dark.Amount < 0.5f) _fog.Reveal(p.Position, RevealRadius * (1f + 0.5f * (glow - 1f)), RevealSoft);
         // Brass Compass: every place on both maps (secret rooms stay hidden).
-        _minimap.Landmarks = _fullMap.Landmarks = _world.Run.Loadout.Flags.Contains("landmarks");
-        // The adventure: the minimap only with Sea Chart Nautilus, and never a ring round it (the gonad gauge says those).
-        bool adventure = HudView.DiveLook(_world);
-        _minimap.Visible = HasMap;
-        _minimap.Plain = adventure;
-        _cleanse.Visible = !adventure;
-        // Entering a place names it under the minimap.
+        _fullMap.Landmarks = _world.Run.Loadout.Flags.Contains("landmarks");
+        // The dive's look: no cleanse meter (the gonad gauge says it).
+        _cleanse.Visible = !HudView.DiveLook(_world);
+        // A place she swims into is visited (the Tab map names it from then on).
         var inside = _map.Pois.Where(poi => System.Numerics.Vector2.Distance(poi.Position, p.Position) <= poi.Radius + 1.5f)
             .OrderBy(poi => System.Numerics.Vector2.Distance(poi.Position, p.Position)).FirstOrDefault();
-        // The start needs no name under the map.
-        bool named = inside is not null && inside.Kind != PoiKind.Start;
-        // (A leak cave's dead end is its leak: named in the leak's purple, as its asterisk on the maps.)
-        var placeColour = !named ? Colors.White : inside!.Kind == PoiKind.Exit && _map.LeakCave ? new Color(0.72f, 0.36f, 1f) : LevelView.PoiColor(inside!.Kind);
-        _minimap.ShowPlace(named ? LevelView.PlaceName(_map, inside!.Kind) : null, placeColour);
         if (inside is not null) _visited.Add(_map.Pois.IndexOf(inside));
+        // The places round her, pointed at from the screen's edges.
+        _arrows.Visible = !_dying && !InLabyrinth;
+        _arrows.SetTargets(ArrowTargets());
+        _arrows.Sync(_camera.Camera, HudScale, dt);
         // The Tab map: the whole screen, framing the level's outline.
         _fullMap.Frame(new Rect2(Vector2.Zero, GetViewport().GetVisibleRect().Size));
         _fullMap.Player = p.Position;
@@ -3515,7 +3501,6 @@ public partial class TopDownMain : Node3D
                 _sfx.PlayPitched("pop", 0.35f, -2f);
                 _sfx.PlayPitched("bell_ring", 0.9f, -6f);
                 _sfx.PlaySecret();
-                _minimap.SetMap(_map, _world.SealedCaves);
                 _fullMap.SetMap(_map, _world.SealedCaves);
                 break;
             case PlaneEventType.SealClosed:

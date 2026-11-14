@@ -1154,9 +1154,9 @@ The FP staging ("look up through the surface") is replaced:
 
 ## 9. UI
 
-- **HUD** (`HudView`, `MinimapView`, `CleanseMeter`): minimal, in three zones — top right where she is and how she
-  is doing (the minimap, its bezel and experience ring, the cleanse bar under it), bottom left what she owns (the
-  shell counter), and the top centre empty at rest, for what comes and goes. Health and the active pearl's charge are
+- **HUD** (`HudView`, `EdgeArrows`, `CleanseMeter`): minimal — top left her gonad gauge (health, the active pearl's
+  charge, experience) and her shells, the screen's edges the arrows to the places round her, and the top centre empty
+  at rest, for what comes and goes. Health and the active pearl's charge are
   diegetic on the bell (§2.5: gonad rings and rim), bubble orbs under it; no numbers for any of them on the HUD. One
   text style throughout: light text with a soft dark outline, no boxes, readable on bright sand and in the deeps.
   Laid out on a 1080-line screen and scaled with the window, gently (its height's share to the 0.6 power: 0.9 at
@@ -1169,11 +1169,6 @@ The FP staging ("look up through the surface") is replaced:
     it shows in the pause menu's summary and on the Tab map.
   - **The boss's bar** shows at the top centre while its fight runs (§12.2), its crust's pips inside its right end.
   - **Messages** drop in a short way to the top centre (under the title or the boss's bar when one shows).
-- **The minimap's bezel is a quiet health bar**: four warm-gold segments just
-  inside its rim, parted at north, east, south and west — one for each gonad
-  ring — each as opaque as its quarter of her HP is full, over a faint track
-  (subtle, but there). They empty clockwise from the top-left and the last one
-  left pulses when she is critical, eased like the rings.
 - **Achievement banner** (`AchievementBanner`, ACHIEVEMENTS-PROPOSAL §4): a
   ticket at the bottom centre, above the HUD and below the pause menu — the main
   card (a coral ACHIEVEMENT eyebrow with a mint diamond, the title, the
@@ -1189,14 +1184,12 @@ The FP staging ("look up through the surface") is replaced:
   and a small pop on the way out. Banners queue (300 ms apart; with three or
   more waiting each holds 3 s), run on game time (they wait while paused and
   under the death splash) and, with reduced motion, simply cross-fade.
-- **Experience ring** (§2.6, `MinimapView.XpRing`): a thin ring just outside
-  the minimap's bezel fills clockwise from 12 o'clock in gold over a dark track
-  as she earns experience. Full (a skill point waiting), it pulses slowly and
-  glows outward in soft gold rings. Her level sits on it in a small gold badge at
-  about half past seven; there are no other numbers round the map.
-- **The minimap** is 220 (of 1080) across, top right. The place she enters is named on its lower rim for a moment
-  (2.4 s, in the place's colour), then the name fades.
-- **The cleanse bar** (`CleanseMeter`, docs/CORRUPTION.md) runs under the minimap, as wide as it: slim, gold over
+- **No minimap.** The places round her are shown by **arrows at the screen's edges** (`EdgeArrows`): for each
+  place off the screen, a small arrow in its place's colour (a haven green, a clam room gold, a leak cave red, a
+  secret pale, the boss's arena violet, a sub-level's way out white, what her requests name in theirs) stands on the
+  edge between the screen's middle and the place, pointing at it; a place on the screen has none. As she dives, climbs
+  or rides into a place, they slide out past the edges; once she has settled, the new place's slide in from outside.
+- **The cleanse bar** (`CleanseMeter`, docs/CORRUPTION.md; off on the dive's reefs) runs top right, 220 wide: slim, gold over
   ink, its tipping points notched. No caption at rest; while it moves, "Reef 34%" shows beside it and fades 1.6 s
   after it settles. Inside a boss's arena a second bar under it, the arena's, captioned the same way.
 - **Pause menu** (`PauseMenu`; Esc or Start): the sea and the clock are held, and she still moves in place. A drawer
