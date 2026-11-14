@@ -486,8 +486,7 @@ Against §14.3:
   wells, the ring, the wake current); the rest (creatures, the director, the long random walk) wait for §15.
 - **§13:** met, but for the three worker-side rows above.
 - **Ten cubes and three layers:** no seam, no missing cube, no pause, the ring and the dives as above.
-- **Worth exploring by eye:** for you to judge. Two looks are still open (§16): the cliffs into the void show 1 m
-  steps, and the cube lines still faintly show as fins of rock.
+- **Worth exploring by eye:** judged so, and built into the game (§15). Its rock's face is smooth (§4.2).
 
 How to see it: `godot -- --cubes` (WASD, the mouse to aim, Shift or the d-pad's down to dive, Q or its up to climb,
 F3 for the overlay), `--cube-route` or `--cube-dives` to watch her do it, `--cube-perf=seconds` for the numbers.
