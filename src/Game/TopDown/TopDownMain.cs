@@ -1045,7 +1045,7 @@ public partial class TopDownMain : Node3D
     /// <summary>
     /// This level's look: its depth's, a leak cave's dark, or in a haven the bay's summer evening.
     /// </summary>
-    ReefLook Look => _map is { } map ? LookAt(map, _world?.Player.Position ?? map.Start.Position) : ReefLook.For(_id.Depth);
+    ReefLook Look => InReef ? ReefLayerLook(_layer) : _map is { } map ? LookAt(map, _world?.Player.Position ?? map.Start.Position) : ReefLook.For(_id.Depth);
 
     /// <summary>A level's own look: a leak cave's dark, a haven's bay evening, else its depth's.</summary>
     static ReefLook LookOf(LevelMap map) =>

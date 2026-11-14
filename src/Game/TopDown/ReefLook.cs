@@ -96,6 +96,18 @@ public sealed record ReefLook
         return PaintedLooks[at] = look with { Name = Drawn(depth).Name };
     }
 
+    /// <summary>
+    /// A layer of the cube reef's look (docs/proposals/CUBE-WORLD-PLAN.md §15): the painted look from the shallows' at
+    /// the top (<paramref name="share"/> 0) through the Blue Hollow's to the deepest's at the bottom (1), a little darker
+    /// each layer down; named as the depth it stands for.
+    /// </summary>
+    public static ReefLook Layer(float share, int depth)
+    {
+        float k = Mathf.Clamp(share, 0f, 1f) * 2f - 1f;
+        var look = k < 0f ? Blend(Showcase, ShowcaseUp, -k) : Blend(Showcase, ShowcaseDown, k);
+        return look with { Name = Drawn(depth).Name };
+    }
+
     /// <summary>The seven depths' drawn palettes (THEME-BIBLE §6.3), for the drawn look.</summary>
     public static ReefLook Drawn(int depth) => depth switch
     {

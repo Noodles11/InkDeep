@@ -75,6 +75,19 @@ public partial class TopDownMain
     int _revealTick;
 
     LayerRecords Here => _records.Of(_layer);
+
+    /// <summary>
+    /// How dark a layer is, 0 (the top, bright) to 1 (the bottom, wholly dark): its depth's share squared, so the layers
+    /// near the top dim only a little and the dark gathers toward the bottom.
+    /// </summary>
+    float LayerShare(int z)
+    {
+        float share = _reef is null || _reef.Space.Layers <= 1 ? 0f : z / (float)(_reef.Space.Layers - 1);
+        return share * share;
+    }
+
+    /// <summary>A layer's look: a little darker each layer down (ReefLook.Layer), named as the depth it stands for.</summary>
+    ReefLook ReefLayerLook(int z) => ReefLook.Layer(LayerShare(z), CubeReef.LookDepthOf(z));
     int LayerTarget => _layer + (_layerMove == LayerMove.Down ? 1 : -1);
     /// <summary>In the cube reef's open water (not in a place behind a mouth).</summary>
     bool InReef => _reef is not null && !InDiveCave;
@@ -420,8 +433,8 @@ public partial class TopDownMain
         _world.Player.Velocity = System.Numerics.Vector2.Zero;
         _world.Player.PrevPosition = _world.Player.Position;
         OctoShoots.Game.Fx.SunMap.Enable(false);
-        _layerLookFrom = LookOf(_map);
-        _layerLookTo = LookOf(_layerMaps[LayerTarget]);
+        _layerLookFrom = ReefLayerLook(_layer);
+        _layerLookTo = ReefLayerLook(LayerTarget);
         _bell.Kick();
         _hud.Diving = true;
         _hud.LayerPrompt = null;
