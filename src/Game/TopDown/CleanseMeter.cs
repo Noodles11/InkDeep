@@ -34,7 +34,7 @@ public partial class CleanseMeter : Control
 
     public void Track(PlaneWorld world, float dt)
     {
-        Visible = world.Corruption is not null && !world.Options.Adventure;
+        Visible = world.Corruption is not null && !HudView.DiveLook(world);
         if (!Visible) return;
         _level = world.Cleansed;
         _arena = world.ArenaCleansed;

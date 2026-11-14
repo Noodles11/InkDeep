@@ -678,7 +678,7 @@ public partial class BellView : Node3D
         _bellMaterial.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("points"), _points);
         // The adventure shows her health and her pearl's charge on the HUD's gonad gauge: her gonads and her rim are
         // only hers then, always whole, never a gauge.
-        if (world.Options.Adventure)
+        if (HudView.DiveLook(world))
         {
             _bellMaterial.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("health"), 1f);
             _bellMaterial.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("charge"), -1f);

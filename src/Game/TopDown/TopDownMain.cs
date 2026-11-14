@@ -868,7 +868,7 @@ public partial class TopDownMain : Node3D
     /// made in the <paramref name="background"/>, on one thread, so the game keeps its frame rate.
     /// </summary>
     /// <summary>The maps (the minimap and the whole level's on Tab / Select) show: always, but in the adventure only once she has absorbed Sea Chart Nautilus.</summary>
-    bool HasMap => !InLabyrinth && (!_world.Options.Adventure || _world.Run.Loadout.Flags.Contains("minimap"));
+    bool HasMap => !InLabyrinth && (!HudView.DiveLook(_world) || _world.Run.Loadout.Flags.Contains("minimap"));
 
     /// <summary>The adventure's levels are abyss reefs (AbyssReef): no seabed outside the caves and tunnels.</summary>
     static LevelMap Abyss(LevelMap map)
@@ -2985,7 +2985,7 @@ public partial class TopDownMain : Node3D
         // Brass Compass: every place on both maps (secret rooms stay hidden).
         _minimap.Landmarks = _fullMap.Landmarks = _world.Run.Loadout.Flags.Contains("landmarks");
         // The adventure: the minimap only with Sea Chart Nautilus, and never a ring round it (the gonad gauge says those).
-        bool adventure = _world.Options.Adventure;
+        bool adventure = HudView.DiveLook(_world);
         _minimap.Visible = HasMap;
         _minimap.Plain = adventure;
         _cleanse.Visible = !adventure;

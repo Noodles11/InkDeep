@@ -73,6 +73,12 @@ public partial class HudView : Control
     // ───────────────────────── the adventure's gonad gauge ─────────────────────────
 
     bool _adventure;
+
+    /// <summary>
+    /// Whether a world is shown as a dive's reef is now (the gonad gauge, a plain minimap, no cleanse meter): the
+    /// adventure's reefs, and the cube reef's layers (PlaneOptions.Reef).
+    /// </summary>
+    public static bool DiveLook(PlaneWorld world) => world.Options.Adventure || world.Options.Reef;
     float _health = 1f, _healthShown = 1f, _xpShare, _charge = 1f, _hurt;
     bool _xpFull, _shellsSeen;
     int _xpLevel = 1;
@@ -282,7 +288,7 @@ public partial class HudView : Control
         _run = world.Run;
         _shells = world.Run.Shells;
         _time += dt;
-        _adventure = world.Options.Adventure;
+        _adventure = DiveLook(world);
         if (_adventure)
         {
             float max = Mathf.Max(world.Run.MaxHp, 1f);
