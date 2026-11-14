@@ -22,7 +22,7 @@ public static class LevelValidator
     {
         int Count(PoiKind k) => map.Pois.Count(p => p.Kind == k);
         if (Count(PoiKind.Start) != 1 || Count(PoiKind.Exit) != 1) return "missing start or exit";
-        if (Count(PoiKind.TreasureCave) > 2 || Count(PoiKind.Shop) > 1 || Count(PoiKind.Secret) > 1 || Count(PoiKind.CurseDen) > 1 || Count(PoiKind.LeakCave) > 1
+        if (Count(PoiKind.TreasureCave) > 2 || Count(PoiKind.Shop) > 1 || Count(PoiKind.Secret) > 1 || Count(PoiKind.CurseDen) > 1 || Count(PoiKind.LeakCave) > 1 || Count(PoiKind.Haven) > 1
             || Count(PoiKind.ShellCache) > 1) return "optional POI counts out of range";
 
         // Scatter rules.
@@ -108,7 +108,7 @@ public static class LevelValidator
         var dist = Distances(map, start.Position);
         // (A leak cave's place, and a secret room's, is in the rock behind its mouth: the water out of its mouth must be reached.)
         foreach (var poi in map.Pois)
-            if (poi.Kind is not (PoiKind.LeakCave or PoiKind.Secret) && float.IsPositiveInfinity(DistanceAt(dist, poi.Position))) return $"the {poi.Kind} cannot be reached from the start";
+            if (poi.Kind is not (PoiKind.LeakCave or PoiKind.Secret or PoiKind.Haven) && float.IsPositiveInfinity(DistanceAt(dist, poi.Position))) return $"the {poi.Kind} cannot be reached from the start";
         foreach (var mouth in map.Mouths)
             if (!Enumerable.Range(6, 19).Select(k => mouth.At - mouth.Into * (k * 0.5f)).Any(q => map.IsOpen(q) && !float.IsPositiveInfinity(DistanceAt(dist, q))))
                 return "a cave's mouth cannot be reached from the start";

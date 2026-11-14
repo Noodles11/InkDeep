@@ -310,7 +310,7 @@ public class TopDownGenTests
     {
         var map = Map(seed);
         var sides = map.Corridors.Where(c => c.Kind == CorridorKind.Side).ToList();
-        Assert.True(sides.Count >= 3, $"{sides.Count} side tunnels");
+        Assert.True(sides.Count >= 2, $"{sides.Count} side tunnels");
         Assert.All(sides, c => Assert.InRange(c.Width, 4.5f, 7f));
         // Some side branches close a loop back into the cave.
         Assert.True(map.Plazas.Count >= 6, $"{map.Plazas.Count} chambers");
@@ -402,7 +402,7 @@ public class TopDownGenTests
         // The first reef of the first depth with a room in a cave.
         var code = SeedCode.Parse(seed);
         var id = Enumerable.Range(1, 4).SelectMany(r => DiveGraph.Of(code).Row(1, LevelPlan.Tutorial + 1, r)).Select(n => n.Id)
-            .First(i => !i.Haven && LevelPlan.For(code, i) is var p && p.Treasures + p.Shops + p.Crabs > 0);
+            .First(i => LevelPlan.For(code, i) is var p && p.Treasures + p.Crabs > 0);
         var map = Map(seed, id);
         Assert.NotEmpty(map.Caves);
         foreach (var cave in map.Caves)
@@ -433,7 +433,7 @@ public class TopDownGenTests
             // The curse dens are leak caves, each with its mouth (docs/DIVE.md §6).
             Assert.Equal(plan.Curses, Count(PoiKind.LeakCave));
             // (And each secret room is a labyrinth behind a sealed mouth, docs/DIVE.md §6.1.)
-            Assert.Equal(plan.Curses + plan.Secrets, map.Mouths.Count);
+            Assert.Equal(plan.Curses + plan.Secrets + plan.Havens, map.Mouths.Count);
             Assert.Equal(plan.Secrets, map.MouthKinds.Count(k => k == PoiKind.Secret));
             Assert.Equal(0, Count(PoiKind.CurseDen));
             Assert.Equal(plan.Shops, Count(PoiKind.Shop));

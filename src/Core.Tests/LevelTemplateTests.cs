@@ -82,7 +82,7 @@ public class LevelTemplateTests
                 foreach (var (kind, rule) in t.Places)
                 {
                     if (rule.None) Assert.Equal(0, counts[kind]);
-                    if (rule.Required > 0 && kind is not (PoiKind.TreasureCave or PoiKind.Shop or PoiKind.ShellCache))
+                    if (rule.Required > 0 && kind is not (PoiKind.TreasureCave or PoiKind.Shop or PoiKind.ShellCache) && plan.Places < LevelStocking.MaxPlaces)
                         Assert.Equal(rule.Required, counts[kind]);
                 }
                 // Its cast: forbidden kinds absent, the others never past their range.

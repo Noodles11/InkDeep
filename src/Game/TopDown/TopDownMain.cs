@@ -549,6 +549,7 @@ public partial class TopDownMain : Node3D
             // Verification: that many seconds into a dive's leak cave, she is taken back out of it (docs/DIVE.md §6).
             else if (arg.StartsWith("--dbg-cavein=") && float.TryParse(Value("--dbg-cavein="), NumberStyles.Float, CultureInfo.InvariantCulture, out float cin)) _dbgCaveIn = cin;
             else if (arg.StartsWith("--dbg-mazein=") && float.TryParse(Value("--dbg-mazein="), NumberStyles.Float, CultureInfo.InvariantCulture, out float mzin)) _dbgMazeIn = mzin;
+            else if (arg.StartsWith("--dbg-havenin=") && float.TryParse(Value("--dbg-havenin="), NumberStyles.Float, CultureInfo.InvariantCulture, out float hvin)) _dbgHavenIn = hvin;
             else if (arg.StartsWith("--dbg-mazeout=") && float.TryParse(Value("--dbg-mazeout="), NumberStyles.Float, CultureInfo.InvariantCulture, out float mzout)) _dbgMazeOut = mzout;
             else if (arg.StartsWith("--dbg-caverounds=") && int.TryParse(Value("--dbg-caverounds="), out int rounds)) _dbgCaveRounds = rounds;
             else if (arg.StartsWith("--dbg-caveback=") && float.TryParse(Value("--dbg-caveback="), NumberStyles.Float, CultureInfo.InvariantCulture, out float back)) _dbgCaveBack = back;
@@ -1569,12 +1570,14 @@ public partial class TopDownMain : Node3D
         ShowMouths();
         if (_captureDir is not null)
             foreach (var door in map.Way is { } way ? map.Mouths.Append(way) : map.Mouths) GD.Print($"Ride door at {door.At} into {door.Into}");
-        _mirrorView.Show(map, silted: _id.Haven && !BayOpen(BayService.Mirror));
+        // A reef's haven: what it offers besides its shop (a pick of what she has unlocked).
+        PickHavenOffers();
+        _mirrorView.Show(map, silted: InHavenPlace && !BayOpen(BayService.Mirror));
         _fanView.Show(map);
-        _folkView.Show(map, _id.Haven ? LoadMap(HavenMap) : null, _jelly);
+        _folkView.Show(map, _id.Haven ? LoadMap(HavenMap) : InHavenPlace ? HavenLayout.Make(_seed, map.Id) : null, _jelly);
         _ashSeen = 0;
-        // A dive's haven: new troubles tied on the Tide Fan.
-        if (_id.Haven && map.Fan is not null) FillFan();
+        // A haven: new troubles tied on the Tide Fan.
+        if (InHavenPlace && map.Fan is not null && BayOpen(BayService.TideFan)) FillFan();
         if (_dbgRequests && _jelly is { } asked)
         {
             _dbgRequests = false;
@@ -1626,7 +1629,7 @@ public partial class TopDownMain : Node3D
         // Back at the moment she left (the save keeps it, should she leave again before saving anew); else the level's
         // start is saved.
         if (moment is not null && !(returning ? RestoreLevel(moment, arriveAt) : RestoreMoment(moment))) moment = null;
-        if (_id.Haven && _jelly is { } banker) BankDive(banker);
+        if (InHavenPlace && _jelly is { } banker) BankDive(banker);
         if (!returning) NoteDiveChains();
         if (moment is null && !InDiveCave) SaveRun();
         if (_dbgMoment > 0f && _dbgMomentStart is null) _dbgMomentStart = RunRecord();
@@ -1717,6 +1720,7 @@ public partial class TopDownMain : Node3D
     (string Title, string Where) PlaceTitle()
     {
         if (_id.Haven) return ("Lantern Bay", _id.ToString());
+        if (InHavenPlace) return ("A haven", "Safe water: rest, trade, and bank what you carry");
         if (InLabyrinth) return ("A secret labyrinth", "Its reward lies at its heart");
         if (InDiveCave) return ("A leak cave", "Its water stings till its leak is sealed");
         string title = _map.Template is { Name.Length: > 0 } template ? template.Name : _id.Level == 1 ? ReefLook.For(_id.Depth).Name : $"Level {_id.Level}";

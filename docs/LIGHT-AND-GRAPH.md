@@ -263,8 +263,6 @@ A dive is a layered graph of reefs, built from the dive's seed a depth at a time
 - **Rules the generator keeps** (it retries the depth on its next sub-seed if one breaks):
   - every reef can be reached from the top, and leads on to its depth's boss;
   - no two holes of a reef lead to the same reef;
-  - from every reef of a depth's first two rows, a haven of the depth can be reached (§6.2);
-  - no row two wide or more is all havens.
 - Past the fifth depth the loop starts again below the tutorial, as before.
 
 ### 6.2 Kinds of reef
@@ -272,7 +270,6 @@ A dive is a layered graph of reefs, built from the dive's seed a depth at a time
 | Kind | What it is |
 |---|---|
 | Reef | an ordinary seeded level |
-| Haven | calm, heals and banks, all the freed folk, the Tide Fan, the shop. Its map stays hand-drawn, with a hole in its gate and in each of its two coves (as many as it has reefs below). From row 2 to row 4 of a depth: 15% by chance (never straight after one), then where most of the reefs that could reach none would reach it. |
 | Boss | the bottom of each depth, one reef wide |
 | Treasure | a reef with a clam room (rows 1–4, 30%; at least one a depth) |
 | Den | a reef with a curse den (rows 2–4, 20%) |
@@ -359,7 +356,6 @@ below it (`Stamp`, the stamp seeds), which the levels no longer shared. The rest
 | Blightroots and the creatures they raise | The dens' hearts and the templates' casts. |
 | Murklings hunting fish, murklings throwing | The variants (§3.2): only they hunt and throw; the basic murkling does neither. |
 | The other corrupted kinds' own lights | Until they too are seen only in her light (§8, stage 4). |
-| Lantern Bay's hand-drawn map | The haven stays the same place every time (§6.2). |
 
 ## 8. Order of work
 

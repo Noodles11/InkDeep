@@ -25,14 +25,20 @@ public static class PlaceRules
     public const float CrabDepth = 0.6f;
 
     public static readonly Rule Secret = new(PoiKind.Secret, PlaceSort.SubLevel, 1, 0.4f, Apart);
-    public static readonly Rule Shop = new(PoiKind.Shop, PlaceSort.Spot, 2, 0.45f, Apart);
+    /// <summary>A reef's shop is in its haven now (docs/DIVE.md §4): none on the reef itself.</summary>
+    public static readonly Rule Shop = new(PoiKind.Shop, PlaceSort.Spot, 2, 0f, Apart, "a haven's (HavenLayout)");
+    /// <summary>
+    /// A haven (docs/DIVE.md §4): a way into a small safe sub-level, always bright, with its shop and the services she has
+    /// unlocked. About a third of the reefs; the first reef of each depth's second row always has one.
+    /// </summary>
+    public static readonly Rule Haven = new(PoiKind.Haven, PlaceSort.SubLevel, 2, 0.34f, Apart);
     public static readonly Rule ShellCache = new(PoiKind.ShellCache, PlaceSort.Spot, 2, 0.6f, Apart);
     public static readonly Rule CrabDeal = new(PoiKind.CrabDeal, PlaceSort.Spot, 2, 0f, Apart, "one reef a depth, CrabDepth of depths past the first");
     public static readonly Rule TreasureCave = new(PoiKind.TreasureCave, PlaceSort.Spot, 1, 0f, Apart, "the reef's kind (Run.ReefPlaces.Treasure)");
     public static readonly Rule LeakCave = new(PoiKind.LeakCave, PlaceSort.SubLevel, 2, 0f, Apart, "the reef's kind (Run.ReefPlaces.Den)");
     public static readonly Rule Hole = new(PoiKind.Hole, PlaceSort.Spot, 1, 0f, Apart, "one for each of the reef's exits past the first");
 
-    public static readonly IReadOnlyList<Rule> All = new[] { Secret, Shop, ShellCache, CrabDeal, TreasureCave, LeakCave, Hole };
+    public static readonly IReadOnlyList<Rule> All = new[] { Secret, Shop, ShellCache, CrabDeal, TreasureCave, LeakCave, Hole, Haven };
 
     public static Rule Of(PoiKind kind)
     {

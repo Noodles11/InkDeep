@@ -34,7 +34,7 @@ public class CorruptionTests
     [Fact]
     public void SafePlacesStartClean()
     {
-        var w = Level(p => p.Template?.Id != "hoard" && p.Shops > 0 && p.Treasures > 0 && !p.HasBoss);
+        var w = Level(p => p.Template?.Id != "hoard" && p.Treasures > 0 && !p.HasBoss);
         var field = w.Corruption!;
         foreach (var poi in w.Map.Pois.Where(p => p.Kind is PoiKind.Start or PoiKind.Shop or PoiKind.TreasureCave))
             Assert.Equal(0f, field.At(poi.Position));

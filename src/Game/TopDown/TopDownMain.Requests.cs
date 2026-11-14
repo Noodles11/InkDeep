@@ -205,7 +205,7 @@ public partial class TopDownMain
             _ashSeen = _world.AshWashed;
         }
         // A haven banks as she goes: what she buys, absorbs or is paid there is hers for good at once.
-        if (jelly is not null && _id.Haven) KeepBanked(jelly);
+        if (jelly is not null && InHavenPlace) KeepBanked(jelly);
         var shown = new List<RequestRibbons.Ribbon>();
         if (jelly is not null && _view.RequestRibbons)
             foreach (var r in jelly.Carried)

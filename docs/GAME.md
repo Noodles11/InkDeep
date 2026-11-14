@@ -80,11 +80,11 @@ the reef was never being called home. It was being kept.
   Once a neighbour is freed, her depth's boss from then on is the Leak's own, Drippus Prime. Until the Tank is built,
   the dive loops after Depth 5 into the next cycle, Menace still rising; after the ending, the loop stays as the endless
   mode.
-- **A depth is a graph of reefs** (LIGHT-AND-GRAPH §6): four rows of two to four reefs, then the boss's reef. Each reef
-  has two to four holes down, each ringed in the colour of the reef it leads to (a plain reef, a clam room, a curse den,
-  a haven, the boss). The pause menu's chart shows what she has seen of the graph.
-- **Havens** (DIVE §4): Lantern Bay's calm water, drawn by hand, between the rows. Arriving heals her whole and banks
-  everything she carries. The freed folk live there; the shop is always open once Ottilie is home.
+- **A depth is a graph of reefs** (LIGHT-AND-GRAPH §6): four rows of two to three reefs, then the boss's reef. Each reef
+  has two to three holes down, each ringed in the colour of the reef it leads to (a plain reef, a clam room, a curse
+  den, the boss). The pause menu's chart shows what she has seen of the graph.
+- **Havens** (DIVE §4): small safe sub-levels behind a third of the reefs' mouths, always bright, each with its shop
+  and a pick of the services she has unlocked. Entering one heals her whole and banks everything she carries.
 - **What she keeps** (DIVE §2): her level, skills and freed folk always; what is banked (pearls and shells) between
   dives; what she carries since the last haven is lost if she dims.
 

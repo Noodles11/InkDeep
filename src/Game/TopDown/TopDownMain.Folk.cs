@@ -57,7 +57,7 @@ public partial class TopDownMain
     }
 
     /// <summary>A bay service is open: its neighbour is home (or not yet in the game).</summary>
-    bool BayOpen(BayService service) => _jelly is not { } jelly || Folk.Opens(jelly, service);
+    bool BayOpen(BayService service) => (_jelly is not { } jelly || Folk.Opens(jelly, service)) && (_havenOffers is not { } offers || offers.Contains(service));
 
     /// <summary>The services that are a drawer at their neighbour's home (the fan and the mirror are places of their own).</summary>
     static bool HasDrawer(Neighbour n) => n.Opens is BayService.BroodBed or BayService.DuskDance;
@@ -169,7 +169,7 @@ public partial class TopDownMain
     void NoteDiveChains()
     {
         if (_jelly is null) return;
-        if (_id.Haven) NoteChain(StepKind.Home);
+        if (InHavenPlace) NoteChain(StepKind.Home);
         // (A labyrinth is no find.)
         else if (InDiveCave)
         {

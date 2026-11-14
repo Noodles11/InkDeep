@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Godot;
 using OctoShoots.Core.Gen.TopDown;
@@ -46,6 +47,8 @@ public partial class TopDownMain
     bool InLabyrinth => InDiveCave && _map.Labyrinth;
     /// <summary>Verification (--dbg-mazein=seconds): that long onto a reef with a secret mouth, its wall opens and she is taken into its labyrinth.</summary>
     float _dbgMazeIn;
+    /// <summary>Verification (--dbg-havenin=seconds): that long onto a reef with a haven, she is taken into it.</summary>
+    float _dbgHavenIn;
     /// <summary>Verification (--dbg-mazeout=seconds): that long into a labyrinth, she gives it up.</summary>
     float _dbgMazeOut;
     /// <summary>A labyrinth's reward is all taken (its shells and its pearl).</summary>
@@ -64,7 +67,42 @@ public partial class TopDownMain
     static PlaneOptions DiveCaveOptions(LevelMap map)
     {
         var d = PlaneOptions.Default;
-        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings && !map.Labyrinth, Vases = d.Vases && !map.Labyrinth, Adventure = d.Adventure, Shots = d.Shots, DiveCave = !map.Labyrinth };
+        bool calm = map.Labyrinth || map.Haven is not null;
+        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings && !calm, Vases = d.Vases && !calm, Adventure = d.Adventure, Shots = d.Shots, DiveCave = map.LeakCave };
+    }
+
+    /// <summary>In a haven (docs/DIVE.md §4): a reef's haven behind its mouth (or, for an old save, Lantern Bay).</summary>
+    bool InHavenPlace => _id.Haven || InDiveCave && _map.Haven is not null;
+
+    /// <summary>
+    /// The haven behind a reef's mouth (docs/DIVE.md §4): its own id (beyond any level's, leak cave's and labyrinth's), its
+    /// way in going the way she swam.
+    /// </summary>
+    static LevelShape PrepareHaven(SeedCode seed, LevelMap reef, int mouth)
+    {
+        var id = new LevelId(reef.Id.Cycle + 700, reef.Id.Depth, reef.Id.Level * 10 + mouth + 1) { Lane = reef.Id.Lane };
+        return LevelShape.Prepare(TopDownGenerator.GenerateHaven(seed, id, reef.Mouths[mouth].Into));
+    }
+
+    /// <summary>
+    /// What a haven offers besides its shop (docs/DIVE.md §4): a pick of the services she has unlocked (the folk she has
+    /// freed), from one to all of them, its own for each haven (from its seed). Null: not in a haven made so (all open).
+    /// </summary>
+    HashSet<BayService>? _havenOffers;
+
+    void PickHavenOffers()
+    {
+        _havenOffers = null;
+        if (!InDiveCave || _map.Haven is null) return;
+        var open = Enum.GetValues<BayService>().Where(s => _jelly is not { } jelly || Folk.Opens(jelly, s)).ToList();
+        var rng = new OctoShoots.Core.Rng(_map.Seed ^ 0x0FFE25UL);
+        for (int i = open.Count - 1; i > 0; i--)
+        {
+            int j = rng.Int(i + 1);
+            (open[i], open[j]) = (open[j], open[i]);
+        }
+        int keep = open.Count == 0 ? 0 : 1 + rng.Int(open.Count);
+        _havenOffers = open.Take(keep).ToHashSet();
     }
 
     /// <summary>
@@ -88,7 +126,7 @@ public partial class TopDownMain
     }
 
     static LevelShape PrepareBehind(SeedCode seed, LevelMap reef, int mouth) =>
-        reef.LeakMouth(mouth) ? PrepareCave(seed, reef, mouth) : PrepareLabyrinth(seed, reef, mouth);
+        reef.HavenMouth(mouth) ? PrepareHaven(seed, reef, mouth) : reef.LeakMouth(mouth) ? PrepareCave(seed, reef, mouth) : PrepareLabyrinth(seed, reef, mouth);
 
     /// <summary>A reef's caves, made with it (on the same thread, after it).</summary>
     static void PrepareCaves(SeedCode seed, LevelShape reef)
@@ -124,6 +162,11 @@ public partial class TopDownMain
             return (true, 0, map => map.Way is { } way ? Through(way) : null, _map.Mouths[0], RideWay.Door);
         }
         // Verification: into the first secret mouth's labyrinth, its wall opened.
+        if (!InDiveCave && _dbgHavenIn > 0f && _levelTime > _dbgHavenIn && _map.MouthKinds.IndexOf(PoiKind.Haven) is var haven and >= 0)
+        {
+            _dbgHavenIn = 0f;
+            return (true, haven, map => map.Way is { } way ? Through(way) : null, _map.Mouths[haven], RideWay.Door);
+        }
         if (!InDiveCave && _dbgMazeIn > 0f && _levelTime > _dbgMazeIn && _map.MouthKinds.IndexOf(PoiKind.Secret) is var maze and >= 0)
         {
             _dbgMazeIn = 0f;
@@ -182,8 +225,8 @@ public partial class TopDownMain
         {
             AddToRun();
             _caveHp = _world.Player.Hp;
-            // (A labyrinth: done with once its reward is taken.)
-            _caveSealed = InLabyrinth ? LabyrinthEmptied : !_world.CaveLeakOpen;
+            // (A labyrinth: done with once its reward is taken; a haven never is.)
+            _caveSealed = InHavenPlace ? false : InLabyrinth ? LabyrinthEmptied : !_world.CaveLeakOpen;
             // Unsealed, it waits as she leaves it (sealed, its mouth closes behind her).
             if (!_caveSealed && Moment(levelOnly: true) is { } cave) _caveStates[_diveCave] = cave;
             else _caveStates.Remove(_diveCave);
@@ -226,6 +269,7 @@ public partial class TopDownMain
     void DiveCaveArrived()
     {
         if (InLabyrinth) Say("A secret labyrinth: find its heart, and its current will carry you home");
+        else if (InHavenPlace) Say("A haven: safe water, healed whole, all you carry banked");
         else if (InDiveCave) Say("A leak cave: its water stings till its leak is sealed · seal it for a pearl and a full heal");
         else if (_caveMouth >= 0 && _caveSealed)
         {

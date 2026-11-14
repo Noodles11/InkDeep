@@ -110,8 +110,11 @@ public class PrismStoneTests
         var stones = w.PrismStones.Where(s => s.Seal == index).ToList();
         var her = stones[0].Bed;
         var right = stones.Where(s => (s.Hue & seal.Hue) != 0).ToList();
-        // Her own light, the stones off its way: nothing.
+        // Her own light, the stones off its way (taken away a moment): nothing.
+        var all = w.PrismStones.ToList();
+        w.PrismStones.Clear();
         Assert.False(Shine(w, seal, her));
+        w.PrismStones.AddRange(all);
         // Through a stone of another colour as well: the wrong colour, nothing.
         var wrong = new PrismStone { Hue = (LightHue)(7 & ~(int)seal.Hue), Bed = her };
         if (wrong.Hue != LightHue.None)
@@ -134,7 +137,9 @@ public class PrismStoneTests
         var w = Worlds(w => w.PrismStones.Count > 0).First();
         var stone = w.PrismStones[0];
         var start = stone.Position;
-        var way = Vector2.Normalize(stone.Bed - stone.Position + new Vector2(0.01f, 0f));
+        // (Pushed the way there is open water for it, and for her behind it.)
+        var way = Enumerable.Range(0, 16).Select(k => new Vector2(MathF.Cos(k * MathF.Tau / 16f), MathF.Sin(k * MathF.Tau / 16f)))
+            .First(d => w.Clear(stone.Position + d * 2f, PrismStoneTuning.Radius) && w.Clear(stone.Position - d * (PrismStoneTuning.Radius + 1.2f), w.Radius));
         w.Player.Position = w.Player.PrevPosition = stone.Position - way * (PrismStoneTuning.Radius + 1.2f);
         for (int i = 0; i < PlaneWorld.TickRate * 6; i++)
         {

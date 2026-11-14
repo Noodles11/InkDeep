@@ -14,7 +14,7 @@ namespace OctoShoots.Core.Gen.TopDown;
 /// </summary>
 /// <summary>A level's places. LeakCave: a leak cave's mouth in the rock (docs/DIVE.md §6), where a curse den once was.
 /// Hole: one of a reef's further holes down (docs/LIGHT-AND-GRAPH.md §6.3), a sunken chamber as its Exit's.</summary>
-public enum PoiKind { Start, ShellCache, Exit, Shop, Secret, CurseDen, TreasureCave, CrabDeal, LeakCave, Hole }
+public enum PoiKind { Start, ShellCache, Exit, Shop, Secret, CurseDen, TreasureCave, CrabDeal, LeakCave, Hole, Haven }
 
 public sealed class Poi
 {
@@ -28,7 +28,7 @@ public sealed class Poi
     public int Cave = -1;
 
     /// <summary>Special rooms live in caves (DESIGN-TOPDOWN §4.2).</summary>
-    public static bool IsCaveHosted(PoiKind kind) => kind is PoiKind.Shop or PoiKind.Secret or PoiKind.CurseDen or PoiKind.TreasureCave or PoiKind.CrabDeal or PoiKind.LeakCave;
+    public static bool IsCaveHosted(PoiKind kind) => kind is PoiKind.Shop or PoiKind.Secret or PoiKind.CurseDen or PoiKind.TreasureCave or PoiKind.CrabDeal or PoiKind.LeakCave or PoiKind.Haven;
 }
 
 /// <summary>Main: a route canyon start→rift. Spur: to a place. Pass: a narrow cut. Side: a labyrinth canyon (dead end or loop).</summary>
@@ -393,6 +393,9 @@ public sealed class LevelMap
     public List<PoiKind> MouthKinds = new();
     /// <summary>Whether a mouth (by index) leads into a leak cave (not a labyrinth).</summary>
     public bool LeakMouth(int mouth) => mouth < MouthKinds.Count ? MouthKinds[mouth] == PoiKind.LeakCave : true;
+
+    /// <summary>Whether a mouth (by index) leads into a haven (docs/DIVE.md §4).</summary>
+    public bool HavenMouth(int mouth) => mouth < MouthKinds.Count && MouthKinds[mouth] == PoiKind.Haven;
     /// <summary>
     /// A secret room's labyrinth (docs/DIVE.md §6.1; TopDownGenerator.GenerateLabyrinth): a maze of the reef's walls, its
     /// reward at its heart (its Secret place), no creatures, no leak, its way out (Way) where she came in.

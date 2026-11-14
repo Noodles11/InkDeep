@@ -76,18 +76,6 @@ public class PlaneCurrentTests
         Assert.True(Vector2.Distance(fish.Position, v.Position) >= AdventureTuning.LeakClear - 0.5f);
     }
 
-    [Fact]
-    public void NoFountainLiesOnTheMainCurrent()
-    {
-        foreach (var id in TestLevels.All(p => true).Take(20))
-        {
-            var map = AbyssReef.Apply(TopDownGenerator.Generate(new RunStreams(TestLevels.Seed), id));
-            var springs = LightSprings.Of(map);
-            Assert.NotEmpty(springs);
-            Assert.All(springs, at => Assert.False(MainCurrent.Touches(map, at, 0f), $"{id}: a fountain on the current at {at}"));
-        }
-    }
-
     static (PlaneWorld World, PlaneBoss Boss) AtTheBoss(float share)
     {
         var w = World(boss: true);

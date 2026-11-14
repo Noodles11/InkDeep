@@ -13,7 +13,7 @@ public class PlaceRulesTests
     {
         Assert.Equal(PlaceRules.All.Count, PlaceRules.All.Select(r => r.Kind).Distinct().Count());
         Assert.All(PlaceRules.All, r => Assert.Equal(r, PlaceRules.Of(r.Kind)));
-        Assert.Equal(new[] { PoiKind.Secret, PoiKind.LeakCave }, PlaceRules.All.Where(r => r.Sort == PlaceSort.SubLevel).Select(r => r.Kind).OrderBy(k => k));
+        Assert.Equal(new[] { PoiKind.Secret, PoiKind.LeakCave, PoiKind.Haven }, PlaceRules.All.Where(r => r.Sort == PlaceSort.SubLevel).Select(r => r.Kind).OrderBy(k => k));
         // What is not rolled says how it comes.
         Assert.All(PlaceRules.All.Where(r => r.Chance == 0f), r => Assert.NotEmpty(r.Comes));
     }

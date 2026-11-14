@@ -38,11 +38,11 @@ public readonly record struct LevelId(int Cycle, int Depth, int Level)
 /// What a level holds (DESIGN-TOPDOWN §4.1 stage 1): rolled per level from the run seed, before the level is shaped.
 /// What each kind of place asks (where, how often, how far apart) is its rule (PlaceRules). At most
 /// <see cref="MaxPlaces"/> places besides the start, the exit and its holes; over the cap, places are dropped in the
-/// order secret, shell cache.
+/// order secret, shell cache, a haven by chance, the Crab Deal.
 /// </summary>
 public static class LevelStocking
 {
-    public const int MaxPlaces = 5;
+    public const int MaxPlaces = 3;
     /// <summary>The tutorial's two levels, between them every kind of place: level 1 a clam room, a secret and a shell
     /// cache; level 2 a shop, a curse den and the open rift (the arena with no boss).</summary>
     public const int TutorialLevels = 2;
@@ -73,6 +73,8 @@ public sealed class LevelPlan
     public int Crabs { get; init; }
     public int Curses { get; init; }
     public int Shops { get; init; }
+    /// <summary>Ways into a haven (docs/DIVE.md §4), 0 or 1.</summary>
+    public int Havens { get; init; }
     public int Caches { get; init; }
     /// <summary>The level above was a boss level: she arrives on its arena's floor.</summary>
     public bool EntryFromArena { get; init; }
@@ -92,7 +94,7 @@ public sealed class LevelPlan
     public int Floor { get; init; } = 1;
     public int Floors { get; init; } = 1;
 
-    public int Places => Treasures + Secrets + Curses + Shops + Caches + Crabs + (HasBoss ? 1 : 0);
+    public int Places => Treasures + Secrets + Curses + Shops + Caches + Crabs + Havens + (HasBoss ? 1 : 0);
     /// <summary>The level's template (docs/archive/LEVEL-TEMPLATES-PROPOSAL.md): null in the tutorial.</summary>
     public LevelTemplate? Template { get; init; }
 
@@ -137,7 +139,11 @@ public sealed class LevelPlan
         int treasures = node.Kind == ReefKind.Treasure ? 1 : 0;
         int secrets = PlaceRules.Rolls(PoiKind.Secret, id.Level, rng) ? 1 : 0;
         int curses = node.Kind == ReefKind.Den ? 1 : 0;
-        int shops = PlaceRules.Rolls(PoiKind.Shop, id.Level, rng) ? 1 : 0;
+        // (A reef's shop is in its haven now: PlaceRules.Shop rolls none.)
+        int shops = 0;
+        // A haven: about a third of the reefs, and always the first of each depth's second row (so every dive meets one).
+        bool keepHaven = !boss && id.Level == 2 && node.Id.Lane == 0;
+        int havens = keepHaven || !boss && PlaceRules.Rolls(PoiKind.Haven, id.Level, rng) ? 1 : 0;
         int caches = PlaceRules.Rolls(PoiKind.ShellCache, id.Level, rng) ? 1 : 0;
 
         // The template's places over the general roll: required, a chance, or none (treasure rooms keep the depth's rule).
@@ -157,7 +163,7 @@ public sealed class LevelPlan
         // (A curse den comes with the reef's kind, which its hole's rim shows: the template only picks fitting kinds, and
         // a treasure reef's may ask for one besides.)
         if (template?.Requires(PoiKind.CurseDen) == true) curses = 1;
-        shops = Apply(PoiKind.Shop, shops);
+        shops = 0;
         caches = Apply(PoiKind.ShellCache, caches);
         // The general rule wins: a depth's first level has no shop and no shell cache.
         if (id.Level < PlaceRules.Shop.FromRow) shops = 0;
@@ -173,13 +179,16 @@ public sealed class LevelPlan
         // Over the cap: drop the secret, then the shell cache — what the template requires last. Treasure rooms and
         // curse dens stay (the reef's kind).
         int crabs = CrabReef(streams, id) == (id.Level, node.Id.Lane) ? 1 : 0;
-        int Total() => treasures + secrets + curses + shops + caches + crabs + (boss ? 1 : 0);
+        int Total() => treasures + secrets + curses + shops + caches + crabs + havens + (boss ? 1 : 0);
         for (int pass = 0; pass < 2 && Total() > LevelStocking.MaxPlaces; pass++)
             while (Total() > LevelStocking.MaxPlaces)
             {
                 bool Free(PoiKind k) => pass == 1 || !required.Contains(k);
                 if (secrets > 0 && Free(PoiKind.Secret)) secrets--;
                 else if (caches > 0 && Free(PoiKind.ShellCache)) caches--;
+                // (Then a haven by chance, never the depth's sure one; then the Crab Deal.)
+                else if (havens > 0 && !keepHaven) havens--;
+                else if (crabs > 0) crabs--;
                 else break;
             }
 
@@ -197,6 +206,7 @@ public sealed class LevelPlan
             Crabs = crabs,
             Curses = curses,
             Shops = shops,
+            Havens = havens,
             Caches = caches,
             // (Into a depth's first row from its boss's arena above, or the tutorial's rift.)
             EntryFromArena = first,
@@ -307,7 +317,8 @@ public sealed class LevelPlan
             Treasures = rift ? 0 : 1,
             Secrets = rift ? 0 : 1,
             Caches = rift ? 0 : 1,
-            Shops = rift ? 1 : 0,
+            // (Its shop in its haven, as every reef's.)
+            Havens = rift ? 1 : 0,
             Curses = rift ? 1 : 0,
             EntryFromArena = false,
             Menace = 0f,

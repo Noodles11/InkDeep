@@ -170,7 +170,7 @@ public class PlaneBossTests
         Assert.Equal(PlaneBossTuning.RingCount - PlaneBossTuning.RingGap, pearls.Count);
         var pearl = pearls[0];
         // Out in the water, clear of her shell.
-        pearl.Position = w.Boss!.Position + Vector2.Normalize(pearl.Velocity) * 7f;
+        pearl.Position = w.Boss!.Position + Vector2.Normalize(pearl.Velocity) * 5f;
         var bubble = BubbleAt(pearl.Position + pearl.Velocity * PlaneWorld.Dt);
         w.Shots.Add(bubble);
         w.Step(default);

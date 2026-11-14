@@ -70,7 +70,7 @@ public class DiveGraphTests
                 else Assert.Equal(1, to.Row);
                 if (to.Row == n.Row + 1 || to.Row == 1) below++;
             }
-            int most = n.Kind == ReefKind.Haven ? DiveTuning.HavenExits : DiveTuning.MaxExits;
+            int most = DiveTuning.MaxExits;
             Assert.InRange(exits.Count, 1, most);
             // Two holes at least, wherever the row below is two wide.
             var next = g.Node(exits[0]);
@@ -81,26 +81,18 @@ public class DiveGraphTests
 
     [Theory]
     [MemberData(nameof(Seeds))]
-    public void FromEveryReefOfADepthsFirstTwoRowsAHavenCanBeReached_NeverAWholeRowOfThem(string seed)
+    public void No_reef_of_the_graph_is_a_haven_and_each_depths_second_row_opens_one(string seed)
     {
-        var g = DiveGraph.Of(SeedCode.Parse(seed));
-        int havens = 0, reefs = 0;
-        bool Reaches(DiveNode from, DiveNode haven) =>
-            from == haven || from.Exits.Select(g.Node).Where(x => x.Id.Depth == from.Id.Depth && x.Id.Cycle == from.Id.Cycle && x.Row <= haven.Row).Any(x => Reaches(x, haven));
+        var code = SeedCode.Parse(seed);
+        var g = DiveGraph.Of(code);
         for (int cycle = 1; cycle <= 2; cycle++)
         for (int depth = LevelPlan.Tutorial + 1; depth <= LevelPlan.Depths; depth++)
         {
             var rows = Enumerable.Range(1, DiveGraph.RowsOf(depth)).Select(r => g.Row(cycle, depth, r)).ToList();
-            var depthHavens = rows.SelectMany(r => r).Where(n => n.Kind == ReefKind.Haven).ToList();
-            Assert.All(depthHavens, h => Assert.True(h.Id.Haven));
-            Assert.DoesNotContain(rows[0], n => n.Kind == ReefKind.Haven);
-            foreach (var n in rows.Take(2).SelectMany(r => r))
-                Assert.True(depthHavens.Any(h => Reaches(n, h)), $"{n.Id}: no haven within reach");
-            foreach (var row in rows.Where(r => r.Count > 1)) Assert.Contains(row, n => n.Kind != ReefKind.Haven);
-            havens += depthHavens.Count;
-            reefs += rows.Sum(r => r.Count);
+            Assert.DoesNotContain(rows.SelectMany(r => r), n => n.Kind == ReefKind.Haven || n.Id.Haven);
+            // (A haven is a reef's way into one of its own: LevelPlan.Havens; the depth's second row's first always has one.)
+            Assert.Equal(1, LevelPlan.For(code, rows[1][0].Id).Havens);
         }
-        Assert.InRange(havens / (float)reefs, 0.08f, 0.35f);
     }
 
     [Theory]
@@ -187,24 +179,4 @@ public class DiveGraphTests
     }
 
     static float Vector2Dist(System.Numerics.Vector2 a, System.Numerics.Vector2 b) => System.Numerics.Vector2.Distance(a, b);
-
-    [Fact]
-    public void AHavensHolesAreItsGateAndCoves_AsManyAsItHasReefsBelow()
-    {
-        var hand = HandLayout.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "maps", "haven.json")));
-        Assert.Equal(DiveTuning.HavenExits - 1, hand.Places.Count(p => p.Kind == PoiKind.Hole));
-        var g = DiveGraph.Of(SeedCode.Parse("HAVENS23"));
-        var haven = Reefs(g).First(n => n.Kind == ReefKind.Haven && g.ExitsOf(n.Id).Count >= 2);
-        var exits = g.ExitsOf(haven.Id).OrderBy(e => g.Node(e).X).ToList();
-        var map = TopDownGenerator.FromHand(hand, asLevel: haven.Id, exits: exits, kinds: exits.Select(g.KindOf).ToList());
-        Assert.Equal(exits.Count, map.Holes.Count);
-        Assert.Equal(exits, map.Holes.Select(h => h.To));
-        foreach (var hole in map.Holes)
-        {
-            Assert.True(map.IsOpen(hole.Shaft.Center));
-            Assert.True(map.InHaven(hole.Shaft.Center));
-        }
-        // Without a dive's exits: its gate alone.
-        Assert.Single(TopDownGenerator.FromHand(hand).Holes);
-    }
 }

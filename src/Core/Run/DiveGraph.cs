@@ -27,16 +27,8 @@ public static class DiveTuning
     public const int MinLanes = 2, MaxLanes = 3;
     /// <summary>Holes out of a reef (fewer only where the row below is narrower, or is the boss's).</summary>
     public const int MinExits = 2, MaxExits = 3;
-    /// <summary>A haven's holes: Lantern Bay's map has this many (data/maps/haven.json).</summary>
-    public const int HavenExits = 3;
     /// <summary>How often a reef has one exit more, a shortcut past the row below to the one after.</summary>
     public const float Shortcut = 0.15f;
-    /// <summary>
-    /// How often a reef from a depth's second row to the one before its boss's is a haven by chance (never straight after
-    /// one); past those, a haven goes where most of the reefs that could reach none would reach it, until from every reef
-    /// of a depth's first two rows a haven of the depth can be reached. A haven is a choice, never a toll.
-    /// </summary>
-    public const float HavenChance = 0.15f;
 }
 
 /// <summary>
@@ -254,25 +246,9 @@ public sealed class DiveGraph
                     Link(node, Nearest(layers[row + 1], node.X).First());
                 }
         }
-        // The kinds: the boss's, the havens (a few by chance, then wherever a route would still miss one), the places.
+        // The kinds: the boss's, then the places. (A haven is no reef of the graph now: a reef's way into a small haven of
+        // its own, LevelPlan.Havens.)
         foreach (var node in layers.SelectMany(l => l)) node.Kind = node.Row == rows ? ReefKind.Boss : ReefKind.Reef;
-        var band = layers.Skip(HavenFrom - 1).Take(rows - HavenFrom).SelectMany(l => l).ToList();
-        foreach (var node in band)
-            if (rng.NextFloat() < DiveTuning.HavenChance && !node.From.Any(f => NodeOf(f).Kind == ReefKind.Haven)) MakeHaven(node);
-        for (int guard = 0; guard < 64 && Unserved(layers, rows) is { Count: > 0 } lacking; guard++)
-        {
-            // The reef most of those that reach no haven can reach (ties by chance): not one that would leave its row all
-            // havens, nor (if it can be helped) straight after one.
-            bool Spares(DiveNode n) => layers[n.Row - 1].Count(x => x.Kind != ReefKind.Haven) > 1;
-            var counts = band.Where(n => n.Kind != ReefKind.Haven && Spares(n)).ToDictionary(n => n, n => lacking.Count(l => Reaches(l, n)));
-            var on = counts.Where(kv => kv.Value > 0).Select(kv => kv.Key).ToList();
-            var calm = on.Where(n => !n.From.Any(f => NodeOf(f).Kind == ReefKind.Haven)).ToList();
-            if (calm.Count > 0) on = calm;
-            if (on.Count == 0) return false;
-            int most = on.Max(n => counts[n]);
-            var best = on.Where(n => counts[n] == most).ToList();
-            MakeHaven(best[rng.Int(best.Count)]);
-        }
         foreach (var node in layers.SelectMany(l => l))
         {
             if (node.Kind != ReefKind.Reef) continue;
@@ -286,23 +262,6 @@ public sealed class DiveGraph
                 break;
             }
         }
-        // A haven's map has HavenExits holes: its farthest exits go, while what they led to has another way in.
-        foreach (var node in layers.SelectMany(l => l).Where(n => n.Kind == ReefKind.Haven))
-        {
-            var spare = node.Exits.OrderByDescending(e => MathF.Abs(NodeOf(e).X - node.X)).ToList();
-            foreach (var e in spare)
-            {
-                if (node.Exits.Count <= DiveTuning.HavenExits) break;
-                var to = NodeOf(e);
-                if (to.From.Count < 2) continue;
-                node.Exits.Remove(e);
-                to.From.Remove(node.Id);
-            }
-            if (node.Exits.Count > DiveTuning.HavenExits) return false;
-        }
-        // A choice in every row: never a whole row of havens (where it is two wide or more).
-        if (layers.Any(l => l.Count > 1 && l.All(n => n.Kind == ReefKind.Haven))) return false;
-        if (Unserved(layers, rows).Count > 0) return false;
         // A depth's place rules that ask for at least so many.
         foreach (var rule in ReefPlaces.All)
         {
@@ -325,34 +284,6 @@ public sealed class DiveGraph
     /// <summary>Whether a reef has one of this kind straight above or below it on a route.</summary>
     bool NextTo(DiveNode node, ReefKind kind) =>
         node.From.Concat(node.Exits).Any(id => _nodes.TryGetValue((id.Cycle, id.Depth, id.Level, id.Lane), out var n) && n.Kind == kind);
-
-    /// <summary>The first row a haven may be in (the row after the boss's reef is a reef: she comes out of a fight).</summary>
-    const int HavenFrom = 2;
-
-    /// <summary>A haven: its kind, its id marked (and what leads into it and out of it told).</summary>
-    void MakeHaven(DiveNode node)
-    {
-        var was = node.Id;
-        node.Kind = ReefKind.Haven;
-        node.Id = was with { Haven = true };
-        foreach (var f in node.From)
-        {
-            var p = NodeOf(f);
-            for (int i = 0; i < p.Exits.Count; i++)
-                if (p.Exits[i] == was) p.Exits[i] = node.Id;
-        }
-        foreach (var e in node.Exits)
-        {
-            var to = NodeOf(e);
-            for (int i = 0; i < to.From.Count; i++)
-                if (to.From[i] == was) to.From[i] = node.Id;
-        }
-    }
-
-    /// <summary>The reefs of a depth's first two rows from which no haven of the depth can be reached.</summary>
-    List<DiveNode> Unserved(List<List<DiveNode>> layers, int rows) =>
-        layers.Take(2).SelectMany(l => l).Where(n => !layers.Skip(HavenFrom - 1).Take(rows - HavenFrom).SelectMany(l => l)
-            .Any(h => h.Kind == ReefKind.Haven && (h == n || Reaches(n, h)))).ToList();
 
     /// <summary>Whether a route of the depth leads from one reef down to another.</summary>
     bool Reaches(DiveNode from, DiveNode to)

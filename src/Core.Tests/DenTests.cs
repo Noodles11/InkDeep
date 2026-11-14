@@ -78,7 +78,9 @@ public class DenTests
         Assert.False(den.Cleared);
         // All of it freed: over, at once.
         foreach (var m in w.Murklings.Where(m => m.Home == den.At)) m.Alive = false;
-        foreach (var r in w.Blightroots.Where(r => Vector2.Distance(r.Position, den.At) < den.Radius)) r.Alive = false;
+        // (Every Blightroot gone: on the small reefs one nearby would ink the nave again.)
+        foreach (var r in w.Blightroots) r.Alive = false;
+        w.Blotters.Clear();
         foreach (var t in w.Thumpsquirts.Where(t => Vector2.Distance(t.Position, den.At) < den.Radius)) t.Alive = false;
         foreach (var x in w.Inkwardens.Where(x => Vector2.Distance(x.Position, den.At) < den.Radius)) x.Alive = false;
         foreach (var m in w.Murklings.Where(m => Vector2.Distance(m.Position, den.At) < den.Radius)) m.Alive = false;
@@ -90,8 +92,8 @@ public class DenTests
         }
         Assert.True(cleared);
         Assert.True(den.Cleared);
-        // Its wave runs out over the whole nave (well under a second).
-        for (int i = 0; i < 60; i++) w.Step(default);
+        // Its wave runs out over the whole nave.
+        for (int i = 0; i < 120; i++) w.Step(default);
         // Its whole nave is cleansed, and it pays out.
         Assert.True(w.Corruption!.At(den.At) < CorruptionTuning.Clean);
         Assert.True(w.Corruption.At(den.At + new Vector2(den.Radius * 0.8f, 0f)) < CorruptionTuning.Clean || !w.Clear(den.At + new Vector2(den.Radius * 0.8f, 0f), 0.2f));

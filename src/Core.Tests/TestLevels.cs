@@ -45,7 +45,13 @@ static class TestLevels
     }
 
     /// <summary>A level with a shop.</summary>
-    public static LevelMap WithShop() => Get(Find(p => p.Shops > 0 && !p.HasBoss));
+    /// <summary>A haven (docs/DIVE.md §4), which holds the shop: the k-th of a few made from the seed.</summary>
+    public static LevelMap Haven(int k = 0) => Havens.GetOrAdd(k, i =>
+        TopDownGenerator.GenerateHaven(Seed, new LevelId(701, LevelPlan.Tutorial + 1 + i % 4, 1 + i), System.Numerics.Vector2.UnitX));
+
+    static readonly ConcurrentDictionary<int, LevelMap> Havens = new();
+
+    public static LevelMap WithShop() => Haven();
 
     /// <summary>A level with exactly one treasure room, and the level after it.</summary>
     public static LevelMap OneTreasure() => Get(Find(p => p.Treasures == 1 && !p.HasBoss));

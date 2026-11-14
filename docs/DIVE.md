@@ -49,23 +49,26 @@ their dimmed look (`ReefLook.OpenShallows`) so the wider view never washes out.
 
 ## 4. Havens
 
-A haven is a reef of the dive's graph of its own kind (`ReefKind.Haven`, `LevelId.Haven`): Lantern Bay's water
-(`data/maps/haven.json`, drawn by hand, the same every time), in the bay's warm look, all of it haven water where
-nothing harms her. Its gate chamber's floor is a hole down, and so are its west and east coves' (`HandLayout.Hole`,
-its `Hole` places), as many as it has reefs below it (at most `DiveTuning.HavenExits`, three; a cove without one
-stays floor), all open from the start.
+A haven is a small safe sub-level behind a reef's mouth (`PoiKind.Haven`), as a leak cave or a secret's labyrinth is
+(§6): made with its reef from its own sub-seed (`TopDownGenerator.GenerateHaven`, `HavenLayout`), entered by swimming
+into the mouth at the end of its spur, left by its way out, back out of the mouth onto the reef.
 
-- **Where** (`DiveGraph`): from a depth's second row to the row before its boss, never in its first row. Each such reef
-  is one 15% of the time (never straight after one by chance); then more go where most of the reefs that could reach
-  none would reach them, until from every reef of a depth's first two rows a haven of the depth can be reached. Never a
-  whole row of them. A haven is a choice, shown on the holes' rims and the chart, never a toll.
-- **Who is there:** a home round the lagoon for every neighbour she has freed, each with their service
-  (docs/FOLK.md): Tull's Tide Fan, Kip's mirror, Fennel's brood bed, Ottilie's pearl collector, Bubbles's
-  dusk dance. The mirror stays silted until Kip is home.
-- **Always:** the shop off the market. Arriving heals her whole and banks all she carries (`BankDive`): her pearls and
-  shells are hers for good from then on.
-- **Verification:** `--dbg-dive --depth=N --level=L --lane=K` starts on that reef (a haven where the graph has one);
-  `--dbg-haven` makes any reef Lantern Bay (with `--dbg-freed=tull,kip,…` for its folk).
+- **Where** (`LevelPlan.Havens`, `PlaceRules.Haven`): about a third of the reefs from a depth's second row (34%), and
+  always the first reef of each depth's second row, so every dive meets one; never on a boss's reef. The tutorial's
+  second level has one. (No reef of the dive's graph is a haven: Lantern Bay's hand-drawn reef is retired.)
+- **Its shape** (`HavenLayout`, 80 m square, mirrored at random): a gate chamber where her way in is cut, a lagoon in
+  its middle with the shop's cave off its far side, a market nook and a nook with the Tide Fan either side; the mirror
+  in the lagoon, a home for each neighbour round the water.
+- **Always bright and fully uncovered:** all of it is haven water (`LevelMap.Haven`), in the bay's warm look
+  (`ReefLook.Bay`), as awake as a reef with every leak sealed. No leaks, no ink, no creatures; nothing harms her.
+- **Always:** its shop, in its cave (a reef has no shop of its own now). Arriving heals her whole and banks all she
+  carries (`BankDive`); what she buys, absorbs or is paid there is banked at once.
+- **What else it offers** (`TopDownMain.PickHavenOffers`): a pick of the services she has unlocked (the folk she has
+  freed, docs/FOLK.md), from one to all of them, its own for each haven: Tull's Tide Fan, Kip's mirror, Fennel's brood
+  bed, Ottilie's pearl collector, Bubbles's dusk dance. What is not offered there is shut there (the mirror silted).
+- **Its mouth stays open:** she may go back in while she is on the reef.
+- **Verification:** `--dbg-havenin=seconds` takes her into the reef's haven that long after she is on it (a reef with
+  one: `--dbg-dive --depth=2 --level=2`).
 
 ## 5. Folk as the depths' bosses
 

@@ -104,6 +104,24 @@ public static partial class TopDownGenerator
         var map = Generate(new RunStreams(seed), LevelPlan.ForCave(seed, id, menace, floor, floors, boss, areaScale), null, "", 0f);
         map.CaveLevel = level;
         if (floor > 1) return map;
+        CutWayIn(map, into);
+        return map;
+    }
+
+    /// <summary>
+    /// A haven behind a reef's mouth (docs/DIVE.md §4): its own small layout (HavenLayout) built as a hand-drawn map is,
+    /// all of it haven water, its way in cut as a cave's is, going the way she swam into the mouth.
+    /// </summary>
+    public static LevelMap GenerateHaven(SeedCode seed, LevelId id, Vector2? into = null)
+    {
+        var map = FromHand(HavenLayout.Make(seed, id), asLevel: id);
+        CutWayIn(map, into);
+        return map;
+    }
+
+    /// <summary>A sub-level's way in and out (Map.Way), cut near its start (GenerateCave's rule).</summary>
+    static void CutWayIn(LevelMap map, Vector2? into)
+    {
         // Its way in and out: an opening in its start chamber's wall (where that wall has no room, the nearest wall along
         // the way in that has), the closest to the way wanted sought first, near the start. Coming in by a mouth, the way
         // she swam is kept to before the start is: any wall in the water round it that has room. At the last, any wall
@@ -124,7 +142,6 @@ public static partial class TopDownGenerator
             for (int i = 4; i < path.Count && Vector2.Distance(path[i], map.Start.Position) < far && map.Way is null; i += 4)
                 map.Way = CutDoorway(map, path[i], DoorReach, toward, facings[f]);
         }
-        return map;
     }
 
     /// <summary>How far from a cave's start the water is searched for a wall going the way wanted (metres), and how much each metre from it counts against a wall.</summary>
@@ -465,10 +482,10 @@ public static partial class TopDownGenerator
         for (int pi = 0; pi < map.Pois.Count; pi++)
         {
             var poi = map.Pois[pi];
-            if (poi.Kind != PoiKind.LeakCave) continue;
-            if (CutMouth(map, poi, spurDirs.TryGetValue(pi, out var f) ? f : CameraWard) is not { } mouth) return "no wall at the leak cave's spur has room for its mouth";
+            if (poi.Kind is not (PoiKind.LeakCave or PoiKind.Haven)) continue;
+            if (CutMouth(map, poi, spurDirs.TryGetValue(pi, out var f) ? f : CameraWard) is not { } mouth) return $"no wall at the {poi.Kind}'s spur has room for its mouth";
             map.Mouths.Add(mouth);
-            map.MouthKinds.Add(PoiKind.LeakCave);
+            map.MouthKinds.Add(poi.Kind);
         }
         return null;
     }
@@ -518,7 +535,7 @@ public static partial class TopDownGenerator
 
     /// <summary>A special room's cave, or an open place's clearing.</summary>
     static float RadiusOf(PoiKind kind) => kind == PoiKind.Hole ? ClearingRadius :
-        Poi.IsCaveHosted(kind) ? (kind is PoiKind.TreasureCave or PoiKind.CurseDen or PoiKind.LeakCave ? ChamberRadius : PocketRadius) : ClearingRadius;
+        Poi.IsCaveHosted(kind) ? (kind is PoiKind.TreasureCave or PoiKind.CurseDen or PoiKind.LeakCave or PoiKind.Haven ? ChamberRadius : PocketRadius) : ClearingRadius;
 
     /// <summary>
     /// Lays out the level's cave (<see cref="CaveLayout"/>, docs/archive/CAVEGEN.md) and records it: the start and the way down,
@@ -534,10 +551,12 @@ public static partial class TopDownGenerator
         for (int i = 0; i < plan.Crabs; i++) kinds.Add(PoiKind.CrabDeal);
         // The curse dens are leak caves now (docs/DIVE.md §6): a mouth in the rock at the end of the spur.
         for (int i = 0; i < plan.Curses; i++) kinds.Add(PoiKind.LeakCave);
+        // A haven (docs/DIVE.md §4): a mouth at the end of its spur, into a small safe sub-level.
+        for (int i = 0; i < plan.Havens; i++) kinds.Add(PoiKind.Haven);
         for (int i = 0; i < plan.Caches; i++) kinds.Add(PoiKind.ShellCache);
         if (kinds.Count > 0)
         {
-            PoiKind earlyKind = kinds.Contains(PoiKind.Shop) && (rng.NextFloat() < 0.8f || !kinds.Contains(PoiKind.TreasureCave)) ? PoiKind.Shop
+            PoiKind earlyKind = kinds.Contains(PoiKind.Haven) ? PoiKind.Haven
                 : kinds.Contains(PoiKind.TreasureCave) ? PoiKind.TreasureCave : kinds[0];
             kinds.Remove(earlyKind);
             kinds.Insert(0, earlyKind);
@@ -1667,7 +1686,7 @@ public static partial class TopDownGenerator
             var poi = map.Pois[pi];
             // (A leak cave's mouth is cut once the rock is done, CutLeakMouths; a secret room's before its seal is raised,
             // CutSecretMouths: what lies behind each is a level of its own.)
-            if (!Poi.IsCaveHosted(poi.Kind) || poi.Kind is PoiKind.LeakCave or PoiKind.Secret) continue;
+            if (!Poi.IsCaveHosted(poi.Kind) || poi.Kind is PoiKind.LeakCave or PoiKind.Secret or PoiKind.Haven) continue;
             Vector2 facing = spurDirs[pi];
             if (poi.Kind == PoiKind.CurseDen)
             {

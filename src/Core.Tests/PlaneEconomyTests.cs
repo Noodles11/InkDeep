@@ -124,17 +124,17 @@ public class PlaneEconomyTests
     }
 
     /// <summary>The first shop level whose shop rolled a pearl.</summary>
-    static PlaneWorld WorldWithShopPearl() => TestLevels.All(p => p.Shops > 0 && !p.HasBoss)
-        .Select(id => new PlaneWorld(TestLevels.Get(id), new Tuning(), new PlaneRun(Catalog.Value, new Tuning())))
+    static PlaneWorld WorldWithShopPearl() => Enumerable.Range(0, 12)
+        .Select(k => new PlaneWorld(TestLevels.Haven(k), new Tuning(), new PlaneRun(Catalog.Value, new Tuning())))
         .First(w => w.Stands.Any(s => s.Kind == StandKind.Pearl));
 
     [Fact]
     public void EveryShopHasOneHeartAndAtMostOnePearlAtItsPrice()
     {
         int shops = 0;
-        foreach (var id in TestLevels.All(p => p.Shops > 0 && !p.HasBoss).Take(8))
+        for (int k = 0; k < 6; k++)
         {
-            var w = new PlaneWorld(TestLevels.Get(id), new Tuning(), new PlaneRun(Catalog.Value, new Tuning()));
+            var w = new PlaneWorld(TestLevels.Haven(k), new Tuning(), new PlaneRun(Catalog.Value, new Tuning()));
             shops++;
             Assert.Single(w.Stands, s => s.Kind == StandKind.Health);
             var pearls = w.Stands.Where(s => s.Kind == StandKind.Pearl).ToList();
@@ -188,7 +188,7 @@ public class PlaneEconomyTests
     public void ShellsCarryDownTheHole()
     {
         var run = new PlaneRun(Catalog.Value, new Tuning()) { Shells = 12 };
-        var w = new PlaneWorld(TestLevels.After(TestLevels.WithShop()), new Tuning(), run);
+        var w = new PlaneWorld(TestLevels.After(TestLevels.Get(TestLevels.Find(p => !p.HasBoss && p.Id.Level > 1))), new Tuning(), run);
         Assert.Equal(12, w.Run.Shells);
     }
 }
