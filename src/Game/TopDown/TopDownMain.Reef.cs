@@ -6,6 +6,7 @@ using Godot;
 using OctoShoots.Core.Gen.Cubes;
 using OctoShoots.Core.Gen.TopDown;
 using OctoShoots.Core.Plane;
+using OctoShoots.Core.Run;
 using OctoShoots.Game.Controls;
 using OctoShoots.Game.Cubes;
 
@@ -114,8 +115,20 @@ public partial class TopDownMain
         return Task.Run(() => LevelShape.Bare(reef.Layer(0, reef.Start)));
     }
 
-    /// <summary>The world's options on a layer: the reef's (its murklings stocked as she claims cubes), no leaks, no corruption on the ground.</summary>
-    static PlaneOptions ReefOptions() => new() { Corruption = false, Pufferlings = false, Vases = false, Adventure = false, InkMurklings = false, Shots = true, Reef = true };
+    /// <summary>
+    /// The world's options on a layer: the reef's (its murklings stocked as she claims cubes), no leaks, no corruption on
+    /// the ground. A layer's boss (§9.1): `--boss=`'s, else the neighbour the Leak made the boss of the depth it stands
+    /// for (layer 1 the first's: the warm-up layer has none), as on the dives, unless she has freed her; else the depth's own.
+    /// </summary>
+    PlaneOptions ReefOptions()
+    {
+        var options = new PlaneOptions { Corruption = false, Pufferlings = false, Vases = false, Adventure = false, InkMurklings = false, Shots = true, Reef = true };
+        if (!_map.HasBoss) return options;
+        if (DebugBoss() is { Boss: { } forced }) options.Boss = forced;
+        else if (_jelly is { } jelly && Dives.FolkBossOf(CubeReef.IdOf(_layer - 1), jelly) is { } folk && Folk.Get(folk) is { } n
+            && OctoShoots.Core.Bosses.FolkBosses.For(n.Id, n.Level, _map.Menace) is { } spec) options.Boss = spec;
+        return options;
+    }
 
     /// <summary>A layer entered (the first, or after a change of layer): its map kept, the next one down begun.</summary>
     void EnteredLayer()
