@@ -1,0 +1,395 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text;
+using Godot;
+using OctoShoots.Core;
+using OctoShoots.Core.Gen;
+using OctoShoots.Core.Gen.Cubes;
+using OctoShoots.Core.Gen.TopDown;
+using OctoShoots.Core.Plane;
+using OctoShoots.Core.Run;
+using OctoShoots.Game.Controls;
+using OctoShoots.Game.Fx;
+using OctoShoots.Game.Settings;
+using OctoShoots.Game.TopDown;
+using static OctoShoots.Core.Gen.Cubes.CubeTuning;
+
+namespace OctoShoots.Game.Cubes;
+
+/// <summary>
+/// The cube world's prototype (docs/proposals/CUBE-WORLD-PLAN.md §14), opened by `--cubes`: Clementine, her light and
+/// the camera in one continuous reef streamed in cubes (ReefStream, ReefStreamView). No creatures, pearls or places.
+/// She is a reef world's own (CubeShell: a blank map with nothing in it but her) given the cubes' rock to swim and shine
+/// against, so every view of her is the game's.
+/// Flags: --seed=, --cube-footprint=N (3), --cube-layers=N (3), --cube-route (she swims a ring of cubes by herself),
+/// --cube-perf=seconds (then the frame costs are printed and it quits), --capture= and --frames= as the game's.
+/// </summary>
+public partial class CubeMain : Node3D
+{
+    SeedCode _seed = SeedCode.Parse("KELP7Q2Z");
+    int _footprint = 3, _layers = 3;
+    bool _route;
+    float _perfFor;
+    string? _captureDir;
+    readonly Queue<int> _captureFrames = new();
+
+    CubeSpace _space = null!;
+    ReefStream _stream = null!;
+    TaskCubeWorker _worker = null!;
+    CubeField _field = null!;
+    PlaneWorld _world = null!;
+    Tuning _tuning = null!;
+    int _layer;
+
+    ReefStreamView _view = null!;
+    BellView _bell = null!;
+    BeamView _beam = null!;
+    CameraRig _camera = null!;
+    SunLight _sun = null!;
+    MarineSnow _snow = null!;
+    WorldEnvironment _environment = null!;
+    readonly HorizonMap _lantern = new();
+    Label _overlay = null!;
+
+    double _accumulator;
+    int _frame;
+    bool _ready;
+    float _beamShown, _seeThrough;
+    bool _dashLatched, _fieldChanged = true;
+
+    // The frame costs, once she is swimming (the first frames make the first cubes).
+    int _perfFrames, _perfOver;
+    double _perfWorst, _perfTotal, _perfClock;
+    readonly List<Vector2> _path = new();
+    int _pathAt;
+
+    public override void _Ready()
+    {
+        foreach (string arg in OS.GetCmdlineUserArgs())
+        {
+            string Value(string prefix) => arg[prefix.Length..];
+            if (arg.StartsWith("--seed=") && SeedCode.TryParse(Value("--seed="), out var seed)) _seed = seed;
+            else if (arg.StartsWith("--cube-footprint=") && int.TryParse(Value("--cube-footprint="), out int f)) _footprint = Math.Clamp(f, 1, Footprint);
+            else if (arg.StartsWith("--cube-layers=") && int.TryParse(Value("--cube-layers="), out int l)) _layers = Math.Clamp(l, 1, Layers);
+            else if (arg == "--cube-route") _route = true;
+            else if (arg.StartsWith("--cube-perf=") && float.TryParse(Value("--cube-perf="), NumberStyles.Float, CultureInfo.InvariantCulture, out float p)) _perfFor = p;
+            else if (arg.StartsWith("--capture=")) _captureDir = Value("--capture=");
+            else if (arg.StartsWith("--frames="))
+                foreach (string f2 in Value("--frames=").Split(','))
+                    if (int.TryParse(f2, out int n)) _captureFrames.Enqueue(n);
+        }
+        InputSetup.Register();
+        _tuning = SettingsStore.LoadTuning();
+        var options = SettingsStore.LoadView();
+        Engine.MaxFps = _captureDir is null && _perfFor <= 0f ? options.MaxFps : 0;
+        ViewOptions.Shadows = options.LightShadows;
+        ReefLook.Brightness = Mathf.Clamp(options.Brightness, 0.6f, 1.8f);
+
+        // The reef, and where she starts: a gate's mouth of its first cube.
+        _space = new CubeSpace(_seed.Value, _footprint, _layers);
+        var first = new CubeCoord(0, 0, 0);
+        var start = CubeTerrain.Make(_space, first).Gates[0].Mouth;
+        _worker = new TaskCubeWorker(_space, Build);
+        _stream = new ReefStream(_space, _worker);
+        _worker.Stream = _stream;
+        _field = new CubeField(_stream.Terrain, first);
+        _world = CubeShell.Make(_footprint, start, _tuning);
+        _world.Field = _field;
+
+        var look = LookOf(0);
+        _environment = TopDownMain.MakeEnvironment(look);
+        AddChild(_environment);
+        _view = new ReefStreamView();
+        AddChild(_view);
+        _bell = new BellView();
+        AddChild(_bell);
+        RenderingServer.GlobalShaderParameterSet(SN.Of("her_horizon"), _lantern.Texture);
+        _beam = new BeamView();
+        AddChild(_beam);
+        _camera = new CameraRig();
+        AddChild(_camera);
+        _snow = new MarineSnow(900, new Vector3(22f, 7f, 17f), 0.11f);
+        AddChild(_snow);
+        _sun = new SunLight();
+        AddChild(_sun);
+        _sun.SetStrength(options.SunLight);
+        AddChild(new Fisheye());
+        var layer = new CanvasLayer { Layer = 5 };
+        AddChild(layer);
+        _overlay = new Label { Position = new Vector2(12f, 12f), Visible = _captureDir is null || OS.GetCmdlineUserArgs().Contains("--f3") };
+        _overlay.AddThemeFontSizeOverride("font_size", 13);
+        layer.AddChild(_overlay);
+        ApplyLook(look);
+        if (_route) PlanRoute(start);
+    }
+
+    /// <summary>The stream's work off the main thread that is the game's: a cube's meshes (nothing is stocked yet).</summary>
+    static object? Build(CubeJob job, CubeTerrain terrain) => job.Work switch
+    {
+        CubeWork.Mesh => CubeShapes.Ground(terrain),
+        CubeWork.PreviewMesh => CubeShapes.Preview(terrain),
+        _ => "nothing",
+    };
+
+    /// <summary>A layer's look: the shallows' for the warm-up layer, then a depth's look every few layers.</summary>
+    static ReefLook LookOf(int layer) => ReefLook.For(1 + Math.Min(layer, 3));
+
+    void ApplyLook(ReefLook look)
+    {
+        ArtLook.Set(ArtLook.Painted);
+        look.Apply();
+        look.ApplyTo(_environment.Environment);
+        ReefLook.SetExtent(_footprint * CubeTuning.Side);
+        RenderingServer.GlobalShaderParameterSet(SN.Of("sun_has_shadow"), 0f);
+        _sun.Configure(look.Sun, look.SunEnergy);
+        _bell.Lantern = look.Lantern;
+        _camera.SetShowcase(true);
+        TopDownMain.ShowcaseOn = true;
+        _camera.SetFloorFog(true);
+        RenderingServer.GlobalShaderParameterSet(SN.Of("reef_showcase"), 1f);
+        // The warm-up layer is awake (bright); below it the reef is dark until her light shows it.
+        RenderingServer.GlobalShaderParameterSet(SN.Of("reef_wake"), _layer == 0 ? 1f : 0f);
+        RenderingServer.GlobalShaderParameterSet(SN.Of("reef_wave"), new Vector4(0f, 0f, 0f, 0f));
+        var white = HerColor.Light.Lerp(new Color(0.92f, 0.96f, 1f), 0.7f);
+        RenderingServer.GlobalShaderParameterSet(SN.Of("her_show_light"), new Vector3(white.R, white.G, white.B));
+    }
+
+    public override void _Process(double delta)
+    {
+        float dt = (float)delta;
+        _frame++;
+        var p = _world.Player;
+
+        // The stream: what is wanted round her, finished work taken in, a few meshes uploaded.
+        var focus = new StreamFocus { Position = p.Position, Velocity = p.Velocity, Layer = _layer };
+        _stream.Update(focus, dt);
+        _worker.Drain(_stream);
+        _view.Take(_stream);
+        _view.Apply();
+        _field.Recenter(CubeCoord.Of(p.Position, _layer));
+        if (_field.Refresh()) _fieldChanged = true;
+
+        // She waits for her own cube and what she can swim into (the first frames only).
+        if (!_ready) _ready = _stream.State(CubeCoord.Of(p.Position, _layer)) == CubeState.Active && _stream.Held.All(c => c.Z != _layer || _stream.Terrain(c) is not null) && _view.Pending == 0;
+        _accumulator += delta;
+        if (!_ready) _accumulator = 0;
+        int steps = 0;
+        while (_accumulator >= PlaneWorld.Dt && steps < 8)
+        {
+            _world.Step(ReadInput());
+            _field.Recenter(CubeCoord.Of(p.Position, _layer));
+            _accumulator -= PlaneWorld.Dt;
+            steps++;
+        }
+        float alpha = (float)(_accumulator / PlaneWorld.Dt);
+
+        var at = System.Numerics.Vector2.Lerp(p.PrevPosition, p.Position, alpha);
+        var eye = new Vector3(at.X, LevelMap.SwimBand, at.Y);
+        _bell.Sync(_world, alpha, dt);
+        SyncLight(dt);
+        _beam.Sync(_world, _bell.LightPosition, dt);
+        _camera.Track(eye, dt, snap: _frame <= 2);
+        // Under an arch she is seen through it.
+        bool hidden = _stream.Terrain(CubeCoord.Of(p.Position, _layer))?.CanopyAt(Mathf.RoundToInt(p.Position.X), Mathf.RoundToInt(p.Position.Y)) == true;
+        _seeThrough = Mathf.MoveToward(_seeThrough, hidden ? 1f : 0f, dt * (hidden ? 4.5f : 2.2f));
+        _view.SeeThrough(_bell.GlobalPosition, 4.5f, _seeThrough);
+        _snow.Her(_bell.GlobalPosition, new Vector3(p.Velocity.X, 0f, p.Velocity.Y));
+        _snow.Tick(dt, eye + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
+
+        Measure(delta);
+        if (_overlay.Visible && _frame % 6 == 0) _overlay.Text = Overlay();
+        Capture();
+    }
+
+    /// <summary>Her light in the water and on the reef (light_field, reef_show), as the game sets it.</summary>
+    void SyncLight(float dt)
+    {
+        var at = _bell.LightPosition;
+        float range = _bell.LightRange;
+        _lantern.Update(_field, at, range, _fieldChanged);
+        _fieldChanged = false;
+        RenderingServer.GlobalShaderParameterSet(SN.Of("her_light_at"), new Vector4(at.X, at.Y, at.Z, range));
+        var aura = _world.Aura;
+        RenderingServer.GlobalShaderParameterSet(SN.Of("her_aura"), aura.Shining ? new Vector4(aura.Position.X, LevelMap.SwimBand, aura.Position.Y, aura.Range) : new Vector4(0f, -1000f, 0f, 0f));
+        RenderingServer.GlobalShaderParameterSet(SN.Of("her_show_aura"), aura.Shining ? new Vector4(aura.Position.X, LevelMap.SwimBand, aura.Position.Y, aura.Range * 1.6f) : new Vector4(0f, -1000f, 0f, 0f));
+        var beam = _world.Beam;
+        _beamShown = Mathf.MoveToward(_beamShown, beam.Shining ? 1f : 0f, dt * (beam.Shining ? 8f : 4f));
+        RenderingServer.GlobalShaderParameterSet(SN.Of("her_beam_show"), _beamShown > 0f
+            ? new Vector4(beam.Position.X, LevelMap.SwimBand, beam.Position.Y, System.Numerics.Vector2.Distance(beam.Position, _world.BeamEnd) + 1.5f) : new Vector4(0f, -1000f, 0f, 0f));
+        RenderingServer.GlobalShaderParameterSet(SN.Of("her_show_dir"), new Vector4(_world.BeamAim.X, _beamShown, _world.BeamAim.Y, Mathf.Max(_world.BeamSpread, beam.HalfAngle)));
+        float murk = 0.5f + LookOf(_layer).Fog;
+        RenderingServer.GlobalShaderParameterSet(SN.Of("her_scatter"), 0.016f * _bell.LightEnergy / Mathf.Pow(_bell.Lantern, 1.3f) * murk);
+    }
+
+    PlaneInput ReadInput()
+    {
+        var input = new PlaneInput();
+        var pos = _world.Player.Position;
+        if (_route && _path.Count > 0)
+        {
+            while (_pathAt + 1 < _path.Count && System.Numerics.Vector2.Distance(pos, ToCore(_path[_pathAt])) < 2.5f) _pathAt++;
+            var to = ToCore(_path[_pathAt]) - pos;
+            if (to.Length() > 0.3f) input.Move = System.Numerics.Vector2.Normalize(to);
+            input.Aim = input.Move;
+            return input;
+        }
+        Vector2 stick = Input.GetVector(InputSetup.Left, InputSetup.Right, InputSetup.Forward, InputSetup.Back);
+        input.Move = new System.Numerics.Vector2(stick.X, stick.Y);
+        bool dash = Input.IsActionPressed(InputSetup.Dash);
+        input.Dash = dash && !_dashLatched;
+        input.DashHeld = dash;
+        _dashLatched = dash;
+        bool shine = Input.IsActionPressed(InputSetup.Beam);
+        Vector2 aim = Input.GetVector(InputSetup.AimLeft, InputSetup.AimRight, InputSetup.AimUp, InputSetup.AimDown);
+        if (aim.LengthSquared() > 0.04f)
+        {
+            input.Aim = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(aim.X, aim.Y));
+            input.Beam = !InputSetup.UsingPad || shine;
+        }
+        else if (InputSetup.UsingPad)
+        {
+            input.Aim = stick.LengthSquared() > 0.04f ? System.Numerics.Vector2.Normalize(input.Move) : _world.Player.Aim;
+            input.Beam = shine;
+        }
+        else
+        {
+            var to = MouseOnBand() - pos;
+            input.Aim = to.LengthSquared() > 1e-4f ? System.Numerics.Vector2.Normalize(to) : default;
+            input.Beam = shine;
+        }
+        return input;
+    }
+
+    static System.Numerics.Vector2 ToCore(Vector2 v) => new(v.X, v.Y);
+
+    public override void _Input(InputEvent e)
+    {
+        bool pad = e switch
+        {
+            InputEventJoypadButton => true,
+            InputEventJoypadMotion m => Mathf.Abs(m.AxisValue) > 0.4f || InputSetup.UsingPad,
+            InputEventKey or InputEventMouseButton => false,
+            _ => InputSetup.UsingPad,
+        };
+        InputSetup.UsingPad = pad;
+        if (e is InputEventKey { Pressed: true, Keycode: Key.F3 }) _overlay.Visible = !_overlay.Visible;
+        if (e is InputEventKey { Pressed: true, Keycode: Key.Escape }) GetTree().Quit();
+    }
+
+    System.Numerics.Vector2 MouseOnBand()
+    {
+        var cam = _camera.Camera;
+        Vector2 mouse = Fisheye.Source(GetViewport().GetMousePosition(), GetViewport().GetVisibleRect().Size);
+        Vector3 origin = cam.ProjectRayOrigin(mouse), dir = cam.ProjectRayNormal(mouse);
+        if (Mathf.Abs(dir.Y) < 1e-4f) return _world.Player.Position;
+        Vector3 hit = origin + dir * ((LevelMap.SwimBand - origin.Y) / dir.Y);
+        return new System.Numerics.Vector2(hit.X, hit.Z);
+    }
+
+    /// <summary>
+    /// Verification (--cube-route): a way round a ring of four cubes and back to where she began, over the water (worked
+    /// out here from the whole layer's terrain, which the game itself never holds at once).
+    /// </summary>
+    void PlanRoute(System.Numerics.Vector2 start)
+    {
+        var made = new Dictionary<CubeCoord, CubeTerrain>();
+        for (int y = 0; y < _footprint; y++)
+        for (int x = 0; x < _footprint; x++)
+            made[new CubeCoord(x, y, 0)] = CubeTerrain.Make(_space, new CubeCoord(x, y, 0));
+        var all = new CubeField(c => made.GetValueOrDefault(c), new CubeCoord(_footprint / 2, _footprint / 2, 0), _footprint);
+        var stops = new List<System.Numerics.Vector2> { start };
+        foreach (var c in new[] { new CubeCoord(1, 0, 0), new CubeCoord(1, 1, 0), new CubeCoord(0, 1, 0) })
+            if (made.TryGetValue(c, out var t)) stops.Add(t.Gates[0].Mouth);
+        stops.Add(start);
+        int n = _footprint * CubeTuning.Side + 1;
+        float clearance = _tuning.PlayerRadius + 0.3f;
+        for (int s = 0; s + 1 < stops.Count; s++)
+        {
+            var a = (X: Mathf.RoundToInt(stops[s].X), Y: Mathf.RoundToInt(stops[s].Y));
+            var b = (X: Mathf.RoundToInt(stops[s + 1].X), Y: Mathf.RoundToInt(stops[s + 1].Y));
+            var came = new Dictionary<(int, int), (int, int)> { [a] = a };
+            var todo = new Queue<(int X, int Y)>();
+            todo.Enqueue(a);
+            bool Free(int x, int y) => x >= 0 && y >= 0 && x < n && y < n && ReefCollision.Clear(all, new System.Numerics.Vector2(x, y), clearance);
+            while (todo.Count > 0)
+            {
+                var c = todo.Dequeue();
+                if (c == b) break;
+                for (int dy = -1; dy <= 1; dy++)
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    var next = (X: c.X + dx, Y: c.Y + dy);
+                    if ((dx == 0 && dy == 0) || came.ContainsKey(next) || !Free(next.X, next.Y)) continue;
+                    if (dx != 0 && dy != 0 && (!Free(c.X + dx, c.Y) || !Free(c.X, c.Y + dy))) continue;
+                    came[next] = c;
+                    todo.Enqueue(next);
+                }
+            }
+            if (!came.ContainsKey(b)) continue;
+            var leg = new List<Vector2>();
+            for (var c = b; c != a; c = came[c]) leg.Add(new Vector2(c.Item1, c.Item2));
+            leg.Reverse();
+            _path.AddRange(leg);
+        }
+        GD.Print($"Cube route: {_path.Count} m over {stops.Count - 1} legs");
+    }
+
+    void Measure(double delta)
+    {
+        if (!_ready || _frame < 30) return;
+        double ms = delta * 1000.0;
+        _perfFrames++;
+        _perfTotal += ms;
+        _perfClock += delta;
+        if (ms > _perfWorst) _perfWorst = ms;
+        if (ms > 20.0) _perfOver++;
+        if (_perfFor <= 0f || _perfClock < _perfFor) return;
+        var p = _world.Player.Position;
+        GD.Print(string.Format(CultureInfo.InvariantCulture,
+            "Cube perf: {0} frames in {1:0.0} s, mean {2:0.00} ms, worst {3:0.0} ms, over 20 ms: {4}; worst upload {5:0.00} ms; window moves {6}; at {7:0},{8:0} cube {9}; nodes {10} in use, {11} pooled",
+            _perfFrames, _perfClock, _perfTotal / _perfFrames, _perfWorst, _perfOver, _view.WorstMs, _field.Recentres, p.X, p.Y, CubeCoord.Of(p, _layer), _view.InUse, _view.Pooled));
+        GetTree().Quit();
+    }
+
+    string Overlay()
+    {
+        var p = _world.Player.Position;
+        var here = CubeCoord.Of(p, _layer);
+        var sb = new StringBuilder();
+        sb.Append(CultureInfo.InvariantCulture, $"{Engine.GetFramesPerSecond():0} fps   worst {_perfWorst:0.0} ms   over 20 ms: {_perfOver}\n");
+        sb.Append(CultureInfo.InvariantCulture, $"cube {here}   at {p.X:0.0}, {p.Y:0.0}   window moves {_field.Recentres}\n");
+        sb.Append(CultureInfo.InvariantCulture, $"jobs out {_stream.InFlight.Count}   uploads waiting {_view.Pending}   last {_view.LastMs:0.00} ms   worst {_view.WorstMs:0.00} ms\n");
+        sb.Append(CultureInfo.InvariantCulture, $"nodes {_view.InUse} in use, {_view.Pooled} pooled   cubes held {_stream.Held.Count()}\n");
+        foreach (int z in new[] { _layer, _layer + 1 })
+        {
+            sb.Append(z == _layer ? "her layer:\n" : "below:\n");
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    var c = new CubeCoord(here.X + dx, here.Y + dy, z);
+                    string s = !_space.Inside(c) ? "·" : _stream.State(c) switch
+                    {
+                        CubeState.Active => "A", CubeState.Preloaded => "P", CubeState.Preview => "v", CubeState.Below => "b", CubeState.Mask => "m", _ => "-",
+                    };
+                    sb.Append(s).Append(_stream.PinnedBy(c).Count > 0 ? "* " : "  ");
+                }
+                sb.Append('\n');
+            }
+        }
+        return sb.ToString();
+    }
+
+    void Capture()
+    {
+        if (_captureDir is null || _captureFrames.Count == 0 || _frame < _captureFrames.Peek()) return;
+        int frame = _captureFrames.Dequeue();
+        string path = $"{_captureDir}/cube_{frame:0000}.png";
+        GetViewport().GetTexture().GetImage().SavePng(path);
+        var p = _world.Player.Position;
+        GD.Print(string.Format(CultureInfo.InvariantCulture, "Captured {0}  pos {1:0.0},{2:0.0}  cube {3}  {4:0} FPS", path, p.X, p.Y, CubeCoord.Of(p, _layer), Engine.GetFramesPerSecond()));
+        if (_captureFrames.Count == 0) GetTree().Quit();
+    }
+}

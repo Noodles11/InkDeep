@@ -442,7 +442,7 @@ public partial class LevelView : Node3D
         ShowCrack(_map);
     }
 
-    static ArrayMesh ToMesh(LevelShape.Surface surface)
+    internal static ArrayMesh ToMesh(LevelShape.Surface surface)
     {
         var arrays = new Godot.Collections.Array();
         arrays.Resize((int)Mesh.ArrayType.Max);
@@ -518,7 +518,7 @@ public partial class LevelView : Node3D
         return Mathf.Clamp(v, Mathf.Min(Mathf.Min(c00, c10), Mathf.Min(c01, c11)), Mathf.Max(Mathf.Max(c00, c10), Mathf.Max(c01, c11)));
     }
 
-    static float CatmullRom(float p0, float p1, float p2, float p3, float t) =>
+    internal static float CatmullRom(float p0, float p1, float p2, float p3, float t) =>
         0.5f * (2f * p1 + (p2 - p0) * t + (2f * p0 - 5f * p1 + 4f * p2 - p3) * t * t + (3f * p1 - p0 - 3f * p2 + p3) * t * t * t);
 
     /// <summary>The way a sealed wall faces: toward the side it is met from.</summary>
@@ -745,7 +745,7 @@ public partial class LevelView : Node3D
     }
 
     /// <summary>A triangle is kept when any of its corners passes <paramref name="keep"/>.</summary>
-    static LevelShape.Surface? SurfaceMesh(int size, Func<float, float, float> height, int x0, int y0, int x1, int y1, Func<float, float, bool>? keep)
+    internal static LevelShape.Surface? SurfaceMesh(int size, Func<float, float, float> height, int x0, int y0, int x1, int y1, Func<float, float, bool>? keep)
     {
         int w = (x1 - x0) * Sub + 1, h = (y1 - y0) * Sub + 1;
         var verts = new Vector3[w * h];

@@ -30,7 +30,7 @@ public partial class TopDownMain
     System.Numerics.Vector2 _waveAt;
 
     /// <summary>Whether the showcase is on (her beam's view asks).</summary>
-    public static bool ShowcaseOn { get; private set; }
+    public static bool ShowcaseOn { get; internal set; }
 
     /// <summary>How much of the place is awake: its share of leaks sealed; Lantern Bay always all of it (it is never dark).</summary>
     float LeaksSealedShare => _world.Map.Haven is not null ? 1f : _world.Leaks.Count == 0 ? 0f : _world.Leaks.Count(v => v.Sealed) / (float)_world.Leaks.Count;

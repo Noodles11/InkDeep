@@ -50,6 +50,22 @@ public sealed class CubeField : IReefField
         _filled = true;
     }
 
+    /// <summary>The window's cubes read again (terrain that has come or gone since); true when any changed.</summary>
+    public bool Refresh()
+    {
+        bool changed = false;
+        for (int dy = -_reach; dy <= _reach; dy++)
+        for (int dx = -_reach; dx <= _reach; dx++)
+        {
+            int k = (dy + _reach) * _span + dx + _reach;
+            var now = _terrain(new CubeCoord(Center.X + dx, Center.Y + dy, Center.Z));
+            if (ReferenceEquals(now, _slots[k])) continue;
+            _slots[k] = now;
+            changed = true;
+        }
+        return changed;
+    }
+
     /// <summary>The cube holding a grid cell (by its first corner), or null outside the window.</summary>
     CubeTerrain? CubeOf(int gx, int gy)
     {
