@@ -149,6 +149,16 @@ public sealed class LayerRecords
     public bool WasSeen(Vector2 p) =>
         _claimed.TryGetValue(CubeId.Of(p, Layer), out var r) && r.WasSeen((int)MathF.Round(p.X), (int)MathF.Round(p.Y));
 
+    /// <summary>The layer's records as a save kept them (CubeRecordSaving.Load).</summary>
+    public void Restore(IEnumerable<CubeRecord> claimed, IEnumerable<EdgeId> shut, EdgeId? last)
+    {
+        _claimed.Clear();
+        foreach (var r in claimed) _claimed[r.Cube] = r;
+        _shut.Clear();
+        foreach (var e in shut) _shut.Add(e);
+        Last = last;
+    }
+
     /// <summary>She leaves the layer: its shut edges open again (the wake current holds only while she is on it).</summary>
     public void Leave()
     {

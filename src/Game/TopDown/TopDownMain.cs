@@ -660,7 +660,7 @@ public partial class TopDownMain : Node3D
             if (OS.GetCmdlineUserArgs().Contains("--dbg-dive")) _jelly = new Jelly { Name = "Clementine", Seed = _seed.ToString(), Tutored = _id.Depth > LevelPlan.Tutorial };
             // (--dbg-freed=tull,…: these of the bay's folk freed, home in the bay.)
             if (_jelly is not null) foreach (string id in _dbgFreed) _jelly.Freed.Add(id);
-            _reefWanted = WantsReef(newDive: false);
+            _reefWanted = WantsReef(newDive: false) || ResumeFromFile();
             return;
         }
         RunLaunch.Pending = null;
@@ -675,8 +675,10 @@ public partial class TopDownMain : Node3D
             (_seed, _id, _) = DiveStart(_jelly);
             _resume = _jelly.Dive;
             // A new dive is in the cube reef (a dive under way in the seeded levels carries on there).
-            _reefWanted = WantsReef(newDive: _jelly.Dive is null);
-            if (_reefWanted) _resume = null;
+            _reefWanted = WantsReef(newDive: _jelly.Dive is null) || _jelly.Dive?.Cubes is not null;
+            // (A cube dive saved in a haven is taken up there: CUBE-WORLD-PLAN §10.)
+            _reefResume = _jelly.Dive?.Cubes;
+            if (_reefWanted && _reefResume is null) _resume = null;
             return;
         }
         if (mode == LaunchMode.Continue && GameSave.Current.Run is { } saved && SeedCode.TryParse(saved.Seed, out var seed))
@@ -1333,7 +1335,7 @@ public partial class TopDownMain : Node3D
             _seed = parsed;
         }
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        var shape = _reef is not null ? LevelShape.Bare(LayerMap(_layer)) : _id.Haven ? Shape(_id).Result : LevelShape.Prepare(Abyss(TopDownGenerator.Generate(new RunStreams(_seed), _id, luck: Luck)));
+        var shape = _reef is not null ? (InDiveCave ? ReefFirstShape().Result : LevelShape.Bare(LayerMap(_layer))) : _id.Haven ? Shape(_id).Result : LevelShape.Prepare(Abyss(TopDownGenerator.Generate(new RunStreams(_seed), _id, luck: Luck)));
         ShowLevel(shape, keepRun, watch.ElapsedMilliseconds);
     }
 
@@ -1577,7 +1579,7 @@ public partial class TopDownMain : Node3D
         // Waking in a haven (Lantern Bay): she is healed whole.
         if (map.InHaven(arriveAt ?? map.Start.Position)) _run.Hp = _run.MaxHp;
         _world = new PlaneWorld(_map, _tuning, _run, InDiveCave ? DiveCaveOptions(_map) : InReef ? ReefOptions() : DebugBoss() ?? DiveBoss());
-        if (InReef) EnteredLayer();
+        if (InReef) EnteredLayer(restored: moment is not null);
         ShowMouths();
         if (_captureDir is not null)
             foreach (var door in map.Way is { } way ? map.Mouths.Append(way) : map.Mouths) GD.Print($"Ride door at {door.At} into {door.Into}");

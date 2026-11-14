@@ -54,6 +54,13 @@ public sealed class CubeReef
         Lay(layer, cube, Terrain(cube));
     }
 
+    /// <summary>A layer's arena as a save kept it (before the layer is made: its map is made with the basin).</summary>
+    public void RestoreArena(CubeId cube)
+    {
+        _arenas[cube.Z] = cube;
+        _made.TryRemove(cube, out _);
+    }
+
     /// <summary>A cube's heights (and the rock over its sockets) laid onto its layer's map.</summary>
     void Lay(LevelMap map, CubeId c, CubeTerrain t)
     {

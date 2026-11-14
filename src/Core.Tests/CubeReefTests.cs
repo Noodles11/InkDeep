@@ -258,3 +258,48 @@ public class CubeArenaTests
         Assert.Equal(2000, bosses[3]);
     }
 }
+
+/// <summary>A cube dive kept at a haven (CUBE-WORLD-PLAN §10): its records and the director's counts, back as they were.</summary>
+public class CubeSaveTests
+{
+    [Fact]
+    public void Records_and_counts_come_back_through_the_save()
+    {
+        var records = new LayerRecords(2);
+        var a = new Vector2(70f, 70f);
+        records.Arrive(a);
+        var to = new Vector2(70f, 129f);
+        records.Move(new Vector2(70f, 127.5f), ref to);
+        records.Reveal(a, 12f);
+        var first = records.Claimed[CubeId.Of(a, 2)];
+        first.Places.Add((PoiKind.Haven, new Doorway(new Vector2(80f, 90f), new Vector2(0f, 1f))));
+        first.Left = new() { new StockLeft(3, 12.5f, false, true, new[] { new Vector2(75f, 76f), new Vector2(77f, 78f) }) };
+        var director = new CubeDirector(9);
+        director.Claim(2, 1, 0);
+        director.LeftLayer(2, freed: false);
+
+        var save = new CubeDiveSave { Layer = 2, Director = director.Save(), Records = { CubeRecordSaving.Save(records) } };
+        string json = System.Text.Json.JsonSerializer.Serialize(save);
+        var back = System.Text.Json.JsonSerializer.Deserialize<CubeDiveSave>(json)!;
+
+        var again = new LayerRecords(2);
+        CubeRecordSaving.Load(back.Records[0], again);
+        Assert.Equal(records.Claims, again.Claims);
+        Assert.Equal(records.Last, again.Last);
+        Assert.Equal(records.Shut, again.Shut);
+        foreach (var (cube, r) in records.Claimed)
+        {
+            var b = again.Claimed[cube];
+            Assert.Equal(r.Claim, b.Claim);
+            Assert.Equal(r.Seen, b.Seen);
+            Assert.Equal(r.Places, b.Places);
+            Assert.Equal(r.Left?.Count, b.Left?.Count);
+        }
+        Assert.Equal(first.Left![0].At, again.Claimed[first.Cube].Left![0].At);
+        var d2 = new CubeDirector(9);
+        d2.Load(back.Director);
+        Assert.Equal(director.Streak, d2.Streak);
+        // The clam room owed (rolled on the 1st claim into a cube with no socket? then carried) comes out alike.
+        Assert.Equal(director.Claim(2, 2, 2), d2.Claim(2, 2, 2));
+    }
+}

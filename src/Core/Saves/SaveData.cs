@@ -280,6 +280,9 @@ public sealed class SuspendedRun
     /// fields above stay as the level's start, to fall back on if the moment cannot be restored.
     /// </summary>
     public LevelState? State { get; set; }
+
+    /// <summary>A dive in the cube reef (docs/proposals/CUBE-WORLD-PLAN.md §10): saved in a haven, taken up there; null for a dive of seeded levels.</summary>
+    public OctoShoots.Core.Gen.Cubes.CubeDiveSave? Cubes { get; set; }
 }
 
 /// <summary>A level in play, exactly (<see cref="Snapshot"/>), with what the game keeps beside it.</summary>

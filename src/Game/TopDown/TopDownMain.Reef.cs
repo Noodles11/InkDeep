@@ -44,6 +44,21 @@ public partial class TopDownMain
     bool _classic, _cubeAsked;
     /// <summary>Verification (--cube-boss): every layer below the warm-up holds a boss (and --autopilot swims to its arena).</summary>
     bool _cubeBoss;
+    /// <summary>Verification: a haven's checkpoint also written to this file (--cube-save=), and a dive taken up from one (--cube-resume=).</summary>
+    string? _cubeSaveTo, _cubeResumeFrom;
+
+    /// <summary>Verification (--cube-resume=): the verification jelly's dive is the one in that file; true if it was read.</summary>
+    bool ResumeFromFile()
+    {
+        if (_cubeResumeFrom is null || _jelly is null || !System.IO.File.Exists(_cubeResumeFrom)) return false;
+        var dive = System.Text.Json.JsonSerializer.Deserialize<OctoShoots.Core.Saves.SuspendedRun>(System.IO.File.ReadAllText(_cubeResumeFrom));
+        if (dive?.Cubes is null || !OctoShoots.Core.Run.SeedCode.TryParse(dive.Seed, out var seed)) return false;
+        _jelly.Dive = dive;
+        _seed = seed;
+        _resume = dive;
+        _reefResume = dive.Cubes;
+        return true;
+    }
     /// <summary>Her layer's map and the one above's (kept to climb back to), and the next one down being made.</summary>
     readonly Dictionary<int, LevelMap> _layerMaps = new();
     Task<LevelMap>? _making;
@@ -71,6 +86,8 @@ public partial class TopDownMain
         if (arg == "--classic") _classic = true;
         else if (arg == "--cube-reef") _cubeAsked = true;
         else if (arg == "--cube-boss") _cubeBoss = true;
+        else if (arg.StartsWith("--cube-save=")) _cubeSaveTo = arg["--cube-save=".Length..];
+        else if (arg.StartsWith("--cube-resume=")) _cubeResumeFrom = arg["--cube-resume=".Length..];
         else if (arg.StartsWith("--cube-footprint=") && int.TryParse(arg["--cube-footprint=".Length..], out int f)) _cubeFootprint = Math.Clamp(f, 2, CubeTuning.Footprint);
         else if (arg.StartsWith("--cube-layers=") && int.TryParse(arg["--cube-layers=".Length..], out int l)) _cubeLayers = Math.Clamp(l, 2, CubeTuning.Layers);
     }
@@ -78,9 +95,19 @@ public partial class TopDownMain
     /// <summary>Whether this launch's dive is in the cube reef: a new dive (not one under way in the seeded levels), or asked for.</summary>
     bool WantsReef(bool newDive) => !_classic && (_cubeAsked || newDive);
 
-    /// <summary>The reef from the run's seed, and its views; she begins on the warm-up layer.</summary>
+    /// <summary>A cube dive saved in a haven, being taken up (null: a new dive).</summary>
+    CubeDiveSave? _reefResume;
+    /// <summary>The layers whose boss she has freed.</summary>
+    readonly HashSet<int> _bossFreed = new();
+
+    /// <summary>The reef from the run's seed, and its views; she begins on the warm-up layer, or in the haven a save left her in.</summary>
     void BuildReef()
     {
+        if (_reefResume is { } saved)
+        {
+            _cubeFootprint = saved.Footprint;
+            _cubeLayers = saved.Layers;
+        }
         _reef = new CubeReef(_seed.Value, _cubeFootprint, _cubeLayers);
         _id = CubeReef.IdOf(0);
         _layer = 0;
@@ -93,7 +120,8 @@ public partial class TopDownMain
         AddChild(_reefView);
         _currentShader = GD.Load<Shader>("res://assets/shaders/cube_current.gdshader");
         _driftStreaks = Streaks(new Vector2(26f, 26f));
-        if (Here.Arrive(_reef.Start) == Crossing.Claimed) Grant(CubeId.Of(_reef.Start, 0));
+        if (_reefResume is not null) ResumeReef(_reefResume);
+        else if (Here.Arrive(_reef.Start) == Crossing.Claimed) Grant(CubeId.Of(_reef.Start, 0));
         GD.Print($"Cube reef {_seed}: {_reef.Space.Footprint} × {_reef.Space.Footprint} squares, {_reef.Space.Layers} layers, {_reef.Space.CubesOf(0).Count()} cubes a layer");
     }
 
@@ -112,7 +140,84 @@ public partial class TopDownMain
     Task<LevelShape> ReefFirstShape()
     {
         var reef = _reef!;
+        if (_reefResume is not null && InDiveCave)
+        {
+            var seed = _seed;
+            var map = _layerMaps[_layer];
+            int mouth = _diveCave;
+            return Task.Run(() => PrepareBehind(seed, map, mouth));
+        }
         return Task.Run(() => LevelShape.Bare(reef.Layer(0, reef.Start)));
+    }
+
+    /// <summary>
+    /// A cube dive taken up in the haven it was saved in (CUBE-WORLD-PLAN §10): the reef's records, the director, the
+    /// arenas and her layer as they were; her layer made (with its mouths) and she in the haven behind its mouth.
+    /// </summary>
+    void ResumeReef(CubeDiveSave saved)
+    {
+        _layer = saved.Layer;
+        _id = CubeReef.IdOf(_layer);
+        _cubeDiving.Restore(saved.Layer, saved.Deepest);
+        _director.Load(saved.Director);
+        foreach (int z in saved.BossRolled) _bossRolled.Add(z);
+        foreach (int z in saved.BossFreed) _bossFreed.Add(z);
+        foreach (var (z, key) in saved.Arenas)
+            if (CubeDiveSave.FromCubeKey(key) is { } arena) _reef!.RestoreArena(arena);
+        foreach (var layer in saved.Records) CubeRecordSaving.Load(layer, _records.Of(layer.Layer));
+        var map = _reef!.Layer(_layer, _reef.Start);
+        MarkBoss(map, _layer);
+        OpenMouths(map);
+        _layerMaps[_layer] = map;
+        _reefView.SetLayer(_layer);
+        if (saved.HavenMouth >= 0 && saved.HavenMouth < map.Mouths.Count)
+        {
+            _diveCave = _caveMouth = saved.HavenMouth;
+            _reefShape = LevelShape.Bare(map);
+        }
+        GD.Print($"Cube reef: taken up on layer {_layer} (deepest {saved.Deepest}), {Here.Claims} cubes claimed, in the haven behind mouth {saved.HavenMouth}");
+    }
+
+    /// <summary>A layer's boss on its map: its arena's middle the boss's place, unless she has freed it.</summary>
+    void MarkBoss(LevelMap map, int layer)
+    {
+        if (_reef!.ArenaOf(layer) is not { } arena || _bossFreed.Contains(layer)) return;
+        map.HasBoss = true;
+        map.Exit.Position = arena.Middle;
+        map.Exit.Radius = CubeTerrain.ArenaRadius;
+    }
+
+    /// <summary>
+    /// A haven reached (§10): the dive saved there, its records, the director and the arenas with it, so continuing puts
+    /// her back in it. What is left of her layer's stock was kept as she went in.
+    /// </summary>
+    void SaveReefCheckpoint()
+    {
+        if (_jelly is not { } jelly || _run is null) return;
+        var record = RunRecord();
+        record.Cubes = new CubeDiveSave
+        {
+            Footprint = _reef!.Space.Footprint, Layers = _reef.Space.Layers, Layer = _layer, Deepest = _cubeDiving.Deepest,
+            HavenMouth = _diveCave, Director = _director.Save(),
+            Arenas = Enumerable.Range(0, _reef.Space.Layers).Where(z => _reef.ArenaOf(z) is not null).ToDictionary(z => z, z => CubeDiveSave.CubeKey(_reef.ArenaOf(z)!.Value)),
+            BossRolled = _bossRolled.ToList(), BossFreed = _bossFreed.ToList(),
+            Records = _records.Layers.Select(z => CubeRecordSaving.Save(_records.Of(z))).ToList(),
+        };
+        jelly.Level = _run.XpLevel;
+        jelly.Xp = _run.Xp;
+        jelly.Points = _run.Points;
+        jelly.Skills = _run.Skills.ToDictionary(k => k.Key.ToString(), k => k.Value);
+        jelly.Dive = record;
+        if (_cubeSaveTo is not null) System.IO.File.WriteAllText(_cubeSaveTo, System.Text.Json.JsonSerializer.Serialize(record));
+        jelly.Played = DateTime.Now.ToString("s", System.Globalization.CultureInfo.InvariantCulture);
+        if (_jellySaved && !_debugRun) OctoShoots.Game.Settings.GameSave.Write();
+        GD.Print($"Cube reef: saved in the haven behind mouth {_diveCave} on layer {_layer}");
+    }
+
+    /// <summary>Into a place behind a mouth from her layer: what is left of each claimed cube's stock kept (for a save made there).</summary>
+    void LeavingForMouth()
+    {
+        foreach (var record in Here.Claimed.Values) record.Left = _world.StockLeft(record.Cube);
     }
 
     /// <summary>
@@ -131,13 +236,14 @@ public partial class TopDownMain
     }
 
     /// <summary>A layer entered (the first, or after a change of layer): its map kept, the next one down begun.</summary>
-    void EnteredLayer()
+    /// <param name="restored">She is back from a place behind a mouth, the layer's world put back as she left it (its stock with it).</param>
+    void EnteredLayer(bool restored)
     {
         _layerMaps[_layer] = _map;
         // Its claimed cubes' places, their mouths on its map (those granted before it was made).
         if (OpenMouths(_map)) ShowReefMouths();
         // Back on a layer: its claimed cubes' stock put back as she left it.
-        foreach (var record in Here.Claimed.Values)
+        foreach (var record in restored ? Enumerable.Empty<CubeRecord>() : Here.Claimed.Values)
             foreach (var left in record.Left ?? Enumerable.Empty<StockLeft>())
                 _world.PlaceStock(record.Cube, left.Spawn, left.Seed, left.Prime, left.At, left: true, shoal: left.Shoal);
         // (Only her layer and the one above are ever needed again: §10.)
@@ -170,6 +276,7 @@ public partial class TopDownMain
     void StepReef(float dt)
     {
         TakeMade();
+        if (_world.Boss?.Freed == true) _bossFreed.Add(_layer);
         var p = _world.Player;
         _stream.Update(ReefFocus(p), dt);
         _cubeWorker.Drain(_stream);

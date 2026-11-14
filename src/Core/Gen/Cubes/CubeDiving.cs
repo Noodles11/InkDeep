@@ -85,6 +85,16 @@ public sealed class CubeDiving
         Arrive(p, arrival);
     }
 
+    /// <summary>A dive taken up from a save: on that layer, that deep, free to dive or climb (she waited in a haven).</summary>
+    public void Restore(int layer, int deepest)
+    {
+        Layer = layer;
+        Deepest = Math.Max(deepest, layer);
+        Since = CooldownSeconds;
+        Arrived = null;
+        ChainLimit = 0f;
+    }
+
     /// <summary>She has climbed and arrived at <paramref name="p"/>.</summary>
     public void Climbed(Vector2 p, CubeTerrain arrival)
     {

@@ -219,6 +219,7 @@ public partial class TopDownMain
         Task<LevelShape> shape;
         if (way.Into)
         {
+            if (InReef) LeavingForMouth();
             _levelState = Moment(levelOnly: true);
             _levelLuck = _map.Luck;
             _reefShape = _levelShape;
@@ -276,6 +277,7 @@ public partial class TopDownMain
     /// <summary>She has come out of the ride: into a cave, word of it; out of one she sealed, its mouth closes behind her.</summary>
     void DiveCaveArrived()
     {
+        if (_reef is not null && InHavenPlace) SaveReefCheckpoint();
         if (InLabyrinth) Say("A secret labyrinth: find its heart, and its current will carry you home");
         else if (InDiveCave && _map.Room == PoiKind.TreasureCave) Say("A clam room: its pearl is yours, then swim back out");
         else if (InHavenPlace) Say("A haven: safe water, healed whole, all you carry banked");

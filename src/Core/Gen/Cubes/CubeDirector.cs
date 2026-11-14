@@ -116,6 +116,25 @@ public sealed class CubeDirector
         return fits[rng.Int(fits.Count)];
     }
 
+    /// <summary>Its counts as a save keeps them.</summary>
+    public CubeDirectorSave Save() => new()
+    {
+        Streak = Streak,
+        Layers = _layers.Select(l => new CubeDirectorLayerSave { Layer = l.Key, Clam = l.Value.Clam, Havens = l.Value.Havens, Carried = l.Value.Carried.ToList() }).ToList(),
+    };
+
+    public void Load(CubeDirectorSave save)
+    {
+        Streak = save.Streak;
+        _layers.Clear();
+        foreach (var l in save.Layers)
+        {
+            var state = new LayerState { Clam = l.Clam, Havens = l.Havens };
+            state.Carried.AddRange(l.Carried);
+            _layers[l.Layer] = state;
+        }
+    }
+
     /// <summary>A layer she can never come back to: its counts let go.</summary>
     public void Forget(int layer) => _layers.Remove(layer);
 }
