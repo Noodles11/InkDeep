@@ -385,18 +385,12 @@ public partial class PauseMenu : Control
     /// what it asks and how far along, what it pays, and Let go; and whether the HUD shows them as ribbons. On a run,
     /// only a line saying there are none.
     /// </summary>
-    /// <summary>The Chart tab: the dive's graph round where she is (ChartView); hidden off a dive's graph (the open reef).</summary>
-    public void FillChart(OctoShoots.Core.Run.DiveGraph? graph, OctoShoots.Core.Gen.TopDown.LevelId at, IEnumerable<OctoShoots.Core.Gen.TopDown.LevelId> visited, int sight)
-    {
-        _tabs[ChartTab].Visible = graph is not null;
-        if (graph is not null) _chart.Show(graph, at, visited, sight);
-    }
 
-    /// <summary>The Chart tab in the cube reef: her layer's claimed cubes (ChartView.ReefChart).</summary>
-    public void FillChart(ChartView.ReefChart chart)
+    /// <summary>The Chart tab: her layer of the cube reef (ChartView.ReefChart); hidden off the reef (null).</summary>
+    public void FillChart(ChartView.ReefChart? chart)
     {
-        _tabs[ChartTab].Visible = true;
-        _chart.Show(chart);
+        _tabs[ChartTab].Visible = chart is not null;
+        if (chart is not null) _chart.Show(chart);
     }
 
     public void FillRequests(IReadOnlyList<FanMenu.Entry> carried, bool ribbons, bool reef)

@@ -18,7 +18,7 @@ namespace OctoShoots.Game.TopDown;
 /// (ReefStream, ReefStreamView). She claims the cubes she swims into, the wake current shuts the edge behind the one she
 /// came by, the frontier drift leads her on to new water; over the void she dives to the layer below (Shift, the
 /// d-pad's down), under a well of the layer above she climbs back (Q, the d-pad's up), the game's dive played either way.
-/// A new dive is in the cube reef; `--classic` keeps the seeded levels, `--cube-reef` puts a verification run in it.
+/// Every dive is in the cube reef; `--classic` (verification) shows one seeded level instead, as the old features need.
 /// </summary>
 public partial class TopDownMain
 {
@@ -41,7 +41,7 @@ public partial class TopDownMain
     bool InArena(System.Numerics.Vector2 p, int layer) => _reef!.IsArena(CubeId.Of(p, layer));
     int _layer;
     int _cubeFootprint = CubeTuning.Footprint, _cubeLayers = CubeTuning.Layers;
-    bool _classic, _cubeAsked;
+    bool _classic;
     /// <summary>Verification (--cube-boss): every layer below the warm-up holds a boss (and --autopilot swims to its arena).</summary>
     bool _cubeBoss;
     /// <summary>Verification (--cube-chart=seconds): that long into the run, the pause menu opens on its chart.</summary>
@@ -86,7 +86,6 @@ public partial class TopDownMain
     void ParseReefArg(string arg)
     {
         if (arg == "--classic") _classic = true;
-        else if (arg == "--cube-reef") _cubeAsked = true;
         else if (arg == "--cube-boss") _cubeBoss = true;
         else if (arg.StartsWith("--cube-chart=") && float.TryParse(arg["--cube-chart=".Length..], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float chartAt)) _cubeChartAt = chartAt;
         else if (arg.StartsWith("--cube-save=")) _cubeSaveTo = arg["--cube-save=".Length..];
@@ -95,8 +94,8 @@ public partial class TopDownMain
         else if (arg.StartsWith("--cube-layers=") && int.TryParse(arg["--cube-layers=".Length..], out int l)) _cubeLayers = Math.Clamp(l, 2, CubeTuning.Layers);
     }
 
-    /// <summary>Whether this launch's dive is in the cube reef: a new dive (not one under way in the seeded levels), or asked for.</summary>
-    bool WantsReef(bool newDive) => !_classic && (_cubeAsked || newDive);
+    /// <summary>Every dive is in the cube reef; `--classic` (verification) shows one seeded level instead.</summary>
+    bool WantsReef => !_classic;
 
     /// <summary>A cube dive saved in a haven, being taken up (null: a new dive).</summary>
     CubeDiveSave? _reefResume;
