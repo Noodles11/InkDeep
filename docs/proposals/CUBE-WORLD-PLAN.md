@@ -100,16 +100,17 @@ over its two squares.
 
 ### 4.2 The geometry
 
-1. **What the edges decide** (`CubeTerrain.Shared`), a function of the edge alone, so both cubes write the same:
-   - its **wall**, a fin of rock along the line whose middle wanders up to 1 m off it and which swells by up to
-     1.5 m, but always covers at least 3 m either side (so the apron, and the rock's rim pass round it, are made from
-     the edge alone): from 6 m to 13 m thick;
-   - each **gate's throat**, cut through the wall and on 10 m into both cubes, swaying from side to side and flaring
-     where it opens into each;
+1. **What the edges decide** (`CubeTerrain.SharedField`), as signed distances (positive in rock) from the edges and
+   corners alone, one field for the whole layer, so every cube that holds a point works out the same:
+   - its **wall** along the line, whose middle wanders up to 1 m off it and each of whose faces swells by up to 3 m on
+     its own, but which always covers at least 3 m either side (so the apron is made from the edges alone); past its
+     own stretch of line it tapers away;
+   - each **gate's throat**, cut through the wall and on 10 m into both cubes (closing over 2 m past that), swaying
+     from side to side and flaring where it opens into each;
    - each **corner's** rock.
-2. **The cube's own water**, from its own hash, wherever the edges do not decide, across both its squares (no wall
-   between them): a chamber round each well (over it and under it), a pocket hugging each outer edge (60% of edges),
-   and two to five chambers more, 7–12 m across. Gate
+2. **The cube's own water**, from its own hash, across both its squares (no wall between them): a chamber round each
+   well (over it and under it), a pocket 15–19 m in from each outer edge (60% of edges; the rock between joins the
+   wall, so no wall stands as a fin), and two to five chambers more, 7–12 m across. Gate
    mouths, wells and chambers are joined by a spanning tree of the shortest tunnels (bowed curves 5.6–8.8 m wide)
    plus a loop or two. Rims wobble by low noise; then **bays** are bitten into the rock within 5 m of the water where
    the bay noise is high, so walls wander rather than trace the plan. Every gate of a cube reaches every other and
@@ -117,10 +118,16 @@ over its two squares.
 3. **Shelves, void and arches**: water is shelf or void by a noise mask at global coordinates (so it runs on across
    cube lines); round a well down it is void, wobbling outward from its radius; arches are laid over the middle of
    a tunnel or two away from the wells, and the floor under an arch is a shelf.
-4. **Heights**: all noise (rock relief, shelf floors) is read at **global** coordinates. Rock stands 3–6.5 m, lowered
-   to 1.2 m right beside the water. A shelf's floor drops into the void along the shelf noise's contour, a slope
-   rather than 1 m steps, and sinks smoothly into a well.
-5. **Apron**: the cube's arrays carry 2 m of its neighbours' samples round them (the ground's smoothing reads two
+4. **The face**: the cube's own water as a signed distance (positive in rock, widened 0.6 m, blurred), joined with
+   the edges' field: the walls' rock over it, the throats' water over that. Within 2 m of an outer edge (the apron)
+   only the edges' field counts; over the next 3 m the cube's own blends in. The face is the field's zero line, which
+   runs smoothly between the grid's points: no 1 m steps anywhere.
+5. **Heights** on the field: all noise (rock relief, shelf floors) is read at **global** coordinates. Rock rises from
+   its face over 2.5 m to its own 3–6.5 m; the floor falls from the face to a shelf's or the void's depth over 1–4 m
+   (the deeper, the further). A shelf's floor drops into the void along the shelf noise's contour as a bank, and sinks
+   smoothly into a well. The ground's edge over the void and an arch's outline follow their fields' smooth lines too
+   (`LevelView.SurfaceMesh`'s field).
+6. **Apron**: the cube's arrays carry 2 m of its neighbours' samples round them (the ground's smoothing reads two
    samples past a cell), all of it decided by the edges, so meshes, normals and soft masks are right up to the line.
 
 **Generation never retries.** Today's generate-validate-retry cannot run while she swims. The construction above is
@@ -514,9 +521,6 @@ Each has the default this plan assumes; none blocks the prototype.
 2. **How deep the reef goes** ("dozens"): 36 layers assumed. It only sets where the bottom is.
 3. **The warm-up layer's places:** assumed to be as anywhere (secrets, clam room, havens) but no curse rooms.
 4. **The footprint** (9 × 9) and **S** (64 m) are the two numbers the prototype is most likely to change.
-5. **Stair-stepped cliffs:** where rock drops into the void its face shows 1 m steps, the rock/water outline being
-   a yes/no on the 1 m grid. The fix is to carve with a continuous margin (signed distance to the chambers, tunnels,
-   bays, walls and throats) and lay heights on it, as the game's own reef terrain does; the seam tests guard it.
-6. **The cube grid's trace:** the shared walls along cube lines still show, faintly, as a grid of rock fins between
-   the caverns. If it reads in play, the next tries are fewer walls (open edges with wide gates) and chambers written
-   by the edge across an open line.
+5. **The cube grid's trace:** with the walls' faces wandering and no pockets against them, the lines no longer read
+   as fins; the throats' ends can still leave a small point of rock. If the grid reads in play, the next tries are
+   fewer walls (open edges with wide gates) and chambers written by the edge across an open line.
