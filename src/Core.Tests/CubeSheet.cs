@@ -10,13 +10,14 @@ namespace OctoShoots.Core.Tests;
 /// <summary>
 /// A picture of a block of cubes for judging the terrain by eye (CUBE-WORLD-PLAN §14.2 step 3): each layer seen from
 /// above, the layers left to right. Rock shaded by its height; shelves sand; through the void, the layer below, dimmed
-/// (and murk under the last). Arches hatched; wells down ringed orange, ways in from above green.
+/// (and murk under the last). Arches hatched; wells down ringed orange, ways in from above green; squares outside the
+/// reef plain rock.
 /// </summary>
 public static class CubeSheet
 {
     const int Scale = 3, Gap = 24;
 
-    public static void Write(string path, Dictionary<CubeCoord, CubeTerrain> cubes, int footprint, int layers, bool lines)
+    public static void Write(string path, Dictionary<CubeId, CubeTerrain> cubes, int footprint, int layers, bool lines)
     {
         int span = footprint * Side + 1, side = span * Scale;
         int w = layers * side + (layers - 1) * Gap, h = side;
@@ -30,19 +31,22 @@ public static class CubeSheet
             {
                 var t = Owner(cubes, footprint, gx, gy, z);
                 var below = z + 1 < layers ? Owner(cubes, footprint, gx, gy, z + 1) : null;
-                var (r, g, b) = Colour(t, below, gx, gy);
+                var (r, g, b) = t is null ? (0.2f, 0.17f, 0.14f) : Colour(t, below, gx, gy);
+                // (A cube's outline: where the square beside is another cube's.)
+                bool outline = lines && t is not null && (gx % Side == 0 && gx > 0 && Owner(cubes, footprint, gx - 1, gy, z) != t
+                    || gy % Side == 0 && gy > 0 && Owner(cubes, footprint, gx, gy - 1, z) != t);
                 for (int sy = 0; sy < Scale; sy++)
                 for (int sx = 0; sx < Scale; sx++)
                 {
                     float cr = r, cg = g, cb = b;
-                    if (t.CanopyAt(gx, gy) && ((gx * Scale + sx + gy * Scale + sy) % 4 == 0)) (cr, cg, cb) = (0.85f, 0.75f, 0.55f);
-                    if (lines && (gx % Side == 0 || gy % Side == 0) && ((gx + gy) % 4 < 2)) (cr, cg, cb) = (cr * 0.5f + 0.5f, cg * 0.5f + 0.5f, cb * 0.5f + 0.5f);
+                    if (t is not null && t.CanopyAt(gx, gy) && ((gx * Scale + sx + gy * Scale + sy) % 4 == 0)) (cr, cg, cb) = (0.85f, 0.75f, 0.55f);
+                    if (outline && ((gx + gy) % 4 < 2)) (cr, cg, cb) = (cr * 0.5f + 0.5f, cg * 0.5f + 0.5f, cb * 0.5f + 0.5f);
                     Put(px, w, ox + gx * Scale + sx, gy * Scale + sy, cr, cg, cb);
                 }
             }
             foreach (var t in cubes.Values)
             {
-                if (t.Coord.Z != z) continue;
+                if (t.Cube.Z != z) continue;
                 foreach (var well in t.Down) Ring(px, w, ox, well.Center.X, well.Center.Y, well.Radius, (1f, 0.55f, 0.15f));
                 foreach (var well in t.Arrivals) Ring(px, w, ox, well.Center.X, well.Center.Y, well.Radius, (0.35f, 0.95f, 0.45f));
             }
@@ -50,8 +54,8 @@ public static class CubeSheet
         Png(path, w, h, px);
     }
 
-    static CubeTerrain Owner(Dictionary<CubeCoord, CubeTerrain> cubes, int footprint, int gx, int gy, int z) =>
-        cubes[new CubeCoord(Math.Min(gx / Side, footprint - 1), Math.Min(gy / Side, footprint - 1), z)];
+    static CubeTerrain? Owner(Dictionary<CubeId, CubeTerrain> cubes, int footprint, int gx, int gy, int z) =>
+        cubes.GetValueOrDefault(CubeId.Of(new CellCoord(Math.Min(gx / Side, footprint - 1), Math.Min(gy / Side, footprint - 1), z)));
 
     static (float, float, float) Colour(CubeTerrain t, CubeTerrain? below, int gx, int gy)
     {

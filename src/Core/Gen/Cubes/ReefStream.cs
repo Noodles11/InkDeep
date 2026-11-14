@@ -18,10 +18,10 @@ public enum CubeState : byte { Unloaded, Mask, Below, Preview, Preloaded, Active
 public enum CubeWork : byte { Terrain, PreviewMesh, Mesh, Stock }
 
 /// <summary>A piece of work handed to the worker. Priority: lower first.</summary>
-public readonly record struct CubeJob(long Id, CubeCoord Cube, CubeWork Work, int Priority);
+public readonly record struct CubeJob(long Id, CubeId Cube, CubeWork Work, int Priority);
 
 /// <summary>What the stream tells the view: a cube's work done and kept (Added) or let go (Dropped).</summary>
-public readonly record struct StreamChange(CubeCoord Cube, CubeWork Work, bool Added, object? Result);
+public readonly record struct StreamChange(CubeId Cube, CubeWork Work, bool Added, object? Result);
 
 /// <summary>Runs the stream's jobs off the main thread; each result comes back through <see cref="ReefStream.Complete"/> on it.</summary>
 public interface ICubeWorker
@@ -61,9 +61,9 @@ public sealed class ReefStream
 
     readonly CubeSpace _space;
     readonly ICubeWorker _worker;
-    readonly Dictionary<CubeCoord, Entry> _cubes = new();
-    readonly Dictionary<CubeCoord, CubeState> _wanted = new();
-    readonly Dictionary<CubeCoord, int> _rank = new();
+    readonly Dictionary<CubeId, Entry> _cubes = new();
+    readonly Dictionary<CubeId, CubeState> _wanted = new();
+    readonly Dictionary<CubeId, int> _rank = new();
     readonly Dictionary<long, CubeJob> _inFlight = new();
     readonly ConcurrentDictionary<long, byte> _cancelled = new();
     readonly List<StreamChange> _changes = new();
@@ -98,22 +98,22 @@ public sealed class ReefStream
     public bool Cancelled(long id) => _cancelled.ContainsKey(id);
 
     /// <summary>What each cube is wanted as, after the last update.</summary>
-    public IReadOnlyDictionary<CubeCoord, CubeState> Wanted => _wanted;
+    public IReadOnlyDictionary<CubeId, CubeState> Wanted => _wanted;
 
     /// <summary>The cubes with any work in hand.</summary>
-    public IEnumerable<CubeCoord> Held => _cubes.Keys;
+    public IEnumerable<CubeId> Held => _cubes.Keys;
 
-    public CubeTerrain? Terrain(CubeCoord c) => _cubes.TryGetValue(c, out var e) ? e.Terrain : null;
+    public CubeTerrain? Terrain(CubeId c) => _cubes.TryGetValue(c, out var e) ? e.Terrain : null;
 
-    public object? Result(CubeCoord c, CubeWork work) => _cubes.TryGetValue(c, out var e) && e.Done.TryGetValue(work, out var r) ? r : null;
+    public object? Result(CubeId c, CubeWork work) => _cubes.TryGetValue(c, out var e) && e.Done.TryGetValue(work, out var r) ? r : null;
 
-    public bool Has(CubeCoord c, CubeWork work) => _cubes.TryGetValue(c, out var e) && e.Done.ContainsKey(work);
+    public bool Has(CubeId c, CubeWork work) => _cubes.TryGetValue(c, out var e) && e.Done.ContainsKey(work);
 
     /// <summary>
     /// The state a cube is in: the most its work in hand allows, Active only for the cube wanted so (one wanted Active
     /// and not yet ready is Unloaded, or Preview, Mask: what it has).
     /// </summary>
-    public CubeState State(CubeCoord c)
+    public CubeState State(CubeId c)
     {
         if (!_cubes.TryGetValue(c, out var e)) return CubeState.Unloaded;
         if (_wanted.TryGetValue(c, out var w) && Ready(e, w)) return w;
@@ -145,7 +145,7 @@ public sealed class ReefStream
     /// A cube kept as it is, whatever is wanted, until the pin is let go (she, a creature awake in it, a shot crossing
     /// it, a battle, an animation). Pinning a cube with nothing in hand keeps nothing.
     /// </summary>
-    public IDisposable Pin(CubeCoord c, string reason)
+    public IDisposable Pin(CubeId c, string reason)
     {
         var e = Get(c);
         e.Pins++;
@@ -154,16 +154,16 @@ public sealed class ReefStream
     }
 
     /// <summary>What pins a cube (for the overlay).</summary>
-    public IReadOnlyList<string> PinnedBy(CubeCoord c) => _cubes.TryGetValue(c, out var e) ? e.Reasons : Array.Empty<string>();
+    public IReadOnlyList<string> PinnedBy(CubeId c) => _cubes.TryGetValue(c, out var e) ? e.Reasons : Array.Empty<string>();
 
     sealed class Unpin : IDisposable
     {
         readonly ReefStream _stream;
-        readonly CubeCoord _cube;
+        readonly CubeId _cube;
         readonly string _reason;
         bool _done;
 
-        public Unpin(ReefStream stream, CubeCoord cube, string reason)
+        public Unpin(ReefStream stream, CubeId cube, string reason)
         {
             _stream = stream;
             _cube = cube;
@@ -180,7 +180,7 @@ public sealed class ReefStream
         }
     }
 
-    Entry Get(CubeCoord c)
+    Entry Get(CubeId c)
     {
         if (!_cubes.TryGetValue(c, out var e)) _cubes[c] = e = new Entry();
         return e;
@@ -222,47 +222,44 @@ public sealed class ReefStream
     {
         _wanted.Clear();
         _rank.Clear();
-        var here = CubeCoord.Of(f.Position, f.Layer);
+        var cell = CellCoord.Of(f.Position, f.Layer);
+        var here = CubeId.Of(cell);
         // Rank: the order work is done in (lower first): her cube, those she can reach, those she sees, below, above, ahead.
         Mark(here, CubeState.Active, 0);
-        foreach (var (edge, next) in Across(here))
+        foreach (var (edge, inside, across) in here.Outer())
         {
             var spec = _space.Edge(edge);
+            var next = CubeId.Of(across);
             bool reach = spec.Open && !(f.Shut?.Invoke(edge) ?? false);
             Mark(next, reach ? CubeState.Preloaded : CubeState.Preview, reach ? 1 : 2);
             if (!reach) continue;
-            // The cube beyond, made early when she heads for a gate into its neighbour.
+            // The cube past the square beyond, made early when she heads for a gate into it.
             foreach (var gate in spec.Gates)
             {
                 var at = edge.Point(gate.Along, 0f);
                 if (Vector2.Distance(at, f.Position) > PredictReach || f.Velocity.LengthSquared() < 0.25f) continue;
                 if (Vector2.Dot(f.Velocity, at - f.Position) <= 0f) continue;
-                Mark(new CubeCoord(2 * next.X - here.X, 2 * next.Y - here.Y, here.Z), CubeState.Preview, 6);
+                var beyond = CubeId.Of(new CellCoord(2 * across.X - inside.X, 2 * across.Y - inside.Y, here.Z));
+                if (beyond == next) beyond = CubeId.Of(new CellCoord(3 * across.X - 2 * inside.X, 3 * across.Y - 2 * inside.Y, here.Z));
+                Mark(beyond, CubeState.Preview, 6);
             }
         }
+        // The squares round hers (as far as the view reaches), their cubes; under them, and over them.
         for (int dy = -1; dy <= 1; dy++)
         for (int dx = -1; dx <= 1; dx++)
         {
-            Mark(new CubeCoord(here.X + dx, here.Y + dy, here.Z), CubeState.Preview, 2);
+            var near = new CellCoord(cell.X + dx, cell.Y + dy, cell.Z);
+            Mark(CubeId.Of(near), CubeState.Preview, 2);
             // (A dive or a climb coming: the layer she will arrive on readied in full, the cube she lands in first.)
-            Mark(new CubeCoord(here.X + dx, here.Y + dy, here.Z + 1), f.ReadyBelow ? CubeState.Preview : CubeState.Below, f.ReadyBelow ? 1 : 3);
-            if (f.Climbable) Mark(new CubeCoord(here.X + dx, here.Y + dy, here.Z - 1), f.ReadyAbove ? CubeState.Preview : CubeState.Mask, f.ReadyAbove ? 1 : 4);
+            Mark(CubeId.Of(near with { Z = cell.Z + 1 }), f.ReadyBelow ? CubeState.Preview : CubeState.Below, f.ReadyBelow ? 1 : 3);
+            if (f.Climbable) Mark(CubeId.Of(near with { Z = cell.Z - 1 }), f.ReadyAbove ? CubeState.Preview : CubeState.Mask, f.ReadyAbove ? 1 : 4);
         }
-        if (f.ReadyBelow) Mark(here with { Z = here.Z + 1 }, CubeState.Preloaded, 0);
-        if (f.ReadyAbove && f.Climbable) Mark(here with { Z = here.Z - 1 }, CubeState.Preloaded, 0);
-    }
-
-    /// <summary>Its four neighbours across, with the edge to each.</summary>
-    static IEnumerable<(EdgeId Edge, CubeCoord Next)> Across(CubeCoord c)
-    {
-        yield return (c.West, new CubeCoord(c.X - 1, c.Y, c.Z));
-        yield return (c.East, new CubeCoord(c.X + 1, c.Y, c.Z));
-        yield return (c.North, new CubeCoord(c.X, c.Y - 1, c.Z));
-        yield return (c.South, new CubeCoord(c.X, c.Y + 1, c.Z));
+        if (f.ReadyBelow) Mark(CubeId.Of(cell with { Z = cell.Z + 1 }), CubeState.Preloaded, 0);
+        if (f.ReadyAbove && f.Climbable) Mark(CubeId.Of(cell with { Z = cell.Z - 1 }), CubeState.Preloaded, 0);
     }
 
     /// <summary>A cube wanted at least so (and its work at least this soon).</summary>
-    void Mark(CubeCoord c, CubeState s, int rank)
+    void Mark(CubeId c, CubeState s, int rank)
     {
         if (!_space.Inside(c)) return;
         if (!_wanted.TryGetValue(c, out var had) || s > had) _wanted[c] = s;
@@ -272,7 +269,7 @@ public sealed class ReefStream
     /// <summary>What is no longer wanted, once it has been so for UnloadDelay and nothing pins it.</summary>
     void LetGo(float dt)
     {
-        List<CubeCoord>? empty = null;
+        List<CubeId>? empty = null;
         foreach (var (c, e) in _cubes)
         {
             var want = _wanted.TryGetValue(c, out var w) ? w : CubeState.Unloaded;
@@ -324,8 +321,7 @@ public sealed class ReefStream
                 // (What is built on the terrain waits for it.)
                 if (work != CubeWork.Terrain && !hasTerrain) continue;
                 if (Out(c, work)) continue;
-                var middle = c.Origin + new Vector2(Side * 0.5f);
-                _todo.Add((new CubeJob(0, c, work, _rank[c] * 4 + (int)work), Vector2.Distance(middle, her)));
+                _todo.Add((new CubeJob(0, c, work, _rank[c] * 4 + (int)work), Vector2.Distance(c.Middle, her)));
             }
         }
         _todo.Sort((a, b) => a.Job.Priority != b.Job.Priority ? a.Job.Priority.CompareTo(b.Job.Priority) : a.Distance.CompareTo(b.Distance));
@@ -338,7 +334,7 @@ public sealed class ReefStream
         }
     }
 
-    bool Out(CubeCoord c, CubeWork work)
+    bool Out(CubeId c, CubeWork work)
     {
         foreach (var job in _inFlight.Values)
             if (job.Cube == c && job.Work == work) return true;
@@ -364,6 +360,12 @@ public sealed class TaskCubeWorker : ICubeWorker
     readonly Func<CubeJob, CubeTerrain, object?>? _build;
     readonly ConcurrentQueue<(CubeJob Job, object? Result, bool Failed)> _done = new();
 
+    /// <summary>Per kind of work: how many jobs ran, their total and longest time (ms), for the overlay.</summary>
+    public ConcurrentDictionary<CubeWork, (int Count, double Total, double Most)> Timing { get; } = new();
+
+    /// <summary>What went wrong in a job (each failed job is tried again while it is wanted): for the game to report.</summary>
+    public ConcurrentQueue<string> Errors { get; } = new();
+
     public TaskCubeWorker(CubeSpace space, Func<CubeJob, CubeTerrain, object?>? build = null)
     {
         _space = space;
@@ -383,11 +385,15 @@ public sealed class TaskCubeWorker : ICubeWorker
         }
         try
         {
+            long start = System.Diagnostics.Stopwatch.GetTimestamp();
             object? result = job.Work == CubeWork.Terrain ? CubeTerrain.Make(_space, job.Cube) : _build?.Invoke(job, terrain!);
+            double ms = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+            Timing.AddOrUpdate(job.Work, (1, ms, ms), (_, t) => (t.Count + 1, t.Total + ms, Math.Max(t.Most, ms)));
             _done.Enqueue((job, result, false));
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            Errors.Enqueue($"{job.Work} of {job.Cube}: {e}");
             _done.Enqueue((job, null, true));
         }
     });

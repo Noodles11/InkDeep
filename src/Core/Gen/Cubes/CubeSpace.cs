@@ -35,9 +35,9 @@ public sealed class FloorSpec
 public readonly record struct CornerSpec(CornerId Id, float Radius);
 
 /// <summary>
-/// The cube world's plan (CUBE-WORLD-PLAN §4.1): from the seed alone, every edge's, corner's and floor's boundary
-/// conditions. Each layer's open edges hold a spanning tree of its cubes, so all of a layer joins up; the footprint's
-/// rim is closed. Thread safe; the only thing kept is each layer's tree.
+/// The cube world's plan (CUBE-WORLD-PLAN §4.1): from the seed alone, which cubes the reef holds and every edge's,
+/// corner's and floor's boundary conditions. Each layer's open edges hold a spanning tree of its cubes, so all of a layer
+/// joins up; the reef's rim is closed. Thread safe; what is kept is the reef's cubes and each layer's tree.
 /// </summary>
 public sealed class CubeSpace
 {
@@ -46,13 +46,58 @@ public sealed class CubeSpace
         Seed = seed;
         Footprint = footprint;
         Layers = layers;
+        _reef = Reef(footprint);
     }
 
     public ulong Seed { get; }
     public int Footprint { get; }
     public int Layers { get; }
 
-    public bool Inside(CubeCoord c) => c.X >= 0 && c.Y >= 0 && c.X < Footprint && c.Y < Footprint && c.Z >= 0 && c.Z < Layers;
+    /// <summary>
+    /// The reef's cubes on every layer (laid the same on each): those wholly within the footprint's squares, the largest
+    /// set of them joined by their sides. A square of the footprint whose cube is not one of them is rock.
+    /// </summary>
+    readonly HashSet<CubeId> _reef;
+
+    /// <summary>The reef's cubes of one layer.</summary>
+    public IEnumerable<CubeId> CubesOf(int z)
+    {
+        foreach (var c in _reef) yield return c.OnLayer(z);
+    }
+
+    public bool Inside(CubeId c) => c.Z >= 0 && c.Z < Layers && _reef.Contains(c.OnLayer(0));
+
+    public bool Inside(CellCoord c) => c.Z >= 0 && c.Z < Layers && _reef.Contains(CubeId.Of(c with { Z = 0 }));
+
+    static HashSet<CubeId> Reef(int footprint)
+    {
+        bool InSquare(CellCoord c) => c.X >= 0 && c.Y >= 0 && c.X < footprint && c.Y < footprint;
+        var whole = new HashSet<CubeId>();
+        for (int y = 0; y < footprint; y++)
+        for (int x = 0; x < footprint; x++)
+        {
+            var cube = CubeId.Of(new CellCoord(x, y, 0));
+            if (InSquare(cube.First) && InSquare(cube.Second)) whole.Add(cube);
+        }
+        var best = new HashSet<CubeId>();
+        var seen = new HashSet<CubeId>();
+        foreach (var from in whole)
+        {
+            if (!seen.Add(from)) continue;
+            var part = new HashSet<CubeId> { from };
+            var todo = new Queue<CubeId>(part);
+            while (todo.Count > 0)
+                foreach (var (_, _, across) in todo.Dequeue().Outer())
+                {
+                    var next = CubeId.Of(across);
+                    if (!whole.Contains(next) || !seen.Add(next)) continue;
+                    part.Add(next);
+                    todo.Enqueue(next);
+                }
+            if (part.Count > best.Count) best = part;
+        }
+        return best;
+    }
 
     public uint NoiseSeed(int use) => ReefHash.NoiseSeed(Seed, use);
 
@@ -64,7 +109,8 @@ public sealed class CubeSpace
         float w1 = rng.Range(GateMinWidth, GateMaxWidth), w2 = rng.Range(GateMinWidth, GateMaxWidth);
         float a1 = rng.NextFloat(), a2 = rng.NextFloat();
         uint wall = (uint)(rng.NextU64() >> 32);
-        bool inside = Inside(id.Low) && Inside(id.High);
+        // (Between the two squares of one cube there is no edge to speak of: its water runs across.)
+        bool inside = Inside(id.Low) && Inside(id.High) && CubeId.Of(id.Low) != CubeId.Of(id.High);
         bool open = inside && (TreeOf(id.Z).Contains(id) || extra < EdgeOpenExtra);
         var gates = new List<Gate>();
         if (open)
@@ -113,23 +159,25 @@ public sealed class CubeSpace
 
     readonly ConcurrentDictionary<int, HashSet<EdgeId>> _trees = new();
 
-    /// <summary>A layer's spanning tree of its cubes (Kruskal over its edges in a seeded order).</summary>
+    /// <summary>A layer's spanning tree of its cubes (Kruskal over the edges between them, in a seeded order).</summary>
     HashSet<EdgeId> TreeOf(int z) => _trees.GetOrAdd(z, layer =>
     {
+        var cubes = new List<CubeId>(CubesOf(layer));
+        cubes.Sort((a, b) => a.Y != b.Y ? a.Y.CompareTo(b.Y) : a.X.CompareTo(b.X));
+        var index = new Dictionary<CubeId, int>();
+        for (int i = 0; i < cubes.Count; i++) index[cubes[i]] = i;
         var edges = new List<EdgeId>();
-        for (int y = 0; y < Footprint; y++)
-        for (int x = 0; x < Footprint; x++)
-        {
-            if (x + 1 < Footprint) edges.Add(new EdgeId(x, y, layer, EdgeAxis.X));
-            if (y + 1 < Footprint) edges.Add(new EdgeId(x, y, layer, EdgeAxis.Y));
-        }
+        foreach (var cube in cubes)
+        foreach (var (edge, inside, across) in cube.Outer())
+            if (edge.Low == inside && index.ContainsKey(CubeId.Of(across))) edges.Add(edge);
+        edges.Sort((a, b) => a.Y != b.Y ? a.Y.CompareTo(b.Y) : a.X != b.X ? a.X.CompareTo(b.X) : a.Axis.CompareTo(b.Axis));
         var rng = ReefHash.Rng(Seed, ReefHash.Layer, layer);
         for (int i = edges.Count - 1; i > 0; i--)
         {
             int j = rng.Int(i + 1);
             (edges[i], edges[j]) = (edges[j], edges[i]);
         }
-        var parent = new int[Footprint * Footprint];
+        var parent = new int[cubes.Count];
         for (int i = 0; i < parent.Length; i++) parent[i] = i;
         int Find(int i)
         {
@@ -139,7 +187,7 @@ public sealed class CubeSpace
         var tree = new HashSet<EdgeId>();
         foreach (var e in edges)
         {
-            int a = Find(e.Y * Footprint + e.X), b = Find(e.High.Y * Footprint + e.High.X);
+            int a = Find(index[CubeId.Of(e.Low)]), b = Find(index[CubeId.Of(e.High)]);
             if (a == b) continue;
             parent[a] = b;
             tree.Add(e);

@@ -11,26 +11,48 @@ using static OctoShoots.Core.Gen.Cubes.CubeTuning;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>The cube world's terrain (docs/proposals/CUBE-WORLD-PLAN.md §4, §12): the prototype's 3 × 3 × 3 block.</summary>
+/// <summary>The cube world's terrain (docs/proposals/CUBE-WORLD-PLAN.md §2–§4, §12): herringbone cubes, three layers.</summary>
 public class CubeTerrainTests
 {
-    readonly ITestOutputHelper _out;
-    public CubeTerrainTests(ITestOutputHelper output) => _out = output;
-
     public static readonly ulong[] SeedValues = { 0x4B454C50UL, 7UL, 0xC0FFEEUL, 123456789UL, 0xDEADBEEFUL, 42UL };
     public static IEnumerable<object[]> Seeds => SeedValues.Select(s => new object[] { s });
 
-    const int F = 3, L = 3;
+    /// <summary>The prototype's reef: four squares a side, three layers.</summary>
+    public const int F = 4, L = 3;
 
-    static IEnumerable<CubeCoord> Block()
+    public static IEnumerable<CubeId> Block(CubeSpace space) => Enumerable.Range(0, L).SelectMany(space.CubesOf);
+
+    public static Dictionary<CubeId, CubeTerrain> MakeAll(CubeSpace space) => Block(space).ToDictionary(c => c, c => CubeTerrain.Make(space, c));
+
+    [Fact]
+    public void The_squares_are_laid_in_a_herringbone_of_two_square_cubes_half_of_them_on_end()
     {
-        for (int z = 0; z < L; z++)
-        for (int y = 0; y < F; y++)
-        for (int x = 0; x < F; x++)
-            yield return new CubeCoord(x, y, z);
+        var cubes = new HashSet<CubeId>();
+        for (int y = -8; y < 8; y++)
+        for (int x = -8; x < 8; x++)
+        {
+            var cell = new CellCoord(x, y, 0);
+            var cube = CubeId.Of(cell);
+            Assert.True(cube.Holds(cell));
+            Assert.Equal(cube, CubeId.Of(cube.First));
+            Assert.Equal(cube, CubeId.Of(cube.Second));
+            cubes.Add(cube);
+        }
+        int lying = cubes.Count(c => !c.OnEnd), standing = cubes.Count(c => c.OnEnd);
+        Assert.InRange(lying, standing - 8, standing + 8);
+        foreach (var c in cubes)
+        {
+            Assert.Equal(6, c.Outer().Length);
+            Assert.Equal(6, c.Corners().Distinct().Count());
+            Assert.All(c.Outer(), o => Assert.NotEqual(c, CubeId.Of(o.Across)));
+        }
+        // The herringbone's L: a lying cube with a standing one under its west half, and the next lying cube a square down
+        // the diagonal.
+        var a = new CubeId(0, 0, 0, false);
+        Assert.Equal(new CubeId(0, 1, 0, true), CubeId.Of(new CellCoord(0, 1, 0)));
+        Assert.Equal(new CubeId(1, 1, 0, false), CubeId.Of(new CellCoord(1, 1, 0)));
+        Assert.Equal(a, CubeId.Of(new CellCoord(1, 0, 0)));
     }
-
-    static Dictionary<CubeCoord, CubeTerrain> MakeAll(CubeSpace space) => Block().ToDictionary(c => c, c => CubeTerrain.Make(space, c));
 
     [Theory]
     [MemberData(nameof(Seeds))]
@@ -38,12 +60,12 @@ public class CubeTerrainTests
     {
         var first = MakeAll(new CubeSpace(seed, F, L));
         var space = new CubeSpace(seed, F, L);
-        var again = new CubeTerrain[F * F * L];
-        var order = Block().Reverse().ToArray();
+        var order = Block(space).Reverse().ToArray();
+        var again = new CubeTerrain[order.Length];
         Parallel.For(0, order.Length, k => again[k] = CubeTerrain.Make(space, order[k]));
         foreach (var b in again)
         {
-            var a = first[b.Coord];
+            var a = first[b.Cube];
             Assert.Equal(a.Cells, b.Cells);
             Assert.Equal(a.Heights, b.Heights);
             Assert.Equal(a.Canopy, b.Canopy);
@@ -54,23 +76,25 @@ public class CubeTerrainTests
     [MemberData(nameof(Seeds))]
     public void Neighbours_agree_on_every_sample_they_both_hold(ulong seed)
     {
-        var all = MakeAll(new CubeSpace(seed, F, L));
-        foreach (var (c, a) in all)
-        foreach (var (dx, dy) in new[] { (1, 0), (0, 1), (1, 1), (1, -1) })
+        var all = MakeAll(new CubeSpace(seed, F, L)).Values.ToList();
+        int pairs = 0;
+        foreach (var a in all)
+        foreach (var b in all)
         {
-            if (!all.TryGetValue(c with { X = c.X + dx, Y = c.Y + dy }, out var b)) continue;
-            int shared = 0;
-            for (int gy = Math.Max(a.Y0, b.Y0); gy < Math.Min(a.Y0, b.Y0) + CubeTerrain.N; gy++)
-            for (int gx = Math.Max(a.X0, b.X0); gx < Math.Min(a.X0, b.X0) + CubeTerrain.N; gx++)
+            if (a.Cube.Z != b.Cube.Z || !(a.Cube.Y < b.Cube.Y || a.Cube.Y == b.Cube.Y && a.Cube.X < b.Cube.X)) continue;
+            int x0 = Math.Max(a.X0, b.X0), x1 = Math.Min(a.X0 + a.Stride, b.X0 + b.Stride);
+            int y0 = Math.Max(a.Y0, b.Y0), y1 = Math.Min(a.Y0 + a.Rows, b.Y0 + b.Rows);
+            if (x0 >= x1 || y0 >= y1) continue;
+            pairs++;
+            for (int gy = y0; gy < y1; gy++)
+            for (int gx = x0; gx < x1; gx++)
             {
-                if (!a.Has(gx, gy) || !b.Has(gx, gy)) continue;
-                shared++;
-                Assert.True(a.CellAt(gx, gy) == b.CellAt(gx, gy), $"{c}/{b.Coord} at ({gx}, {gy}): {a.CellAt(gx, gy)} vs {b.CellAt(gx, gy)}");
+                Assert.True(a.CellAt(gx, gy) == b.CellAt(gx, gy), $"{a.Cube}/{b.Cube} at ({gx}, {gy}): {a.CellAt(gx, gy)} vs {b.CellAt(gx, gy)}");
                 Assert.Equal(a.HeightAt(gx, gy), b.HeightAt(gx, gy));
                 Assert.Equal(a.CanopyAt(gx, gy), b.CanopyAt(gx, gy));
             }
-            Assert.True(shared > 0);
         }
+        Assert.True(pairs > 0);
     }
 
     [Theory]
@@ -84,15 +108,15 @@ public class CubeTerrainTests
                 Assert.True(gate.Along - gate.Width / 2f >= GateMargin - 0.01f);
                 Assert.True(gate.Along + gate.Width / 2f <= Side - GateMargin + 0.01f);
             }
-            // Within 7 m of a corner, all rock: no water joins two cubes that share only a corner.
-            foreach (var (dx, dy) in new[] { (0, 0), (1, 0), (0, 1), (1, 1) })
+            // Within 7 m of each of its six corners, all rock: no water joins two cubes that share only a corner.
+            foreach (var corner in t.Cube.Corners())
             {
-                var corner = t.Coord.Corner(dx, dy).Point;
+                var at = corner.Point;
                 for (int y = -7; y <= 7; y++)
                 for (int x = -7; x <= 7; x++)
                 {
                     if (x * x + y * y > 49) continue;
-                    int gx = (int)corner.X + x, gy = (int)corner.Y + y;
+                    int gx = (int)at.X + x, gy = (int)at.Y + y;
                     if (t.Has(gx, gy)) Assert.Equal(CubeCell.Rock, t.CellAt(gx, gy));
                 }
             }
@@ -106,23 +130,17 @@ public class CubeTerrainTests
         var space = new CubeSpace(seed, F, L);
         for (int z = 0; z < L; z++)
         {
-            Assert.False(space.Edge(new CubeCoord(0, 0, z).West).Open);
-            Assert.False(space.Edge(new CubeCoord(F - 1, 1, z).East).Open);
-            Assert.False(space.Edge(new CubeCoord(1, 0, z).North).Open);
-            Assert.False(space.Edge(new CubeCoord(2, F - 1, z).South).Open);
-            var seen = new HashSet<CubeCoord> { new(0, 0, z) };
-            var todo = new Queue<CubeCoord>(seen);
+            var cubes = space.CubesOf(z).ToList();
+            Assert.True(cubes.Count >= 4, $"{cubes.Count} cubes");
+            foreach (var c in cubes)
+            foreach (var (edge, _, across) in c.Outer())
+                if (!space.Inside(CubeId.Of(across))) Assert.False(space.Edge(edge).Open);
+            var seen = new HashSet<CubeId> { cubes[0] };
+            var todo = new Queue<CubeId>(seen);
             while (todo.Count > 0)
-            {
-                var c = todo.Dequeue();
-                foreach (var e in new[] { c.West, c.East, c.North, c.South })
-                {
-                    if (!space.Edge(e).Open) continue;
-                    var next = e.Low == c ? e.High : e.Low;
-                    if (seen.Add(next)) todo.Enqueue(next);
-                }
-            }
-            Assert.Equal(F * F, seen.Count);
+                foreach (var (edge, _, across) in todo.Dequeue().Outer())
+                    if (space.Edge(edge).Open && seen.Add(CubeId.Of(across))) todo.Enqueue(CubeId.Of(across));
+            Assert.Equal(cubes.Count, seen.Count);
         }
     }
 
@@ -135,61 +153,61 @@ public class CubeTerrainTests
             var label = Regions(t);
             var points = t.Gates.Select(g => g.Mouth).Concat(t.Down.Select(w => w.Center)).Concat(t.Arrivals.Select(w => w.Center)).ToList();
             var ids = points.Select(p => label[t.Index((int)MathF.Round(p.X), (int)MathF.Round(p.Y))]).ToList();
-            Assert.All(ids, id => Assert.True(id > 0, $"{t.Coord}: a gate or well not in open water"));
-            Assert.True(ids.Distinct().Count() == 1, $"{t.Coord}: its gates and wells are not all joined");
+            Assert.All(ids, id => Assert.True(id > 0, $"{t.Cube}: a gate or well not in open water"));
+            Assert.True(ids.Distinct().Count() == 1, $"{t.Cube}: its gates and wells are not all joined");
         }
     }
 
     [Theory]
     [MemberData(nameof(Seeds))]
-    public void Every_floor_has_a_well_or_two_she_can_dive_through(ulong seed)
+    public void Every_square_has_a_well_or_two_she_can_dive_through(ulong seed)
     {
         var space = new CubeSpace(seed, F, L);
         var all = MakeAll(space);
-        foreach (var c in Block().Where(c => c.Z < L - 1))
+        foreach (var cube in Block(space).Where(c => c.Z < L - 1))
+        foreach (var cell in new[] { cube.First, cube.Second })
         {
-            var wells = space.Floor(c.Under).Wells;
+            var wells = space.Floor(cell.Under).Wells;
             Assert.InRange(wells.Count, 1, 2);
-            var lower = all[c with { Z = c.Z + 1 }];
-            foreach (var w in wells) Assert.True(CubeTerrain.CanDive(all[c], lower, w.Center, w.Radius - 0.6f), $"{c}: well at {w.Center}");
+            var lower = all[CubeId.Of(cell with { Z = cell.Z + 1 })];
+            foreach (var w in wells) Assert.True(CubeTerrain.CanDive(all[cube], lower, w.Center, w.Radius - 0.6f), $"{cell}: well at {w.Center}");
             // The ways in from above and the ways on down are apart.
             foreach (var w in wells)
-            foreach (var a in all[c].Arrivals)
+            foreach (var a in space.Floor(cell.Over).Wells)
                 Assert.True(Vector2.Distance(w.Center, a.Center) >= 14f);
         }
-        Assert.Empty(all[new CubeCoord(0, 0, L - 1)].Down);
-        Assert.Empty(all[new CubeCoord(0, 0, 0)].Arrivals);
+        Assert.All(space.CubesOf(L - 1), c => Assert.Empty(all[c].Down));
+        Assert.All(space.CubesOf(0), c => Assert.Empty(all[c].Arrivals));
     }
-
 
     /// <summary>The cube's own open water (1 m clear of rock) labelled by region (0: none).</summary>
     static int[] Regions(CubeTerrain t)
     {
-        int n = CubeTerrain.N;
-        var label = new int[n * n];
+        int w = t.Stride, h = t.Rows;
+        var label = new int[w * h];
         bool Clear(int i, int j) =>
-            i > 0 && j > 0 && i < n - 1 && j < n - 1
-            && t.Cells[j * n + i] != CubeCell.Rock && t.Cells[j * n + i - 1] != CubeCell.Rock && t.Cells[j * n + i + 1] != CubeCell.Rock
-            && t.Cells[(j - 1) * n + i] != CubeCell.Rock && t.Cells[(j + 1) * n + i] != CubeCell.Rock;
+            i > 0 && j > 0 && i < w - 1 && j < h - 1
+            && t.Cells[j * w + i] != CubeCell.Rock && t.Cells[j * w + i - 1] != CubeCell.Rock && t.Cells[j * w + i + 1] != CubeCell.Rock
+            && t.Cells[(j - 1) * w + i] != CubeCell.Rock && t.Cells[(j + 1) * w + i] != CubeCell.Rock;
         int next = 0;
         var todo = new Stack<int>();
-        for (int s = 0; s < n * n; s++)
+        for (int s = 0; s < w * h; s++)
         {
-            if (label[s] != 0 || !Clear(s % n, s / n)) continue;
+            if (label[s] != 0 || !Clear(s % w, s / w)) continue;
             label[s] = ++next;
             todo.Push(s);
             while (todo.Count > 0)
             {
                 int k = todo.Pop();
-                int i = k % n, j = k / n;
+                int i = k % w, j = k / w;
                 foreach (var (di, dj) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
                 {
                     int a = i + di, b = j + dj;
-                    // (Only its own square: water beyond it is its neighbours'.)
-                    if (a < CubeTuning.Apron || b < CubeTuning.Apron || a > n - 1 - CubeTuning.Apron || b > n - 1 - CubeTuning.Apron) continue;
-                    if (label[b * n + a] != 0 || !Clear(a, b)) continue;
-                    label[b * n + a] = next;
-                    todo.Push(b * n + a);
+                    // (Only its own squares: water beyond them is its neighbours'.)
+                    if (a < Apron || b < Apron || a > w - 1 - Apron || b > h - 1 - Apron) continue;
+                    if (label[b * w + a] != 0 || !Clear(a, b)) continue;
+                    label[b * w + a] = next;
+                    todo.Push(b * w + a);
                 }
             }
         }
@@ -197,8 +215,8 @@ public class CubeTerrainTests
     }
 
     /// <summary>
-    /// Not a check: with CUBE_SHEET set to a folder, draws the 3 × 3 × 3 block there (CUBE-WORLD-PLAN §14.2 step 3),
-    /// one sheet a layer, side by side, with and without the cube lines.
+    /// Not a check: with CUBE_SHEET set to a folder, draws a reef six squares a side there (CUBE-WORLD-PLAN §14.2
+    /// step 3), one sheet a layer, side by side, with and without the cubes' outlines.
     /// </summary>
     [Fact]
     public void Draws_the_block_when_asked()
@@ -207,9 +225,10 @@ public class CubeTerrainTests
         if (string.IsNullOrEmpty(dir)) return;
         foreach (var seed in SeedValues.Take(3))
         {
-            var all = MakeAll(new CubeSpace(seed, F, L));
-            CubeSheet.Write(System.IO.Path.Combine(dir, $"cubes-{seed:X}.png"), all, F, L, lines: false);
-            CubeSheet.Write(System.IO.Path.Combine(dir, $"cubes-{seed:X}-lines.png"), all, F, L, lines: true);
+            var space = new CubeSpace(seed, F + 2, L);
+            var all = Enumerable.Range(0, L).SelectMany(space.CubesOf).ToDictionary(c => c, c => CubeTerrain.Make(space, c));
+            CubeSheet.Write(System.IO.Path.Combine(dir, $"cubes-{seed:X}.png"), all, F + 2, L, lines: false);
+            CubeSheet.Write(System.IO.Path.Combine(dir, $"cubes-{seed:X}-lines.png"), all, F + 2, L, lines: true);
         }
     }
 }
@@ -230,33 +249,31 @@ public class CubeTimingTests
     public void A_cube_is_made_within_its_budget()
     {
         var space = new CubeSpace(CubeTerrainTests.SeedValues[0], CubeTuning.Footprint, CubeTuning.Layers);
-        CubeTerrain.Make(space, new CubeCoord(4, 4, 4));
+        var cubes = space.CubesOf(4).Take(12).ToList();
+        CubeTerrain.Make(space, cubes[0]);
         double best = double.MaxValue;
         for (int round = 0; round < 3; round++)
         {
             var watch = Stopwatch.StartNew();
-            int n = 0;
-            for (int z = round; z < round + 2; z++)
-            for (int y = 2; y < 6; y++)
-            for (int x = 2; x < 6; x++, n++)
-                CubeTerrain.Make(space, new CubeCoord(x, y, z));
-            best = Math.Min(best, watch.Elapsed.TotalMilliseconds / n);
+            foreach (var c in cubes) CubeTerrain.Make(space, c.OnLayer(round + 1));
+            best = Math.Min(best, watch.Elapsed.TotalMilliseconds / cubes.Count);
         }
         _out.WriteLine($"{best:F2} ms a cube");
-        // (CUBE-WORLD-PLAN §13: 10 ms on a worker; the test machine is given room.)
-        Assert.True(best < 20.0, $"{best:F2} ms a cube");
+        // (CUBE-WORLD-PLAN §13: 20 ms a cube of two squares on a worker; the test machine is given room.)
+        Assert.True(best < 30.0, $"{best:F2} ms a cube");
     }
 
     [Fact]
     public void The_stream_keeps_its_books_within_its_budget()
     {
-        var space = new CubeSpace(CubeTerrainTests.SeedValues[0], 5, 3);
+        var space = new CubeSpace(CubeTerrainTests.SeedValues[0], 6, 3);
         var worker = new TaskCubeWorker(space);
         var stream = new ReefStream(space, worker);
         worker.Stream = stream;
-        var focus = new StreamFocus { Position = new System.Numerics.Vector2(2.5f * Side, 2.5f * Side), Velocity = new System.Numerics.Vector2(6f, 0f) };
+        var at = space.CubesOf(0).OrderBy(c => Vector2.Distance(c.Middle, new Vector2(3f * Side))).First().First.Origin + new Vector2(Side * 0.5f);
+        var focus = new StreamFocus { Position = at, Velocity = new Vector2(6f, 0f) };
         var watch = Stopwatch.StartNew();
-        while (watch.Elapsed.TotalSeconds < 20 && (stream.Held.Count() < 18 || stream.InFlight.Count > 0))
+        while (watch.Elapsed.TotalSeconds < 20 && (stream.Held.Count() < stream.Wanted.Count || stream.InFlight.Count > 0))
         {
             stream.Update(focus, 1f / 60f);
             worker.Drain(stream);

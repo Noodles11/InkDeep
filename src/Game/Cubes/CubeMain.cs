@@ -29,7 +29,7 @@ namespace OctoShoots.Game.Cubes;
 public partial class CubeMain : Node3D
 {
     SeedCode _seed = SeedCode.Parse("KELP7Q2Z");
-    int _footprint = 3, _layers = 3;
+    int _footprint = 5, _layers = 3;
     bool _route;
     float _perfFor;
     string? _captureDir;
@@ -61,7 +61,7 @@ public partial class CubeMain : Node3D
 
     // The frame costs, once she is swimming (the first frames make the first cubes).
     int _perfFrames, _perfOver;
-    double _perfWorst, _perfTotal, _perfClock;
+    double _perfWorst, _perfTotal, _perfClock, _cpuMs, _cpuTotal, _gpuTotal, _renderCpuTotal, _allProcessTotal;
     readonly List<Vector2> _path = new();
     int _pathAt;
 
@@ -84,17 +84,21 @@ public partial class CubeMain : Node3D
         _tuning = SettingsStore.LoadTuning();
         var options = SettingsStore.LoadView();
         Engine.MaxFps = _captureDir is null && _perfFor <= 0f ? options.MaxFps : 0;
+        RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
+        // (Measuring: unpaced by the screen, so a window behind another, which Windows paces down, still shows its own cost.)
+        if (_perfFor > 0f) DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
         ViewOptions.Shadows = options.LightShadows;
         ReefLook.Brightness = Mathf.Clamp(options.Brightness, 0.6f, 1.8f);
 
         // The reef, and where she starts: a gate's mouth of its first cube.
         _space = new CubeSpace(_seed.Value, _footprint, _layers);
-        var first = new CubeCoord(0, 0, 0);
+        // (The reef's cube nearest its north-west corner.)
+        var first = _space.CubesOf(0).OrderBy(c => c.Middle.Length()).First();
         var start = CubeTerrain.Make(_space, first).Gates[0].Mouth;
         _worker = new TaskCubeWorker(_space, Build);
         _stream = new ReefStream(_space, _worker);
         _worker.Stream = _stream;
-        _field = new CubeField(_stream.Terrain, first);
+        _field = new CubeField(_stream.Terrain, CellCoord.Of(start, 0));
         _world = CubeShell.Make(_footprint, start, _tuning);
         _world.Field = _field;
 
@@ -115,7 +119,7 @@ public partial class CubeMain : Node3D
         _sun = new SunLight();
         AddChild(_sun);
         _sun.SetStrength(options.SunLight);
-        AddChild(new Fisheye());
+        if (!Without("fisheye")) AddChild(new Fisheye());
         var layer = new CanvasLayer { Layer = 5 };
         AddChild(layer);
         _overlay = new Label { Position = new Vector2(12f, 12f), Visible = _captureDir is null || OS.GetCmdlineUserArgs().Contains("--f3") };
@@ -123,6 +127,22 @@ public partial class CubeMain : Node3D
         layer.AddChild(_overlay);
         ApplyLook(look);
         if (_route) PlanRoute(start);
+        if (OS.GetCmdlineUserArgs().Contains("--cube-nodes")) GetTree().CreateTimer(2.0).Timeout += ListProcessing;
+        if (OS.GetCmdlineUserArgs().Contains("--cube-nomusic") && GetTree().Root.GetNodeOrNull("MusicManager") is { } music) music.SetProcess(false);
+    }
+
+    /// <summary>Verification (--cube-without=bell,beam,…): parts of the scene left out, to find what a frame costs.</summary>
+    static bool Without(string part) => OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--cube-without=")) is { } w && w["--cube-without=".Length..].Split(',').Contains(part);
+
+    /// <summary>Verification (--cube-nodes): every node that runs a step of its own each frame.</summary>
+    void ListProcessing()
+    {
+        void Walk(Node n)
+        {
+            if (n.IsProcessing() || n.IsPhysicsProcessing() || n.IsProcessingInternal() || n.IsPhysicsProcessingInternal()) GD.Print($"Processing: {n.GetPath()} ({n.GetType().Name}{(n.IsProcessingInternal() ? ", internal" : "")})");
+            foreach (var c in n.GetChildren()) Walk(c);
+        }
+        Walk(GetTree().Root);
     }
 
     /// <summary>The stream's work off the main thread that is the game's: a cube's meshes (nothing is stocked yet).</summary>
@@ -158,6 +178,7 @@ public partial class CubeMain : Node3D
 
     public override void _Process(double delta)
     {
+        long processStart = System.Diagnostics.Stopwatch.GetTimestamp();
         float dt = (float)delta;
         _frame++;
         var p = _world.Player;
@@ -166,20 +187,22 @@ public partial class CubeMain : Node3D
         var focus = new StreamFocus { Position = p.Position, Velocity = p.Velocity, Layer = _layer };
         _stream.Update(focus, dt);
         _worker.Drain(_stream);
+        while (_worker.Errors.TryDequeue(out var error))
+            if (_errorsShown++ < 5) GD.PushError($"Cube work failed: {error}");
         _view.Take(_stream);
         _view.Apply();
-        _field.Recenter(CubeCoord.Of(p.Position, _layer));
+        _field.Recenter(CellCoord.Of(p.Position, _layer));
         if (_field.Refresh()) _fieldChanged = true;
 
         // She waits for her own cube and what she can swim into (the first frames only).
-        if (!_ready) _ready = _stream.State(CubeCoord.Of(p.Position, _layer)) == CubeState.Active && _stream.Held.All(c => c.Z != _layer || _stream.Terrain(c) is not null) && _view.Pending == 0;
+        if (!_ready) _ready = _stream.State(CubeId.Of(p.Position, _layer)) == CubeState.Active && _stream.Held.All(c => c.Z != _layer || _stream.Terrain(c) is not null) && _view.Pending == 0;
         _accumulator += delta;
         if (!_ready) _accumulator = 0;
         int steps = 0;
         while (_accumulator >= PlaneWorld.Dt && steps < 8)
         {
             _world.Step(ReadInput());
-            _field.Recenter(CubeCoord.Of(p.Position, _layer));
+            _field.Recenter(CellCoord.Of(p.Position, _layer));
             _accumulator -= PlaneWorld.Dt;
             steps++;
         }
@@ -187,21 +210,30 @@ public partial class CubeMain : Node3D
 
         var at = System.Numerics.Vector2.Lerp(p.PrevPosition, p.Position, alpha);
         var eye = new Vector3(at.X, LevelMap.SwimBand, at.Y);
-        _bell.Sync(_world, alpha, dt);
-        SyncLight(dt);
-        _beam.Sync(_world, _bell.LightPosition, dt);
+        if (!Without("bell")) _bell.Sync(_world, alpha, dt);
+        if (!Without("light")) SyncLight(dt);
+        if (!Without("beam")) _beam.Sync(_world, _bell.LightPosition, dt);
         _camera.Track(eye, dt, snap: _frame <= 2);
         // Under an arch she is seen through it.
-        bool hidden = _stream.Terrain(CubeCoord.Of(p.Position, _layer))?.CanopyAt(Mathf.RoundToInt(p.Position.X), Mathf.RoundToInt(p.Position.Y)) == true;
+        bool hidden = _stream.Terrain(CubeId.Of(p.Position, _layer))?.CanopyAt(Mathf.RoundToInt(p.Position.X), Mathf.RoundToInt(p.Position.Y)) == true;
         _seeThrough = Mathf.MoveToward(_seeThrough, hidden ? 1f : 0f, dt * (hidden ? 4.5f : 2.2f));
         _view.SeeThrough(_bell.GlobalPosition, 4.5f, _seeThrough);
-        _snow.Her(_bell.GlobalPosition, new Vector3(p.Velocity.X, 0f, p.Velocity.Y));
-        _snow.Tick(dt, eye + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
+        if (!Without("snow"))
+        {
+            _snow.Her(_bell.GlobalPosition, new Vector3(p.Velocity.X, 0f, p.Velocity.Y));
+            _snow.Tick(dt, eye + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
+        }
 
+        _cpuMs = (System.Diagnostics.Stopwatch.GetTimestamp() - processStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
         Measure(delta);
         if (_overlay.Visible && _frame % 6 == 0) _overlay.Text = Overlay();
         Capture();
+        _tailMs = (System.Diagnostics.Stopwatch.GetTimestamp() - processStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency - _cpuMs;
     }
+
+    double _tailMs, _lateFor, _lateMost;
+    int _lateFrames;
+    int _errorsShown;
 
     /// <summary>Her light in the water and on the reef (light_field, reef_show), as the game sets it.</summary>
     void SyncLight(float dt)
@@ -294,14 +326,14 @@ public partial class CubeMain : Node3D
     /// </summary>
     void PlanRoute(System.Numerics.Vector2 start)
     {
-        var made = new Dictionary<CubeCoord, CubeTerrain>();
-        for (int y = 0; y < _footprint; y++)
-        for (int x = 0; x < _footprint; x++)
-            made[new CubeCoord(x, y, 0)] = CubeTerrain.Make(_space, new CubeCoord(x, y, 0));
-        var all = new CubeField(c => made.GetValueOrDefault(c), new CubeCoord(_footprint / 2, _footprint / 2, 0), _footprint);
+        var made = _space.CubesOf(0).ToDictionary(c => c, c => CubeTerrain.Make(_space, c));
+        var all = new CubeField(c => made.GetValueOrDefault(c), new CellCoord(_footprint / 2, _footprint / 2, 0), _footprint);
         var stops = new List<System.Numerics.Vector2> { start };
-        foreach (var c in new[] { new CubeCoord(1, 0, 0), new CubeCoord(1, 1, 0), new CubeCoord(0, 1, 0) })
-            if (made.TryGetValue(c, out var t)) stops.Add(t.Gates[0].Mouth);
+        // A ring: round the cubes nearest the middle of the reef, in turn about it, and back.
+        var middle = new System.Numerics.Vector2(_footprint * CubeTuning.Side * 0.5f);
+        foreach (var t in made.Values.OrderBy(t => System.Numerics.Vector2.Distance(t.Cube.Middle, middle)).Take(4)
+                     .OrderBy(t => MathF.Atan2(t.Cube.Middle.Y - middle.Y, t.Cube.Middle.X - middle.X)))
+            stops.Add(t.Gates[0].Mouth);
         stops.Add(start);
         int n = _footprint * CubeTuning.Side + 1;
         float clearance = _tuning.PlayerRadius + 0.3f;
@@ -345,18 +377,37 @@ public partial class CubeMain : Node3D
         _perfClock += delta;
         if (ms > _perfWorst) _perfWorst = ms;
         if (ms > 20.0) _perfOver++;
+        // A cube in her view on her layer not drawn yet: late.
+        var cell = CellCoord.Of(_world.Player.Position, _layer);
+        bool late = false;
+        for (int dy = -1; dy <= 1 && !late; dy++)
+        for (int dx = -1; dx <= 1 && !late; dx++)
+        {
+            var c = CubeId.Of(new CellCoord(cell.X + dx, cell.Y + dy, _layer));
+            if (_space.Inside(c) && !_stream.Has(c, CubeWork.Mesh)) late = true;
+        }
+        _lateFor = late ? _lateFor + delta : 0;
+        if (late) _lateFrames++;
+        _lateMost = Math.Max(_lateMost, _lateFor);
+        _cpuTotal += _cpuMs;
+        _gpuTotal += RenderingServer.ViewportGetMeasuredRenderTimeGpu(GetViewport().GetViewportRid());
+        _renderCpuTotal += RenderingServer.ViewportGetMeasuredRenderTimeCpu(GetViewport().GetViewportRid());
+        _allProcessTotal += Performance.GetMonitor(Performance.Monitor.TimeProcess) * 1000.0;
         if (_perfFor <= 0f || _perfClock < _perfFor) return;
         var p = _world.Player.Position;
         GD.Print(string.Format(CultureInfo.InvariantCulture,
-            "Cube perf: {0} frames in {1:0.0} s, mean {2:0.00} ms, worst {3:0.0} ms, over 20 ms: {4}; worst upload {5:0.00} ms; window moves {6}; at {7:0},{8:0} cube {9}; nodes {10} in use, {11} pooled",
-            _perfFrames, _perfClock, _perfTotal / _perfFrames, _perfWorst, _perfOver, _view.WorstMs, _field.Recentres, p.X, p.Y, CubeCoord.Of(p, _layer), _view.InUse, _view.Pooled));
+            "Cube perf: {0} frames in {1:0.0} s, mean {2:0.00} ms (our frame code {12:0.00} ms + {16:0.00} ms after it, every node's process {14:0.00} ms, render CPU {15:0.00} ms, GPU {13:0.00} ms), worst {3:0.0} ms, over 20 ms: {4}; worst upload {5:0.00} ms; window moves {6}; at {7:0},{8:0} cube {9}; nodes {10} in use, {11} pooled",
+            _perfFrames, _perfClock, _perfTotal / _perfFrames, _perfWorst, _perfOver, _view.WorstMs, _field.Recentres, p.X, p.Y, CubeId.Of(p, _layer), _view.InUse, _view.Pooled,
+            _cpuTotal / _perfFrames, _gpuTotal / _perfFrames, _allProcessTotal / _perfFrames, _renderCpuTotal / _perfFrames, _tailMs));
+        GD.Print(string.Format(CultureInfo.InvariantCulture, "Cube perf: a cube in view undrawn on {0} frames, {1:0.00} s at most; jobs: {2}", _lateFrames, _lateMost,
+            string.Join(", ", _worker.Timing.Select(t => $"{t.Key} {t.Value.Count} × {t.Value.Total / t.Value.Count:0.0} ms (most {t.Value.Most:0.0})"))));
         GetTree().Quit();
     }
 
     string Overlay()
     {
         var p = _world.Player.Position;
-        var here = CubeCoord.Of(p, _layer);
+        var here = CellCoord.Of(p, _layer);
         var sb = new StringBuilder();
         sb.Append(CultureInfo.InvariantCulture, $"{Engine.GetFramesPerSecond():0} fps   worst {_perfWorst:0.0} ms   over 20 ms: {_perfOver}\n");
         sb.Append(CultureInfo.InvariantCulture, $"cube {here}   at {p.X:0.0}, {p.Y:0.0}   window moves {_field.Recentres}\n");
@@ -369,7 +420,7 @@ public partial class CubeMain : Node3D
             {
                 for (int dx = -1; dx <= 1; dx++)
                 {
-                    var c = new CubeCoord(here.X + dx, here.Y + dy, z);
+                    var c = CubeId.Of(new CellCoord(here.X + dx, here.Y + dy, z));
                     string s = !_space.Inside(c) ? "·" : _stream.State(c) switch
                     {
                         CubeState.Active => "A", CubeState.Preloaded => "P", CubeState.Preview => "v", CubeState.Below => "b", CubeState.Mask => "m", _ => "-",
@@ -389,7 +440,7 @@ public partial class CubeMain : Node3D
         string path = $"{_captureDir}/cube_{frame:0000}.png";
         GetViewport().GetTexture().GetImage().SavePng(path);
         var p = _world.Player.Position;
-        GD.Print(string.Format(CultureInfo.InvariantCulture, "Captured {0}  pos {1:0.0},{2:0.0}  cube {3}  {4:0} FPS", path, p.X, p.Y, CubeCoord.Of(p, _layer), Engine.GetFramesPerSecond()));
+        GD.Print(string.Format(CultureInfo.InvariantCulture, "Captured {0}  pos {1:0.0},{2:0.0}  cube {3}  {4:0} FPS", path, p.X, p.Y, CubeId.Of(p, _layer), Engine.GetFramesPerSecond()));
         if (_captureFrames.Count == 0) GetTree().Quit();
     }
 }
