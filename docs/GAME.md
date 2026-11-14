@@ -10,7 +10,8 @@ page**, then the system documents (§0), then DESIGN-TOPDOWN.md, then anything i
 |---|---|
 | **GAME.md** (this page) | The whole game in brief, and the decisions that bind the rest. |
 | [THEME-BIBLE.md](THEME-BIBLE.md) | The guideline: theme, pillars, lore, look, sound, voice, and the theme tests every idea must pass. |
-| [LIGHT-AND-GRAPH.md](LIGHT-AND-GRAPH.md) | Light as life: her aura and beam, what light does, charge and prism stones, murklings hunting light; the dive as a graph of reefs; places and sub-levels. |
+| [LIGHT-AND-GRAPH.md](LIGHT-AND-GRAPH.md) | Light as life: her aura and beam, what light does, charge and prism stones, murklings hunting light; the dive's shape (the cube reef); places and sub-levels. |
+| [proposals/CUBE-WORLD-PLAN.md](proposals/CUBE-WORLD-PLAN.md) | The cube reef the dive is: its cubes and layers, generation, streaming, diving and climbing, the currents, what a cube holds, bosses' arenas, records and saves, the budget. |
 | [DIVE.md](DIVE.md) | Jellies (save slots), what she keeps and loses, the camera, havens, folk as depth bosses, leak caves, labyrinths, requests and chains. |
 | [ADVENTURE.md](ADVENTURE.md) | Leaks, the ink, fish that turn, corrupted fish, the abyss reef, her oral arm and the HUD's gauge, Crab Deals. |
 | [CORRUPTION.md](CORRUPTION.md) | The corruption war: every corrupted creature, meters and corruption rings, Drippus Prime, Queen Clam, light springs, her corruption meter. |
@@ -20,7 +21,7 @@ page**, then the system documents (§0), then DESIGN-TOPDOWN.md, then anything i
 | [TITLE-MENU.md](TITLE-MENU.md) | The title screen, its cards, statistics, the Sea-pedia, saves and settings. |
 | [VISUAL-SHOWCASE.md](VISUAL-SHOWCASE.md), [ART-LOOKS.md](ART-LOOKS.md) | The painted look (the Blue Hollow), her beam's light, and the earlier looks. |
 | [DESIGN-TOPDOWN.md](DESIGN-TOPDOWN.md) | The detailed rules and numbers of the plane: movement, camera, the level generator, lighting, UI. Parts are out of date (§13). |
-| `proposals/` | Ideas not built: the deeper fish, the reef redo, the beam pearls plan, the project review. |
+| `proposals/` | Ideas not built (but for the cube world's plan, built): the deeper fish, the reef redo, the beam pearls plan, the project review. |
 | `archive/` | Superseded designs and the reasoning behind built features (the 2D and 3D designs, the open-reef RPG, the old proposals). Read for history, never for rules. |
 
 ## 1. The game in one breath
@@ -30,8 +31,9 @@ dives after her family through a reef poisoned by the Leak. Her light is everyth
 the corrupted, how she seals the leaks, and it is her life. Every pearl she swallows becomes part of her light; every
 creature she defeats is freed, not killed; every depth ends with a neighbour to bring home.
 
-The pillars, the tests and the voice are in the Theme Bible. The game in numbers: a dive is a tutorial and five depths
-of five rows of reefs; a reef takes a few minutes; a dive is saved at every reef.
+The pillars, the tests and the voice are in the Theme Bible. The game in numbers: a dive is one reef 36 layers deep,
+the warm-up layer first and five depths' bosses below it; a layer is 576 m across in cubes of two 64 m squares; a dive
+is saved in its havens.
 
 ## 2. The story
 
@@ -62,14 +64,20 @@ the reef was never being called home. It was being kept.
 
 ## 4. The dive
 
-- **A jelly is a save slot** (three on the title). Choosing one continues her dive or starts a new one (DIVE §1).
-- **The tutorial**, Depth 0, the Sunlit Shallows: two set reefs holding every kind of place, nothing explained in words.
-  Passed once, dives start in Depth 1.
-- **The depths:**
+- **A jelly is a save slot** (three on the title). Choosing one takes her dive up in the haven it was saved in, or
+  starts a new one (DIVE §1).
+- **The cube reef** (DIVE §1; docs/proposals/CUBE-WORLD-PLAN.md): one continuous reef, layer under layer, each layer a
+  9 × 9 footprint of 64 m squares laid in two-square cubes and streamed in round her. Over the void she dives to the
+  layer below (Shift, the d-pad's down); under a well of the layer above she climbs back one layer (Q, its up); thirty
+  seconds between changes of layer. A gentle drift leads her to cubes she has not been in, and the edge behind the one
+  she came by is shut by a current she cannot swim against.
+- **The warm-up layer**, the Sunlit Shallows: bright, no creatures, no curse rooms, no boss; where a new jelly learns,
+  nothing explained in words, and veterans dive straight through.
+- **The layers stand for the depths:**
 
-  | Depth | Reef | Its boss | State |
+  | Layer | Reef | Its boss | State |
   |---|---|---|---|
-  | 0 | Sunlit Shallows | none (the open rift) | built (the tutorial) |
+  | 0 | Sunlit Shallows | none (the warm-up layer) | built |
   | 1 | Kelp Jungle | Grandmother Tull | built |
   | 2 | Sunken Galleon | Kip | built |
   | 3 | Coral Carnival | Fennel | built |
@@ -77,40 +85,41 @@ the reef was never being called home. It was being kept.
   | 5 | The Abyss | Bubbles | built; its own creatures and the keystone's boss planned (§12) |
   | 6 | The Tank | The Hand | **planned**: the finale and the ending (§12) |
 
-  Once a neighbour is freed, her depth's boss from then on is the Leak's own, Drippus Prime. Until the Tank is built,
-  the dive loops after Depth 5 into the next cycle, Menace still rising; after the ending, the loop stays as the endless
-  mode.
-- **A depth is a graph of reefs** (LIGHT-AND-GRAPH §6): four rows of two to three reefs, then the boss's reef. Each reef
-  has two to three holes down, each ringed in the colour of the reef it leads to (a plain reef, a clam room, a curse
-  den, the boss). The pause menu's chart shows what she has seen of the graph.
-- **Havens** (DIVE §4): small safe sub-levels behind a third of the reefs' mouths, always bright, each with its shop
-  and a pick of the services she has unlocked. Entering one heals her whole and banks everything she carries.
+  A layer's boss is rolled as she first arrives (more likely the more layers she has left without freeing one) and
+  waits in an arena basin a few cubes away (DIVE §5). Once a neighbour is freed, her layer's boss from then on is the
+  Leak's own, Drippus Prime; so is every boss below layer 5. The reef goes 36 layers down; the Tank's finale is not
+  placed in it yet.
+- **What a cube holds** (CUBE-WORLD-PLAN §9) is decided as she first swims into it: its murklings (never on the warm-up
+  layer, never in the cube she dives into), and now and then a mouth into a place of its own. The pause menu's chart
+  is her layer: the cubes she has claimed and what they hold.
+- **Havens** (DIVE §4): small safe sub-levels behind mouths, two a layer at most, always bright, each with its shop and
+  a pick of the services she has unlocked. Entering one heals her whole, banks everything she carries and saves the dive.
 - **What she keeps** (DIVE §2): her level, skills and freed folk always; what is banked (pearls and shells) between
-  dives; what she carries since the last haven is lost if she dims.
+  dives; what she carries since the last haven is lost if she dims, and her next dive is a new reef.
 
 ## 5. A reef
 
-- **Its leak** (ADVENTURE §1): a brittle star of ink over the shut hole, seen only in light. Its ink spreads as dots
-  through the water, and murklings bud out of it (ADVENTURE §4). Sealing it with her light opens every hole of the reef, sends
-  a wave of light out that dissolves the ink and briefly shows the corrupted it touches, and pays her experience.
-- **Its places** (LIGHT-AND-GRAPH §7): secrets (sealed walls with labyrinths behind), shops, shell caches, Crab Deals,
-  clam rooms, leak caves (sub-levels with their own leak, harmful until sealed) and the holes. A template gives each reef
-  its subject and cast (DESIGN-TOPDOWN §4.8).
+- **Its leaks** (ADVENTURE §1) are in its leak caves only: a brittle star of ink seen only in light, its ink spreading
+  as dots through the cave's water, murklings budding out of it (ADVENTURE §4). Sealing it with her light sends a wave
+  of light out that dissolves the ink and briefly shows the corrupted it touches, heals her and pays her experience.
+- **Its places** (LIGHT-AND-GRAPH §7), each behind a mouth: havens, secret labyrinths, leak caves (the curse rooms,
+  harmful until sealed) and clam rooms; inside a leak cave, its own secrets, shops, shell caches and Crab Deals as a
+  level's (DESIGN-TOPDOWN §4.8).
 - **Its light**: light springs where she heals, charge stones her beam lights (lures, lamps, and a trio that hides a
   cache), prism stones she pushes into line to colour her light for coloured seals.
 - **Its life**: healthy reef fish (clownfish in anemones, blue tangs, schools of chromis, pufferfish, flounders) going
   about their day; the ink never turns them; currents and geysers; the reef director that keeps the reef acting when she is not
   there.
-- **Where she is shown**: the minimap (her surroundings, the unseen filled as rock), the Tab map (the whole level under
-  fog), the chart (the dive).
+- **Where she is shown**: the minimap (her surroundings, the unseen filled as rock), the Tab map (the whole layer under
+  fog), the chart (her layer's claimed cubes).
 
 ## 6. The corrupted
 
 The Leak's creatures give off no light: they are seen only where light falls on them. Each carries a corruption meter;
 emptied, it is freed, leaving a core of light.
 
-- **Murklings only** (ADVENTURE §4): on every reef, at every depth, the only creatures are murklings budded out of the
-  leaks' ink: basic ones that cling and drink her light, throwers, shoals (a whole school at once, ringing her) and
+- **Murklings only** (ADVENTURE §4): the only creatures are murklings, stocked into the cube reef's cubes as she claims
+  them and budded out of the leak caves' ink: basic ones that cling and drink her light, throwers, shoals (a whole school at once, ringing her) and
   primes (which break into murklings). The deeper (the Menace), the bigger and the more of them. Their size is their
   corruption; they wear no ring.
 - **Kept, switched off** (CORRUPTION; ADVENTURE §3–4): the war's creatures (Blightroots, Blotters, Thumpsquirts,

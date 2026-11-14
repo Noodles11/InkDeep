@@ -1,12 +1,12 @@
-# Light as life, and the dive as a graph (proposal)
+# Light as life, and the dive's shape
 
-The plan for Ink Deep's next shape, fitted to the game as it is (docs/DIVE.md: a dive of seeded levels, havens, leak
-caves, folk bosses). Light comes first: it is what the murklings hunt, what she lives on and what frees the corrupted.
-The dive turns from a line into a graph after that. Values marked *(tune)* are starting points.
+Ink Deep's light and the shape of its dive (docs/DIVE.md: the cube reef, havens, leak caves, folk bosses). Light comes
+first: it is what the murklings hunt, what she lives on and what frees the corrupted. The dive is one continuous reef
+of layers (§6). Values marked *(tune)* are starting points.
 
 Decided:
 
-- The dive becomes a graph of reefs (§6).
+- The dive is the cube reef (§6; docs/proposals/CUBE-WORLD-PLAN.md).
 - The murklings' extra behaviour (throws, fish hunting, primes) is kept, but only on variants; the basic murkling does
   none of it (§3). Requests and chains that count primes keep working.
 - The corrupted are invisible outside her light, at every depth, the sunlit shallows included (§4).
@@ -228,7 +228,7 @@ The new effects go on existing pearls:
 
 - The Anglerfish Lure is the **decoy** (above).
 - The Remora Sucker is the **magnet** for cores (built).
-- The Brass Compass and the Sea Chart Nautilus between them are the **cartographer**, showing the graph (§6.3).
+- The Brass Compass and the Sea Chart Nautilus between them are the **cartographer**, showing the minimap and every place on both maps.
 - The Coral Polyp stays the slow mend of her light.
 
 ### 5.2 One light rule per folk boss (built)
@@ -246,99 +246,30 @@ holding it on the pearl:
 
 Drippus Prime and Queen Clam keep their rules (the whole body; the pearl while the shell is open).
 
-## 6. The dive as a graph (built)
+## 6. The dive's shape: the cube reef (built)
 
-### 6.1 Shape
+The dive is no longer a line or a graph of seeded levels: it is one continuous reef of layers streamed in cubes,
+described in docs/proposals/CUBE-WORLD-PLAN.md and docs/DIVE.md. In short:
 
-A dive is a layered graph of reefs, built from the dive's seed a depth at a time as it is reached (`DiveGraph`,
-`DiveTuning`, in `src/Core/Run`; the same from the same seed):
-
-- **Depths**: the five depths, as before. Each has 4 rows of reefs and ends in its folk boss's reef, one wide (row 5).
-  The tutorial is two reefs, one wide; the very first row of the dive (where every dive begins) is one reef.
-- **Lanes**: each row has 2 to 3 reefs. Each reef has 2 to 3 holes down to the nearest reefs of the row below (fewer
-  only where that row is narrower, or is the boss's); the boss's reef leads to every reef of the next depth's first row.
-  Now and then (15%) a reef has a **shortcut** past the row below to the one after (never to the boss's).
-- **Menace** comes from a reef's depth alone, never from how many reefs she has crossed. A shortcut is a reef fewer
-  for her pearls and shells, not a harder one.
-- **Rules the generator keeps** (it retries the depth on its next sub-seed if one breaks):
-  - every reef can be reached from the top, and leads on to its depth's boss;
-  - no two holes of a reef lead to the same reef;
-- Past the fifth depth the loop starts again below the tutorial, as before.
-
-### 6.2 Kinds of reef
-
-| Kind | What it is |
-|---|---|
-| Reef | an ordinary seeded level |
-| Boss | the bottom of each depth, one reef wide |
-| Treasure | a reef with a clam room (rows 1–4, 30%; at least one a depth) |
-| Den | a reef with a curse den (rows 2–4, 20%) |
-
-Treasure and Den follow one rule each (`ReefPlaces`): the rows they may stand in, how often, how many at least a depth,
-and never straight after one of their kind. A reef's template is drawn to fit its kind (none forbidding the room it
-holds, none requiring one it does not; a treasure reef may hold the curse den its template asks for too). The spots
-inside a reef (a secret, a shop, a shell cache, a Crab Deal on one reef of a depth) are rolled by its plan.
-
-### 6.3 Holes and choosing
-
-- **Opening the holes**: a reef has a hole for each of its exits: its Exit's chamber, and further chambers sunk the same
-  way (`PoiKind.Hole`), far from the start and the exit and 28 m apart. Sealing the reef's leak (on a boss's reef,
-  freeing the boss) opens them all at once.
-- **Which leads where**: left to right across the map as the reefs they lead to lie left to right across the rows below.
-- **Showing where each leads**: each hole's rim is a ring of light in the colour of the reef below (`HoleView`,
-  `ReefKinds`): plain reef pale water, clam room gold, curse den red, haven green, boss violet. Faint while sealed, it
-  brightens and breathes once the holes open. Over a hole the prompt says it too ("dive · a clam room below").
-- **Its emblem** (`HoleEmblems`): in each open hole, lying flat in the middle of its rim's ring (half the hole's width), a faint see-through line
-  drawing in the same colour, breathing with it: a fish for a plain reef, a lantern for a haven, the Leak's
-  five-armed star for the boss, an open clam with its pearl for a clam room, a spiral for a curse den. A fissure,
-  which has no rim, still has its emblem.
-- **The level below**: each hole's reef is made off the main thread, the nearest first; the one under the hole she is
-  nearest shows through it, and she dives into whichever she is over.
-- **The chart**: the pause menu's Chart tab (`ChartView`) shows the depth she is in and the next depth's first row: the
-  reefs she has been on, filled; the one she is on, ringed in gold; the reefs she can see (every hole's reef of a reef
-  she has been on, and down to one row below her, two more for each cartographer pearl: Sea Chart Nautilus, Brass
-  Compass), in their kind's colour; the rest unknown.
-
-### 6.4 In the code
-
-- **LevelId** has a **Lane**; its Level is the row. A reef's streams come from (cycle, depth, row, lane).
-- **The graph** (`DiveGraph.Of(seed)`): `Node`, `Row`, `ExitsOf`, `KindOf`, `Resolve`. `LevelPlan.For` takes a reef's
-  kind and its exits from it (`LevelPlan.Exits`, `ExitKinds`, left to right). There is no line of levels any more: where a reef leads is its exits.
-- **The map**: `LevelMap.Holes` (each its shaft, the reef it leads to and its kind), `InShaft`, `HoleAt`;
-  `PlaneWorld.HoleUnder`.
-- **The save**: the dive's save keeps the reef she is on (`SuspendedRun.Lane`) and the reefs she has been on
-  (`Reefs`). The graph itself is rebuilt from the seed. An older save is resumed on lane 0 of its row.
-- **Unchanged**: the Tide Fan's requests ("seal 3 leaks on the way down") and the chains ("dive to Depth N") count
-  depths and kinds, so they keep working.
-- **Verification**: `--lane=K` (with `--depth=`, `--level=`), `--at=holeK` (over the K-th hole from the left),
-  `--at=rimK` (a few metres south of it), `--pause-tab=5` (the chart).
+- **Layers** for depths: the warm-up layer first, then layer under layer, each a 9 × 9 footprint of 64 m squares laid
+  in two-square cubes. Each layer stands for a depth (its look, its menace, its folk boss).
+- **The way down** is the void: over it, past the cooldown, she dives to the layer below; under a well of the layer
+  above she may climb back one layer.
+- **What a cube holds** is decided as she first swims into it (`CubeDirector`): its stock of murklings, and now and then
+  a mouth into a place of its own (§7). A layer may hold a boss in an arena fixed as she arrives.
+- **The chart**: the pause menu's Chart tab (`ChartView`) is her layer: the cubes she has claimed, what they hold,
+  the cubes beside them, the edges the wake current holds, and where she is.
 
 ## 7. Places and sub-levels (built)
 
-- **One rule for each kind of place** (`PlaceRules`): its sort, the first row of a depth it may stand in, how often a
-  reef holds one, and how far it keeps from other places. `LevelPlan` rolls them, `CaveLayout` spaces them and
-  `LevelValidator` holds a level to them.
-
-  | Kind | Sort | From row | How often | Apart |
-  |---|---|---|---|---|
-  | Secret | sub-level | 1 | 40% | 17 m (20 m from another cave) |
-  | Shop | spot | 2 | 45% | 17 m (20 m) |
-  | Shell cache | spot | 2 | 60% | 17 m |
-  | Crab Deal | spot | 2 | one reef a depth, 60% of depths past the first | 17 m (20 m) |
-  | Clam room | spot | 1 | the reef's kind (§6.2) | 17 m (20 m) |
-  | Leak cave | sub-level | 2 | the reef's kind (§6.2), or the template's (a clam-room reef's, from row 2) | 17 m (20 m) |
-  | Hole | spot | 1 | one for each exit past the first | 17 m (28 m from another hole) |
-
-  Every place keeps 30 m from the start and from the exit; the early place lies within 38 m of the start. A clam room,
-  and a shop are rooms in the reef's rock; a leak cave and a secret are ways into sub-levels (a leak cave; a labyrinth,
-  docs/DIVE.md §6.1).
-- **Sub-levels are made with their reef**, on the same thread right after it, each from its own sub-seed (its reef's
-  cycle, depth, row and lane in it): `LevelShape.Caves`. A sub-level has no sub-levels of its own. A reef under a hole is
-  made with its caves before she dives.
+- **Every place is behind a mouth** in a claimed cube's socket: a haven, a leak cave (the curse room), a secret's
+  labyrinth (docs/DIVE.md §6.1) or a clam room. Each is a level of its own, made from its own sub-seed as she swims in
+  (the ride's fade covers it); a sub-level has no sub-levels of its own.
+- **Inside a sub-level** the classic rules for places still hold (`PlaceRules`, `LevelPlan.ForCave`, `CaveLayout`,
+  `LevelValidator`): a leak cave's secret and its leak, a clam room's room.
 - **Coming back**:
-  - The reef as it was made is kept while she is below, so nothing is made on the way back; she comes back out of the
-    mouth she went in by, swimming out of it, the reef as she left it.
-  - A cave she leaves unsealed keeps its state, should she go back in (till she leaves the reef). A sealed one's mouth
+  - The layer is kept as she left it while she is behind a mouth; she comes back out of the mouth she went in by.
+  - A cave she leaves unsealed keeps its state, should she go back in (till she leaves the layer). A sealed one's mouth
     closes behind her.
 - **The ride in and out** is a short fade (under half a second of black), the loader showing only if the place is
   not made yet.
@@ -352,7 +283,7 @@ below it (`Stamp`, the stamp seeds), which the levels no longer shared. The rest
 | System | Why it stays |
 |---|---|
 | Her shots, their reserve and its refill | Off in the game (§5): her beam is her one attack. The sim keeps them (`PlaneOptions.Shots`) till the shot pearls are carried over to the beam or let go. |
-| Leaks and the ink's dots | Sealing a reef's leak opens its holes (§6.3): still the heart of a reef. |
+| Leaks and the ink's dots | The heart of a leak cave: the game's leaks are only there now. |
 | Blightroots and the creatures they raise | The dens' hearts and the templates' casts. |
 | Murklings hunting fish, murklings throwing | The variants (§3.2): only they hunt and throw; the basic murkling does neither. |
 | The other corrupted kinds' own lights | Until they too are seen only in her light (§8, stage 4). |
@@ -366,9 +297,9 @@ below it (`Stamp`, the stamp seeds), which the levels no longer shared. The rest
 | 3 | The basic murkling on the registry; variants by depth — built | yes |
 | 4 | Invisible in the dark (built for murklings; the other corrupted kinds follow); cores and healing; the magnet — built | yes |
 | 5 | Pearls sorted and moved; one light rule per boss — built | yes |
-| 6 | The dive graph, the reef kinds and their place rules, the holes, the chart — built | yes |
-| 7 | The rules for the places within a reef; sub-levels made with their reef; the return; short transitions — built | yes |
-| 8 | The save for the graph (and older saves migrated); the death fade and the dive's summary — built (docs/DIVE.md §2) | yes |
+| 6 | The dive's shape — built as a graph of reefs, then replaced by the cube reef (§6) | yes |
+| 7 | The places behind mouths; the return; short transitions — built | yes |
+| 8 | The death fade and the dive's summary — built (docs/DIVE.md §2); the save is the haven's (docs/DIVE.md §2) | yes |
 | 9 | What nothing uses any more goes (the line of levels, the shared stamps); the rest reviewed (§9) — built | no |
 
 Each stage ends with the build, the tests and a play check in the game, and is committed on its own.

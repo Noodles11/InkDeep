@@ -500,8 +500,10 @@ run in the reef (`--cube-boss`, `--cube-chart=`, `--cube-save=`, `--cube-resume=
 4. **The arena and the boss table** (§9.1): done.
 5. **Records and haven checkpoints** (§10): reaching a haven saves the dive there (`CubeDiveSave` in the dive's save);
    continuing puts her back in that haven. The pause menu's chart is her layer's claimed cubes.
-6. **Retire** the dive graph, level plans, the hole views and the loading splash between reefs; rewrite GAME, DIVE
-   and LIGHT-AND-GRAPH to the reef as it then is. *Not done yet.*
+6. **The seeded levels' dive retired:** every dive is in the cube reef; diving down holes to a level below, the hole
+   views and the dive graph's chart are gone, and GAME, DIVE and LIGHT-AND-GRAPH describe the reef. The dive graph and
+   level plans stay in Core, where the generator (the sub-levels) and the test suite's levels are made with them;
+   `--classic` shows one seeded level for verification.
 
 
 ## 16. Still open
