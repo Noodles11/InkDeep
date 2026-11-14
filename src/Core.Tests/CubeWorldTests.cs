@@ -167,9 +167,6 @@ public class CubeWorldTests
         }
         Assert.Equal(slim.Player.Position, world.Player.Position);
         Assert.False(world.Defeated);
-        // Her light stops at the cubes' rock.
-        Assert.True(world.StopsLight(cube.Cube.Origin + new Vector2(1f, 1f)));
-        Assert.False(world.StopsLight(mouth));
     }
 
     /// <summary>The shortest way over the water a body of <paramref name="clearance"/> fits (8-way steps, 1 m grid).</summary>

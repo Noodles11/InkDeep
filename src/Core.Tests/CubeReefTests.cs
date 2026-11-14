@@ -43,7 +43,7 @@ public class CubeReefTests
     {
         var reef = new CubeReef(seed, 5, 3);
         var map = reef.Layer(0, reef.Start);
-        var world = new PlaneWorld(map, new Tuning(), options: new PlaneOptions { Corruption = false, InkMurklings = false });
+        var world = new PlaneWorld(map, new Tuning(), options: new PlaneOptions { Corruption = false });
         Assert.Equal(reef.Start, world.Player.Position);
         Assert.True(world.Clear(world.Player.Position, world.Radius));
         // A layer's rim squares outside the reef are rock.
