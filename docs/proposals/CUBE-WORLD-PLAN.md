@@ -179,19 +179,19 @@ the player code nor the generator knows about loading.
   is running in it. Each pin is a counted reference with a reason, shown in the debug overlay.
 - **Depth changes:** it readies the cube below for arrival (§7) and swaps layers.
 
-### 5.3 The simulation reads a window, not a map
+### 5.3 The simulation reads its layer as a level
 
-`PlaneWorld` takes one `LevelMap` today and many of its parts index a square from (0, 0): collision, the nav grid,
-fog of war, the corruption field, the sun map. The change:
+The game's systems (collision, her light, the nav grid, the maps, creatures, bosses, the save's snapshot) read one
+`LevelMap`. A layer is given to them as one: `CubeReef` makes each cube's terrain once (on any thread, kept while
+its layer is) and stitches a layer's cubes into a map as wide as the footprint, made in parallel off the main thread
+(about 0.2 s for 36 cubes) as soon as she arrives on the layer above it. Squares of the footprint outside the reef
+are rock. A layer is then a level to the game: `PlaneWorld` is made on it as she arrives, sub-levels behind its
+mouths are classic levels as before, and a layer she climbs back to keeps its map.
 
-- **`IReefField`**: `HeightAt(p)`, `IsOpen(p)`, `Gradient(p)`, in global metres, with `ReefCollision` for bodies
-  against it. The cube world (`CubeField`) answers from a 3 × 3 table of squares, each holding its loaded cube (two
-  integer divisions and an array read); a classic level answers from its one map, so sub-levels (havens, leak caves,
-  labyrinths) keep working unchanged.
-- **Anything outside loaded terrain reads as rock.**
-- **Per-cube grids:** fog of war and corruption live in the cube (and its record), not in a level-wide array.
-- **Navigation:** the flow field to her is already rebuilt every few ticks; it becomes a 96 × 96 m grid centred on
-  her, which is smaller than a level's grid today.
+- **`IReefField`** (`HeightAt`, `IsOpen`, `Gradient`) with `ReefCollision` stays the one interface for rock; a level's
+  map and the window of cubes (`CubeField`) both answer it.
+- **What streams is the drawing:** `ReefStream` and `ReefStreamView` show the cubes round her as she swims (§5.2,
+  §5.5); the simulation never waits for them.
 
 ### 5.4 Things that cross cube lines
 
@@ -234,7 +234,8 @@ rules below means a claim.
 ## 7. Diving and climbing
 
 - **Where:** §3's rule. Over a spot that allows it the HUD's dive prompt shows, as over a hole today.
-- **Controls:** down and up on the controller's d-pad dive and climb (on the keyboard, the dive key and a climb key).
+- **Controls:** down and up on the controller's d-pad dive and climb; on the keyboard Shift dives and Q climbs (the
+  bindings Dive and Climb).
 - **Cooldown:** 30 s after any change of layer before the next, either way. The prompt shows the time left.
 - **No chain dives:** after arriving, she may not dive within S / 2 (32 m) of where she arrived. If no reachable
   spot in her cube is that far (a small sealed pocket), the limit shrinks to 80% of the distance of the farthest
@@ -275,13 +276,16 @@ can be dodged by stepping back and forth; shutting edges for good cannot be, and
 
 ## 9. The director: what a claimed cube holds
 
-`ReefDirector` keeps, per layer, the count of claimed cubes and what has been granted, and across layers the boss
-streak. A cube's grant is rolled when it is claimed, from the seed, the layer and its claim number, so the same seed
+`CubeDirector` keeps, per layer, what has been granted, and across layers the boss streak. A cube's grant is rolled when it is claimed, from the seed, the layer and its claim number, so the same seed
 swum the same way gives the same reef.
 
-Clam rooms, secret rooms, curse rooms and havens are all **sub-levels behind a mouth**, as havens, leak caves and
-labyrinths are today. A cube's terrain carries up to two **sockets** (alcoves in a wall, at least 14 m from any gate);
-a granted place opens its mouth in a socket. A cube with no free socket passes its grant on to the next claim.
+Clam rooms, secret rooms, curse rooms and havens are all **sub-levels behind a mouth**, reached by the game's rides
+and left back to the layer as she left it: a haven is the game's haven, a secret room its labyrinth, a curse room its
+leak cave (the game's curse dens are its leak caves), and a clam room a small level of its own holding one
+(`TopDownGenerator.GenerateRoom`). A cube's terrain carries up to two **sockets**: alcoves cut into its walls as a
+level's cave opening is, at least 12 m inside the cube, 14 m from a gate's mouth, 9 m past a well and 20 m apart
+(nine cubes in ten have one). A granted place opens its mouth in a socket. A cube with no free socket passes its
+grant on to the next claim.
 
 | Place | Rule |
 |---|---|
@@ -290,7 +294,7 @@ a granted place opens its mouth in a socket. A cube with no free socket passes i
 | **Curse room** | Each claim: 1 in 5. No limit. |
 | **Haven** | Each claim: 1 in 4, until the layer has two; then 0. |
 | **Boss** | At most one a layer; §9.1. |
-| **Arrival cube** | The cube she dives into: no creatures, ever. Not a haven. It may hold mouths. |
+| **Arrival cube** | The cube she dives into: no creatures, ever. It may hold mouths. |
 | **The warm-up layer** | Layer 0: bright, its menace low, no creatures anywhere, no curse rooms and no boss. Its other places as anywhere. |
 
 At most two places a cube; when more are rolled, the order kept is haven, clam room, curse room, secret.
@@ -305,17 +309,19 @@ one:
 | 0 (she freed the last one, or this is layer 1) | 35% *(open, §16)* |
 | 1 | 75% |
 | 2 | 95% |
-| 3 or more | 100%, and it is her 2nd claim on the layer |
+| 3 or more | 100% |
 
-When a layer holds one, it is her 2nd to 5th claim (rolled), the 2nd when certain. That cube becomes the **arena**:
+When a layer holds one, its **arena** is fixed as she arrives: a cube two to four cubes from where she arrived along
+open edges, with at least two open edges, none of its squares within two of hers (so it has never been drawn). Its
+terrain is made again and laid over the layer's map:
 
-- Its terrain is the cube's own with a basin 24 m in radius opened in its middle and its shelves removed. The edges,
-  seam bands and wells are untouched, so its neighbours never notice.
-- It keeps two gates: the one she came in by (**back**) and the one opposite, or failing that the gate farthest from
-  it (**forward**). Its other gates are plugged with a rockfall in the arena's own throat. A cube with only one gate
-  cannot be an arena; the boss passes to her next claim.
-- Nothing else is in it: no creatures, no mouths, no drift. Its wells are sealed over until the boss is freed.
-- Both gates seal when the battle begins (today's boss seals) and open when it ends.
+- A basin 24 m in radius opened in its middle, and a way cut to it from every gate. Its edges, seam bands and wells
+  are untouched, so its neighbours never notice.
+- Nothing else is in it: no creatures, no mouths, no drift. Its wells are sealed (down and up) until the boss is
+  freed, and nothing dives into it from above.
+- While the battle runs its ways out are held shut, and they open when it ends.
+- Its boss is the neighbour the Leak made the boss of the depth the layer stands for (layer 1 the first depth's), as on
+  the dives, unless she has freed her; else the depth's own (`BossRoster`).
 
 Leaving the layer with its boss unfreed, or before meeting it, counts as a layer left without one. The warm-up layer
 counts as neither.
@@ -347,13 +353,13 @@ haven. Dying ends the run, and the save with it: the next run starts at the top.
 | Today | In the cube world |
 |---|---|
 | `DiveGraph`, rows and lanes, holes ringed by kind, the chart | Retired. The pause menu's chart becomes the layer's claimed cubes. |
-| `LevelPlan`, `PlaceRules`, level templates | Replaced by `ReefDirector` (§9) and per-cube stocking rules. |
+| `LevelPlan`, `PlaceRules`, level templates | Replaced by `CubeDirector` (§9) and per-cube stocking (`CubeStock`). |
 | `CaveLayout` carving, `TerrainNoise`, `WallStrata`, `ReefTerrain` | Kept, called per cube with global coordinates. |
 | `LevelValidator` | Becomes tests (§4.2). |
 | Havens, leak caves, labyrinths (`PrepareBehind`) | Kept as they are: classic `LevelMap`s behind mouths. |
 | Leaks and the awake / asleep reef | Leaks only in leak caves. The open layers have no awake / asleep state. |
 | `LevelView`, `LevelShape` | Split into per-chunk shape building and a pooled chunk view. |
-| `PlaneWorld` | Reads `IReefField`; owns creatures globally (§5.3, §5.4). |
+| `PlaneWorld` | Made on a layer's stitched map as on a level (§5.3); its creatures marked by the cube they were stocked in. |
 | Snapshot saves of a level in play | Replaced by records and haven checkpoints (§10). |
 | The tutorial's two levels | Retired: the warm-up layer (§9) is where she learns. |
 
@@ -479,19 +485,24 @@ Against §14.3:
 How to see it: `godot -- --cubes` (WASD, the mouse to aim, Shift or the d-pad's down to dive, Q or its up to climb,
 F3 for the overlay), `--cube-route` or `--cube-dives` to watch her do it, `--cube-perf=seconds` for the numbers.
 
-## 15. After the prototype
+## 15. In the game
 
-Each stage ends with the game playable.
+A new dive is in the cube reef, in the game itself (`TopDownMain.Reef.cs`): her HUD, light, pearls and maps as on any
+level, the prompt over a way to another layer. `--classic` keeps the seeded levels; `--cube-reef` puts a verification
+run in the reef (`--cube-boss`, `--cube-chart=`, `--cube-save=`, `--cube-resume=`, `--autopilot` help verify it).
 
-1. **`PlaneWorld` on `IReefField`:** collision, nav, light stops, fog and corruption per cube. Classic maps still run
-   through the same interface (sub-levels, tests).
-2. **World-owned creatures:** stable ids, sleep by distance, records, the leash, pools. The murkling roster stocks
-   cubes by layer.
-3. **The director and sockets:** secret rooms, curse rooms, clam rooms and havens behind mouths, by §9's rules.
-4. **The arena and the boss table.**
-5. **Records and haven checkpoints;** the chart of claimed cubes.
+1. **The layer as a level** (§5.3): done.
+2. **Creatures:** each cube she claims buds its stock (`CubeStock`): 3 + 4 × the layer's Menace of the roster's
+   murklings, 9 m apart, none within 18 m of where she came in, at most one prime (from layer 2), from the seed, the
+   cube and its claim alone; never on the warm-up layer or in the cube she dives into. Over 48 m from her they sleep.
+   Leaving a layer keeps what is left of each cube's stock in its record; coming back puts it back where it was.
+3. **The director and sockets** (§9): done.
+4. **The arena and the boss table** (§9.1): done.
+5. **Records and haven checkpoints** (§10): reaching a haven saves the dive there (`CubeDiveSave` in the dive's save);
+   continuing puts her back in that haven. The pause menu's chart is her layer's claimed cubes.
 6. **Retire** the dive graph, level plans, the hole views and the loading splash between reefs; rewrite GAME, DIVE
-   and LIGHT-AND-GRAPH to the reef as it then is.
+   and LIGHT-AND-GRAPH to the reef as it then is. *Not done yet.*
+
 
 ## 16. Still open
 
