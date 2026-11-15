@@ -20,6 +20,9 @@ public partial class TopDownMain
 
     static readonly Color WayOut = new(0.95f, 0.97f, 1f), SecretColour = new(0.82f, 0.88f, 1f);
 
+    /// <summary>How near (metres) counts as at a request's mark, and in at a mouth or a way out (its emblem fades: EdgeArrows).</summary>
+    const float MarkReach = 2f, MouthReach = 3f;
+
     /// <summary>A place's sign on its emblem.</summary>
     static string Sign(PoiKind kind) => kind switch
     {
@@ -40,16 +43,16 @@ public partial class TopDownMain
         _ => ReefKinds.Colour(ReefKind.Den),
     };
 
-    IEnumerable<(System.Numerics.Vector2 At, Color Colour, string Sign)> ArrowTargets()
+    IEnumerable<(System.Numerics.Vector2 At, Color Colour, string Sign, float Reach)> ArrowTargets()
     {
-        foreach (var (at, colour) in _marks) yield return (at, colour, ".");
+        foreach (var (at, colour) in _marks) yield return (at, colour, ".", MarkReach);
         for (int i = 0; i < _map.Mouths.Count; i++)
             if (!_world.ShutMouths.Contains(i))
             {
                 var kind = i < _map.MouthKinds.Count ? _map.MouthKinds[i] : PoiKind.LeakCave;
-                yield return (_map.Mouths[i].At, MouthColour(kind), Sign(kind));
+                yield return (_map.Mouths[i].At, MouthColour(kind), Sign(kind), MouthReach);
             }
-        if (_map.Way is { } way) yield return (way.At, WayOut, "^");
+        if (_map.Way is { } way) yield return (way.At, WayOut, "^", MouthReach);
         bool all = _world.Run.Loadout.Flags.Contains("landmarks");
         for (int i = 0; i < _map.Pois.Count; i++)
         {
@@ -58,10 +61,10 @@ public partial class TopDownMain
             if (!inside) continue;
             // A boss's arena while its boss waits.
             if (poi.Kind == PoiKind.Exit && _map.HasBoss && _world.Boss is { Freed: false })
-                yield return (poi.Position, ReefKinds.Colour(ReefKind.Boss), "X");
+                yield return (poi.Position, ReefKinds.Colour(ReefKind.Boss), "X", poi.Radius);
             // A level's own rooms (those behind mouths have their mouths' arrows).
             else if (poi.Kind is PoiKind.Shop or PoiKind.TreasureCave or PoiKind.ShellCache or PoiKind.CrabDeal && (all || _visited.Contains(i)))
-                yield return (poi.Position, LevelView.PoiColor(poi.Kind), Sign(poi.Kind));
+                yield return (poi.Position, LevelView.PoiColor(poi.Kind), Sign(poi.Kind), Mathf.Max(poi.Radius, MouthReach));
         }
     }
 

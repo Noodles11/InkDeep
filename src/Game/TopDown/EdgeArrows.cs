@@ -31,7 +31,8 @@ public partial class EdgeArrows : Control
     readonly Dictionary<System.Numerics.Vector2, float> _grown = new();
 
     /// <summary>
-    /// She is at a place once within this many of a full-size emblem's radii of it on the screen: its emblem fades away
+    /// She is at a place once inside it (within its reach, metres: a room's own radius, a mouth's threshold) or within
+    /// this many of a full-size emblem's radii of it on the screen: its emblem fades away
     /// (over Fade seconds), so it never covers what lies there (a shop's wares), and back as she leaves.
     /// </summary>
     const float Near = 3f, Fade = 0.25f;
@@ -42,7 +43,7 @@ public partial class EdgeArrows : Control
 
     static readonly Color Disc = new(0.03f, 0.045f, 0.07f, 0.62f), Ink = new(0.03f, 0.045f, 0.07f, 0.9f);
 
-    readonly List<(System.Numerics.Vector2 At, Color Colour, string Sign)> _targets = new();
+    readonly List<(System.Numerics.Vector2 At, Color Colour, string Sign, float Reach)> _targets = new();
     readonly List<(Vector2 At, Vector2 Way, Color Colour, string Sign, bool Off, float Size, float Alpha)> _shown = new();
     /// <summary>0: in place; 1: slid out past the edges.</summary>
     float _out;
@@ -55,8 +56,8 @@ public partial class EdgeArrows : Control
         SetAnchorsPreset(LayoutPreset.FullRect);
     }
 
-    /// <summary>The places to show (world metres on her plane, each one's colour and sign).</summary>
-    public void SetTargets(IEnumerable<(System.Numerics.Vector2 At, Color Colour, string Sign)> targets)
+    /// <summary>The places to show (world metres on her plane, each one's colour, sign, and how near counts as in it).</summary>
+    public void SetTargets(IEnumerable<(System.Numerics.Vector2 At, Color Colour, string Sign, float Reach)> targets)
     {
         _targets.Clear();
         foreach (var t in targets)
@@ -99,7 +100,7 @@ public partial class EdgeArrows : Control
         var lo = new Vector2(Inset, Inset);
         var hi = size - lo;
         Vector2? herAt = her is { } h && !camera.IsPositionBehind(h) ? Fisheye.Shown(camera.UnprojectPosition(h), view) / scale : null;
-        foreach (var (at, colour, sign) in _targets)
+        foreach (var (at, colour, sign, reach) in _targets)
         {
             var world = new Vector3(at.X, 0.7f, at.Y);
             if (camera.IsPositionBehind(world)) continue;
@@ -133,7 +134,8 @@ public partial class EdgeArrows : Control
             _grown[at] = grown;
             float grownSize = Mathf.Lerp(EdgeSize, OnSize, Mathf.SmoothStep(0f, 1f, grown));
             // At it: gone (eased).
-            bool at_ = !off && herAt is { } me && me.DistanceTo(screen) < Near * Radius * OnSize;
+            bool at_ = !off && herAt is { } me && me.DistanceTo(screen) < Near * Radius * OnSize
+                || her is { } w && System.Numerics.Vector2.Distance(new System.Numerics.Vector2(w.X, w.Z), at) < reach;
             _shownBy.TryGetValue(at, out float alpha);
             if (!_shownBy.ContainsKey(at)) alpha = 1f;
             alpha = Mathf.MoveToward(alpha, at_ ? 0f : 1f, dt / Fade);

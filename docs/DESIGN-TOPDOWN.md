@@ -1192,7 +1192,8 @@ The FP staging ("look up through the surface") is replaced:
   on the line from the middle toward it, a small pointer on its ring turned to it; once the place's entrance comes on
   the screen, the emblem goes on to it and stays locked on it, one motion as she swims toward it. Waiting at the edge
   it is small (two thirds of its size); on its place it grows to four thirds, eased in and out over 0.3 s (and shrinks
-  back as the place leaves the screen). Once she is at a place (within three full-size emblem radii of it on the screen)
+  back as the place leaves the screen). Once she is at a place (in it: within a room's own radius, 3 m of a mouth or a way out, 2 m of a request's mark;
+  or within three full-size emblem radii of it on the screen)
   its emblem fades away (0.25 s), so it never covers what lies there (a shop's wares), and back as she leaves. Places
   within 1.5 m
   share one emblem. As she dives, climbs or rides into a place, they slide out past the edges; once she has settled,
