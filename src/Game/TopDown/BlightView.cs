@@ -520,13 +520,12 @@ public partial class BlightView : Node3D
 
     /// <summary>
     /// Sensing the unseen (docs/CORRUPTION.md): she is never harmed by something she had no way to sense. A murkling no
-    /// light shows, within SenseReach of her, troubles the water: a pale ripple spreads from where it is, the oftener the
+    /// light shows, within SenseReach of her, troubles the water: it shimmers out from where it is, the oftener the
     /// nearer it comes (RippleFar to RippleNear seconds apart), and its coming is heard once from where it is (Sensed;
     /// again only after it has been out of her sensing for Rearm). One drinking her unseen (her glow out) draws motes of
     /// her light off her toward it, so the thief is plain.
     /// </summary>
     public const float SenseReach = 13f, RippleFar = 1.5f, RippleNear = 0.55f, Rearm = 4f;
-    static readonly Color RippleTint = new(0.72f, 0.9f, 1f, 0.42f);
     /// <summary>An unseen murkling has come within her sensing, here.</summary>
     public event System.Action<System.Numerics.Vector2>? Sensed;
 
@@ -553,8 +552,8 @@ public partial class BlightView : Node3D
         {
             float near = 1f - Mathf.Clamp((d - m.Radius) / SenseReach, 0f, 1f);
             body.Ripple = Mathf.Lerp(RippleFar, RippleNear, near);
-            var tint = RippleTint with { A = RippleTint.A * (0.55f + 0.45f * near) };
-            AddRipple(m.Position, LevelMap.SwimBand - 0.05f, m.Radius * 0.5f, m.Radius * 1.5f + 0.7f, 0.9f, tint);
+            // (Seen as the game's moving water is: the water shoved out round it in a shimmer, like the air over a hot road.)
+            Swells?.AddRing(new Vector2(m.Position.X, m.Position.Y), 0.35f + 0.45f * near, (m.Radius * 1.5f + 0.9f) / 2.6f, 0.9f, snap: 3f);
         }
         // Drinking her unseen: her light leaves her toward it.
         if (m.Clinging)
