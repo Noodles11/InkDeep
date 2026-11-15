@@ -416,8 +416,8 @@ public partial class LevelView : Node3D
     Vector4 _seeThrough;
     MeshInstance3D? _seeFloor;
     static readonly bool NoSeeFloor = OS.GetCmdlineUserArgs().Contains("--dbg-nofloor");
-    /// <summary>The see floor's square (metres a side: the opening and some), and the highest it lies (the seabed); it lies a little under the floor under her, so the real floor wins wherever it is.</summary>
-    const float SeeFloorSize = 16f, SeeFloorHeight = -1.2f;
+    /// <summary>The see floor's square (metres a side: the opening and its channel to the screen's edge), and the highest it lies (the seabed); it lies a little under the floor under her, so the real floor wins wherever it is.</summary>
+    const float SeeFloorSize = 80f, SeeFloorHeight = -1.2f;
     float _seeFloorY;
     bool _seeFloorShown;
 

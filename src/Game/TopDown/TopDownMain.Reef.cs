@@ -682,13 +682,12 @@ public partial class TopDownMain
         _reefView.Follow(eye);
         var p = _world.Player.Position;
         bool hidden = _reef!.Made(CubeId.Of(p, _layer))?.CanopyAt(Mathf.RoundToInt(p.X), Mathf.RoundToInt(p.Y)) == true
-            || WallHides(_bell.GlobalPosition, _camera.Camera.GlobalPosition);
-        _reefSeeThrough = Mathf.MoveToward(_reefSeeThrough, hidden ? 1f : 0f, dt * (hidden ? 4.5f : 2.2f));
-        _reefView.SeeThrough(_bell.GlobalPosition, TallSeeThrough, _reefSeeThrough);
+            || WallHides(_bell.GlobalPosition, _camera.Camera.GlobalPosition) || _level.Hides(_bell.GlobalPosition, _camera.Camera.GlobalPosition);
+        _reefSeeThrough = SeeStep(_reefSeeThrough, hidden, dt);
+        _reefView.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, SeeScale(_reefSeeThrough));
+        // (Her layer's reef life and mouths are cut with its rock.)
+        _level.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, SeeScale(_reefSeeThrough));
     }
-
-    /// <summary>The opening cut round her through a risen wall between her and the camera (wider than a level's: the walls are tall).</summary>
-    const float TallSeeThrough = 5.5f;
 
     /// <summary>
     /// Whether a wall of her layer, risen as it is drawn (ReefStreamView.Rise, topdown_ground's rise), stands between her

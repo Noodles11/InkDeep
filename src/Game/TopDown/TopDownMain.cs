@@ -76,7 +76,24 @@ public partial class TopDownMain : Node3D
     bool _dbgSteerFight;
     bool _dbgGate;
     /// <summary>How far round her the rock between the camera and her is carved away.</summary>
-    const float SeeThroughRadius = 3.6f;
+    const float SeeThroughRadius = 7f;
+
+    /// <summary>The cutout's opening and closing (seconds): out quickly, in more gently.</summary>
+    const float SeeOpenSeconds = 0.18f, SeeCloseSeconds = 0.35f;
+
+    /// <summary>
+    /// The cutout's scale from its progress (0 shut, 1 open): an ease out (cubic), so opening it springs out quickly and
+    /// settles, and closing it (the same curve run back) starts gently and shuts quickly: an ease in.
+    /// </summary>
+    static float SeeScale(float progress)
+    {
+        float u = 1f - Mathf.Clamp(progress, 0f, 1f);
+        return 1f - u * u * u;
+    }
+
+    /// <summary>The cutout's progress a frame on, toward open while she is hidden, else toward shut.</summary>
+    static float SeeStep(float progress, bool hidden, float dt) =>
+        Mathf.MoveToward(progress, hidden ? 1f : 0f, dt / (hidden ? SeeOpenSeconds : SeeCloseSeconds));
     /// <summary>How far the walls round her are carved away (0 whole → 1 open while they hide her).</summary>
     float _seeThrough;
     /// <summary>Verification (--dbg-nocarve): the walls are not carved away round her.</summary>
@@ -2863,8 +2880,8 @@ public partial class TopDownMain : Node3D
         // A wall between the camera and her (a tunnel's roof, a wall in front) is cut open round her while it hides her,
         // the opening irising out quickly and closing gently (eased in the shader); one she only swims beside stays whole.
         bool hidden = _level.Hides(_bell.GlobalPosition, _camera.Camera.GlobalPosition);
-        _seeThrough = Mathf.MoveToward(_seeThrough, hidden ? 1f : 0f, dt * (hidden ? 4.5f : 2.2f));
-        _level.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, _dbgNoCarve ? 0f : _seeThrough);
+        _seeThrough = SeeStep(_seeThrough, hidden, dt);
+        if (!InReef) _level.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, _dbgNoCarve ? 0f : SeeScale(_seeThrough));
         if (InReef) SyncReefView(dt, Focus(alpha));
         // In the curse den's dark her own light is dimmed too, to about half.
         _bell.Dim = 1f - 0.475f * _dark.Amount;

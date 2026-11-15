@@ -1325,17 +1325,17 @@ at mist distance (inherited fade rule).
 - Boulders and bommies are decoration only, never collision.
 - **The cutout** (a presentation rule for walls, as Baldur's Gate 3's; the canopy layer has its own fade): while rock
   (the reef, a tunnel's roof, a cave's lid) stands between the camera and any part of her (her middle and 0.8 m round
-  it; `LevelView.Hides`), whatever stands between the camera and her plane round her is cut away in a clean round
-  opening (`LevelView.SeeThrough`, level_frame's `lf_see_cut`):
-  - **Its shape:** 3.6 m round her where the camera's ray crosses her plane, its rim wavering a little as rock breaks
-    (fixed to the world, never crawling), its edge a thin 0.3 m band dissolving in fine noise (no screen-door grid).
+  it; `LevelView.Hides`; on the cube reef also its risen walls and arches), whatever stands between the camera and her
+  plane round her is cut away (`LevelView.SeeThrough`, `ReefStreamView.SeeThrough`, level_frame's `lf_see_cut`):
+  - **Its shape:** 7 m round her where the camera's ray crosses her plane, running on toward the camera as a channel as
+    wide, out past the screen's edge, so she is never framed in a hole. Its edge is sharp.
   - **What it cuts:** the rock (the ground's heightfield and the free rock) and the coral and flora on it, down to just
     over the seabed, only on the camera's side of her; the floor she swims over and what stands beyond her stay whole.
     The shadows stay as they are (the cut is not made from the sun's eye).
   - **What it shows:** the floor running on under the rock (the see floor: a patch of the ground's own skin at the
     floor under her, out of the rock's shadow, drawn only where the rock over it along the ray is cut), so the cut
     reads as the wall gone, never as a hole onto nothing. A faint cool glow rims what is left round the opening.
-  - **Its timing:** it irises open (eased) in about a quarter of a second and closes over about half a second. A wall
+  - **Its timing:** it opens by its scale with a quick ease out (0.18 s) and closes with an ease in (0.35 s). A wall
     she only swims beside stays whole. A canopy fading over Clementine is drawn unblurred while it fades.
   - **Verification:** `--at=hidden` starts her where rock hides her (`--dbg-hidden2`: another such spot);
     `--dbg-nocarve` keeps every wall whole; `--dbg-nofloor` leaves out the see floor.
