@@ -47,6 +47,9 @@ public sealed class LevelShape
             var r = new List<Transform3D>();
             var g = new List<Transform3D>();
             if (!OS.GetCmdlineUserArgs().Contains("--dbg-nodecor")) LevelView.DecorItems(m, f, r, g);
+            // (A cube reef's walls rise out of view: only the life at their feet and on the floor shows.)
+            f.RemoveAll(i => i.Transform.Origin.Y > 0.8f);
+            r.RemoveAll(t => t.Origin.Y > 0.8f);
             return new Tuple<List<FloraItem>, List<Transform3D>, List<Transform3D>>(f, r, g);
         }) is var t ? (t.Item1, t.Item2, t.Item3) : default;
         shape.Flora.AddRange(flora);

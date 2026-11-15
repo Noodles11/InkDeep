@@ -20,7 +20,21 @@ uniform vec3 door_size = vec3(4.5, 1.7, 2.8);
 varying vec3 world;
 varying vec3 world_normal;
 
+// The cube reef's tall walls (ReefStreamView): rock above rise_from metres rises by up to rise metres (fully by rise_to),
+// so every wall stands on up out of view as one tall structure; its normals tilted to match. A vertex colour's alpha
+// below 1 rises less (an arch's slab, alpha 0, not at all).
+uniform float rise = 0.0;
+uniform float rise_from = 1.4;
+uniform float rise_to = 3.2;
+
 void vertex() {
+	if (rise > 0.0) {
+		float t = clamp((VERTEX.y - rise_from) / (rise_to - rise_from), 0.0, 1.0);
+		float k = t * t * (3.0 - 2.0 * t) * COLOR.a;
+		float stretch = 1.0 + rise * COLOR.a * 6.0 * t * (1.0 - t) / (rise_to - rise_from);
+		VERTEX.y += rise * k;
+		NORMAL = normalize(vec3(NORMAL.x * stretch, NORMAL.y, NORMAL.z * stretch));
+	}
 	world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 }

@@ -83,6 +83,9 @@ uniform float her_seat = 0.0;
 uniform float peak_from = 4.0;
 uniform float peak_span = 6.0;
 uniform float peak_blur = 2.2;
+// Taller still (the cube reef's walls rising out of view): softer again the higher, to tall_blur more by tall_to metres.
+uniform float tall_to = 26.0;
+uniform float tall_blur = 2.0;
 /// Where the camera follows her (the swim layer the bubbles' halos lie on).
 uniform vec3 player_pos = vec3(0.0);
 /// The bubbles' halos' strength (her own glow in the water is light_field's in-scatter).
@@ -385,6 +388,7 @@ void fragment() {
 		+ above_blur * smoothstep(0.0, 9.0, above);
 	float peak = open_deep ? 0.0 : smoothstep(peak_from, peak_from + peak_span, h);
 	lod += peak_blur * peak;
+	lod += open_deep ? 0.0 : tall_blur * smoothstep(peak_from + peak_span, tall_to, h);
 	// Watercolour: the walls stay crisp at every height; all that lies under her plane runs soft, wet into wet.
 	if (paper) lod = paper_blur * smoothstep(0.5, 4.0, below);
 	vec3 col = blurred(suv, lod);

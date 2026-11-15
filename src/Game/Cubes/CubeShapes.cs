@@ -88,7 +88,10 @@ public static class CubeShapes
             return Mathf.Lerp(a, b, v);
         }
         float Top(float x, float y) => 2.6f + 0.45f * Mathf.Sin(x * 0.9f + Mathf.Sin(y * 0.7f) * 1.5f) * Mathf.Sin(y * 0.8f + 1.3f);
-        return LevelView.SurfaceMesh(1 << 20, Top, minX - 3, minY - 3, maxX + 3, maxY + 3, null, (x, y) => Cover(x, y) - 0.34f);
+        if (LevelView.SurfaceMesh(1 << 20, Top, minX - 3, minY - 3, maxX + 3, maxY + 3, null, (x, y) => Cover(x, y) - 0.34f) is not { } slab) return null;
+        // (Its colours' alpha 0: an arch stays where it is when the walls rise round it.)
+        var colors = Array.ConvertAll(slab.Colors, c => c with { A = 0f });
+        return new LevelShape.Surface(slab.Vertices, slab.Normals, colors, slab.Indices);
     }
 
     /// <summary>The layer below's simplified ground: one mesh on a 2 m grid, its void a flat floor deep under it (murk).</summary>

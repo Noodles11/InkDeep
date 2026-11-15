@@ -490,6 +490,9 @@ public partial class TopDownMain
         float radius = t < 0.35f ? Mathf.Lerp(-3f, 6f, Ease(t / 0.35f)) : Mathf.Lerp(6f, 150f, Mathf.Pow(Ease((t - 0.35f) / 0.9f), 2f));
         var at = new Vector2(_layerFrom.X, _layerFrom.Y);
         _reefView.SetPortal(at, radius, _layerMove == LayerMove.Up);
+        // The walls of the layer she goes to rise up round her as she reaches it.
+        if (_layerMove == LayerMove.Down) _reefView.SetRise(1f, sink, 0f);
+        else _reefView.SetRise(1f, 0f, sink);
         // (Her layer's reef life goes with its rock, through the same iris; climbing, it stays till she is up.)
         if (_layerMove == LayerMove.Down) _level.SetPortal(at, radius, 1);
         // What lived on the layer she leaves goes with it, as on the game's dive.
@@ -538,6 +541,7 @@ public partial class TopDownMain
         _reefView.SetLayer(_layer);
         _reefView.ShowAbove(false);
         _reefView.SetPortal(Vector2.Zero, -1f, false);
+        _reefView.SetRise(1f, 0f, 0f);
         _level.SetPortal(Vector2.Zero, -1f, 0);
         _bell.DiveDepth = 0f;
         _bell.DiveTurn = 0f;
@@ -677,9 +681,31 @@ public partial class TopDownMain
     {
         _reefView.Follow(eye);
         var p = _world.Player.Position;
-        bool hidden = _reef!.Made(CubeId.Of(p, _layer))?.CanopyAt(Mathf.RoundToInt(p.X), Mathf.RoundToInt(p.Y)) == true;
+        bool hidden = _reef!.Made(CubeId.Of(p, _layer))?.CanopyAt(Mathf.RoundToInt(p.X), Mathf.RoundToInt(p.Y)) == true
+            || WallHides(_bell.GlobalPosition, _camera.Camera.GlobalPosition);
         _reefSeeThrough = Mathf.MoveToward(_reefSeeThrough, hidden ? 1f : 0f, dt * (hidden ? 4.5f : 2.2f));
-        _reefView.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, _reefSeeThrough);
+        _reefView.SeeThrough(_bell.GlobalPosition, TallSeeThrough, _reefSeeThrough);
+    }
+
+    /// <summary>The opening cut round her through a risen wall between her and the camera (wider than a level's: the walls are tall).</summary>
+    const float TallSeeThrough = 5.5f;
+
+    /// <summary>
+    /// Whether a wall of her layer, risen as it is drawn (ReefStreamView.Rise, topdown_ground's rise), stands between her
+    /// and the camera: the line from her to it stepped along, against each point's rock as it is drawn.
+    /// </summary>
+    bool WallHides(Vector3 her, Vector3 camera)
+    {
+        var way = camera - her;
+        for (int i = 1; i <= 40; i++)
+        {
+            var at = her + way * (i / 40f);
+            if (at.Y > ReefStreamView.Rise + CubeTuning.RockLow + CubeTuning.RockRise) break;
+            float h = _map.HeightAt(new System.Numerics.Vector2(at.X, at.Z));
+            float t = Mathf.Clamp((h - 1.4f) / (3.2f - 1.4f), 0f, 1f);
+            if (h + ReefStreamView.Rise * t * t * (3f - 2f * t) > at.Y) return true;
+        }
+        return false;
     }
 
 }

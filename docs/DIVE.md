@@ -20,6 +20,10 @@ levels one after another: the layers are the depths.
 - **The light by depth:** each layer wears the adventure's painted reef, its coral gardens and all; the top layer is
   bright, the bottom one wholly dark (its rock seen only in her light), and each layer between a little darker than the
   one above, the dark gathering toward the bottom (`ReefLook.Layer`).
+- **One tall structure:** every wall of her layer rises 26 m above its own rock as it is drawn (topdown_ground's
+  rise; play keeps the walls' real heights), on up out of view, the higher the softer (topdown_post's tall blur), so the
+  layers read as one reef standing up through the deep; the layer she goes to grows its walls as she reaches it. A wall
+  between her and the camera is cut open round her.
 - **The warm-up layer** (layer 0) is where she learns: bright, its menace low, no creatures, no curse rooms and no
   boss. Veterans dive straight through it. (There is no tutorial level.)
 - **Diving and climbing** (CUBE-WORLD-PLAN §7): Shift or the d-pad's down over the void, Q or its up under a well of
