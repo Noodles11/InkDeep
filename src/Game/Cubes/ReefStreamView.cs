@@ -106,8 +106,15 @@ public partial class ReefStreamView : Node3D
     }
 
     /// <summary>What stands between the camera and her (an arch) cut open round her (level_frame's see_through).</summary>
-    public void SeeThrough(Vector3 her, float radius, float open)
+    public void SeeThrough(Vector3 her, float radius, float open, (Texture2D Heights, Texture2D Keep, Vector3 Box)? mask = null)
     {
+        // (The map round her: which rock the cut may take, LevelView.SeeMask.)
+        if (mask is { } m)
+        {
+            _here.SetShaderParameter(SN.Of("see_heights"), m.Heights);
+            _here.SetShaderParameter(SN.Of("see_keep"), m.Keep);
+            _here.SetShaderParameter(SN.Of("see_heights_box"), m.Box);
+        }
         _here.SetShaderParameter(SN.Of("see_through"), new Vector4(her.X, her.Z, radius, open));
         _here.SetShaderParameter(SN.Of("see_through_y"), her.Y);
     }

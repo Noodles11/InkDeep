@@ -415,43 +415,146 @@ public partial class LevelView : Node3D
     Vector4 _seeThrough;
     MeshInstance3D? _seeFloor;
 
-    /// <summary>The map's height round her (for the see floor: it caps only what lies under rock), a metre a texel.</summary>
+    /// <summary>
+    /// The map round her for the cutout, a metre a texel (level_frame's see_heights, see_keep, see_heights_box): its
+    /// height (for the see floor: it caps only what lies under rock), and which rock the cut may take. Every material
+    /// that is cut reads it (the cube reef's too: SeeMask).
+    /// </summary>
     const int SeeHeightsSize = 192;
-    ImageTexture? _seeHeights;
-    Vector2 _seeHeightsAt = new(float.MaxValue, float.MaxValue);
+    ImageTexture? _seeHeights, _seeKeep;
+    float[] _seeH = Array.Empty<float>();
+    Vector2 _seeHeightsAt = new(float.MaxValue, float.MaxValue), _seeKeepAt = new(float.MaxValue, float.MaxValue);
+    Vector2 _seeKeepToward;
+    Vector3 _seeBox;
 
-    /// <summary>The height map round her made again once she has swum a quarter of its span from where it was made.</summary>
+    /// <summary>The cutout's map round her (null until it is first cut), for the cube reef's rock.</summary>
+    public (Texture2D Heights, Texture2D Keep, Vector3 Box)? SeeMask =>
+        _seeHeights is null || _seeKeep is null ? null : (_seeHeights, _seeKeep, _seeBox);
+
+    /// <summary>How far to her side of the line from her to the camera rock hides her (metres): her body and a margin.</summary>
+    const float SeeHideReach = 1.6f;
+
+    /// <summary>
+    /// The height map round her made again once she has swum a quarter of its span from where it was made; which rock
+    /// the cut may take made again as she moves (SeeKeep).
+    /// </summary>
     void SeeHeights(Vector3 her)
     {
         var at = new Vector2(her.X - Position.X, her.Z - Position.Z);
-        if (_seeHeights is not null && at.DistanceTo(_seeHeightsAt) < SeeHeightsSize * 0.25f) return;
-        _seeHeightsAt = at;
         int n = SeeHeightsSize;
-        float x0 = Mathf.Floor(at.X) - n / 2, y0 = Mathf.Floor(at.Y) - n / 2;
-        var data = new float[n * n];
-        for (int j = 0; j < n; j++)
-        for (int i = 0; i < n; i++)
+        if (_seeHeights is null || at.DistanceTo(_seeHeightsAt) >= n * 0.25f)
         {
-            int gx = (int)x0 + i, gy = (int)y0 + j;
-            float h = -100f;
-            if (gx >= 0 && gy >= 0 && gx <= _map.Size && gy <= _map.Size)
+            _seeHeightsAt = at;
+            float x0 = Mathf.Floor(at.X) - n / 2, y0 = Mathf.Floor(at.Y) - n / 2;
+            var data = new float[n * n];
+            for (int j = 0; j < n; j++)
+            for (int i = 0; i < n; i++)
             {
-                h = _map[gx, gy];
-                // (A tunnel's roof or a cave's lid is rock over it too.)
-                float roof = _map.RoofAt(gx, gy), lid = _map.LidAt(gx, gy);
-                if (!float.IsNaN(roof)) h = Mathf.Max(h, roof);
-                if (!float.IsNaN(lid)) h = Mathf.Max(h, lid);
+                int gx = (int)x0 + i, gy = (int)y0 + j;
+                float h = -100f;
+                if (gx >= 0 && gy >= 0 && gx <= _map.Size && gy <= _map.Size)
+                {
+                    h = _map[gx, gy];
+                    // (A tunnel's roof or a cave's lid is rock over it too.)
+                    float roof = _map.RoofAt(gx, gy), lid = _map.LidAt(gx, gy);
+                    if (!float.IsNaN(roof)) h = Mathf.Max(h, roof);
+                    if (!float.IsNaN(lid)) h = Mathf.Max(h, lid);
+                }
+                data[j * n + i] = h + Position.Y;
             }
-            data[j * n + i] = h + Position.Y;
+            _seeH = data;
+            var bytes = new byte[data.Length * 4];
+            Buffer.BlockCopy(data, 0, bytes, 0, bytes.Length);
+            var image = Image.CreateFromData(n, n, false, Image.Format.Rf, bytes);
+            if (_seeHeights is null) _seeHeights = ImageTexture.CreateFromImage(image);
+            else _seeHeights.Update(image);
+            // (Texel centres on the metres: its corner half a metre short of the first.)
+            _seeBox = new Vector3(x0 - 0.5f + Position.X, y0 - 0.5f + Position.Z, n);
+            _seeKeepAt = new(float.MaxValue, float.MaxValue);
         }
-        var bytes = new byte[data.Length * 4];
-        Buffer.BlockCopy(data, 0, bytes, 0, bytes.Length);
-        var image = Image.CreateFromData(n, n, false, Image.Format.Rf, bytes);
-        if (_seeHeights is null) _seeHeights = ImageTexture.CreateFromImage(image);
-        else _seeHeights.Update(image);
-        _ground.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_heights"), _seeHeights);
-        // (Texel centres on the metres: its corner half a metre short of the first.)
-        _ground.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_heights_box"), new Vector3(x0 - 0.5f + Position.X, y0 - 0.5f + Position.Z, n));
+        var cam = GetViewport()?.GetCamera3D();
+        var toward = cam is null ? new Vector2(0f, 1f) : new Vector2(cam.GlobalPosition.X - her.X, cam.GlobalPosition.Z - her.Z);
+        toward = toward.LengthSquared() < 1e-6f ? new Vector2(0f, 1f) : toward.Normalized();
+        if (_seeKeep is null || at.DistanceTo(_seeKeepAt) >= 0.4f || toward.Dot(_seeKeepToward) < 0.999f)
+        {
+            _seeKeepAt = at;
+            _seeKeepToward = toward;
+            var keep = SeeKeep(_seeH, n, _seeBox, her, toward);
+            var image = Image.CreateFromData(n, n, false, Image.Format.R8, keep);
+            if (_seeKeep is null) _seeKeep = ImageTexture.CreateFromImage(image);
+            else _seeKeep.Update(image);
+        }
+        foreach (var m in _materials)
+        {
+            m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_heights"), _seeHeights);
+            m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_keep"), _seeKeep);
+            m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_heights_box"), _seeBox);
+        }
+    }
+
+    /// <summary>
+    /// Which rock the cut may take (255) or must keep whole (0), over the height map: the rock standing over her plane is
+    /// gathered into its walls (cells joined side to side), and a wall reaching back past her line (more than the cut
+    /// reaches behind her) is kept whole unless it hides her (it crosses the line from her toward the camera, within
+    /// SeeHideReach of it); every other wall in front of her is cut. The open floor round a kept wall is marked kept for
+    /// two metres, so its smooth skin past its cells is kept with it.
+    /// </summary>
+    static byte[] SeeKeep(float[] heights, int n, Vector3 box, Vector3 her, Vector2 toward)
+    {
+        var keep = new byte[n * n];
+        Array.Fill(keep, (byte)255);
+        float over = her.Y + 0.5f;
+        var wall = new int[n * n];
+        Array.Fill(wall, -1);
+        var cells = new List<int>();
+        var stack = new Stack<int>();
+        int walls = 0;
+        for (int start = 0; start < n * n; start++)
+        {
+            if (wall[start] >= 0 || heights[start] <= over) continue;
+            cells.Clear();
+            stack.Push(start);
+            wall[start] = walls;
+            bool back = false, front = false, hides = false;
+            while (stack.Count > 0)
+            {
+                int c = stack.Pop();
+                cells.Add(c);
+                int cx = c % n, cy = c / n;
+                float x = box.X + 0.5f + cx - her.X, z = box.Y + 0.5f + cy - her.Z;
+                float f = x * toward.X + z * toward.Y, side = Mathf.Abs(x * toward.Y - z * toward.X);
+                // (Past her line by a cell more than the cut reaches back.)
+                if (f < -2.5f) back = true;
+                if (f > 0f) { front = true; if (side < SeeHideReach) hides = true; }
+                if (cx > 0) Visit(c - 1);
+                if (cx < n - 1) Visit(c + 1);
+                if (cy > 0) Visit(c - n);
+                if (cy < n - 1) Visit(c + n);
+            }
+            if (back && front && !hides)
+                foreach (int c in cells) keep[c] = 0;
+            walls++;
+        }
+        // (The skin round a kept wall kept with it.)
+        for (int pass = 0; pass < 2; pass++)
+        {
+            var was = (byte[])keep.Clone();
+            for (int c = 0; c < n * n; c++)
+            {
+                if (heights[c] > over || was[c] == 0) continue;
+                int cx = c % n, cy = c / n;
+                if (cx > 0 && was[c - 1] == 0 || cx < n - 1 && was[c + 1] == 0 || cy > 0 && was[c - n] == 0 || cy < n - 1 && was[c + n] == 0)
+                    keep[c] = 0;
+            }
+        }
+        return keep;
+
+        void Visit(int c)
+        {
+            if (wall[c] >= 0 || heights[c] <= over) return;
+            wall[c] = walls;
+            stack.Push(c);
+        }
     }
     static readonly bool NoSeeFloor = OS.GetCmdlineUserArgs().Contains("--dbg-nofloor");
     /// <summary>

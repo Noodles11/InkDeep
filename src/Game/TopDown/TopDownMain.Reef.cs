@@ -684,9 +684,9 @@ public partial class TopDownMain
         bool hidden = _reef!.Made(CubeId.Of(p, _layer))?.CanopyAt(Mathf.RoundToInt(p.X), Mathf.RoundToInt(p.Y)) == true
             || WallHides(_bell.GlobalPosition, _camera.Camera.GlobalPosition) || _level.Hides(_bell.GlobalPosition, _camera.Camera.GlobalPosition);
         _reefSeeThrough = SeeStep(_reefSeeThrough, hidden, dt);
-        _reefView.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, SeeScale(_reefSeeThrough));
-        // (Her layer's reef life and mouths are cut with its rock.)
+        // (Her layer's reef life and mouths are cut with its rock; its map tells which rock the cut may take.)
         _level.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, SeeScale(_reefSeeThrough));
+        _reefView.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, SeeScale(_reefSeeThrough), _level.SeeMask);
     }
 
     /// <summary>

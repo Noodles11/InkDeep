@@ -14,16 +14,13 @@ instance uniform float see_floor = 0.0;
 // The level's cave openings (LevelView.AddDoors, docs/DIVE.md §6): each one's threshold (xy, map metres) and
 // the way into it (zw), and the passages' depth, open half-width and arch top. The deeper into one, the darker, until
 // its back is black: the dark of the cave beyond.
-// The cutout's inside (level_frame's lf_see_cut): the rock it cuts through shows solid, a flat grey dotted over
-// (see_dot, every see_dot_step pixels), and its edge outlined in the dots' colour (see_line_width metres, or a few
-// pixels). The see floor caps only what lies under rock: see_heights is the map's height round her (box: x, z of its
-// corner, its span in metres).
-uniform vec3 see_cap = vec3(0.3, 0.31, 0.34);
-uniform vec3 see_dot = vec3(0.55, 0.56, 0.6);
+// The cutout's inside (level_frame's lf_see_cut): the rock it cuts through shows solid, a flat grey faintly dotted
+// (see_dot, every see_dot_step pixels), and its edge outlined in the dots' colour (see_line_width metres, or a couple
+// of pixels): quiet, plainly a cut. The see floor caps only what lies under rock (level_frame's see_heights).
+uniform vec3 see_cap = vec3(0.12, 0.13, 0.15);
+uniform vec3 see_dot = vec3(0.18, 0.19, 0.22);
 uniform float see_dot_step = 7.0;
-uniform float see_line_width = 0.32;
-uniform sampler2D see_heights : filter_linear, repeat_disable;
-uniform vec3 see_heights_box = vec3(0.0);
+uniform float see_line_width = 0.18;
 
 uniform vec4 doors[8];
 uniform int door_count = 0;
@@ -90,7 +87,7 @@ void fragment() {
 	bool outline = false;
 	bool cap = !FRONT_FACING;
 	if (see_floor > 0.5) {
-		if (see_through.w <= 0.0 || lf_see_front(world, CAMERA_POSITION_WORLD) < 0.0 || see_heights_box.z <= 0.0) discard;
+		if (see_through.w <= 0.0 || lf_see_front(world, CAMERA_POSITION_WORLD) < 0.0 || see_heights_box.z <= 0.0 || !lf_see_takes(world)) discard;
 		vec2 huv = (world.xz - see_heights_box.xy) / see_heights_box.z;
 		float under = huv.x < 0.0 || huv.y < 0.0 || huv.x > 1.0 || huv.y > 1.0 ? -100.0 : texture(see_heights, huv).r;
 		if (under <= world.y) discard;
@@ -100,9 +97,10 @@ void fragment() {
 	}
 	// Its edge on what is left of the rock: a sharp line along the cut.
 	else if (!IN_SHADOW_PASS && see_through.w > 0.0) {
-		float edge = lf_see_dist(world, CAMERA_POSITION_WORLD);
-		// (A few pixels wide however steep the rock.)
-		outline = edge >= 0.0 && (edge < line_width || edge / max(fwidth(edge), 1e-4) < 3.5);
+		// (A couple of pixels wide however steep the rock; measured on the cut's own distance, not where rock kept
+		// whole meets it.)
+		float edge = max(lf_see_height() - world.y, -lf_see_front(world, CAMERA_POSITION_WORLD));
+		outline = lf_see_takes(world) && edge >= 0.0 && (edge < line_width || edge / max(fwidth(edge), 1e-4) < 2.0);
 	}
 	vec3 local = lf_local(world);
 	float px = length(fwidth(world.xz));
@@ -142,7 +140,7 @@ void fragment() {
 	if (cap || outline) {
 		// Unlit, flat: the cut through solid reef, dotted; its edge a line.
 		vec2 cell = mod(FRAGCOORD.xy, see_dot_step) - see_dot_step * 0.5;
-		float dotted = 1.0 - smoothstep(see_dot_step * 0.16, see_dot_step * 0.16 + 0.8, length(cell));
+		float dotted = 1.0 - smoothstep(see_dot_step * 0.12, see_dot_step * 0.12 + 0.8, length(cell));
 		ALBEDO = vec3(0.0);
 		EMISSION = outline ? see_dot : mix(see_cap, see_dot, dotted);
 		BACKLIGHT = vec3(0.0);

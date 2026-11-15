@@ -16,6 +16,12 @@ uniform vec2 level_origin = vec2(0.0);
 uniform vec4 portal = vec4(0.0);
 uniform vec4 see_through = vec4(0.0);
 uniform float see_through_y = 0.0;
+// The map round her for the cutout (LevelView.SeeHeights; box: x, z of its corner, its span in metres, 0 for none):
+// see_heights its height (rock, roofs and lids), see_keep 1 for rock the cut may take, 0 for rock kept whole (a wall
+// reaching back past her that does not hide her).
+uniform sampler2D see_heights : filter_linear, repeat_disable;
+uniform sampler2D see_keep : filter_nearest, repeat_disable;
+uniform vec3 see_heights_box = vec3(0.0);
 
 // The dissolve threshold at a pixel (0..1): interleaved gradient noise, fine and even, with no grid to it (an ordered
 // 4×4 dither showed as a screen door over a fade).
@@ -49,9 +55,17 @@ float lf_see_front(vec3 world, vec3 cam) {
 	return dot(world.xz - see_through.xy, toward) + see_through.z;
 }
 
+// Whether the rock at a point may be cut (see_keep): a wall reaching back past her that does not hide her stays whole.
+bool lf_see_takes(vec3 world) {
+	if (see_heights_box.z <= 0.0) return true;
+	vec2 uv = (world.xz - see_heights_box.xy) / see_heights_box.z;
+	if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) return true;
+	return texture(see_keep, uv).r > 0.5;
+}
+
 // How far (metres) a point is from the cut away (< 0 inside it, > 0 outside), for the cut and its outline.
 float lf_see_dist(vec3 world, vec3 cam) {
-	if (see_through.w <= 0.0) return 1e3;
+	if (see_through.w <= 0.0 || !lf_see_takes(world)) return 1e3;
 	return max(lf_see_height() - world.y, -lf_see_front(world, cam));
 }
 
@@ -74,7 +88,7 @@ float lf_see_rim(vec3 world, vec3 cam) {
 }
 
 // The outline's colour (the cut's dots').
-const vec3 LF_SEE_RIM = vec3(0.55, 0.56, 0.6);
+const vec3 LF_SEE_RIM = vec3(0.18, 0.19, 0.22);
 
 // True where the portal hides this pixel; its edge dissolves over a few metres.
 bool lf_portal_cut(vec3 world, vec2 frag) {
