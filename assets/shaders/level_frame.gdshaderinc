@@ -29,60 +29,52 @@ vec3 lf_local(vec3 world) { return world - level_offset; }
 // A local position where patterns are drawn: absolute across the dive.
 vec3 lf_pattern(vec3 local) { return vec3(local.x + level_origin.x, local.y, local.z + level_origin.y); }
 
-// The cutout: whatever stands between the camera and her plane round her — rock, a tunnel's roof, the coral and sponges
-// on it — is cut away, so no wall ever hides her: a round opening about her that runs on as a channel its own width
-// up the screen (away from the camera), out past the screen's edge. It opens and closes by its scale (see_through.w,
-// eased by the game: out quickly as something comes to hide her, in as it clears). Its edge is sharp and outlined, and
-// the rock it cuts through shows solid inside, dotted (topdown_ground). Only what stands above her plane is cut: the
-// floor she swims over stays whole.
+// The cutout: while something stands between the camera and her, everything on the camera's side of her (from
+// see_through.z metres behind her, out past the screen's edges) is cut off flat a little over her plane: the walls and
+// peaks in front of her gone down to their stumps, the cut filled solid (topdown_ground's cap, dotted) and outlined. What
+// stands behind her stays whole. As it opens (see_through.w, eased by the game) the cut comes down from over the
+// tallest walls; as it closes it lifts away.
 
-// How open the opening is (its scale, eased by the game), and the lowest height anything is cut at: just over her plane.
+// How far it has come down (eased by the game), and the height it cuts at now: from over the walls' tops to its own.
 float lf_see_open() { return clamp(see_through.w, 0.0, 1.0); }
-// (Just over the seabed: the rock is cut right down, its foot left as no stub round her; the floor itself is never cut.)
-float lf_see_slice() { return see_through_y - 1.5; }
+const float LF_SEE_TOP = 34.0;
+const float LF_SEE_OVER = 0.5;
+float lf_see_height() { return mix(see_through_y + LF_SEE_TOP, see_through_y + LF_SEE_OVER, lf_see_open()); }
+// (The lowest height anything is cut at.)
+float lf_see_slice() { return lf_see_height(); }
 
-// How far (metres) from the opening's edge a point is, on her plane, as the camera sees it (< 0 inside the opening,
-// > 0 outside); a long way out for what is not on the camera's side of her.
+// How far (metres) a point stands on the camera's side of the cut's back line (> 0: on the camera's side, cut there).
+float lf_see_front(vec3 world, vec3 cam) {
+	vec2 toward = normalize(cam.xz - see_through.xy + vec2(1e-5, 0.0));
+	return dot(world.xz - see_through.xy, toward) + see_through.z;
+}
+
+// How far (metres) a point is from the cut away (< 0 inside it, > 0 outside), for the cut and its outline.
 float lf_see_dist(vec3 world, vec3 cam) {
 	if (see_through.w <= 0.0) return 1e3;
-	float band = see_through_y;
-	vec3 d = world - cam;
-	if (d.y > -1e-3) return 1e3;
-	// Where the camera's ray to it crosses her plane (what it hides there; for the see floor, below her plane, what
-	// stands over it along the ray).
-	vec3 hid = cam + d * ((band - cam.y) / d.y);
-	vec2 off = hid.xz - see_through.xy;
-	float r = see_through.z * lf_see_open();
-	// Away from the camera (up the screen) it runs on as a channel its own width, out past the screen's edge.
-	vec2 toward = normalize(see_through.xy - cam.xz + vec2(1e-5, 0.0));
-	float along = dot(off, toward);
-	if (along > 0.0) return abs(off.x * toward.y - off.y * toward.x) - r;
-	return length(off) - r;
+	return max(lf_see_height() - world.y, -lf_see_front(world, cam));
 }
 
-// lf_see_dist, and whether the point may be cut at all (in .y, eased over its lowest height: nothing under the slice is
-// cut, so the floor she swims over stays whole). Through the opening the seabed is seen running on under the rock
-// (LevelView's see floor: the ground's own skin on a patch under her, drawn only inside the opening).
+// lf_see_dist, and whether the point may be cut at all (in .y).
 vec2 lf_see_edge(vec3 world, vec3 cam) {
-	if (see_through.w <= 0.0 || world.y < lf_see_slice()) return vec2(1e3, 0.0);
-	return vec2(lf_see_dist(world, cam), smoothstep(lf_see_slice(), lf_see_slice() + 0.15, world.y));
+	if (see_through.w <= 0.0) return vec2(1e3, 0.0);
+	return vec2(lf_see_dist(world, cam), 1.0);
 }
 
-// True where something in front of her is cut away (lf_see_edge's opening): its edge sharp.
+// True where something in front of her is cut away: its edge sharp.
 bool lf_see_cut(vec3 world, vec3 cam, vec2 frag) {
-	vec2 e = lf_see_edge(world, cam);
-	return e.y > 0.0 && e.x < 0.0;
+	return see_through.w > 0.0 && lf_see_dist(world, cam) < 0.0;
 }
 
-// The faint glow round the opening (0..1), on what is left at its edge.
+// The outline along the cut (0..1), on what is left at its edge.
 float lf_see_rim(vec3 world, vec3 cam) {
-	if (see_through.w <= 0.0 || world.y < lf_see_slice()) return 0.0;
+	if (see_through.w <= 0.0) return 0.0;
 	float e = lf_see_dist(world, cam);
-	return (1.0 - smoothstep(0.0, 0.45, abs(e + 0.1))) * see_through.w;
+	return e >= 0.0 && e < 0.3 ? 1.0 : 0.0;
 }
 
-// The cut faces' glow: a cool light, as if her light caught them.
-const vec3 LF_SEE_RIM = vec3(0.35, 0.75, 0.95);
+// The outline's colour (the cut's dots').
+const vec3 LF_SEE_RIM = vec3(0.55, 0.56, 0.6);
 
 // True where the portal hides this pixel; its edge dissolves over a few metres.
 bool lf_portal_cut(vec3 world, vec2 frag) {

@@ -1326,22 +1326,22 @@ at mist distance (inherited fade rule).
 - **The cutout** (a presentation rule for walls, as Baldur's Gate 3's; the canopy layer has its own fade): while rock
   (the reef, a tunnel's roof, a cave's lid) stands between the camera and any part of her (her middle and 0.8 m round
   it; `LevelView.Hides`; on the cube reef also its risen walls and arches), whatever stands between the camera and her
-  plane round her is cut away (`LevelView.SeeThrough`, `ReefStreamView.SeeThrough`, level_frame's `lf_see_cut`):
-  - **Its shape:** 10 m round her where the camera's ray crosses her plane, running on up the screen (away from the
-    camera) as a channel as wide, out past the screen's edge. Its edge is sharp, outlined in a pale line.
-  - **Solid inside:** the reef it cuts through reads as solid rock cut through, never as the water or the void under it:
-    the rock's far faces seen from within the cut, and the see floor wherever rock stands over it (a height map of the
-    map round her tells), are drawn a flat dark tone dotted over.
-  - **What it cuts:** the rock (the ground's heightfield and the free rock) and the coral and flora on it, down to just
-    over the seabed; the floor she swims over stays whole.
-    The shadows stay as they are (the cut is not made from the sun's eye).
-  - **What it shows:** the floor running on under the rock (the see floor: a patch of the ground's own skin at the
-    floor under her, out of the rock's shadow, drawn only where the rock over it along the ray is cut), so the cut
-    reads as the wall gone, never as a hole onto nothing.
-  - **Its timing:** it opens by its scale with a quick ease out (0.18 s) and closes with an ease in (0.35 s). A wall
-    she only swims beside stays whole. A canopy fading over Clementine is drawn unblurred while it fades.
+  plane is cut away (`LevelView.SeeThrough`, `ReefStreamView.SeeThrough`, level_frame's `lf_see_cut`):
+  - **Its shape:** a flat, horizontal slice 0.5 m over her plane through everything on the camera's side of her, from
+    1.5 m behind her out past the screen's edges: the walls and peaks in front of her are cut down to their stumps.
+    What stands behind her (up the screen) is drawn whole.
+  - **Solid inside:** the cut reads as solid rock cut through, never as the water or the void under it: a flat grey
+    plane at the cut's height (the see floor), drawn only where rock stood over it (a height map of the map round her
+    tells), dotted over in a lighter grey; the rock's far faces seen through a vertical cut (a wall straddling the line
+    behind her) are drawn the same. Its rim, where the stumps meet it, and its back edge are outlined sharply in the
+    dots' colour, a few pixels wide.
+  - **What it cuts:** the rock (the ground's heightfield and the free rock) and the coral and flora on it; the floor
+    she swims over stays whole. The shadows stay as they are (the cut is not made from the sun's eye).
+  - **Its timing:** it opens with a quick ease out (0.18 s), the slice coming down from 34 m over her plane, and closes
+    with an ease in (0.35 s), lifting away. A wall she only swims beside stays whole. A canopy fading over Clementine is
+    drawn unblurred while it fades.
   - **Verification:** `--at=hidden` starts her where rock hides her (`--dbg-hidden2`: another such spot);
-    `--dbg-nocarve` keeps every wall whole; `--dbg-nofloor` leaves out the see floor.
+    `--dbg-nocarve` keeps every wall whole; `--dbg-nofloor` leaves out the cut's grey fill.
 - **Leaving a level fades all of it** (`TopDownMain.FadeLevelLife`): down a hole, or up and out of a sub-level, the
   old level's rock and flora are cut by the iris, and everything else of it — its creatures and their ink, leaks,
   charge stones, prism stones, springs, seals, mouths, kelp, places and its lights and decals — fades out as the iris's edge passes over

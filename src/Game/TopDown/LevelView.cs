@@ -400,11 +400,9 @@ public partial class LevelView : Node3D
         if (_seeFloor is { } floor && IsInstanceValid(floor))
         {
             floor.Visible = amount > 0f && !NoSeeFloor;
-            // At the floor under her (eased), so the floor round her is seen running on under the cut rock (on an abyss
-            // reef, its deep floor).
-            float under = Mathf.Min(SmoothHeight(_map, her.X - Position.X, her.Z - Position.Z), SeeFloorHeight) - 0.25f;
-            _seeFloorY = floor.Visible && _seeFloorShown ? Mathf.Lerp(_seeFloorY, under, 0.15f) : under;
-            _seeFloorShown = floor.Visible;
+            // At the cut's height (level_frame's lf_see_height: coming down from over the walls' tops as it opens), the
+            // cut's solid fill where rock was cut over it.
+            _seeFloorY = her.Y + Mathf.Lerp(SeeCutTop, SeeCutOver, Mathf.Clamp(amount, 0f, 1f)) - Position.Y;
             floor.Position = new Vector3(her.X - Position.X, _seeFloorY, her.Z - Position.Z);
         }
         if (amount > 0f) SeeHeights(her);
@@ -418,7 +416,7 @@ public partial class LevelView : Node3D
     MeshInstance3D? _seeFloor;
 
     /// <summary>The map's height round her (for the see floor: it caps only what lies under rock), a metre a texel.</summary>
-    const int SeeHeightsSize = 128;
+    const int SeeHeightsSize = 192;
     ImageTexture? _seeHeights;
     Vector2 _seeHeightsAt = new(float.MaxValue, float.MaxValue);
 
@@ -456,10 +454,12 @@ public partial class LevelView : Node3D
         _ground.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_heights_box"), new Vector3(x0 - 0.5f + Position.X, y0 - 0.5f + Position.Z, n));
     }
     static readonly bool NoSeeFloor = OS.GetCmdlineUserArgs().Contains("--dbg-nofloor");
-    /// <summary>The see floor's square (metres a side: the opening and its channel to the screen's edge), and the highest it lies (the seabed); it lies a little under the floor under her, so the real floor wins wherever it is.</summary>
-    const float SeeFloorSize = 80f, SeeFloorHeight = -1.2f;
+    /// <summary>
+    /// The cut's fill (the see floor): its square (metres a side: all the screen shows round her), and the heights it is
+    /// laid at over her plane, as level_frame's cut (LF_SEE_TOP as it starts to open, LF_SEE_OVER open).
+    /// </summary>
+    const float SeeFloorSize = 200f, SeeCutTop = 34f, SeeCutOver = 0.5f;
     float _seeFloorY;
-    bool _seeFloorShown;
 
     /// <summary>How far round her middle (metres) rock counts as hiding her: her bell and the strands under it.</summary>
     const float HerReach = 0.8f;
