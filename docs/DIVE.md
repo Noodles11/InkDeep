@@ -97,6 +97,24 @@ layer 1 Grandmother Tull, layer 2 Kip, layer 3 Fennel, layer 4 Ottilie, layer 5 
 her saves her as freed at once and unlocks her for every later haven; from then on, and below layer 5, the boss is the
 Leak's own, Drippus Prime.
 
+### 5.1 The danger clock
+
+- **Each layer keeps a clock** (`TopDownMain.StepDanger`, `DangerTuning`), started unseen the first time she comes onto
+  it. It runs while she is on the layer (not while the game is held, nor in a cave or a haven off it, nor during a
+  change of layer) until the layer's boss is freed; it is saved with the dive (`CubeDiveSave.DangerClock`). A layer
+  that holds no boss keeps its clock running: the pressure to move on.
+- **Its ten minutes** (`DangerTuning.Minutes`, configurable) are cut into five equal steps. In the first, murklings
+  come as the Menace alone has them; each step after, they come 30% more often and 25% more of them may stay round her
+  (`RateStep`, `CapStep`), to the most at the last step, held from then on. Freeing the layer's boss puts it back to
+  the first step for good, to be explored in peace.
+- **Murklings come out of the dark** (`PlaneWorld.StepDarkMurklings`): any spot 9–20 m from her that no light reaches
+  (`DangerTuning.Dark`), clear of rock, never in a haven or the boss's arena. No ink is needed: the cube reef keeps no
+  corruption on its floor. One every 9 s ÷ (1 + Menace), times the step's rate, while fewer than 4 + 5 × Menace (times
+  the step's share) are within 26 m of her. They come as the roster's (basic, thrower, shoal), budding where they come.
+- **The only sign** is on the HUD: right of her gauge's bell, under her shells, an exclamation mark for each step past
+  the first (none at first, four at the most), in a warning red, each trembling on its own, the more of them the harder.
+- **Verification:** `--danger-speed=N` runs the clock N times as fast.
+
 ## 6. Leak caves
 
 The curse rooms are leak caves: a cube she claims opens one time in five (never on the warm-up layer), its mouth in

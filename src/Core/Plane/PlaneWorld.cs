@@ -302,6 +302,7 @@ public sealed partial class PlaneWorld : IBodyBlocker
         StepAsh();
         StepCorruption();
         if (Options.Adventure) StepAdventure();
+        StepDarkMurklings();
         StepKnocks();
         StepSprings();
         StepFish();

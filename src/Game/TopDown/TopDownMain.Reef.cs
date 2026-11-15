@@ -112,6 +112,31 @@ public partial class TopDownMain
     /// <summary>The layers whose boss she has freed.</summary>
     readonly HashSet<int> _bossFreed = new();
 
+    /// <summary>
+    /// Each layer's danger clock (DangerTuning, docs/DIVE.md): seconds she has spent on it, started unseen the first time
+    /// she comes onto it, stopped for good once its boss is freed (its danger then back to none).
+    /// </summary>
+    readonly Dictionary<int, float> _dangerClock = new();
+
+    /// <summary>Her layer's clock run on (not while the game is held, nor out of the reef), and the danger it is at, to the world and the HUD.</summary>
+    void StepDanger(float dt)
+    {
+        int danger = 0;
+        if (!_bossFreed.Contains(_layer))
+        {
+            _dangerClock.TryGetValue(_layer, out float seconds);
+            if (_layerMove == LayerMove.None && !_world.Defeated) seconds += dt * _dangerSpeed;
+            _dangerClock[_layer] = seconds;
+            danger = DangerTuning.StepAt(seconds);
+        }
+        _world.Danger = danger;
+        _hud.Danger = danger;
+    }
+
+    /// <summary>Verification (--danger-speed=N): the danger clock run N times as fast.</summary>
+    readonly float _dangerSpeed = System.Linq.Enumerable.FirstOrDefault(OS.GetCmdlineUserArgs(), a => a.StartsWith("--danger-speed="))
+        is { } arg && float.TryParse(arg["--danger-speed=".Length..], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float k) ? k : 1f;
+
     /// <summary>The reef from the run's seed, and its views; she begins on the warm-up layer, or in the haven a save left her in.</summary>
     void BuildReef()
     {
@@ -149,6 +174,7 @@ public partial class TopDownMain
         _makingLayer = -1;
         _bossRolled.Clear();
         _bossFreed.Clear();
+        _dangerClock.Clear();
         _reefResume = null;
         _layerMove = LayerMove.None;
         _hud.LayerPrompt = null;
@@ -193,6 +219,7 @@ public partial class TopDownMain
         _director.Load(saved.Director);
         foreach (int z in saved.BossRolled) _bossRolled.Add(z);
         foreach (int z in saved.BossFreed) _bossFreed.Add(z);
+        foreach (var (z, seconds) in saved.DangerClock) _dangerClock[z] = seconds;
         foreach (var (z, key) in saved.Arenas)
             if (CubeDiveSave.FromCubeKey(key) is { } arena) _reef!.RestoreArena(arena);
         foreach (var layer in saved.Records) CubeRecordSaving.Load(layer, _records.Of(layer.Layer));
@@ -231,7 +258,7 @@ public partial class TopDownMain
             Footprint = _reef!.Space.Footprint, Layers = _reef.Space.Layers, Layer = _layer, Deepest = _cubeDiving.Deepest,
             HavenMouth = _diveCave, Director = _director.Save(),
             Arenas = Enumerable.Range(0, _reef.Space.Layers).Where(z => _reef.ArenaOf(z) is not null).ToDictionary(z => z, z => CubeDiveSave.CubeKey(_reef.ArenaOf(z)!.Value)),
-            BossRolled = _bossRolled.ToList(), BossFreed = _bossFreed.ToList(),
+            BossRolled = _bossRolled.ToList(), BossFreed = _bossFreed.ToList(), DangerClock = new Dictionary<int, float>(_dangerClock),
             Records = _records.Layers.Select(z => CubeRecordSaving.Save(_records.Of(z))).ToList(),
         };
         jelly.Level = _run.XpLevel;
@@ -320,6 +347,7 @@ public partial class TopDownMain
             CallDeferred(MethodName.TogglePause);
         }
         if (_world.Boss?.Freed == true) _bossFreed.Add(_layer);
+        StepDanger(dt);
         var p = _world.Player;
         _stream.Update(ReefFocus(p), dt);
         _cubeWorker.Drain(_stream);

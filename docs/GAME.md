@@ -196,7 +196,8 @@ emptied, it is freed, leaving a core of light.
 ## 11. On the screen
 
 - **The HUD** (DESIGN-TOPDOWN §9, ADVENTURE §6): top left, Clementine seen from above with her four oral arms as her
-  stats (health, inner light, the active pearl's charge, experience) and her shells beside her; at the screen's edges
+  stats (health, inner light, the active pearl's charge, experience) and her shells beside her, under them the depth's danger
+  as trembling exclamation marks (DIVE §5.1); at the screen's edges
   the emblems on the places round her; top centre a dot per leak. Messages slide down from the top edge. Nothing else stays on
   the screen.
 - **On the reef**: corruption rings round the corrupted she can see; the pearl she is absorbing on its own card.

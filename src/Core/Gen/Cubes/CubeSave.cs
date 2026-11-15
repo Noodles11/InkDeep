@@ -25,6 +25,8 @@ public sealed class CubeDiveSave
     public Dictionary<int, string> Arenas { get; set; } = new();
     public List<int> BossRolled { get; set; } = new();
     public List<int> BossFreed { get; set; } = new();
+    /// <summary>Each layer's danger clock (seconds she has been on it with its boss not freed: DangerTuning).</summary>
+    public Dictionary<int, float> DangerClock { get; set; } = new();
     public List<CubeLayerSave> Records { get; set; } = new();
 
     public static string CubeKey(CubeId c) => $"{c.X}/{c.Y}/{c.Z}/{(c.OnEnd ? 1 : 0)}";
