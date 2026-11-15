@@ -1840,7 +1840,7 @@ public partial class TopDownMain : Node3D
             FadeLevelLife(from, radius, stay);
             _corruption.Fade(stay);
             _arrows.DiveOut(Ease(t / 0.6f));
-            _arrows.Sync(_camera.Camera, HudScale, dt);
+            _arrows.Sync(_camera.Camera, HudScale, dt, _bell.GlobalPosition);
         }
         _hud.Elapsed = _elapsed;
         _hud.Track(_world, _catalog, dt);
@@ -2392,7 +2392,7 @@ public partial class TopDownMain : Node3D
         {
             if (_riding) StepRide(dt);
             else StepArrive(dt);
-            _arrows.Sync(_camera.Camera, HudScale, dt);
+            _arrows.Sync(_camera.Camera, HudScale, dt, _bell.GlobalPosition);
             Capture();
             return;
         }
@@ -2927,7 +2927,7 @@ public partial class TopDownMain : Node3D
         // The places round her, pointed at from the screen's edges.
         _arrows.Visible = !_dying && !InLabyrinth;
         _arrows.SetTargets(ArrowTargets());
-        _arrows.Sync(_camera.Camera, HudScale, dt);
+        _arrows.Sync(_camera.Camera, HudScale, dt, _bell.GlobalPosition);
         // The Tab map: the whole screen, framing the level's outline.
         _fullMap.Frame(new Rect2(Vector2.Zero, GetViewport().GetVisibleRect().Size));
         _fullMap.Player = p.Position;

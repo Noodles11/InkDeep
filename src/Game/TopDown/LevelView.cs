@@ -595,7 +595,10 @@ public partial class LevelView : Node3D
                 if (cy < n - 1) Spread(c, c + n);
             }
         }
-        // (The skin round what is taken taken with it.)
+        // The open floor: on the camera's side of her line all it has over it is taken (a roof, an arch over a passage in
+        // front of her), and round what is taken (the rock's skin past its cells) too; but not within two metres of rock
+        // left standing, so its skin stays with it.
+        var rock = (byte[])keep.Clone();
         for (int pass = 0; pass < 2; pass++)
         {
             var was = (byte[])keep.Clone();
@@ -606,6 +609,26 @@ public partial class LevelView : Node3D
                 if (cx > 0 && was[c - 1] != 0 || cx < n - 1 && was[c + 1] != 0 || cy > 0 && was[c - n] != 0 || cy < n - 1 && was[c + n] != 0)
                     keep[c] = 255;
             }
+        }
+        var nearLeft = new int[n * n];
+        Array.Fill(nearLeft, int.MaxValue);
+        queue.Clear();
+        for (int c = 0; c < n * n; c++)
+            if (heights[c] > over && rock[c] == 0) { nearLeft[c] = 0; queue.Enqueue(c); }
+        while (queue.Count > 0)
+        {
+            int c = queue.Dequeue();
+            if (nearLeft[c] >= 2) continue;
+            int cx = c % n, cy = c / n;
+            foreach (int q in new[] { cx > 0 ? c - 1 : -1, cx < n - 1 ? c + 1 : -1, cy > 0 ? c - n : -1, cy < n - 1 ? c + n : -1 })
+                if (q >= 0 && heights[q] <= over && nearLeft[q] > nearLeft[c] + 1) { nearLeft[q] = nearLeft[c] + 1; queue.Enqueue(q); }
+        }
+        for (int c = 0; c < n * n; c++)
+        {
+            if (heights[c] > over) continue;
+            if (nearLeft[c] <= 2) { keep[c] = 0; continue; }
+            float x = box.X + 0.5f + c % n - her.X, z = box.Y + 0.5f + c / n - her.Z;
+            if (x * toward.X + z * toward.Y + reach > 0f) keep[c] = 255;
         }
         return keep;
 

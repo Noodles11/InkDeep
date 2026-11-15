@@ -499,7 +499,7 @@ public partial class TopDownMain
         float stay = 1f - Ease((t - 0.3f) / 1.0f);
         FadeLevelLife(at, Mathf.Lerp(-5f, radius, Ease(t / 0.45f)), stay);
         _arrows.DiveOut(Ease(t / 0.6f));
-        _arrows.Sync(_camera.Camera, HudScale, dt);
+        _arrows.Sync(_camera.Camera, HudScale, dt, _bell.GlobalPosition);
         _snow.Tick(dt, focus + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
         _plankton.Tick(dt, focus + Vector3.Up * 2f, _camera.Camera.GlobalBasis);
         _damage.Tick(dt);

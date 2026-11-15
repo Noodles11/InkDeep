@@ -1192,7 +1192,9 @@ The FP staging ("look up through the surface") is replaced:
   on the line from the middle toward it, a small pointer on its ring turned to it; once the place's entrance comes on
   the screen, the emblem goes on to it and stays locked on it, one motion as she swims toward it. Waiting at the edge
   it is small (two thirds of its size); on its place it grows to four thirds, eased in and out over 0.3 s (and shrinks
-  back as the place leaves the screen). Places within 1.5 m
+  back as the place leaves the screen). Once she is at a place (within three full-size emblem radii of it on the screen)
+  its emblem fades away (0.25 s), so it never covers what lies there (a shop's wares), and back as she leaves. Places
+  within 1.5 m
   share one emblem. As she dives, climbs or rides into a place, they slide out past the edges; once she has settled,
   the new place's slide in from outside.
 - **Pause menu** (`PauseMenu`; Esc or Start): the sea and the clock are held, and she still moves in place. A drawer
@@ -1337,7 +1339,8 @@ at mist distance (inherited fade rule).
     screen's edges: they are cut down to their stumps. The walls are told apart on a metre-a-texel map of the rock round
     her (`LevelView.SeeKeep`). A wall with anything on the camera's side of her line (1.5 m behind her) is taken whole:
     all of it on that side, and on along the wall for 14 m past the line, so no faces of a cut mountain are left
-    standing. What stands only behind her (up the screen) is drawn whole, and so is a wall reaching back past her that
+    standing. The open floor on the camera's side of her line is taken too (a roof or an arch over a passage in front
+    of her goes), but not within 2 m of rock left standing. What stands only behind her (up the screen) is drawn whole, and so is a wall reaching back past her that
     does not hide her (it does not cross the line from her toward the camera within 1.6 m of it; 2.8 m for a wall
     already taken, so one at the edge never flicks between the two).
   - **Solid inside:** the cut reads as solid rock cut through, never as the water or the void under it. Every reef

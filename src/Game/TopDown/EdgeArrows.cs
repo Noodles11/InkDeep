@@ -30,13 +30,20 @@ public partial class EdgeArrows : Control
     /// <summary>Each place's way from its edge size (0) to its size on it (1), by where it is.</summary>
     readonly Dictionary<System.Numerics.Vector2, float> _grown = new();
 
+    /// <summary>
+    /// She is at a place once within this many of a full-size emblem's radii of it on the screen: its emblem fades away
+    /// (over Fade seconds), so it never covers what lies there (a shop's wares), and back as she leaves.
+    /// </summary>
+    const float Near = 3f, Fade = 0.25f;
+    readonly Dictionary<System.Numerics.Vector2, float> _shownBy = new();
+
     /// <summary>Two places nearer than this (metres) share one emblem (the first: a request's mark over a mouth's own).</summary>
     const float Same = 1.5f;
 
     static readonly Color Disc = new(0.03f, 0.045f, 0.07f, 0.62f), Ink = new(0.03f, 0.045f, 0.07f, 0.9f);
 
     readonly List<(System.Numerics.Vector2 At, Color Colour, string Sign)> _targets = new();
-    readonly List<(Vector2 At, Vector2 Way, Color Colour, string Sign, bool Off, float Size)> _shown = new();
+    readonly List<(Vector2 At, Vector2 Way, Color Colour, string Sign, bool Off, float Size, float Alpha)> _shown = new();
     /// <summary>0: in place; 1: slid out past the edges.</summary>
     float _out;
     /// <summary>Since she settled (−1: not sliding in).</summary>
@@ -76,7 +83,7 @@ public partial class EdgeArrows : Control
     }
 
     /// <summary>Each frame: where each emblem stands, by the camera (the screen's own scale is <paramref name="scale"/>).</summary>
-    public void Sync(Camera3D camera, float scale, float dt)
+    public void Sync(Camera3D camera, float scale, float dt, Vector3? her = null)
     {
         if (_settled >= 0f)
         {
@@ -91,6 +98,7 @@ public partial class EdgeArrows : Control
         var middle = size * 0.5f;
         var lo = new Vector2(Inset, Inset);
         var hi = size - lo;
+        Vector2? herAt = her is { } h && !camera.IsPositionBehind(h) ? Fisheye.Shown(camera.UnprojectPosition(h), view) / scale : null;
         foreach (var (at, colour, sign) in _targets)
         {
             var world = new Vector3(at.X, 0.7f, at.Y);
@@ -124,12 +132,18 @@ public partial class EdgeArrows : Control
             grown = Mathf.MoveToward(grown, off ? 0f : 1f, dt / Grow);
             _grown[at] = grown;
             float grownSize = Mathf.Lerp(EdgeSize, OnSize, Mathf.SmoothStep(0f, 1f, grown));
-            _shown.Add((place, way, colour, sign, off, grownSize));
+            // At it: gone (eased).
+            bool at_ = !off && herAt is { } me && me.DistanceTo(screen) < Near * Radius * OnSize;
+            _shownBy.TryGetValue(at, out float alpha);
+            if (!_shownBy.ContainsKey(at)) alpha = 1f;
+            alpha = Mathf.MoveToward(alpha, at_ ? 0f : 1f, dt / Fade);
+            _shownBy[at] = alpha;
+            if (alpha > 0.001f) _shown.Add((place, way, colour, sign, off, grownSize, Mathf.SmoothStep(0f, 1f, alpha)));
         }
         // (Places gone forgotten.)
         if (_grown.Count > _targets.Count)
             foreach (var key in new List<System.Numerics.Vector2>(_grown.Keys))
-                if (!_targets.Exists(t => t.At == key)) _grown.Remove(key);
+                if (!_targets.Exists(t => t.At == key)) { _grown.Remove(key); _shownBy.Remove(key); }
         QueueRedraw();
     }
 
@@ -137,8 +151,12 @@ public partial class EdgeArrows : Control
     {
         var font = ThemeDB.FallbackFont;
         const int fontSize = 22;
-        foreach (var (place, way, colour, sign, off, size) in _shown)
+        foreach (var (place, way, tint, sign, off, size, alpha) in _shown)
         {
+            // (Faded as she reaches it.)
+            var colour = tint with { A = tint.A * alpha };
+            var disc = Disc with { A = Disc.A * alpha };
+            var ink = Ink with { A = Ink.A * alpha };
             // (Drawn about its middle at its size.)
             DrawSetTransform(place, 0f, new Vector2(size, size));
             var at = Vector2.Zero;
@@ -149,10 +167,10 @@ public partial class EdgeArrows : Control
                 var tip = at + way * (Radius + Pointer);
                 var points = new[] { tip, at + way * (Radius - 1f) + side * 7f, at + way * (Radius - 1f) - side * 7f };
                 DrawColoredPolygon(points, colour);
-                DrawPolyline(new[] { points[0], points[1], points[2], points[0] }, Ink, 1.5f, true);
+                DrawPolyline(new[] { points[0], points[1], points[2], points[0] }, ink, 1.5f, true);
             }
-            DrawCircle(at, Radius, Disc);
-            DrawArc(at, Radius + 1.5f, 0f, Mathf.Tau, 40, Ink, 1.8f, true);
+            DrawCircle(at, Radius, disc);
+            DrawArc(at, Radius + 1.5f, 0f, Mathf.Tau, 40, ink, 1.8f, true);
             DrawArc(at, Radius - 0.6f, 0f, Mathf.Tau, 40, colour, 2.8f, true);
             // Its sign, inked in its colour.
             if (sign == ".") DrawCircle(at, 4.8f, colour);
