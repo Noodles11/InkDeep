@@ -147,12 +147,72 @@ public partial class BellView : Node3D
     float _reserve = 1f, _breath = 1f, _points;
     const float SpendPerBubble = 0.07f, Rekindle = 0.45f;
 
+    /// <summary>
+    /// Her afterimages as she dashes: a copy of her bell left every GhostSpacing metres along her way (however few
+    /// frames the dash takes), in her light's colour (bell_ghost.gdshader), fading away over GhostSeconds, so a dash
+    /// reads fast.
+    /// </summary>
+    const float GhostSpacing = 0.55f, GhostSeconds = 0.32f;
+    Transform3D? _lastGhost;
+    ArrayMesh _bellMesh = null!;
+    ShaderMaterial _ghostMaterial = null!;
+    readonly List<(MeshInstance3D Node, float Life)> _ghosts = new();
+
+    void SyncGhosts(bool dashing, float dt)
+    {
+        for (int i = _ghosts.Count - 1; i >= 0; i--)
+        {
+            var (node, life) = _ghosts[i];
+            life -= dt;
+            if (life <= 0f)
+            {
+                node.QueueFree();
+                _ghosts.RemoveAt(i);
+                continue;
+            }
+            float k = life / GhostSeconds;
+            node.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("fade"), k * k);
+            _ghosts[i] = (node, life);
+        }
+        if (!dashing || !Visible)
+        {
+            _lastGhost = null;
+            return;
+        }
+        var now = _body.GlobalTransform;
+        if (_lastGhost is not { } last)
+        {
+            Ghost(now);
+            _lastGhost = now;
+            return;
+        }
+        // Copies along her way since the last, GhostSpacing apart.
+        float gap = last.Origin.DistanceTo(now.Origin);
+        int n = Mathf.Min((int)(gap / GhostSpacing), 12);
+        for (int k = 1; k <= n; k++)
+        {
+            float t = k * GhostSpacing / gap;
+            Ghost(last.InterpolateWith(now, t));
+        }
+        if (n > 0) _lastGhost = last.InterpolateWith(now, n * GhostSpacing / gap);
+    }
+
+    void Ghost(Transform3D at)
+    {
+        var ghost = new MeshInstance3D { Mesh = _bellMesh, MaterialOverride = _ghostMaterial, TopLevel = true, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+        AddChild(ghost);
+        ghost.GlobalTransform = at;
+        ghost.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("fade"), 1f);
+        _ghosts.Add((ghost, GhostSeconds));
+    }
+
     public override void _Ready()
     {
         _body = new Node3D();
         AddChild(_body);
         _bellMaterial = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/clementine_bell.gdshader"), RenderPriority = 2 };
-        var bell = BakeBell();
+        var bell = _bellMesh = BakeBell();
+        _ghostMaterial = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/bell_ghost.gdshader") };
         _body.AddChild(new MeshInstance3D { Mesh = bell, MaterialOverride = _bellMaterial, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         // Her outline when something covers her: over everything, the kelp over her included (it draws at 3).
         _outlineMaterial = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/clementine_outline.gdshader"), RenderPriority = 5 };
@@ -406,6 +466,7 @@ public partial class BellView : Node3D
         _time += dt;
         float h = Mathf.Min(dt, 0.05f);
         var p = world.Player;
+        SyncGhosts(p.IsDashing && !Puppet, dt);
         SetArm(world.Options.Adventure ? world.ArmLength : AdventureTuning.ArmBase);
         // A new level's body: its jet, dash and hurt timers start from zero, which must not read as a stroke or a hit.
         if (!ReferenceEquals(p, _drawnFor))

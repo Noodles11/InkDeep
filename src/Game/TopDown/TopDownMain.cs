@@ -86,6 +86,13 @@ public partial class TopDownMain : Node3D
 
     /// <summary>The cutout's hold a frame on: full while she is hidden, else running out.</summary>
     static float SeeStep(float hold, bool hidden, float dt) => hidden ? SeeHoldSeconds : Mathf.Max(0f, hold - dt);
+    /// <summary>How far the camera leads the way she dashes (metres), and where it leads now.</summary>
+    const float DashLead = 2.4f;
+    Vector3 _dashLead;
+    /// <summary>Verification (--dbg-dashes, with --autopilot): she dashes every 1.5 s.</summary>
+    bool _dbgDashes;
+    float _dashEvery = 1.5f;
+
     /// <summary>How long the walls round her stay carved away (seconds left of the hold; 0 whole).</summary>
     float _seeThrough;
     /// <summary>Verification (--dbg-nocarve): the walls are not carved away round her.</summary>
@@ -620,6 +627,7 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--dbg-look=") && Value("--dbg-look=").Split(',') is { Length: 4 } tried)
                 _dbgLook = new JellyLook { Gonads = tried[0], Glow = tried[1], Arms = tried[2], Tips = tried[3] };
             else if (arg == "--dbg-burn") _dbgBurn = true;
+            else if (arg == "--dbg-dashes") _dbgDashes = true;
             else if (arg.StartsWith("--pause-tab=") && int.TryParse(Value("--pause-tab="), out int pauseTab))
             {
                 _startPaused = true;
@@ -2825,7 +2833,12 @@ public partial class TopDownMain : Node3D
         // In a fight the camera draws in on her (and so tells her of danger near that she cannot see yet); calm, it
         // stands back again. Not in a haven, nor while the pause menu frames her.
         _camera.Tense(!Paused && !_world.Calm && !_world.Defeated && _world.Time > ExperienceTuning.CalmSeconds + 0.5f, _world.Boss is { Stage: BossStage.Fight }, dt);
-        _camera.Track(Focus(alpha), dt, look: new Vector3(MenuShift() * framing, 0f, 0f));
+        // Dashing, the camera leads a little the way she dashes (quickly), and eases back once she is through.
+        var dasher = _world.Player;
+        var dashTo = dasher.IsDashing && dasher.Velocity.LengthSquared() > 0.01f && !Paused
+            ? new Vector3(dasher.Velocity.X, 0f, dasher.Velocity.Y).Normalized() * DashLead : Vector3.Zero;
+        _dashLead = _dashLead.Lerp(dashTo, 1f - Mathf.Exp(-(dashTo == Vector3.Zero ? 2.2f : 9f) * dt));
+        _camera.Track(Focus(alpha), dt, look: new Vector3(MenuShift() * framing, 0f, 0f) + _dashLead);
         _dark.Sync(_world, _camera.Camera, _bell.GlobalPosition, dt);
         // A wall between the camera and her (a tunnel's roof, a wall in front) is cut open round her while it hides her,
         // the opening irising out quickly and closing gently (eased in the shader); one she only swims beside stays whole.
@@ -3801,6 +3814,12 @@ public partial class TopDownMain : Node3D
             var to = _route[Math.Min(_route.Count - 1, _routeProgress + 2)] - pos;
             if (to.Length() > 0.3f) input.Move = System.Numerics.Vector2.Normalize(to);
             input.Dive = _autoDive && _world.CanDive;
+            // (Verification, --dbg-dashes: a dash every 1.5 s along her way.)
+            if (_dbgDashes && (_dashEvery -= (float)PlaneWorld.Dt) <= 0f)
+            {
+                _dashEvery = 1.5f;
+                input.Dash = input.DashHeld = true;
+            }
             AutoFire(ref input);
             return input;
         }
