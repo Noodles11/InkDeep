@@ -104,8 +104,9 @@ the reef was never being called home. It was being kept.
 - **Its places** (LIGHT-AND-GRAPH §7), each behind a mouth: havens, secret labyrinths, leak caves (the curse rooms,
   harmful until sealed) and clam rooms; inside a leak cave, its own secrets, shops, shell caches and Crab Deals as a
   level's (DESIGN-TOPDOWN §4.8).
-- **Bubble vaults** (`PlaneVaults`): the game's chest, a fragile shimmering bubble a little bigger than a murkling,
-  floating and wobbling, a soft glow barely there inside. Her light fills it, its outline and glow brightening, till
+- **Bubble vaults** (`PlaneVaults`): the game's chest, a soap bubble a little bigger than a murkling: a soap film's
+  colours swirling all over it (thicker toward its bottom), two bright window highlights on it, floating and wobbling,
+  a soft glow barely there inside. Her light fills it, its outline and glow brightening, till
   it pops in a flash and a ripple, freeing what it held: shells, a healing orb, or a prank (a gust that knocks her
   back). A secret labyrinth's reward is packed in one; a shop sells one for 20 shells, its prize unknown.
 - **Its light**: light springs where she heals, charge stones her beam lights (lures, lamps, and a trio that hides a
