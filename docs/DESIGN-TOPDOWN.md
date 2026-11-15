@@ -1155,7 +1155,7 @@ The FP staging ("look up through the surface") is replaced:
 ## 9. UI
 
 - **HUD** (`HudView`, `EdgeArrows`): minimal — top left her gonad gauge (health, the active pearl's
-  charge, experience) and her shells, the screen's edges the arrows to the places round her, and the top centre empty
+  charge, experience) and her shells, the emblems on the places round her (at the screen's edges while they are off it), and the top centre empty
   at rest, for what comes and goes. Health and the active pearl's charge are
   diegetic on the bell (§2.5: gonad rings and rim), bubble orbs under it; no numbers for any of them on the HUD. One
   text style throughout: light text with a soft dark outline, no boxes, readable on bright sand and in the deeps.
@@ -1184,11 +1184,15 @@ The FP staging ("look up through the surface") is replaced:
   and a small pop on the way out. Banners queue (300 ms apart; with three or
   more waiting each holds 3 s), run on game time (they wait while paused and
   under the death splash) and, with reduced motion, simply cross-fade.
-- **No minimap.** The places round her are shown by **arrows at the screen's edges** (`EdgeArrows`): for each
-  place off the screen, a small arrow in its place's colour (a haven green, a clam room gold, a leak cave red, a
-  secret pale, the boss's arena violet, a sub-level's way out white, what her requests name in theirs) stands on the
-  edge between the screen's middle and the place, pointing at it; a place on the screen has none. As she dives, climbs
-  or rides into a place, they slide out past the edges; once she has settled, the new place's slide in from outside.
+- **No minimap.** The places round her are shown by **emblems** (`EdgeArrows`): a small dark disc ringed in its
+  place's colour (a haven green, a clam room gold, a leak cave red, a secret pale, the boss's arena violet, a
+  sub-level's way out white, what her requests name in theirs) with its sign inked in the middle ("!" a leak cave, "+"
+  a haven, "*" a treasure cave, "?" a secret, "$" a shop, "o" a shell cache, "%" a crab's deal, "X" the boss's arena,
+  "^" a way out, a dot what a request names). While a place is off the screen its emblem waits at the screen's edge
+  on the line from the middle toward it, a small pointer on its ring turned to it; once the place's entrance comes on
+  the screen, the emblem goes on to it and stays locked on it, one motion as she swims toward it. Places within 1.5 m
+  share one emblem. As she dives, climbs or rides into a place, they slide out past the edges; once she has settled,
+  the new place's slide in from outside.
 - **Pause menu** (`PauseMenu`; Esc or Start): the sea and the clock are held, and she still moves in place. A drawer
   slides in from the right over the reef (0.35 s) as the camera closes in on her (to a third of its distance, 0.5 s) and
   looks past her, so she sits 30% across the screen; closing, both ease back (0.35 s) and play goes on. Its top gives

@@ -5,18 +5,29 @@ using OctoShoots.Game.Fx;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// The places round her, shown as small coloured arrows at the edges of the screen (in place of a minimap): each place
-/// off the screen has an arrow on the edge between the screen's middle and it, pointing at it, in its place's colour;
-/// one on the screen has none. Changing layer (or riding into a place), the arrows slide out past the edges as she goes,
-/// and the new place's slide back in from outside once she has settled.
+/// The places round her, shown as small emblems (in place of a minimap): a dark disc ringed in its place's colour with
+/// its sign inked in the middle ("!" a leak cave, "+" a haven, "?" a secret...). An emblem stands on the place's
+/// entrance while that is on the screen, and stays there; while it is off the screen, the emblem waits at the screen's
+/// edge on the line from the middle toward it, a small pointer on its ring turned to it. As she swims toward a place
+/// its emblem slides along the edge and then on in to its entrance, one motion. Changing layer (or riding into a
+/// place), the emblems slide out past the edges as she goes, and the new place's slide back in from outside once she
+/// has settled.
 /// </summary>
 public partial class EdgeArrows : Control
 {
-    /// <summary>How far in from the screen's edges the arrows stand, how long one is, and how long they take to slide back in (after a moment's wait).</summary>
-    const float Inset = 30f, Length = 19f, SlideIn = 0.55f, SettleWait = 0.35f;
+    /// <summary>
+    /// How far in from the screen's edges an emblem waits, its radius, how far its pointer stands out, and how long they
+    /// take to slide back in (after a moment's wait).
+    /// </summary>
+    const float Inset = 34f, Radius = 16f, Pointer = 8f, SlideIn = 0.55f, SettleWait = 0.35f;
 
-    readonly List<(System.Numerics.Vector2 At, Color Colour)> _targets = new();
-    readonly List<(Vector2 At, Vector2 Way, Color Colour)> _shown = new();
+    /// <summary>Two places nearer than this (metres) share one emblem (the first: a request's mark over a mouth's own).</summary>
+    const float Same = 1.5f;
+
+    static readonly Color Disc = new(0.03f, 0.045f, 0.07f, 0.62f), Ink = new(0.03f, 0.045f, 0.07f, 0.9f);
+
+    readonly List<(System.Numerics.Vector2 At, Color Colour, string Sign)> _targets = new();
+    readonly List<(Vector2 At, Vector2 Way, Color Colour, string Sign, bool Off)> _shown = new();
     /// <summary>0: in place; 1: slid out past the edges.</summary>
     float _out;
     /// <summary>Since she settled (−1: not sliding in).</summary>
@@ -28,28 +39,34 @@ public partial class EdgeArrows : Control
         SetAnchorsPreset(LayoutPreset.FullRect);
     }
 
-    /// <summary>The places to point at (world metres on her plane, and each one's colour).</summary>
-    public void SetTargets(IEnumerable<(System.Numerics.Vector2 At, Color Colour)> targets)
+    /// <summary>The places to show (world metres on her plane, each one's colour and sign).</summary>
+    public void SetTargets(IEnumerable<(System.Numerics.Vector2 At, Color Colour, string Sign)> targets)
     {
         _targets.Clear();
-        _targets.AddRange(targets);
+        foreach (var t in targets)
+        {
+            bool dup = false;
+            foreach (var u in _targets)
+                if (System.Numerics.Vector2.Distance(u.At, t.At) < Same) { dup = true; break; }
+            if (!dup) _targets.Add(t);
+        }
     }
 
-    /// <summary>Leaving (0 → 1 as she goes): the arrows slide out past the edges.</summary>
+    /// <summary>Leaving (0 → 1 as she goes): the emblems slide out past the edges.</summary>
     public void DiveOut(float k)
     {
         _out = Mathf.Clamp(k, 0f, 1f);
         _settled = -1f;
     }
 
-    /// <summary>Settled where she went (its places set): after a moment the arrows slide in from outside.</summary>
+    /// <summary>Settled where she went (its places set): after a moment the emblems slide in from outside.</summary>
     public void Arrive()
     {
         _out = 1f;
         _settled = 0f;
     }
 
-    /// <summary>Each frame: where each arrow stands, by the camera (the screen's own scale is <paramref name="scale"/>).</summary>
+    /// <summary>Each frame: where each emblem stands, by the camera (the screen's own scale is <paramref name="scale"/>).</summary>
     public void Sync(Camera3D camera, float scale, float dt)
     {
         if (_settled >= 0f)
@@ -65,38 +82,66 @@ public partial class EdgeArrows : Control
         var middle = size * 0.5f;
         var lo = new Vector2(Inset, Inset);
         var hi = size - lo;
-        foreach (var (at, colour) in _targets)
+        foreach (var (at, colour, sign) in _targets)
         {
             var world = new Vector3(at.X, 0.7f, at.Y);
             if (camera.IsPositionBehind(world)) continue;
             var screen = Fisheye.Shown(camera.UnprojectPosition(world), view) / scale;
-            // On the screen: no arrow.
-            if (screen.X > lo.X && screen.Y > lo.Y && screen.X < hi.X && screen.Y < hi.Y) continue;
             var way = screen - middle;
-            if (way.LengthSquared() < 1f) continue;
+            if (way.LengthSquared() < 1f) way = Vector2.Down;
             way = way.Normalized();
-            // Where the line from the middle toward it meets the inset frame.
-            float tx = way.X > 0f ? (hi.X - middle.X) / way.X : way.X < 0f ? (lo.X - middle.X) / way.X : float.MaxValue;
-            float ty = way.Y > 0f ? (hi.Y - middle.Y) / way.Y : way.Y < 0f ? (lo.Y - middle.Y) / way.Y : float.MaxValue;
-            var edge = middle + way * Mathf.Min(tx, ty);
+            bool off = screen.X < lo.X || screen.Y < lo.Y || screen.X > hi.X || screen.Y > hi.Y;
+            var place = screen;
+            if (off)
+            {
+                // Where the line from the middle toward it meets the inset frame.
+                var d = screen - middle;
+                float tx = d.X > 0f ? (hi.X - middle.X) / d.X : d.X < 0f ? (lo.X - middle.X) / d.X : float.MaxValue;
+                float ty = d.Y > 0f ? (hi.Y - middle.Y) / d.Y : d.Y < 0f ? (lo.Y - middle.Y) / d.Y : float.MaxValue;
+                place = middle + d * Mathf.Min(1f, Mathf.Min(tx, ty));
+            }
             // Sliding: out along its way, past the screen's edge.
-            edge += way * _out * (Inset + Length * 2f + 8f);
-            _shown.Add((edge, way, colour));
+            // (One on the screen goes out the further: from where it stands on to the edge along its way.)
+            float toEdge = 0f;
+            if (!off)
+            {
+                float ex = way.X > 0f ? (hi.X - place.X) / way.X : way.X < 0f ? (lo.X - place.X) / way.X : float.MaxValue;
+                float ey = way.Y > 0f ? (hi.Y - place.Y) / way.Y : way.Y < 0f ? (lo.Y - place.Y) / way.Y : float.MaxValue;
+                toEdge = Mathf.Max(0f, Mathf.Min(ex, ey));
+            }
+            place += way * _out * (toEdge + Inset + Radius * 2f + Pointer + 8f);
+            _shown.Add((place, way, colour, sign, off));
         }
         QueueRedraw();
     }
 
     public override void _Draw()
     {
-        foreach (var (at, way, colour) in _shown)
+        var font = ThemeDB.FallbackFont;
+        const int fontSize = 22;
+        foreach (var (at, way, colour, sign, off) in _shown)
         {
-            var side = new Vector2(-way.Y, way.X);
-            var tip = at + way * Length * 0.5f;
-            var back = at - way * Length * 0.5f;
-            var points = new[] { tip, back + side * Length * 0.45f, back + way * Length * 0.18f, back - side * Length * 0.45f };
-            var outline = new[] { tip, back + side * Length * 0.45f, back + way * Length * 0.18f, back - side * Length * 0.45f, tip };
-            DrawColoredPolygon(points, colour);
-            DrawPolyline(outline, new Color(0.04f, 0.06f, 0.09f, 0.85f), 2f, true);
+            // Off the screen: a small pointer on its ring, turned to it.
+            if (off)
+            {
+                var side = new Vector2(-way.Y, way.X);
+                var tip = at + way * (Radius + Pointer);
+                var points = new[] { tip, at + way * (Radius - 1f) + side * 7f, at + way * (Radius - 1f) - side * 7f };
+                DrawColoredPolygon(points, colour);
+                DrawPolyline(new[] { points[0], points[1], points[2], points[0] }, Ink, 1.5f, true);
+            }
+            DrawCircle(at, Radius, Disc);
+            DrawArc(at, Radius + 1.5f, 0f, Mathf.Tau, 40, Ink, 1.8f, true);
+            DrawArc(at, Radius - 0.6f, 0f, Mathf.Tau, 40, colour, 2.8f, true);
+            // Its sign, inked in its colour.
+            if (sign == ".") DrawCircle(at, 4.8f, colour);
+            else
+            {
+                float ascent = font.GetAscent(fontSize), descent = font.GetDescent(fontSize);
+                var pos = new Vector2(at.X - Radius, at.Y + (ascent - descent) * 0.5f - 0.5f);
+                DrawStringOutline(font, pos, sign, HorizontalAlignment.Center, Radius * 2f, fontSize, 3, Ink);
+                DrawString(font, pos, sign, HorizontalAlignment.Center, Radius * 2f, fontSize, colour);
+            }
         }
     }
 }

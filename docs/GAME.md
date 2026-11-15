@@ -113,7 +113,7 @@ the reef was never being called home. It was being kept.
 - **Its life**: healthy reef fish (clownfish in anemones, blue tangs, schools of chromis, pufferfish, flounders) going
   about their day; the ink never turns them; currents and geysers; the reef director that keeps the reef acting when she is not
   there.
-- **Where she is shown**: no minimap; the arrows at the screen's edges point to the places round her, the Tab map
+- **Where she is shown**: no minimap; emblems mark the places round her (locked on each entrance once it is on the screen, waiting at the screen's edge till then), the Tab map
   shows the whole layer under fog, the chart her layer's claimed cubes.
 
 ## 6. The corrupted
@@ -197,7 +197,7 @@ emptied, it is freed, leaving a core of light.
 
 - **The HUD** (DESIGN-TOPDOWN §9, ADVENTURE §6): top left, Clementine seen from above with her four oral arms as her
   stats (health, inner light, the active pearl's charge, experience) and her shells beside her; at the screen's edges
-  the arrows to the places round her; top centre a dot per leak. Messages slide down from the top edge. Nothing else stays on
+  the emblems on the places round her; top centre a dot per leak. Messages slide down from the top edge. Nothing else stays on
   the screen.
 - **On the reef**: corruption rings round the corrupted she can see; the pearl she is absorbing on its own card.
 - **Readable at a glance** (VISUAL-SHOWCASE, "The order of the eye"): outside her light the reef is grey and quiet and

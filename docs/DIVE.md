@@ -141,7 +141,7 @@ A secret room is a sub-level too: a cube she claims opens one time in three, its
 - **Solved, its water carries her home** (`PlaneWorld.LabyrinthSolved`, its way home: DESIGN-TOPDOWN §4.7): once its
   reward is taken, a current wakes along the way from its heart to its way out and carries her there and out of its
   mouth, back onto the reef.
-- **No map in it:** neither the arrows nor the whole level's map show inside.
+- **No map in it:** neither the emblems nor the whole level's map show inside.
 - **She can leave at any time** by swimming out by its way out; there is no key for it (her active pearl's key does
   nothing in a labyrinth).
 - **The reef waits as she left it**, as for a leak cave. Leaving with the reward still there, the labyrinth waits as she
@@ -160,7 +160,7 @@ A secret room is a sub-level too: a cube she claims opens one time in three, its
   - **Ash:** wash a number of patches of ash off leak caves' walls.
   The posters' lines speak of the deep instead of a mouth. On a level, what a carried ask wants is ringed on the maps
   (the open leaks for a seal ask, the open leak caves' mouths for a cave or ash ask), and
-  the arrows at the screen's edges point the way to each.
+  the emblems mark each.
 - **Requests and chains are saved at once** (`KeepJelly`): writing them never banks what she carries. In a haven, what
   she buys, absorbs or is paid is banked as it happens (`KeepBanked`).
 - **The folk's chains** (`Chains.All`) lead on down the depth below the one their neighbour was the boss of, their

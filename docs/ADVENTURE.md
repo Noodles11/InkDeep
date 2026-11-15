@@ -188,7 +188,7 @@ the seabed, a store of healing she may come back to, too bright for any murkling
   3. **experience** (amber; her level at its foot) — growing toward the next level, pulsing full with a point to
      spend.
   Beside the bell **her shells** (the shell and its count — shown only once she has collected at least one).
-- **Maps:** the whole level's map (Tab / Select) hidden unless she has absorbed **Sea Chart Nautilus** ("Remembers every current"), which she starts every run with for now. There is no minimap: the arrows at the screen's edges point to the places round her (DESIGN-TOPDOWN §9).
+- **Maps:** the whole level's map (Tab / Select) hidden unless she has absorbed **Sea Chart Nautilus** ("Remembers every current"), which she starts every run with for now. There is no minimap: emblems mark the places round her (DESIGN-TOPDOWN §9).
   The cleansing meter is gone.
   The whole level's map is cut out of its square along the level's outline — all its water and a few metres of rock
   round it, seen or not (the unseen under fog) — its edges fading softly into a dimming of the game, framed as large as

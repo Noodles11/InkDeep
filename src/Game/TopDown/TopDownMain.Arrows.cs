@@ -7,9 +7,11 @@ using OctoShoots.Core.Run;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// What the arrows at the screen's edges point at (EdgeArrows, in place of a minimap): the open mouths round her in
-/// the colour of the place behind each, a sub-level's way out, the boss's arena while its boss waits, what her requests
-/// and chains name, and a level's own rooms once she has been in them (or, with Brass Compass, all of them).
+/// What the emblems show (EdgeArrows, in place of a minimap), each in its colour with its sign: what her requests and
+/// chains name (a dot), the open mouths round her in the colour of the place behind each ("!" a leak cave, "+" a haven,
+/// "*" a treasure cave, "?" a secret), a sub-level's way out ("^"), the boss's arena while its boss waits ("X"), and a
+/// level's own rooms once she has been in them (or, with Brass Compass, all of them: "$" a shop, "*" a treasure cave,
+/// "o" a shell cache, "%" a crab's deal).
 /// </summary>
 public partial class TopDownMain
 {
@@ -17,6 +19,18 @@ public partial class TopDownMain
     const float RevealSoft = 10f, RevealRadius = 27.5f;
 
     static readonly Color WayOut = new(0.95f, 0.97f, 1f), SecretColour = new(0.82f, 0.88f, 1f);
+
+    /// <summary>A place's sign on its emblem.</summary>
+    static string Sign(PoiKind kind) => kind switch
+    {
+        PoiKind.Haven => "+",
+        PoiKind.TreasureCave => "*",
+        PoiKind.Secret => "?",
+        PoiKind.Shop => "$",
+        PoiKind.ShellCache => "o",
+        PoiKind.CrabDeal => "%",
+        _ => "!",
+    };
 
     static Color MouthColour(PoiKind kind) => kind switch
     {
@@ -26,13 +40,16 @@ public partial class TopDownMain
         _ => ReefKinds.Colour(ReefKind.Den),
     };
 
-    IEnumerable<(System.Numerics.Vector2 At, Color Colour)> ArrowTargets()
+    IEnumerable<(System.Numerics.Vector2 At, Color Colour, string Sign)> ArrowTargets()
     {
-        foreach (var mark in _marks) yield return mark;
+        foreach (var (at, colour) in _marks) yield return (at, colour, ".");
         for (int i = 0; i < _map.Mouths.Count; i++)
             if (!_world.ShutMouths.Contains(i))
-                yield return (_map.Mouths[i].At, MouthColour(i < _map.MouthKinds.Count ? _map.MouthKinds[i] : PoiKind.LeakCave));
-        if (_map.Way is { } way) yield return (way.At, WayOut);
+            {
+                var kind = i < _map.MouthKinds.Count ? _map.MouthKinds[i] : PoiKind.LeakCave;
+                yield return (_map.Mouths[i].At, MouthColour(kind), Sign(kind));
+            }
+        if (_map.Way is { } way) yield return (way.At, WayOut, "^");
         bool all = _world.Run.Loadout.Flags.Contains("landmarks");
         for (int i = 0; i < _map.Pois.Count; i++)
         {
@@ -41,10 +58,10 @@ public partial class TopDownMain
             if (!inside) continue;
             // A boss's arena while its boss waits.
             if (poi.Kind == PoiKind.Exit && _map.HasBoss && _world.Boss is { Freed: false })
-                yield return (poi.Position, ReefKinds.Colour(ReefKind.Boss));
+                yield return (poi.Position, ReefKinds.Colour(ReefKind.Boss), "X");
             // A level's own rooms (those behind mouths have their mouths' arrows).
             else if (poi.Kind is PoiKind.Shop or PoiKind.TreasureCave or PoiKind.ShellCache or PoiKind.CrabDeal && (all || _visited.Contains(i)))
-                yield return (poi.Position, LevelView.PoiColor(poi.Kind));
+                yield return (poi.Position, LevelView.PoiColor(poi.Kind), Sign(poi.Kind));
         }
     }
 
