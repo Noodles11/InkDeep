@@ -20,10 +20,14 @@ levels one after another: the layers are the depths.
 - **The light by depth:** each layer wears the adventure's painted reef, its coral gardens and all; the top layer is
   bright, the bottom one wholly dark (its rock seen only in her light), and each layer between a little darker than the
   one above, the dark gathering toward the bottom (`ReefLook.Layer`).
-- **One tall structure:** every wall of her layer rises 60 m above its own rock (past the camera's own height, so no wall's top is ever seen: each runs on past the screen's edge until the cutout takes it) as it is drawn (topdown_ground's
-  rise; play keeps the walls' real heights), on up out of view, the higher the softer (topdown_post's tall blur), so the
-  layers read as one reef standing up through the deep; the layer she goes to grows its walls as she reaches it. A wall
-  between her and the camera is cut open round her.
+- **One tall structure:** the layers are slices of one reef (CUBE-WORLD-PLAN §4.3): each layer's caverns, walls and
+  corners lie largely where the layer above has its own, and the reef changes wholly only over about ten layers. Her
+  layer's walls rise 60 m above their own rock where the layer above is rock (past the camera's own height, so no
+  wall's top is ever seen: each runs on past the screen's edge until the cutout takes it), and under the layer above's
+  open water only to about its floor, as they are drawn (topdown_ground's rise; play keeps the walls' real heights),
+  the higher the softer (topdown_post's tall blur); the layer she goes to grows its walls as she reaches it. Most
+  gates between cubes and most tunnels through rock are **roofed** (§4.4): openings carved through the walls, the rock
+  running on whole over them. A wall or roof between her and the camera is cut open round her.
 - **The warm-up layer** (layer 0) is where she learns: bright, its menace low, no creatures, no curse rooms and no
   boss. Veterans dive straight through it. (There is no tutorial level.)
 - **Diving and climbing** (CUBE-WORLD-PLAN §7): Shift or the d-pad's down over the void, Q or its up under a well of
@@ -51,7 +55,8 @@ levels one after another: the layers are the depths.
   layer and the one above (what she saw of each, the places in it, what is left of its stock), the edges the current
   holds, the director's counts and boss streak, and each layer's arena. Continuing makes the reef again from the seed,
   lays the records over it, and puts her in that haven. Quitting anywhere else keeps the last haven's save. A dive saved
-  in the seeded levels before the cube reef is let go: she dives anew.
+  in the seeded levels before the cube reef, or under an earlier terrain generator than today's
+  (`CubeDiveSave.Terrain`), is let go: she dives anew.
 
 ## 3. Camera
 

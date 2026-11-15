@@ -686,9 +686,9 @@ public partial class TopDownMain : Node3D
         RunLaunch.Jelly = -1;
         (_seed, _id, _) = DiveStart(_jelly);
         _resume = _jelly.Dive;
-        // One saved in a haven is taken up there (CUBE-WORLD-PLAN §10); one saved before there was a cube reef is let go,
-        // and she dives anew from her seed.
-        _reefResume = _jelly.Dive?.Cubes;
+        // One saved in a haven is taken up there (CUBE-WORLD-PLAN §10); one saved before there was a cube reef, or under
+        // an earlier terrain generator (whose reef the seed no longer makes), is let go, and she dives anew from her seed.
+        _reefResume = _jelly.Dive?.Cubes is { Terrain: OctoShoots.Core.Gen.Cubes.CubeDiveSave.TerrainNow } cubes ? cubes : null;
         if (_reefResume is null)
         {
             _resume = null;
@@ -1973,6 +1973,26 @@ public partial class TopDownMain : Node3D
         FillSprings(_fullMap, _world);
     }
 
+    /// <summary>Verification: the roofed gate of her layer nearest her start: its mouth, or the middle of its throat.</summary>
+    System.Numerics.Vector2? RoofedGate(bool inside)
+    {
+        if (_reef is null) return null;
+        var start = _world.Player.Position;
+        System.Numerics.Vector2? best = null;
+        foreach (var cube in _reef.Space.CubesOf(_layer))
+        {
+            var t = _reef.Terrain(cube);
+            foreach (var (edge, gate, mouth) in t.Gates)
+            {
+                var middle = edge.Point(gate.Along, 0f);
+                if (!t.CanopyAt((int)Mathf.Round(middle.X), (int)Mathf.Round(middle.Y))) continue;
+                var at = inside ? middle : mouth;
+                if (best is null || System.Numerics.Vector2.Distance(at, start) < System.Numerics.Vector2.Distance(best.Value, start)) best = at;
+            }
+        }
+        return best;
+    }
+
     /// <summary>Verification: start somewhere interesting.</summary>
     void PlaceAt(string? where)
     {
@@ -2003,6 +2023,8 @@ public partial class TopDownMain : Node3D
             "fan" => _map.Fan + new System.Numerics.Vector2(0f, 1f),
             // Just south of it, the fan and its ribbons in view.
             "fan-near" => _map.Fan + new System.Numerics.Vector2(0f, 4.5f),
+            // The cube reef: at the mouth of the roofed gate nearest her start, or under its roof ("roof-in").
+            "roof" or "roof-in" => RoofedGate(where == "roof-in"),
             "mirror-near" => _map.Mirror + new System.Numerics.Vector2(0f, 3.2f),
             // Six metres out from a region's first cave mouth, or a leak cave's way out (with --dbg-steer she swims into it).
             "mouth" => _map.Mouths.Count > 0 ? _map.Mouths[0].At - _map.Mouths[0].Into * 6f : null,

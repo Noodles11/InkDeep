@@ -11,7 +11,7 @@ public enum CubeCell : byte { Rock, Shelf, Void }
 
 /// <summary>
 /// One cube's reef (CUBE-WORLD-PLAN §3–§4): a heightfield on the 1 m grid of its two squares plus an Apron of its
-/// neighbours', each point rock, shelf or void, and the arches over its water. Made by <see cref="Make"/> from the seed
+/// neighbours', each point rock, shelf or void, and the roofs over its water. Made by <see cref="Make"/> from the seed
 /// and its id alone.
 /// </summary>
 public sealed class CubeTerrain
@@ -25,7 +25,14 @@ public sealed class CubeTerrain
     public required int Y0 { get; init; }
     public required CubeCell[] Cells { get; init; }
     public required float[] Heights { get; init; }
+    /// <summary>
+    /// Where rock roofs its water over (CUBE-WORLD-PLAN §4.4): the throats of its roofed gates through their walls and
+    /// its tunnels bored through rock, and the rock round them (so their roof runs on into the walls).
+    /// </summary>
     public required bool[] Canopy { get; init; }
+    /// <summary>How open the layer above is over each sample (0 rock, 1 its caverns' water): her walls rise on up only under rock.</summary>
+    public float[]? UpperOpen { get; init; }
+    public float UpperOpenAt(int gx, int gy) => UpperOpen is { } o && Has(gx, gy) ? o[Index(gx, gy)] : 0f;
     /// <summary>Its gates (edge, gate, and where its throat meets the cube's own water, global).</summary>
     public required IReadOnlyList<(EdgeId Edge, Gate Gate, Vector2 Mouth)> Gates { get; init; }
     /// <summary>The wells down out of it (its floor's), and those into it from above (the floor over it).</summary>
@@ -70,6 +77,8 @@ public sealed class CubeTerrain
 
     /// <summary>The shelf noise's band over which a shelf's floor drops into the void (so its edge is a slope, not a step).</summary>
     const float ShelfEdge = 0.14f;
+    /// <summary>How much more of the water over the layer below's caverns is void than the shelf noise alone would make.</summary>
+    const float VoidMore = 0.12f;
 
     static float Smooth(float a, float b, float x)
     {
@@ -82,6 +91,8 @@ public sealed class CubeTerrain
 
     // Noise fields, one seed each (every cube reads the same at the same global point).
     const int NoiseThroat = 1, NoiseChamber = 2, NoiseTunnel = 3, NoiseShelf = 4, NoiseTop = 5, NoiseFloor = 6, NoiseBays = 7;
+    /// <summary>The stacked cavern field (CubeSpace.Strata).</summary>
+    const int NoiseCavern = 8;
 
     /// <summary>A socket's opening lies at least this far inside its cube, this far from a gate's mouth and from a well, and sockets this far apart.</summary>
     public const float SocketInside = 12f, SocketFromGate = 14f, SocketFromWell = 9f, SocketApart = 20f;
@@ -91,7 +102,7 @@ public sealed class CubeTerrain
     /// on a scratch map of the cube, from spots of shelf water deep inside it. Pure: the cube's own rng, after all else.
     /// </summary>
     static List<Doorway> CutSockets(ulong seed, CubeId c, CubeCell[] cells, float[] heights, int nw, int nh, int x0, int y0,
-        List<(EdgeId, Gate, Vector2)> gates, List<Well> down, List<Well> arrivals, Rng rng, out float[]? roof)
+        List<(EdgeId, Gate, Vector2)> gates, List<Well> down, List<Well> arrivals, bool[] roofed, Rng rng, out float[]? roof)
     {
         var sockets = new List<Doorway>();
         roof = null;
@@ -112,11 +123,15 @@ public sealed class CubeTerrain
             foreach (var s in sockets) if (Vector2.Distance(g, s.At) < SocketApart) return false;
             return true;
         }
-        for (int tries = 0; tries < 60 && sockets.Count < 2; tries++)
+        // (Tried from spots of open shelf water deep inside it, not under a roof: every other metre of it.)
+        var spots = new List<Vector2>();
+        for (int fj = (int)MathF.Ceiling(lo.Y + SocketInside + 6f); fj <= hi.Y - SocketInside - 6f; fj += 2)
+        for (int fi = (int)MathF.Ceiling(lo.X + SocketInside + 6f); fi <= hi.X - SocketInside - 6f; fi += 2)
+            if (cells[fj * nw + fi] == CubeCell.Shelf && !roofed[fj * nw + fi]) spots.Add(new Vector2(fi, fj));
+        for (int tries = 0; tries < 100 && sockets.Count < 2 && spots.Count > 0; tries++)
         {
-            var from = new Vector2(rng.Range(lo.X + SocketInside + 6f, hi.X - SocketInside - 6f), rng.Range(lo.Y + SocketInside + 6f, hi.Y - SocketInside - 6f));
-            int fi = (int)MathF.Round(from.X), fj = (int)MathF.Round(from.Y);
-            if (cells[fj * nw + fi] != CubeCell.Shelf || !map.IsOpen(from) || !Clear(from)) continue;
+            var from = spots[rng.Int(spots.Count)];
+            if (!map.IsOpen(from) || !Clear(from)) continue;
             float a = rng.Range(0f, MathF.Tau);
             if (TopDownGenerator.FindDoorway(map, from, 10f, new Vector2(MathF.Cos(a), MathF.Sin(a)), -1.01f) is not { } found) continue;
             if (!Deep(found.Door.At, SocketInside) || !Deep(found.Door.Back, SocketInside) || !Clear(found.Door.At)) continue;
@@ -184,31 +199,12 @@ public sealed class CubeTerrain
             wellNode.Add(true);
             chambers.Add((well.Center - origin, well.Radius + 4f, well.Radius + 1.5f));
         }
-        // Pockets near its edges, but clear of their walls (so the rock between joins the wall, and no wall stands as a
-        // straight fin with water either side).
-        for (int e = 0; e < edges.Length; e++)
-        {
-            float along = rng.Range(16f, Side - 16f), inset = rng.Range(15f, 19f), radius = rng.Range(5f, 8f);
-            if (rng.NextFloat() < 0.4f) continue;
-            var at = edges[e].Id.Point(along, inward[e] * inset) - origin;
-            if (nodes.Exists(n => Vector2.Distance(n, at) < 11f)) continue;
-            nodes.Add(at);
-            wellNode.Add(false);
-            chambers.Add((at, radius, 0f));
-        }
-        int extra = 2 + rng.Int(4);
-        for (int k = 0; k < extra; k++)
-        {
-            for (int tries = 0; tries < 12; tries++)
-            {
-                var at = new Vector2(rng.Range(13f, w - 13f), rng.Range(13f, h - 13f));
-                if (tries < 11 && nodes.Exists(n => Vector2.Distance(n, at) < 12f)) continue;
-                nodes.Add(at);
-                wellNode.Add(false);
-                chambers.Add((at, rng.Range(7f, 12f), 0f));
-                break;
-            }
-        }
+        // (Its open water is the reef's caverns (step 3); the plan only joins its gates and wells through them.)
+
+        // The stacked fields on the worked grid: the caverns of its own layer, the one below and the one above.
+        var here = StrataGrid(space, c.Z, gx0, gy0, gw, gh);
+        var under = c.Z + 1 >= space.Layers ? Filled(gw * gh, 1f) : StrataGrid(space, c.Z + 1, gx0, gy0, gw, gh, 4);
+        var over = c.Z == 0 ? Filled(gw * gh, -1f) : StrataGrid(space, c.Z - 1, gx0, gy0, gw, gh, 4);
 
         // 2. Joined: a spanning tree of the shortest ways (Prim), and a loop or two.
         var tunnels = new List<(Vector2[] Points, float Half, bool Wells)>();
@@ -257,28 +253,56 @@ public sealed class CubeTerrain
             joined.Add((ba, bb));
             tunnels.Add(Tunnel(nodes[ba], nodes[bb], rng, wellNode[ba] || wellNode[bb], w, h));
         }
-        // Arches over a tunnel or two (none by a well: nothing hides a way down or a way in).
-        var arches = new List<(Vector2[] Points, float Half)>();
-        foreach (var t in tunnels)
-        {
-            if (t.Wells || arches.Count >= 2 || Vector2.Distance(t.Points[0], t.Points[^1]) < 14f) continue;
-            if (rng.NextFloat() < 0.45f) arches.Add((t.Points[4..8], t.Half + 1.2f));
-        }
+        // Which of them run under a roof where they bore through rock (CUBE-WORLD-PLAN §4.4).
+        var roofedTunnel = tunnels.ConvertAll(_ => rng.NextFloat() < RoofedTunnels);
 
-        // 3. Carved into its own square: water where a chamber or tunnel is (their rims wobbling by global noise).
+        // 3. Carved into its own square: water in the reef's caverns, its wells' chambers and its tunnels (their rims
+        // wobbling by global noise); a tunnel bored through rock under a roof.
         int ow = w + 1, oh = h + 1;
         var water = new bool[ow * oh];
-        var arch = new bool[ow * oh];
+        var bore = new bool[ow * oh];
+        for (int v = 0; v < oh; v++)
+        for (int u = 0; u < ow; u++)
+            if (here[(v + m) * gw + u + m] > CavernCut) water[v * ow + u] = true;
         foreach (var (at, radius, least) in chambers)
             Stamp(at, radius * 1.45f, (x, y) =>
             {
                 float wob = 1f + 0.3f * TerrainNoise.Fbm((origin.X + x) * 0.07f, (origin.Y + y) * 0.07f, chamberSeed, 2);
                 return Vector2.Distance(new Vector2(x, y), at) < MathF.Max(least, radius * wob);
             }, water, ow, oh);
-        foreach (var t in tunnels)
+        for (int n = 0; n < tunnels.Count; n++)
+        {
+            var t = tunnels[n];
             StampLine(t.Points, t.Half + 1.5f, (x, y, d) =>
-                d < t.Half + 1.1f * TerrainNoise.Fbm((origin.X + x) * 0.1f, (origin.Y + y) * 0.1f, tunnelSeed, 2), water, ow, oh);
-        Bays(water, origin, space.NoiseSeed(NoiseBays), ow, oh);
+                d < t.Half + 1.1f * TerrainNoise.Fbm((origin.X + x) * 0.1f, (origin.Y + y) * 0.1f, tunnelSeed, 2), roofedTunnel[n] && !t.Wells ? bore : water, ow, oh);
+        }
+        // Caverns not joined to its gates and wells: the small filled, the rest bored through to the nearest that is.
+        var blocked = new bool[ow * oh];
+        foreach (var e in edges)
+        {
+            bool isX = e.Id.Axis == EdgeAxis.X;
+            float line = e.Id.Line - (isX ? origin.X : origin.Y);
+            int lo = Math.Max(0, (int)MathF.Ceiling(line - WallMax - 1f)), hi = Math.Min((isX ? ow : oh) - 1, (int)MathF.Floor(line + WallMax + 1f));
+            for (int a = lo; a <= hi; a++)
+            for (int b = 0; b < (isX ? oh : ow); b++) blocked[isX ? b * ow + a : a * ow + b] = true;
+        }
+        var roofOwn = new bool[ow * oh];
+        bool Roofable(int u, int v) => here[(v + m) * gw + u + m] < CavernCut - 0.06f && over[(v + m) * gw + u + m] < CavernCut;
+        void Merge()
+        {
+            for (int k = 0; k < bore.Length; k++)
+            {
+                if (!bore[k]) continue;
+                bore[k] = false;
+                if (water[k]) continue;
+                water[k] = true;
+                if (Roofable(k % ow, k / ow)) roofOwn[k] = true;
+            }
+        }
+        Merge();
+        Join(water, bore, blocked, nodes, ow, oh, rng, tunnelSeed, origin);
+        Merge();
+        Bays(water, roofOwn, origin, space.NoiseSeed(NoiseBays), ow, oh);
         // A boss arena's basin and the ways to it from its gates, carved as its own water is.
         if (arena)
         {
@@ -288,7 +312,39 @@ public sealed class CubeTerrain
             foreach (var (_, _, mouth) in gates)
                 StampLine(new[] { mouth - origin, middle }, ArenaWay, (x, y, d) => d < ArenaWay * 0.5f, water, ow, oh);
         }
-        foreach (var a in arches) StampLine(a.Points, a.Half, (x, y, d) => d < a.Half, arch, ow, oh);
+        // (A boss's basin is open to the sky; a tunnel's roof runs on two metres into the rock round it.)
+        if (arena) Array.Clear(roofOwn);
+        var roofed = (bool[])roofOwn.Clone();
+        for (int v = 0; v < oh; v++)
+        for (int u = 0; u < ow; u++)
+        {
+            if (!roofOwn[v * ow + u]) continue;
+            for (int dv = -2; dv <= 2; dv++)
+            for (int du = -2; du <= 2; du++)
+            {
+                int a = u + du, b = v + dv;
+                if (a >= 0 && b >= 0 && a < ow && b < oh && !water[b * ow + a]) roofed[b * ow + a] = true;
+            }
+        }
+        // Its gates' roofs: whether each is roofed, the same from both its cubes.
+        var gateRoofs = new List<(EdgeId Edge, Gate Gate)>();
+        foreach (var (edge, gate, _) in gates)
+        {
+            int index = 0;
+            foreach (var e in edges)
+                if (e.Id == edge)
+                    for (int g = 0; g < e.Gates.Count; g++)
+                        if (e.Gates[g] == gate) index = g;
+            ulong h2 = ReefHash.Of(space.Seed, ReefHash.Edge, edge.X, edge.Y, edge.Z, 16 + (int)edge.Axis * 4 + index);
+            if ((h2 >> 40) / (float)(1UL << 24) < RoofedGates) gateRoofs.Add((edge, gate));
+        }
+        bool UnderGateRoof(Vector2 p, float wall)
+        {
+            if (wall <= 0.3f) return false;
+            foreach (var (edge, gate) in gateRoofs)
+                if (MathF.Abs(edge.Across(p)) <= ThroatReach + ThroatPast && MathF.Abs(edge.Along(p) - gate.Along) <= gate.Width * 0.75f + 3.5f) return true;
+            return false;
+        }
 
         // 4. Every point's signed distance to the rock's face (CUBE-WORLD-PLAN §4.2; positive in rock): near its outer
         // edges what the edges and corners decide (shared with the neighbours, so its apron is theirs too), further in
@@ -305,7 +361,6 @@ public sealed class CubeTerrain
         {
             int u = i - m, v = j - m, k = j * gw + i;
             var p = new Vector2(gx0 + i, gy0 + j);
-            top[k] = RockLow + RockRise * Math.Clamp(TerrainNoise.Fbm(p.X * 0.06f, p.Y * 0.06f, topSeed, 3) * 0.5f + 0.5f, 0f, 1f);
             var (wall, throat) = SharedField(gx0 + i, gy0 + j, allEdges, allCorners, throatSeed);
             float near = float.MaxValue;
             foreach (var e in edges) near = MathF.Min(near, MathF.Abs(e.Id.Across(p)));
@@ -315,9 +370,12 @@ public sealed class CubeTerrain
             var shared = throat < 0f ? true : wall > 0f ? false : (bool?)null;
             bool ownPoint = u >= 0 && v >= 0 && u <= w && v <= h;
             bool wet = s <= 0f;
+            bool underRoof = UnderGateRoof(p, wall) || ownPoint && roofed[v * ow + u];
             if (!wet)
             {
                 cell[k] = CubeCell.Rock;
+                top[k] = RockLow + RockRise * Math.Clamp(TerrainNoise.Fbm(p.X * 0.06f, p.Y * 0.06f, topSeed, 3) * 0.5f + 0.5f, 0f, 1f);
+                canopy[k] = underRoof;
                 continue;
             }
             var local = new Vector2(u, v);
@@ -327,21 +385,26 @@ public sealed class CubeTerrain
             if (ownPoint && shared is null)
                 foreach (var well in down)
                 {
-                    float reach = well.Radius * (1f + 0.3f * MathF.Max(0f, TerrainNoise.Perlin(p.X * 0.15f, p.Y * 0.15f, floorSeed + 9u)));
                     float d = Vector2.Distance(local, well.Center - origin);
+                    // (Past its widest reach and the slope round it, nothing to work out.)
+                    if (d >= well.Radius * 1.3f + 2.5f) continue;
+                    float reach = well.Radius * (1f + 0.3f * MathF.Max(0f, TerrainNoise.Perlin(p.X * 0.15f, p.Y * 0.15f, floorSeed + 9u)));
                     if (d < reach) inWell = true;
                     rise = MathF.Min(rise, Smooth(reach, reach + 2.5f, d));
                 }
             foreach (var well in Concat(down, arrivals))
                 if (Vector2.Distance(local, well.Center - origin) < well.Radius + 2f) byWell = true;
-            canopy[k] = ownPoint && shared is null && arch[v * ow + u] && !byWell;
+            canopy[k] = underRoof && !byWell;
+            // Void only where the shelf noise opens it over the layer below's caverns (CUBE-WORLD-PLAN §4.3), so what she
+            // sees down through it is that layer's open water.
             float shelfNoise = TerrainNoise.Fbm(p.X * 0.035f, p.Y * 0.035f, shelfSeed, 2);
+            float open = MathF.Min(ShelfCut + VoidMore - shelfNoise, under[k] - CavernCut + 0.02f);
             if (inWell) cell[k] = CubeCell.Void;
             else if (canopy[k]) cell[k] = CubeCell.Shelf;
-            else cell[k] = shelfNoise > ShelfCut ? CubeCell.Shelf : CubeCell.Void;
-            // The floor's height follows the shelf noise's contour smoothly (no 1 m steps along a shelf's edge), and sinks into
-            // a well; under an arch it is a shelf.
-            shelf[k] = inWell ? 0f : canopy[k] ? rise : MathF.Min(rise, Smooth(ShelfCut - ShelfEdge, ShelfCut + ShelfEdge, shelfNoise));
+            else cell[k] = open > 0f ? CubeCell.Void : CubeCell.Shelf;
+            // The floor's height follows that contour smoothly (no 1 m steps along a shelf's edge), and sinks into a well;
+            // under a roof it is a shelf.
+            shelf[k] = inWell ? 0f : canopy[k] ? rise : MathF.Min(rise, Smooth(-ShelfEdge, ShelfEdge, -open));
         }
 
         // 5. Heights, cropped to the apron, laid on the field: the rock rising from its face over RockRamp to its own
@@ -350,6 +413,7 @@ public sealed class CubeTerrain
         var outCells = new CubeCell[nw * nh];
         var outHeights = new float[nw * nh];
         var outCanopy = new bool[nw * nh];
+        var outOpen = new float[nw * nh];
         for (int j = 0; j < nh; j++)
         for (int i = 0; i < nw; i++)
         {
@@ -357,6 +421,7 @@ public sealed class CubeTerrain
             var kind = cell[k];
             outCells[o] = kind;
             outCanopy[o] = canopy[k];
+            outOpen[o] = c.Z == 0 ? 0f : Smooth(CavernCut - 0.05f, CavernCut + 0.05f, over[k]);
             float gx = gx0 + si, gy = gy0 + sj;
             float s = field[k];
             if (kind == CubeCell.Rock) outHeights[o] = top[k] * Smooth(0f, RockRamp, s);
@@ -370,7 +435,7 @@ public sealed class CubeTerrain
         // 6. A boss arena's basin; else its sockets, cut into its walls.
         float[]? roof = null;
         var sockets = new List<Doorway>();
-        if (!arena) sockets = CutSockets(space.Seed, c, outCells, outHeights, nw, nh, c.X * Side - Apron, c.Y * Side - Apron, gates, down, arrivals, rng, out roof);
+        if (!arena) sockets = CutSockets(space.Seed, c, outCells, outHeights, nw, nh, c.X * Side - Apron, c.Y * Side - Apron, gates, down, arrivals, outCanopy, rng, out roof);
 
         return new CubeTerrain
         {
@@ -385,6 +450,7 @@ public sealed class CubeTerrain
             Cells = outCells,
             Heights = outHeights,
             Canopy = outCanopy,
+            UpperOpen = outOpen,
             Gates = gates,
             Down = down,
             Arrivals = arrivals,
@@ -443,10 +509,11 @@ public sealed class CubeTerrain
                 for (int q = 0; q < n; q++)
                 {
                     float g = s0 + q;
-                    near.Shift[q] = WallShift * Math.Clamp(TerrainNoise.Perlin(g * 0.05f, 0.5f, spec.WallSeed), -1f, 1f);
+                    // (Read at the layer's depth: the wall's seed is its line's, so it wanders on slowly down the layers.)
+                    near.Shift[q] = WallShift * Math.Clamp(TerrainNoise.Perlin(g * 0.05f, 0.5f + z * WallDepth, spec.WallSeed), -1f, 1f);
                     // (Each face swells on its own, so the wall's two faces wander apart.)
-                    near.SwellLow[q] = WallSwell * Math.Clamp(TerrainNoise.Fbm(g * 0.13f, 3.7f, spec.WallSeed + 1u, 2) * 0.6f + 0.5f, 0f, 1f);
-                    near.SwellHigh[q] = WallSwell * Math.Clamp(TerrainNoise.Fbm(g * 0.13f, 11.3f, spec.WallSeed + 1u, 2) * 0.6f + 0.5f, 0f, 1f);
+                    near.SwellLow[q] = WallSwell * Math.Clamp(TerrainNoise.Fbm(g * 0.13f, 3.7f + z * WallDepth, spec.WallSeed + 1u, 2) * 0.6f + 0.5f, 0f, 1f);
+                    near.SwellHigh[q] = WallSwell * Math.Clamp(TerrainNoise.Fbm(g * 0.13f, 11.3f + z * WallDepth, spec.WallSeed + 1u, 2) * 0.6f + 0.5f, 0f, 1f);
                 }
                 if (spec.Open)
                     for (int q = 0; q < swayN; q++) near.Sway[q] = 2.2f * TerrainNoise.Perlin((q - swayN / 2) * 0.11f, 7.3f, spec.WallSeed + 5u);
@@ -457,6 +524,136 @@ public sealed class CubeTerrain
                 corners.Add(space.Corner(corner));
         }
         return (edges.ToArray(), corners.ToArray());
+    }
+
+    static float[] Filled(int n, float v)
+    {
+        var a = new float[n];
+        Array.Fill(a, v);
+        return a;
+    }
+
+    /// <summary>
+    /// The cavern field of layer <paramref name="z"/> on the worked grid: read every <paramref name="Step"/> metres on the
+    /// global grid and blended between (its features are tens of metres; the layers either side, read coarser, only soften), so every cube that holds a point reads the same.
+    /// </summary>
+    static float[] StrataGrid(CubeSpace space, int z, int gx0, int gy0, int gw, int gh, int Step = 2)
+    {
+        int cx0 = FloorDiv(gx0, Step) * Step, cy0 = FloorDiv(gy0, Step) * Step;
+        int cw = (gx0 + gw - cx0) / Step + 2, ch = (gy0 + gh - cy0) / Step + 2;
+        var coarse = new float[cw * ch];
+        var slice = space.StrataKeys(NoiseCavern, z);
+        for (int j = 0; j < ch; j++)
+        for (int i = 0; i < cw; i++) coarse[j * cw + i] = slice.At(cx0 + i * Step, cy0 + j * Step, CavernScale);
+        var f = new float[gw * gh];
+        for (int j = 0; j < gh; j++)
+        {
+            int ry = gy0 + j - cy0, cj = ry / Step;
+            float v = (ry - cj * Step) / (float)Step;
+            for (int i = 0; i < gw; i++)
+            {
+                int rx = gx0 + i - cx0, ci = rx / Step;
+                float u = (rx - ci * Step) / (float)Step;
+                int k = cj * cw + ci;
+                float a = coarse[k] + (coarse[k + 1] - coarse[k]) * u, b = coarse[k + cw] + (coarse[k + cw + 1] - coarse[k + cw]) * u;
+                f[j * gw + i] = a + (b - a) * v;
+            }
+        }
+        return f;
+    }
+
+    /// <summary>How far a wall's wander moves on (in its noise) from one layer to the next.</summary>
+    const float WallDepth = 0.12f;
+
+    /// <summary>
+    /// Its caverns joined up: each patch of water (off its walls' band) not joined to its gates and wells is filled if
+    /// small, else bored through to the nearest water that is (into <paramref name="bore"/>, roofed where through rock).
+    /// </summary>
+    static void Join(bool[] water, bool[] bore, bool[] blocked, List<Vector2> nodes, int ow, int oh, Rng rng, uint tunnelSeed, Vector2 origin)
+    {
+        const int Least = 30;
+        var label = new int[ow * oh];
+        Array.Fill(label, -1);
+        var sizes = new List<int>();
+        var todo = new Queue<int>();
+        for (int s = 0; s < label.Length; s++)
+        {
+            if (!water[s] || blocked[s] || label[s] >= 0) continue;
+            int id = sizes.Count, size = 0;
+            label[s] = id;
+            todo.Enqueue(s);
+            while (todo.Count > 0)
+            {
+                int k = todo.Dequeue();
+                size++;
+                int x = k % ow, y = k / ow;
+                foreach (var (dx, dy) in Steps)
+                {
+                    int a = x + dx, b = y + dy;
+                    if (a < 0 || b < 0 || a >= ow || b >= oh) continue;
+                    int q = b * ow + a;
+                    if (!water[q] || blocked[q] || label[q] >= 0) continue;
+                    label[q] = id;
+                    todo.Enqueue(q);
+                }
+            }
+            sizes.Add(size);
+        }
+        var main = new bool[sizes.Count];
+        foreach (var n in nodes)
+        {
+            int x = Math.Clamp((int)MathF.Round(n.X), 0, ow - 1), y = Math.Clamp((int)MathF.Round(n.Y), 0, oh - 1);
+            if (label[y * ow + x] >= 0) main[label[y * ow + x]] = true;
+        }
+        // Every point's nearest joined water (breadth first from all of it, off the walls' band).
+        var from = new int[ow * oh];
+        var dist = new int[ow * oh];
+        Array.Fill(from, -1);
+        for (int k = 0; k < label.Length; k++)
+            if (label[k] >= 0 && main[label[k]])
+            {
+                from[k] = k;
+                todo.Enqueue(k);
+            }
+        while (todo.Count > 0)
+        {
+            int k = todo.Dequeue();
+            int x = k % ow, y = k / ow;
+            foreach (var (dx, dy) in Steps)
+            {
+                int a = x + dx, b = y + dy;
+                if (a < 0 || b < 0 || a >= ow || b >= oh) continue;
+                int q = b * ow + a;
+                if (blocked[q] || from[q] >= 0) continue;
+                from[q] = from[k];
+                dist[q] = dist[k] + 1;
+                todo.Enqueue(q);
+            }
+        }
+        var best = new int[sizes.Count];
+        Array.Fill(best, -1);
+        for (int k = 0; k < label.Length; k++)
+        {
+            int id = label[k];
+            if (id < 0 || main[id] || from[k] < 0) continue;
+            if (best[id] < 0 || dist[k] < dist[best[id]]) best[id] = k;
+        }
+        for (int id = 0; id < sizes.Count; id++)
+        {
+            if (main[id]) continue;
+            if (sizes[id] < Least || best[id] < 0)
+            {
+                for (int k = 0; k < label.Length; k++)
+                    if (label[k] == id) water[k] = false;
+                continue;
+            }
+            int a = best[id], b = from[a];
+            var p0 = new Vector2(a % ow, a / ow);
+            var p1 = new Vector2(b % ow, b / ow);
+            float half = rng.Range(2.6f, 3.4f);
+            StampLine(new[] { p0, Vector2.Lerp(p0, p1, 0.5f), p1 }, half + 1.5f, (x, y, d) =>
+                d < half + 0.9f * TerrainNoise.Fbm((origin.X + x) * 0.1f, (origin.Y + y) * 0.1f, tunnelSeed, 2), bore, ow, oh);
+        }
     }
 
     static int FloorDiv(int a, int b) => a >= 0 ? a / b : -((-a + b - 1) / b);
@@ -505,18 +702,20 @@ public sealed class CubeTerrain
     }
 
     /// <summary>
-    /// Bays bitten into the rock round the carved water: rock within BayReach of it gives way where the bay noise is
-    /// high, so the walls wander instead of tracing the chambers and tunnels.
+    /// Bays bitten into the rock round the carved water open to the sky (none off a roofed tunnel: no skylights in its
+    /// roof): rock within BayReach of it gives way where the bay noise is high, so the walls wander instead of tracing
+    /// the caverns and chambers.
     /// </summary>
-    static void Bays(bool[] water, Vector2 origin, uint seed, int ow, int oh)
+    static void Bays(bool[] water, bool[] roofed, Vector2 origin, uint seed, int ow, int oh)
     {
         const int BayReach = 5;
         var near = new int[ow * oh];
         var todo = new Queue<int>();
         for (int k = 0; k < near.Length; k++)
         {
-            near[k] = water[k] ? 0 : int.MaxValue;
-            if (water[k]) todo.Enqueue(k);
+            bool from = water[k] && !roofed[k];
+            near[k] = from ? 0 : water[k] ? -1 : int.MaxValue;
+            if (from) todo.Enqueue(k);
         }
         while (todo.Count > 0)
         {
@@ -526,14 +725,14 @@ public sealed class CubeTerrain
             foreach (var (dx, dy) in Steps)
             {
                 int a = x + dx, b = y + dy;
-                if (a < 0 || b < 0 || a >= ow || b >= oh || near[b * ow + a] <= near[k] + 1) continue;
+                if (a < 0 || b < 0 || a >= ow || b >= oh || near[b * ow + a] < 0 || near[b * ow + a] <= near[k] + 1) continue;
                 near[b * ow + a] = near[k] + 1;
                 todo.Enqueue(b * ow + a);
             }
         }
         for (int k = 0; k < near.Length; k++)
         {
-            if (near[k] == 0 || near[k] > BayReach) continue;
+            if (near[k] <= 0 || near[k] > BayReach) continue;
             float n = TerrainNoise.Fbm((origin.X + k % ow) * 0.09f, (origin.Y + k / ow) * 0.09f, seed, 2);
             if (n > 0.08f + 0.07f * near[k]) water[k] = true;
         }

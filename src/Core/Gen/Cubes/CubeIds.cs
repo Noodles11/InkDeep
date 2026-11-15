@@ -41,6 +41,18 @@ public static class CubeTuning
     public const float RockLow = 3f, RockRise = 3.5f, RockRim = 1.2f;
     /// <summary>The share of open water that is shelf rather than void, set by the shelf noise's cut.</summary>
     public const float ShelfCut = 0.1f;
+
+    /// <summary>
+    /// The reef's strata (CUBE-WORLD-PLAN §4.3): its depth fields are noise maps stacked one every StrataLayers layers and
+    /// blended between, so each layer reads a slice a little on from the one above.
+    /// </summary>
+    public const int StrataLayers = 5;
+    /// <summary>The caverns: open water wherever the stacked cavern field is over CavernCut (its scale, per metre).</summary>
+    public const float CavernCut = 0.2f, CavernScale = 0.03f;
+    /// <summary>The share of gates whose throat runs through its wall under a roof of rock (the rest open clefts), and of tunnels through rock.</summary>
+    public const float RoofedGates = 0.75f, RoofedTunnels = 0.9f;
+    /// <summary>A roof's underside over the water it covers (above the walls' rise's start, so its rock rises whole with them).</summary>
+    public const float RoofHeight = 3.6f;
 }
 
 /// <summary>

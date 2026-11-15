@@ -62,16 +62,16 @@ new idea, the **void**:
 | At a point | It is |
 |---|---|
 | height > 0 | Rock: blocks her and everything else. |
-| a canopy over water | An arch or overhang (today's `Canopy`): she swims under it. |
+| a roof over water | Rock over a roofed gate's throat or a tunnel bored through rock (§4.4): she swims under it. |
 | 0 ≥ height > void | Water over a **shelf**: a floor she sees and cannot dive through. |
 | height = void | Water with nothing under it: the layer below shows through. |
 
 **She may dive at a point** when, for her whole body's radius: this cube is void there, and the cube below is water
-there with no canopy over it. A shelf here, rock below ("an obstacle") or an arch below all refuse the dive. **She may
+there with no roof over it. A shelf here, rock below ("an obstacle") or a roof below all refuse the dive. **She may
 climb** at a point when the same holds read from the layer above. One rule, both ways.
 
-About 60% of a cube's water is void *(tune)*: seeing down and diving are the rule, shelves and arches the features
-that shape where.
+Void lies only over the layer below's caverns (§4.3), so looking down through it she always sees that layer's open
+water; shelves, roofs and the caverns' shapes decide where.
 
 ## 4. Generation: plan first, then geometry
 
@@ -82,12 +82,14 @@ made in any order, on any thread, and always agree.
 
 Three small specs, each hashed from the seed and the id of the thing two or three cubes **share**:
 
-- **`EdgeSpec(EdgeId)`**: open or closed, and the seed of its shared wall's shape. Each layer's open edges first
+- **`EdgeSpec(EdgeId)`**: open or closed, and the seed of its shared wall's shape (its line's, the same on every
+  layer: §4.3). Each layer's open edges first
   hold a spanning tree of its cubes (Kruskal over the edges between them, in a seeded order), so every cube of a
   layer can be reached across them; each other edge is open by a 35% chance *(tune)*; edges on the reef's rim are
   always closed. An open edge has one gate, or two on 35% of edges, each 6–13 m wide, its sides never nearer a corner
   than 13 m. Two cubes may share two edges (along a long side), each with its own gates.
-- **`CornerSpec(CornerId)`**: rock 8–10 m round the corner. With gates kept off the corners, no water ever joins two
+- **`CornerSpec(CornerId)`**: rock 8–10 m round the corner, its size wandering slowly with depth, so a corner stands
+  on down the layers as one pillar. With gates kept off the corners, no water ever joins two
   cubes that share only a corner, so she cannot cross diagonally.
 - **`FloorSpec(FloorId)`**: per square, one well, or two (50%), discs 5–7 m in radius where the upper cube must be
   void and the lower open water. They are the sure ways down; any other spot where §3's rule happens to hold is a way
@@ -104,20 +106,24 @@ over its two squares.
    corners alone, one field for the whole layer, so every cube that holds a point works out the same:
    - its **wall** along the line, whose middle wanders up to 1 m off it and each of whose faces swells by up to 3 m on
      its own, but which always covers at least 3 m either side (so the apron is made from the edges alone); past its
-     own stretch of line it tapers away;
+     own stretch of line it tapers away. Its wander is read at the layer's depth from its line's own noise, so the
+     same wall runs on down the layers, moving a little from each to the next;
    - each **gate's throat**, cut through the wall and on 10 m into both cubes (closing over 2 m past that), swaying
-     from side to side and flaring where it opens into each;
+     from side to side and flaring where it opens into each; 75% of gates are **roofed** *(tune)*, the wall's rock
+     running on over the throat (§4.4), the rest open clefts;
    - each **corner's** rock.
-2. **The cube's own water**, from its own hash, across both its squares (no wall between them): a chamber round each
-   well (over it and under it), a pocket 15–19 m in from each outer edge (60% of edges; the rock between joins the
-   wall, so no wall stands as a fin), and two to five chambers more, 7–12 m across. Gate
-   mouths, wells and chambers are joined by a spanning tree of the shortest tunnels (bowed curves 5.6–8.8 m wide)
-   plus a loop or two. Rims wobble by low noise; then **bays** are bitten into the rock within 5 m of the water where
-   the bay noise is high, so walls wander rather than trace the plan. Every gate of a cube reaches every other and
-   every well.
-3. **Shelves, void and arches**: water is shelf or void by a noise mask at global coordinates (so it runs on across
-   cube lines); round a well down it is void, wobbling outward from its radius; arches are laid over the middle of
-   a tunnel or two away from the wells, and the floor under an arch is a shelf.
+2. **The cube's own water**, across both its squares (no wall between them): the reef's **caverns**, wherever the
+   stacked cavern field (§4.3) is over its cut (0.2, about a fifth of the reef *(tune)*), and a chamber round each
+   well (over it and under it). Gate mouths and wells are joined by a spanning tree of the shortest tunnels (bowed
+   curves 5.6–8.8 m wide, from the cube's own hash) plus a loop or two; a cavern not joined to them by then is filled
+   if small (under 30 m²) or bored through to the nearest water that is. 75% of tunnels *(tune)* are **bored**: where
+   they run through rock (outside the caverns of this layer and the one above) they are roofed (§4.4). Rims wobble by
+   low noise; then **bays** are bitten into the rock within 5 m of the water open to the sky where the bay noise is
+   high, so walls wander rather than trace the plan (none off a roofed tunnel: no skylights in its roof). Every gate
+   of a cube reaches every other and every well.
+3. **Shelves and void**: water is void where the shelf noise (global coordinates, so it runs on across cube lines)
+   opens it **and** the layer below has a cavern there (§4.3), else shelf; round a well down it is void, wobbling
+   outward from its radius; under a roof it is a shelf.
 4. **The face**: the cube's own water as a signed distance (positive in rock, widened 0.6 m, blurred), joined with
    the edges' field: the walls' rock over it, the throats' water over that. Within 2 m of an outer edge (the apron)
    only the edges' field counts; over the next 3 m the cube's own blends in. The face is the field's zero line, which
@@ -125,7 +131,7 @@ over its two squares.
 5. **Heights** on the field: all noise (rock relief, shelf floors) is read at **global** coordinates. Rock rises from
    its face over 2.5 m to its own 3–6.5 m; the floor falls from the face to a shelf's or the void's depth over 1–4 m
    (the deeper, the further). A shelf's floor drops into the void along the shelf noise's contour as a bank, and sinks
-   smoothly into a well. The ground's edge over the void and an arch's outline follow their fields' smooth lines too
+   smoothly into a well. The ground's edge over the void and a roof's outline follow their fields' smooth lines too
    (`LevelView.SurfaceMesh`'s field).
 6. **Apron**: the cube's arrays carry 2 m of its neighbours' samples round them (the ground's smoothing reads two
    samples past a cell), all of it decided by the edges, so meshes, normals and soft masks are right up to the line.
@@ -133,9 +139,35 @@ over its two squares.
 **Generation never retries.** Today's generate-validate-retry cannot run while she swims. The construction above is
 valid by design; `LevelValidator`'s checks move into the test suite, run over thousands of seeds and coordinates.
 
-### 4.3 Two stages
+### 4.3 One reef down the layers: the strata
 
-- **Terrain**: heights, void, canopies, the dive mask. Depends on nothing but seed and coordinates. Cheap.
+A layer is not made alone: its depth fields are **stacked noise maps**, one every 5 layers *(tune)*, each layer a
+smooth blend of the four round it (a cubic B-spline down the stack, kept to the maps' own spread;
+`CubeSpace.Strata`). Layers next to each other read nearly the same, and over about ten layers (100 m) the reef has
+wholly changed. What reads them:
+
+- **The caverns** (§4.2 step 2): the reef's open water, so a layer's caverns lie largely where the layer above has its
+  own, shifted and reshaped a little. About two thirds of a layer's water open to the sky lies where the next layer's
+  does, a third where a layer eight down does (`CubeTerrainTests.Each_layer_carries_on_the_reef_of_the_one_above`).
+- **The walls and corners** (§4.1, §4.2 step 1): the same lines every layer, their wander read at the layer's depth.
+- **The void** (§4.2 step 3): only over the layer below's caverns, so the void and the open water under it are one
+  shaft.
+- **How far her walls rise** (§5.5): on up past the camera where the layer above is rock; under the layer above's
+  caverns only to about its floor (`CubeTerrain.UpperOpen`), so the walls she sees rising are the reef above going on.
+
+### 4.4 Roofs
+
+Rock carried over water she swims through (`CubeTerrain.Canopy`): the throats of roofed gates, inside their wall's
+band, and tunnels bored through rock, each with the rock 2 m round it. From above a roofed gate leaves its wall whole,
+an opening carved through it; a bored tunnel runs hidden through the rock between caverns. A roof is drawn as a slab
+(`CubeShapes.Roofs`) whose underside lies 3.6 m over her plane at its edge (the lintel over each mouth) and which rises
+with the walls round it inside, made over each cube's own squares only, so neighbours' roofs meet at full height.
+Roofs are rock over the water on the layer's map (`LevelMap.Roof`), so the cutout takes a roof with its wall, whole.
+No roof lies within 2 m of a well, nor over a boss's basin.
+
+### 4.5 Two stages
+
+- **Terrain**: heights, void, roofs, the dive mask. Depends on nothing but seed and coordinates. Cheap.
 - **Stocking**: creatures, pickups, decoration, mouths of sub-levels. Depends on the terrain and on what the director
   (§9) grants the cube.
 
@@ -217,7 +249,7 @@ mouths are classic levels as before, and a layer she climbs back to keeps its ma
 
 ### 5.5 Rendering without seams
 
-- **Meshes:** eight 32 m chunks a cube and its arches, built off the main thread with the level's own surface builder.
+- **Meshes:** eight 32 m chunks a cube and its roofs, built off the main thread with the level's own surface builder.
   Chunk edges share their rim samples and take normals from the apron. Quads all in the void are left out: there the
   layer below shows.
 - **Map textures** (fog of war, corruption, baked sun shadow) that shaders sample by world position become one
@@ -346,7 +378,8 @@ Loaded things and remembered things are kept apart.
 - which of its edges the wake current holds.
 
 A cube's terrain, meshes and nodes are **never** saved: they are regenerated from the seed, and the record is laid
-over them. That is how (0,0) is the same (0,0) after the ring in §8.2.
+over them. The save names the terrain generator it was made under (`CubeDiveSave.Terrain`); one made under another
+is let go, since its seed no longer makes the same reef. That is how (0,0) is the same (0,0) after the ring in §8.2.
 
 **What is dropped:** on diving to a new deepest layer, the records of the layer two up are discarded; she can never
 return there. Kept for the whole dive: the director's counters and the boss streak.
@@ -396,7 +429,7 @@ prompted 0.44.0's optimisation.
 |---|---|---|
 | Terrain of one cube (two squares) | worker | ≤ 20 ms |
 | Stocking of one cube | worker | ≤ 20 ms |
-| Ground of one cube (8 chunks and arches, as meshes) | worker | ≤ 100 ms |
+| Ground of one cube (8 chunks and roofs, as meshes) | worker | ≤ 100 ms |
 | Simplified ground of one cube | worker | ≤ 6 ms |
 | Applying finished work | main | ≤ 2 ms a frame |
 | Stream bookkeeping | main | ≤ 0.1 ms a tick |
@@ -424,7 +457,7 @@ On its own branch, `inkdeep-cubes`, forked from `m6-redefine`; nothing merges ba
 
 ### 14.1 Scope
 
-- A footprint of 5 × 5 squares (the herringbone's cubes wholly inside it), three layers. Shelves, arches, wells,
+- A footprint of 5 × 5 squares (the herringbone's cubes wholly inside it), three layers. Shelves, roofs, wells,
   closed edges, the reef's rim.
 - Clementine, her light, her movement and collision, the camera. The debug overlay.
 - Streaming with all four states, the layer below shown, diving and climbing with the camera move, the cooldown and
@@ -440,7 +473,7 @@ movement and collision are first moved behind `IReefField` so both worlds share 
 | # | Step | Done when |
 |---|---|---|
 | 1 | `CellCoord`, `CubeId` (the herringbone), the edge, corner and floor ids, `ReefHash`, `EdgeSpec`, `CornerSpec`, `FloorSpec` (`src/Core/Gen/Cubes`) | Done: determinism, herringbone and gate tests pass. |
-| 2 | Shared walls and throats, the cube's own carving, bays, shelves, arches, void, apron: `CubeTerrain.Make(space, coord)` | Done: seam, connectivity and well tests pass (`CubeTerrainTests`); terrain within budget. |
+| 2 | Shared walls and throats, the cube's own carving, bays, shelves, roofs, void, apron: `CubeTerrain.Make(space, coord)` | Done: seam, connectivity and well tests pass (`CubeTerrainTests`); terrain within budget. |
 | 3 | A picture of a reef of 6 × 6 squares, three layers (one sheet a layer), drawn by `CubeTerrainTests` when `CUBE_SHEET` names a folder | Done. |
 | 4 | `IReefField` and `ReefCollision` (`src/Core/Gen`); her stroke and her move against what blocks her in `BodyMotion`, shared by `PlaneWorld` and the prototype's `CubeWorld`; `CubeField`, the window of cubes round her | Done (`CubeWorldTests`): through a gate her speed and step hold to 0.1% across the cube line; a long swim over five cubes is the same tick for tick with a 3 × 3 window moving with her as with every cube held. |
 | 5 | `ReefStream`: wants, queue, states, pins, unload delay; `TaskCubeWorker` on the thread pool | Done (`ReefStreamTests`, with a worker the test runs by hand and with the thread pool's): her cube's work first, terrain before what is built on it, two jobs out at a time; crossing a line back and forth lets nothing go; what she leaves goes after 3 s, pinned cubes not; work no longer wanted given up; the layer left kept as masks while she may climb; the bookkeeping 25 µs a frame. |

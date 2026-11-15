@@ -14,6 +14,10 @@ namespace OctoShoots.Core.Gen.Cubes;
 /// </summary>
 public sealed class CubeDiveSave
 {
+    /// <summary>The terrain generator it was made with: one saved under another reef's is let go (TerrainNow).</summary>
+    public int Terrain { get; set; }
+    /// <summary>The terrain generator's version now (raised whenever a seed's reef would come out different).</summary>
+    public const int TerrainNow = 2;
     public int Footprint { get; set; }
     public int Layers { get; set; }
     public int Layer { get; set; }

@@ -250,6 +250,7 @@ public partial class TopDownMain
         var record = RunRecord();
         record.Cubes = new CubeDiveSave
         {
+            Terrain = CubeDiveSave.TerrainNow,
             Footprint = _reef!.Space.Footprint, Layers = _reef.Space.Layers, Layer = _layer, Deepest = _cubeDiving.Deepest,
             HavenMouth = _diveCave, Director = _director.Save(),
             Arenas = Enumerable.Range(0, _reef.Space.Layers).Where(z => _reef.ArenaOf(z) is not null).ToDictionary(z => z, z => CubeDiveSave.CubeKey(_reef.ArenaOf(z)!.Value)),

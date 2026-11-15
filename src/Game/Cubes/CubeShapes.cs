@@ -8,7 +8,7 @@ using static OctoShoots.Core.Gen.Cubes.CubeTuning;
 namespace OctoShoots.Game.Cubes;
 
 /// <summary>
-/// A cube's ground: its 32 m chunks (none where a chunk is all void) and its arches, as surfaces and as the meshes made
+/// A cube's ground: its 32 m chunks (none where a chunk is all void) and its roofs, as surfaces and as the meshes made
 /// of them. The meshes are made on the worker too (a mesh resource may be made off the main thread), so showing one costs
 /// the main thread next to nothing.
 /// </summary>
@@ -44,16 +44,54 @@ public static class CubeShapes
         for (int cy = 0; cy < h; cy += Chunk)
         for (int cx = 0; cx < w; cx += Chunk)
         {
-            if (LevelView.SurfaceMesh(1 << 20, Height, x0 + cx, y0 + cy, x0 + cx + Chunk, y0 + cy + Chunk, null, Kept) is { } s) surfaces.Add(s);
+            if (LevelView.SurfaceMesh(1 << 20, Height, x0 + cx, y0 + cy, x0 + cx + Chunk, y0 + cy + Chunk, null, Kept) is { } s) surfaces.Add(UnderAbove(t, s));
             // (The cutout's dotted cap inside its rock at the cut's height: LevelView.Cap.)
             if (LevelView.Cap(1 << 20, Height, x0 + cx, y0 + cy, x0 + cx + Chunk, y0 + cy + Chunk) is { } cap) surfaces.Add(cap);
         }
-        if (Arches(t) is { } arches) surfaces.Add(arches);
+        if (Roofs(t) is { } roofs) surfaces.Add(roofs);
         return new CubeShape(surfaces);
     }
 
-    /// <summary>Its arches: a slab of rock over the water they span, in one piece, its outline smooth (its canopy blurred).</summary>
-    static LevelShape.Surface? Arches(CubeTerrain t)
+    /// <summary>
+    /// Her walls rise on up (ReefStreamView.Rise) only where the layer above is rock (CUBE-WORLD-PLAN §4.3): under its
+    /// caverns' open water they stop about where its floor lies, so the walls she sees rising are the reef above going
+    /// on. (Each vertex's alpha is how far it rises; a cap's 0.5 is left alone, and none comes near it.)
+    /// </summary>
+    static LevelShape.Surface UnderAbove(CubeTerrain t, LevelShape.Surface s)
+    {
+        if (t.UpperOpen is null) return s;
+        var colours = (Color[])s.Colors.Clone();
+        for (int k = 0; k < colours.Length; k++)
+        {
+            if (Mathf.Abs(colours[k].A - 0.5f) < 0.1f) continue;
+            float open = UpperOpen(t, s.Vertices[k].X, s.Vertices[k].Z);
+            colours[k].A = Rising(Mathf.Lerp(1f, UnderOpenRise, open));
+        }
+        return new LevelShape.Surface(s.Vertices, s.Normals, colours, s.Indices);
+    }
+
+    /// <summary>How much of the full rise a wall keeps under the layer above's open water (to about that layer's floor).</summary>
+    const float UnderOpenRise = (LayerDrop - RockLow) / ReefStreamView.Rise;
+
+    /// <summary>A rise kept clear of a cap's alpha (0.4–0.6, topdown_ground's is_cap).</summary>
+    static float Rising(float a) => a > 0.39f && a < 0.61f ? (a < 0.5f ? 0.38f : 0.62f) : a;
+
+    static float UpperOpen(CubeTerrain t, float x, float y)
+    {
+        int ix = Mathf.FloorToInt(x), iy = Mathf.FloorToInt(y);
+        float fx = x - ix, fy = y - iy;
+        float a = Mathf.Lerp(t.UpperOpenAt(ix, iy), t.UpperOpenAt(ix + 1, iy), fx);
+        float b = Mathf.Lerp(t.UpperOpenAt(ix, iy + 1), t.UpperOpenAt(ix + 1, iy + 1), fx);
+        return Mathf.Lerp(a, b, fy);
+    }
+
+    /// <summary>
+    /// Its roofs (CUBE-WORLD-PLAN §4.4): rock over the throats of its roofed gates and its tunnels bored through rock, in
+    /// one piece, its outline smooth (its canopy blurred). Inside it rises with the walls (so from above the wall runs on
+    /// whole over the way through); at its edge it stays at RoofHeight, the lintel over each mouth. Made over its own
+    /// squares only, its canopy read on past them as its apron holds it, so neighbours' roofs meet at full height.
+    /// </summary>
+    static LevelShape.Surface? Roofs(CubeTerrain t)
     {
         int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
         int n = t.Stride;
@@ -79,7 +117,7 @@ public static class CubeShapes
             {
                 float k = (3 - Math.Abs(dx)) * (3 - Math.Abs(dy));
                 weight += k;
-                if (t.CanopyAt(bx0 + i + dx, by0 + j + dy)) sum += k;
+                if (CanopyNear(t, bx0 + i + dx, by0 + j + dy)) sum += k;
             }
             cover[j * bw + i] = sum / weight;
         }
@@ -91,12 +129,25 @@ public static class CubeShapes
             float a = Mathf.Lerp(cover[j * bw + i], cover[j * bw + i + 1], u), b = Mathf.Lerp(cover[(j + 1) * bw + i], cover[(j + 1) * bw + i + 1], u);
             return Mathf.Lerp(a, b, v);
         }
-        float Top(float x, float y) => 2.6f + 0.45f * Mathf.Sin(x * 0.9f + Mathf.Sin(y * 0.7f) * 1.5f) * Mathf.Sin(y * 0.8f + 1.3f);
-        if (LevelView.SurfaceMesh(1 << 20, Top, minX - 3, minY - 3, maxX + 3, maxY + 3, null, (x, y) => Cover(x, y) - 0.34f) is not { } slab) return null;
-        // (Its colours' alpha 0: an arch stays where it is when the walls rise round it.)
-        var colors = Array.ConvertAll(slab.Colors, c => c with { A = 0f });
+        float Top(float x, float y) => RoofHeight + 0.25f * Mathf.Sin(x * 0.9f + Mathf.Sin(y * 0.7f) * 1.5f) * Mathf.Sin(y * 0.8f + 1.3f);
+        int ox0 = t.Cube.X * CubeTuning.Side, oy0 = t.Cube.Y * CubeTuning.Side, ox1 = ox0 + t.Cube.Wide * CubeTuning.Side, oy1 = oy0 + t.Cube.Tall * CubeTuning.Side;
+        int sx0 = Math.Max(minX - 3, ox0), sy0 = Math.Max(minY - 3, oy0), sx1 = Math.Min(maxX + 3, ox1), sy1 = Math.Min(maxY + 3, oy1);
+        if (sx1 <= sx0 || sy1 <= sy0) return null;
+        if (LevelView.SurfaceMesh(1 << 20, Top, sx0, sy0, sx1, sy1, null, (x, y) => Cover(x, y) - 0.34f) is not { } slab) return null;
+        // (Its rise: none at its edge, the lintel; all of it a little way in, as the walls round it rise.)
+        var colors = new Color[slab.Colors.Length];
+        for (int k = 0; k < colors.Length; k++)
+        {
+            float c = Cover(slab.Vertices[k].X, slab.Vertices[k].Z);
+            float rise = Mathf.SmoothStep(0.36f, 0.5f, c) * Mathf.Lerp(1f, UnderOpenRise, UpperOpen(t, slab.Vertices[k].X, slab.Vertices[k].Z));
+            colors[k] = slab.Colors[k] with { A = Rising(rise) };
+        }
         return new LevelShape.Surface(slab.Vertices, slab.Normals, colors, slab.Indices);
     }
+
+    /// <summary>Its canopy at a point, read on past its arrays' edge as their last sample.</summary>
+    static bool CanopyNear(CubeTerrain t, int gx, int gy) =>
+        t.CanopyAt(Math.Clamp(gx, t.X0, t.X0 + t.Stride - 1), Math.Clamp(gy, t.Y0, t.Y0 + t.Rows - 1));
 
     /// <summary>The layer below's simplified ground: one mesh on a 2 m grid, its void a flat floor deep under it (murk).</summary>
     public static CubeShape Preview(CubeTerrain t)

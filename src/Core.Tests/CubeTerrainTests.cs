@@ -14,6 +14,9 @@ namespace OctoShoots.Core.Tests;
 /// <summary>The cube world's terrain (docs/proposals/CUBE-WORLD-PLAN.md §2–§4, §12): herringbone cubes, three layers.</summary>
 public class CubeTerrainTests
 {
+    readonly ITestOutputHelper _out;
+    public CubeTerrainTests(ITestOutputHelper output) => _out = output;
+
     public static readonly ulong[] SeedValues = { 0x4B454C50UL, 7UL, 0xC0FFEEUL, 123456789UL, 0xDEADBEEFUL, 42UL };
     public static IEnumerable<object[]> Seeds => SeedValues.Select(s => new object[] { s });
 
@@ -178,6 +181,52 @@ public class CubeTerrainTests
         }
         Assert.All(space.CubesOf(L - 1), c => Assert.Empty(all[c].Down));
         Assert.All(space.CubesOf(0), c => Assert.Empty(all[c].Arrivals));
+    }
+
+    /// <summary>
+    /// The reef is one body (CUBE-WORLD-PLAN §4.3): a layer's water open to the sky lies largely where the layer above has its own,
+    /// much more so than a layer far below; and the void looks down onto the layer below's open water.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Seeds))]
+    public void Each_layer_carries_on_the_reef_of_the_one_above(ulong seed)
+    {
+        const int Layers = 9;
+        var space = new CubeSpace(seed, F, Layers);
+        var all = Enumerable.Range(0, Layers).SelectMany(space.CubesOf).ToDictionary(c => c, c => CubeTerrain.Make(space, c));
+        int span = F * Side;
+        CubeTerrain At(int x, int y, int z) => all[CubeId.Of(new CellCoord(x / Side, y / Side, z))];
+        bool Rock(int x, int y, int z) => At(x, y, z).CellAt(x, y) == CubeCell.Rock;
+        bool Open(int x, int y, int z) => !Rock(x, y, z) && !At(x, y, z).CanopyAt(x, y);
+        double Same(int a, int b)
+        {
+            int both = 0, either = 0;
+            for (int y = 0; y < span; y += 2)
+            for (int x = 0; x < span; x += 2)
+            {
+                if (!space.Inside(new CellCoord(x / Side, y / Side, 0))) continue;
+                // (Open to the sky: what is seen from above, a roofed way's rock rising with its walls.)
+                bool wa = Open(x, y, a), wb = Open(x, y, b);
+                if (wa || wb) either++;
+                if (wa && wb) both++;
+            }
+            return both / (double)either;
+        }
+        double next = Same(3, 4), far = Same(0, 8);
+        _out.WriteLine($"water shared: next layer {next:P0}, eight down {far:P0}");
+        Assert.True(next >= 0.6 && next > far + 0.25, $"next {next:P0}, far {far:P0}");
+        // Down through the void (out of the wells' and the walls' way) she sees the layer below's water, not its rock.
+        int voids = 0, onRock = 0;
+        for (int z = 0; z < Layers - 1; z++)
+        for (int y = 0; y < span; y += 2)
+        for (int x = 0; x < span; x += 2)
+        {
+            if (!space.Inside(new CellCoord(x / Side, y / Side, z)) || At(x, y, z).CellAt(x, y) != CubeCell.Void) continue;
+            voids++;
+            if (Rock(x, y, z + 1)) onRock++;
+        }
+        _out.WriteLine($"{voids} void points, {onRock} over rock");
+        Assert.True(onRock <= voids * 0.05, $"{onRock} of {voids} void points over rock");
     }
 
     /// <summary>The cube's own open water (1 m clear of rock) labelled by region (0: none).</summary>

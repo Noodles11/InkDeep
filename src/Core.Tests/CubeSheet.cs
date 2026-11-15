@@ -10,7 +10,7 @@ namespace OctoShoots.Core.Tests;
 /// <summary>
 /// A picture of a block of cubes for judging the terrain by eye (CUBE-WORLD-PLAN §14.2 step 3): each layer seen from
 /// above, the layers left to right. Rock shaded by its height; shelves sand; through the void, the layer below, dimmed
-/// (and murk under the last). Arches hatched; wells down ringed orange, ways in from above green; squares outside the
+/// (and murk under the last). Roofs hatched; wells down ringed orange, ways in from above green; squares outside the
 /// reef plain rock.
 /// </summary>
 public static class CubeSheet

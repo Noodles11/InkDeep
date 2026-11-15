@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Numerics;
+using OctoShoots.Core.Gen.TopDown;
 using static OctoShoots.Core.Gen.Cubes.CubeTuning;
 
 namespace OctoShoots.Core.Gen.Cubes;
@@ -108,7 +109,9 @@ public sealed class CubeSpace
         float extra = rng.NextFloat(), two = rng.NextFloat();
         float w1 = rng.Range(GateMinWidth, GateMaxWidth), w2 = rng.Range(GateMinWidth, GateMaxWidth);
         float a1 = rng.NextFloat(), a2 = rng.NextFloat();
-        uint wall = (uint)(rng.NextU64() >> 32);
+        _ = rng.NextU64();
+        // (Its wall's shape is its line's at every depth, read at the layer's depth: CubeTerrain.SharedNear.)
+        uint wall = (uint)(ReefHash.Of(Seed, ReefHash.Edge, id.X, id.Y, -1, (int)id.Axis) >> 32);
         // (Between the two squares of one cube there is no edge to speak of: its water runs across.)
         bool inside = Inside(id.Low) && Inside(id.High) && CubeId.Of(id.Low) != CubeId.Of(id.High);
         bool open = inside && (TreeOf(id.Z).Contains(id) || extra < EdgeOpenExtra);
@@ -127,8 +130,33 @@ public sealed class CubeSpace
         return new EdgeSpec { Id = id, Open = open, Gates = gates, WallSeed = wall };
     }
 
-    public CornerSpec Corner(CornerId id) =>
-        new(id, ReefHash.Rng(Seed, ReefHash.Corner, id.X, id.Y, id.Z).Range(CornerMin, CornerMax));
+    /// <summary>A corner's rock: its size wandering slowly with depth, so a corner stands on down the layers as one pillar.</summary>
+    public CornerSpec Corner(CornerId id)
+    {
+        uint seed = (uint)(ReefHash.Of(Seed, ReefHash.Corner, id.X, id.Y, -1) >> 32);
+        float t = Math.Clamp(TerrainNoise.Perlin(id.Z * 0.17f, 0.5f, seed) * 0.7f + 0.5f, 0f, 1f);
+        return new(id, CornerMin + (CornerMax - CornerMin) * t);
+    }
+
+    /// <summary>
+    /// A stacked depth field at a global point of layer <paramref name="z"/> (CUBE-WORLD-PLAN §4.3): a noise map every
+    /// StrataLayers layers, each layer a smooth blend of the four round it (a cubic B-spline down the stack, kept to the
+    /// maps' own spread), so layers next to each other read nearly the same and the field changes on down the reef.
+    /// About −1 to 1.
+    /// </summary>
+    public float Strata(int use, float x, float y, int z, float scale, int octaves = 2) => StrataKeys(use, z).At(x, y, scale, octaves);
+
+    /// <summary>The four stacked maps a layer reads and its weights on them (for reading many points of one layer).</summary>
+    public StrataSlice StrataKeys(int use, int z)
+    {
+        float depth = Math.Max(z, 0) / (float)StrataLayers;
+        int k = (int)MathF.Floor(depth);
+        float u = depth - k, u2 = u * u, u3 = u2 * u;
+        float w0 = (1f - u) * (1f - u) * (1f - u) / 6f, w1 = (3f * u3 - 6f * u2 + 4f) / 6f, w2 = (-3f * u3 + 3f * u2 + 3f * u + 1f) / 6f, w3 = u3 / 6f;
+        float norm = 1f / MathF.Sqrt(w0 * w0 + w1 * w1 + w2 * w2 + w3 * w3);
+        return new StrataSlice(NoiseSeed(use * 64 + k), NoiseSeed(use * 64 + k + 1), NoiseSeed(use * 64 + k + 2), NoiseSeed(use * 64 + k + 3),
+            w0 * norm, w1 * norm, w2 * norm, w3 * norm);
+    }
 
     /// <summary>
     /// A floor's wells: one or two, in opposite quadrants of the cube, the pair of quadrants by the floor's parity (so the
@@ -194,4 +222,16 @@ public sealed class CubeSpace
         }
         return tree;
     });
+}
+
+/// <summary>A layer's slice of a stacked field: its four maps' seeds and its weights on them (their squares summing to 1).</summary>
+public readonly record struct StrataSlice(uint S0, uint S1, uint S2, uint S3, float W0, float W1, float W2, float W3)
+{
+    public float At(float x, float y, float scale, int octaves = 2)
+    {
+        x *= scale;
+        y *= scale;
+        float v = W0 * TerrainNoise.Fbm(x, y, S0, octaves) + W1 * TerrainNoise.Fbm(x, y, S1, octaves) + W2 * TerrainNoise.Fbm(x, y, S2, octaves);
+        return W3 > 0f ? v + W3 * TerrainNoise.Fbm(x, y, S3, octaves) : v;
+    }
 }

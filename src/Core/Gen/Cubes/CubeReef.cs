@@ -61,7 +61,7 @@ public sealed class CubeReef
         _made.TryRemove(cube, out _);
     }
 
-    /// <summary>A cube's heights (and the rock over its sockets) laid onto its layer's map.</summary>
+    /// <summary>A cube's heights (and the rock over its sockets, gates and tunnels) laid onto its layer's map.</summary>
     void Lay(LevelMap map, CubeId c, CubeTerrain t)
     {
         int last = Size;
@@ -72,6 +72,8 @@ public sealed class CubeReef
             map[x, y] = t.HeightAt(x, y);
             // (The rock over its sockets' passages, drawn by the mouths' views as a level's.)
             if (t.Roof is not null && t.RoofAt(x, y) is var roof && !float.IsNaN(roof)) map.Roof[y * map.Samples + x] = roof;
+            // (The roofs over its gates and tunnels, as rock over the water to the cutout: LevelView.SeeKeep.)
+            else if (t.CanopyAt(x, y) && t.CellAt(x, y) != CubeCell.Rock) map.Roof[y * map.Samples + x] = RoofHeight;
         }
     }
 
