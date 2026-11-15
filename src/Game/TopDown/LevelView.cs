@@ -83,7 +83,8 @@ public sealed class LevelShape
             if (!sx.Inside || !sy.Inside) pieces.Add(() => LevelView.SkirtSurface(map, sx.A, sy.A, sx.B, sy.B));
         var built = new LevelShape.Surface?[pieces.Count];
         System.Threading.Tasks.Parallel.For(0, pieces.Count, k => built[k] = pieces[k]());
-        foreach (var surface in built) shape.Ground.Add(surface!);
+        foreach (var surface in built)
+            if (surface is not null) shape.Ground.Add(surface);
         foreach (var cave in map.Caves) shape.Lids.Add(LevelView.LidSurface(map, cave));
         foreach (var rock in map.WeakRocks)
             if (rock.Kind == SealKind.Secret && rock.Cave >= 0 && LevelView.LidSurface(map, map.Caves[rock.Cave], opened: true) is { } open) shape.OpenLids[rock.Cave] = open;

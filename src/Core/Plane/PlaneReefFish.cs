@@ -571,3 +571,26 @@ public sealed partial class PlaneWorld
         return tip - d * (r * 0.15f + r * 2.4f * u) + across * (lane == 0 ? 0.16f : -0.16f);
     }
 }
+
+public sealed partial class PlaneWorld
+{
+    /// <summary>
+    /// A few blue tangs wandering about a spot (the title screen's open water: fish near her): each hops about its own
+    /// home, round <paramref name="around"/> from <paramref name="near"/> to <paramref name="far"/> metres off.
+    /// </summary>
+    public void AddWanderers(Vector2 around, int count, float near, float far, ulong seed)
+    {
+        var rng = new Rng(seed);
+        int id = ReefFish.Count == 0 ? 0 : ReefFish.Max(f => f.Id) + 1;
+        for (int k = 0; k < count; k++)
+        {
+            float a = rng.Range(0f, MathF.Tau), d = rng.Range(near, far);
+            var at = around + new Vector2(MathF.Cos(a), MathF.Sin(a)) * d;
+            ReefFish.Add(new PlaneReefFish
+            {
+                Kind = ReefFishKind.BlueTang, Id = id++, Home = at, Position = at,
+                Heading = rng.Range(0f, MathF.Tau), Wait = rng.Range(0f, 2f), Rng = new Rng(rng.NextU64()),
+            });
+        }
+    }
+}

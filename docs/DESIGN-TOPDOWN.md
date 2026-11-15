@@ -1582,17 +1582,31 @@ at mist distance (inherited fade rule).
 - **Title screen** (docs/TITLE-MENU.md has the full layout and motion):
   - **One crosshair.** With the controller the left stick's crosshair is the mouse's own, at its own size whatever the
     window (not scaled with the menu), and the mouse pointer hides until the mouse is used again.
-  - **The backdrop.** The game boots into a menu over the live sea. Clementine swims slowly back and forth along the
-    west end of the longest straight channel of a fixed seed's reef (KELP 7Q2Z), the camera keeping her in the middle
-    of the screen; the sea is dimmed a little, more toward the edges. The logo sits at the top left.
+  - **The opening** (a second, `TitleMain.StepReveal`, title_reveal.gdshader): the game boots on black, the gonad
+    loader turning in the middle. Once the sea is made, the loader whitens and starts to glow (0.3 s); then it is the
+    opening onto the menu: in its own shape at first, growing, with a round opening spreading from it in a white glow
+    until the whole screen is uncovered (0.7 s). The loader is gone and the menu takes input.
+  - **The backdrop.** Clementine floats in the middle of wide open water, its floor far below (22 m) and blurred, in
+    the cube reef's top layer's look (Menace 0). A few blue tangs wander about her (`PlaneWorld.AddWanderers`). The
+    logo sits at the top left, the version at the bottom right.
   - **The menu** stands in a ring round her (an oval 860 × 600 on the 1600 × 900 page), evenly spaced from the top,
     clockwise: Play (her jellies: the one game, a dive in the cube reef, docs/DIVE.md), Sea-pedia, Statistics,
-    Settings, Quit. There are no other modes: no new or seeded run, no saved run to continue. Each item is its word with its detail line under it; the one in focus swells a little and turns coral. W/S
-    and A/D (and the D-pad) go round the ring.
+    Settings, Quit. There are no other modes: no new or seeded run, no saved run to continue. Each item is its word with its detail line under it, in a
+    murkling's colour (the ink's deep violet). W/S and A/D (and the D-pad) go round the ring.
+  - **Her beam on an item:** the item under the pointer (with the controller or the keys, the one in focus) she lights
+    with her beam: its text turns white, outlined in her light, and it sprays as a mob in her beam does, sparks of her
+    light and the corruption's violet brackets peeling off it (`MenuSpray`).
+  - **Choosing an item:** its text dissolves outward along her beam, still on it, a ragged burning front with a spray of
+    sparks and brackets off it (menu_dissolve.gdshader, 0.5 s), and her push wave, a ring running out from her, throws
+    the other items, the logo and the footer off the screen (0.6 s). Then **Play** dives: the game's dive between
+    layers (she gathers, turns head-down and sinks a layer's drop, the camera drawing in and back out, the water
+    darkening a little to the layer below's), and her jellies' slots open in the water below. Sea-pedia, Statistics and
+    Settings open their cards; **Quit** quits. Closing a card brings the menu back (0.4 s), after the climb back up if
+    she dived.
+  - **Review:** `--title-slow=N` runs the opening, the choosing and the dive N times slower; `--title-pick=id` chooses
+    that item a moment after the menu is up.
   - **She aims as in the game:** the pointer is her crosshair (four orange gonads, as in play), and she turns to face
-    it, her first gonad toward it; with the controller or the keys she faces the item in focus. **Choosing an item,
-    she shoots at it:** a bolt of her light, a hot white heart with a short tail, flies from her to the item on a
-    slight arc (0.22 s) and bursts on it in a ring and a spray of sparks, the item jolting; what it does happens then.
+    it, her first gonad toward it; with the controller or the keys she faces the item in focus.
   - **Sea-pedia:**
     - **Pearls:** each ported pearl is absorbed, seen (offered but never taken) or unknown. Its record: times
       absorbed, runs it was in, runs lost holding it, levels cleared with it.
@@ -1608,8 +1622,7 @@ at mist distance (inherited fade rule).
     reef's skin works out only the looks a pixel shows (sand or rock), not both. Measured on a
     3840-wide window: about 12–25 ms of GPU a frame before, 3–5 ms after.
   - **Motion.** Sub-screens are pearl cards that surface from the bottom right and dive away.
-  - **Starting a run** (New run, a seed, Continue): the menu, the logo and the footer fade (0.4 s) and she swims off to
-    the right along the channel, facing where she goes, the camera easing ahead of her until she sits 30% across the
+  - **Starting a dive** (a jelly chosen in her slots): she swims off to the right, facing where she goes, the camera easing ahead of her until she sits 30% across the
     screen. The loading page ("The new dive", or "Back into the sea" for a saved run, with its seed and level, "Shaping
     the reef" and the loader) fades up over that shot while the first level is shaped: the one loading screen a run
     starts with. Once the level is ready and at least 2.4 s have passed, the game takes over, holding the shot's last

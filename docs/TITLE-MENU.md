@@ -39,17 +39,15 @@ It is a menu scene, not the free-swim Tide Pool hub; the hub question stays open
 
 The title renders the real game behind the menu.
 
-**The scene**
-- **The level.** A fixed, handsome seed (`TIDEPOOL`), shown from the game's own camera and slowly drifting along a
-  canyon (about 0.6 m/s, turning gently).
-- **Clementine** bobs idly in the right third of the screen. Her glow lights the water, and a bubble rises from her
-  every few seconds.
-- **The look:**
-  - the depth focus, caustics and sunlight stay on;
-  - the camera shake and the HUD are off;
-  - the frame is dimmed by 15% under the menu column for legibility.
-- **Trophies.** Once Queen Clam has been freed, she sits in the backdrop in her true colours, on a rock near
-  Clementine. Each freed boss adds itself the same way, so the screen shows progress (DESIGN-2D §13.2).
+**The scene** (DESIGN-TOPDOWN's title screen has the details)
+- **The opening.** Black, the gonad loader turning in the middle; once the sea is made the loader whitens, glows and
+  opens out into the menu, in its own shape and then a spreading white-rimmed circle (a second in all).
+- **The water.** Clementine floats in the middle of wide open water, its floor far below and blurred, in the cube
+  reef's top layer's look (Menace 0); a few fish wander about her.
+- **The items** stand in a ring round her in a murkling's colour; the one under the pointer (or in focus) she lights
+  with her beam, white and outlined, spraying sparks and the corruption's brackets. Chosen, it dissolves along her
+  beam, her push wave throws the rest off the screen, and Play dives to her jellies' slots below.
+- **The look:** the depth focus, caustics and sunlight stay on; the camera shake and the HUD are off.
 
 **Mood**
 - It is calm, bright and underwater: teal water and warm Clementine light, with the game's own dark drawers.
