@@ -17,6 +17,9 @@ levels one after another: the layers are the depths.
   round her (`ReefStream`, `ReefStreamView`).
 - **Its seed** comes from the jelly's own seed and how many dives she has ended (`Dives.SeedOf`), so every dive is a
   different reef.
+- **The light by depth:** each layer wears the adventure's painted reef, its coral gardens and all; the top layer is
+  bright, the bottom one wholly dark (its rock seen only in her light), and each layer between a little darker than the
+  one above, the dark gathering toward the bottom (`ReefLook.Layer`).
 - **The warm-up layer** (layer 0) is where she learns: bright, its menace low, no creatures, no curse rooms and no
   boss. Veterans dive straight through it. (There is no tutorial level.)
 - **Diving and climbing** (CUBE-WORLD-PLAN §7): Shift or the d-pad's down over the void, Q or its up under a well of
