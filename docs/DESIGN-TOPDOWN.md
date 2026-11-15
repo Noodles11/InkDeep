@@ -1586,15 +1586,13 @@ at mist distance (inherited fade rule).
     west end of the longest straight channel of a fixed seed's reef (KELP 7Q2Z), the camera keeping her in the middle
     of the screen; the sea is dimmed a little, more toward the edges. The logo sits at the top left.
   - **The menu** stands in a ring round her (an oval 860 × 600 on the 1600 × 900 page), evenly spaced from the top,
-    clockwise: Continue (only with a saved run), New run, Seeded run, Sea-pedia, Statistics, Save & load, Settings,
-    Quit. Each item is its word with its detail line under it; the one in focus swells a little and turns coral. W/S
+    clockwise: Play (her jellies: the one game, a dive in the cube reef, docs/DIVE.md), Sea-pedia, Statistics,
+    Settings, Quit. There are no other modes: no new or seeded run, no saved run to continue. Each item is its word with its detail line under it; the one in focus swells a little and turns coral. W/S
     and A/D (and the D-pad) go round the ring.
   - **She aims as in the game:** the pointer is her crosshair (four orange gonads, as in play), and she turns to face
     it, her first gonad toward it; with the controller or the keys she faces the item in focus. **Choosing an item,
     she shoots at it:** a bolt of her light, a hot white heart with a short tail, flies from her to the item on a
     slight arc (0.22 s) and bursts on it in a ring and a spray of sparks, the item jolting; what it does happens then.
-  - **Seeded run** opens a seed box under the item. Typing is forgiving and paste works; there is a random dice and
-    the last five seeds as chips. Seeded runs never earn achievements.
   - **Sea-pedia:**
     - **Pearls:** each ported pearl is absorbed, seen (offered but never taken) or unknown. Its record: times
       absorbed, runs it was in, runs lost holding it, levels cleared with it.
@@ -1604,11 +1602,6 @@ at mist distance (inherited fade rule).
     - four headline numbers (runs, best reach, foes defeated, time in the sea);
     - runs, combat, treasure and feats rows, records marked "best";
     - a bar per cause of death.
-    - Seeded runs are counted, and also counted on their own.
-  - **Save & load:**
-    - the saved run (continue or abandon);
-    - a backup save code to copy, or to import after a preview;
-    - erasing everything (type ERASE).
   - **Settings:** frame-rate cap, sunlight, camera shake, reduced motion; the controls, read-only.
   - **Keeping the GPU cool on big screens:** the 3D scene renders with at most a 1080p screen's worth of pixels
     (view option MaxRenderHeight, 0 = native) and FSR upscales it to the window; the HUD draws at full size. The

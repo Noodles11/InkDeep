@@ -359,7 +359,6 @@ public partial class TopDownMain : Node3D
     int _dbgSeal;
     bool _autopilot, _autoDive, _calm;
     /// <summary>This launch's dive is in the cube reef (TopDownMain.Reef.cs).</summary>
-    bool _reefWanted;
     /// <summary>
     /// Where on the open reef she is (docs/archive/RPG-PROPOSAL.md §2): Lantern Bay, a region, or a leak cave behind one of a
     /// region's mouths; Run is the old run of seeded levels. From the title's Lantern Bay, or `--reef=bay|shallows|cave`.
@@ -533,7 +532,7 @@ public partial class TopDownMain : Node3D
         if (OS.GetCmdlineUserArgs().Contains("--dbg-noshadow"))
             foreach (var l in sun.FindChildren("*", "DirectionalLight3D", true, false)) ((DirectionalLight3D)l).ShadowEnabled = false;
         BuildUi();
-        if (_reefWanted) BuildReef();
+        BuildReef();
         // From the title: the first level is shaped off the main thread behind the splash.
         if (_persist) StartFirstLevel();
         else Regenerate();
@@ -653,57 +652,41 @@ public partial class TopDownMain : Node3D
         if (haven) _id = _id with { Haven = true };
     }
 
-    /// <summary>What the title screen asked for: a new run, a seeded run, or the saved one.</summary>
+    /// <summary>
+    /// What the title screen asked for: the chosen jelly's dive in the cube reef (the one game). Started without the title
+    /// (verification), a dive of a jelly of its own, never saved.
+    /// </summary>
     void TakeLaunch()
     {
-        if (RunLaunch.Pending is not { } mode)
+        if (!RunLaunch.Pending)
         {
             _customSeed = OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--seed="));
             _recorder = new PlaneProfileRecorder(new Profile());
-            // Verification of a dive (--dbg-dive): a jelly of its own, never saved.
-            if (OS.GetCmdlineUserArgs().Contains("--dbg-dive")) _jelly = new Jelly { Name = "Clementine", Seed = _seed.ToString(), Tutored = _id.Depth > LevelPlan.Tutorial };
+            _jelly = new Jelly { Name = "Clementine", Seed = _seed.ToString(), Tutored = _id.Depth > LevelPlan.Tutorial };
             // (--dbg-freed=tull,…: these of the bay's folk freed, home in the bay.)
-            if (_jelly is not null) foreach (string id in _dbgFreed) _jelly.Freed.Add(id);
-            _reefWanted = WantsReef;
+            foreach (string id in _dbgFreed) _jelly.Freed.Add(id);
             ResumeFromFile();
             return;
         }
-        RunLaunch.Pending = null;
+        RunLaunch.Pending = false;
         _persist = true;
         _recorder = new PlaneProfileRecorder(GameSave.Current.Profile);
-        if (mode == LaunchMode.Jelly && RunLaunch.Jelly >= 0 && RunLaunch.Jelly < GameSave.Current.Jellies.Count)
+        if (RunLaunch.Jelly < 0 || RunLaunch.Jelly >= GameSave.Current.Jellies.Count) RunLaunch.Jelly = Math.Max(0, GameSave.Current.Chosen);
+        // A jelly dives (docs/DIVE.md §1): her dive where it stands, or a new one.
+        _jelly = GameSave.Current.Jellies[RunLaunch.Jelly];
+        _jellySaved = true;
+        RunLaunch.Jelly = -1;
+        (_seed, _id, _) = DiveStart(_jelly);
+        _resume = _jelly.Dive;
+        // One saved in a haven is taken up there (CUBE-WORLD-PLAN §10); one saved before there was a cube reef is let go,
+        // and she dives anew from her seed.
+        _reefResume = _jelly.Dive?.Cubes;
+        if (_reefResume is null)
         {
-            // A jelly dives (docs/DIVE.md §1): her dive where it stands, or a new one.
-            _jelly = GameSave.Current.Jellies[RunLaunch.Jelly];
-            _jellySaved = true;
-            RunLaunch.Jelly = -1;
-            (_seed, _id, _) = DiveStart(_jelly);
-            _resume = _jelly.Dive;
-            // Every dive is in the cube reef: one saved in a haven is taken up there (CUBE-WORLD-PLAN §10); one saved in
-            // the seeded levels before there was a cube reef is let go, and she dives anew from her seed.
-            _reefWanted = true;
-            _reefResume = _jelly.Dive?.Cubes;
-            if (_reefResume is null)
-            {
-                _resume = null;
-                _seed = Dives.SeedOf(_jelly);
-            }
-            return;
+            _resume = null;
+            _seed = Dives.SeedOf(_jelly);
         }
-        if (mode == LaunchMode.Continue && GameSave.Current.Run is { } saved && SeedCode.TryParse(saved.Seed, out var seed))
-        {
-            _seed = seed;
-            _customSeed = saved.CustomSeed;
-            _id = RunLaunch.Start(saved);
-            _resume = saved;
-            return;
-        }
-        _seed = RunLaunch.Seed;
-        _customSeed = mode == LaunchMode.Seeded;
-        _id = RunStart();
     }
-
-    LevelId RunStart() => RunLaunch.Start(_recorder.Profile, _view ?? SettingsStore.LoadView());
 
     /// <summary>Verification: the options with the boss `--boss=` names: queen, drippus, a concept, a neighbour (null: the game's own).</summary>
     PlaneOptions? DebugBoss()
@@ -734,21 +717,6 @@ public partial class TopDownMain : Node3D
             || OctoShoots.Core.Bosses.FolkBosses.For(n.Id, n.Level, _map.Menace) is not { } spec) return null;
         var d = PlaneOptions.Default;
         return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Shots = d.Shots, Boss = spec };
-    }
-
-    /// <summary>Saves the run as it stands at the start of this level (continuing puts her back here).</summary>
-    void SaveRun()
-    {
-        // (A dive in the cube reef is saved at its havens: CUBE-WORLD-PLAN §10, §15.5.)
-        if (_reef is not null) return;
-        if (_jelly is { } diver)
-        {
-            SaveDive(diver, ended: false);
-            return;
-        }
-        if (!_persist || _debugRun || _run is null) return;
-        GameSave.Current.Run = RunRecord();
-        GameSave.Write();
     }
 
     /// <summary>The run as it stands at the start of this level.</summary>
@@ -786,7 +754,6 @@ public partial class TopDownMain : Node3D
     void StartFirstLevel()
     {
         if (_jelly is not null) FillDiveSplash(_splash, _jelly, _id);
-        else FillFirstSplash(_splash, _seed, _customSeed, _id, _resume, _catalog, _tuning);
         if (RunLaunch.Frame is { } frame) _splash.Over(frame);
         RunLaunch.Frame = null;
         _splash.Modulate = Colors.White;
@@ -862,14 +829,6 @@ public partial class TopDownMain : Node3D
         else jelly.Dive = RunRecord();
         jelly.Played = DateTime.Now.ToString("s", CultureInfo.InvariantCulture);
         if (_jellySaved && !_debugRun) GameSave.Write();
-    }
-
-    /// <summary>The loading page of a run's first level.</summary>
-    public static void FillFirstSplash(LoadingSplash splash, SeedCode seed, bool custom, LevelId id, SuspendedRun? resume, ItemCatalog? catalog, Tuning tuning)
-    {
-        var stats = new List<(string, string)> { ("Seed", seed.ToString() + (custom ? "  (seeded)" : "")) };
-        if (resume is { } saved) stats.Add(("Carrying", $"{saved.Items.Count} pearls · {saved.Shells} shells · {CorruptionText(saved.Hp, saved.Items, catalog, tuning)}"));
-        splash.Fill(resume is not null ? "Back into the sea" : "The new dive", stats, id.ToString());
     }
 
     /// <summary>
@@ -951,7 +910,7 @@ public partial class TopDownMain : Node3D
     {
         // A jelly's dive keeps the moment on her (docs/DIVE.md §1); in a leak cave, the level's start is what is kept.
         if (InDiveCave) return;
-        if (!_persist || _debugRun || (_jelly is { } diver ? diver.Dive : GameSave.Current.Run) is not { } saved) return;
+        if (!_persist || _debugRun || _jelly?.Dive is not { } saved) return;
         if (saved.Cycle != _id.Cycle || saved.Depth != _id.Depth || saved.Level != _id.Level || saved.Lane != _id.Lane) return;
         saved.State = Moment();
         if (saved.State is null) return;
@@ -1218,7 +1177,7 @@ public partial class TopDownMain : Node3D
             _recorder.RunAbandoned(_elapsed);
             _seed = SeedCode.NewRandom();
             _customSeed = false;
-            _id = RunStart();
+            _id = LevelId.FirstRun;
             Regenerate();
             Say("New run");
         };
@@ -1266,7 +1225,7 @@ public partial class TopDownMain : Node3D
         random.Pressed += () =>
         {
             _seed = SeedCode.NewRandom();
-            _id = RunStart();
+            _id = LevelId.FirstRun;
             _seedField.Text = _seed.ToString();
             Regenerate();
         };
@@ -1333,7 +1292,7 @@ public partial class TopDownMain : Node3D
                 _info.Text = "Not a seed: 8 characters from A–Z and 2–9 (no 0, O, 1 or I)";
                 return;
             }
-            if (!parsed.Equals(_seed)) _id = RunStart();
+            if (!parsed.Equals(_seed)) _id = LevelId.FirstRun;
             _seed = parsed;
         }
         var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -1646,7 +1605,6 @@ public partial class TopDownMain : Node3D
         if (moment is not null && !(returning ? RestoreLevel(moment, arriveAt) : RestoreMoment(moment))) moment = null;
         if (InHavenPlace && _jelly is { } banker) BankDive(banker);
         if (!returning) NoteDiveChains();
-        if (moment is null && !InDiveCave) SaveRun();
         if (_dbgMoment > 0f && _dbgMomentStart is null) _dbgMomentStart = RunRecord();
         _combat.Show(_world, _catalog, fresh);
         _currents.Clear(_camera);
@@ -3080,12 +3038,6 @@ public partial class TopDownMain : Node3D
         _accumulator = 0;
         AddToRun();
         _recorder.RunDied(_world, _runTime);
-        // The run is over: nothing to continue (a debug run leaves the save as it was).
-        if (_persist && !_debugRun && _jelly is null)
-        {
-            GameSave.Current.Run = null;
-            GameSave.Write();
-        }
         var time = TimeSpan.FromSeconds(_runTime);
         // The dive's summary: how deep, how far across the reefs, what she set right.
         var graph = DiveGraph.Of(_seed);
@@ -3201,16 +3153,6 @@ public partial class TopDownMain : Node3D
                     // Her next dive: a new reef from her seed, at the top, with what she has banked.
                     (_seed, _id, _) = DiveStart(diver);
                     _customSeed = false;
-                    ResetRunTotals();
-                    _splash.Working("Shaping a new reef");
-                    StartLoading();
-                }
-                else if (_deathSplash)
-                {
-                    // A clean new game: new seed, the first level, no pearls or shells.
-                    _seed = SeedCode.NewRandom();
-                    _customSeed = false;
-                    _id = RunStart();
                     ResetRunTotals();
                     _splash.Working("Shaping a new reef");
                     StartLoading();

@@ -1,7 +1,8 @@
 # Title menu
 
-> The title screen and its areas: new run, seeded run, statistics, the glossary (Sea-pedia) and save/load. The first
-> pass is built (`src/Game/Title/`); §10 lists the decisions and §11 what this pass leaves for later.
+> The title screen and its areas: Play (her jellies), statistics, the glossary (Sea-pedia) and the settings. The cube
+> reef is the one game: every way in is a jelly's dive (docs/DIVE.md); there is no new, seeded or saved run, and no
+> save & load card.
 
 ## 1. What it is for
 
@@ -23,12 +24,9 @@ It is a menu scene, not the free-swim Tide Pool hub; the hub question stays open
 ## 2. Flow
 
 ```
- boot ──> Title ──┬── Continue ───────────────> splash ──> room N (where the save left off)
-                  ├── New run ────────────────> splash ──> room 1 (random seed)
-                  ├── Seeded run ─[seed box]──> splash ──> room 1 (that seed)
+ boot ──> Title ──┬── Play ─[her jellies]────> splash ──> her dive in the cube reef
                   ├── Sea-pedia (glossary) ─── Pearls │ Creatures
                   ├── Statistics
-                  ├── Save & load ──────────── continue slot · export · import · erase
                   ├── Settings
                   └── Quit
  in a run:  Esc ─> pause ─> "Save & quit to title"
@@ -94,12 +92,11 @@ In the drawers (`DrawerStyle`, shared with the game's pause menu and the bay's m
 │  INK DEEP                                                                      │
 │  the absorbent jellyfish                                                       │
 │                                                                                │
-│  ▸ Continue          Depth 1 · Room 3 · KELP 7Q2Z · 12:41                     │
-│    New run                                                ◯  Clementine      │
-│    Seeded run   [ KELP 7Q2Z ] ⚄                              bobbing          │
+│  ▸ Play              2 of 3 jellies                                            │
+│                                                           ◯  Clementine      │
+│                                                              bobbing          │
 │    Sea-pedia            12 / 63 pearls · 2 creatures                           │
 │    Statistics                                                                  │
-│    Save & load                                                                 │
 │    Settings                                                                    │
 │    Quit                                                      v0.3 · profile 1 │
 └────────────────────────────────────────────────────────────────────────────────┘
@@ -115,12 +112,11 @@ In the drawers (`DrawerStyle`, shared with the game's pause menu and the bay's m
 **The items**
 - Nunito ExtraBold, 30 px, pearl-white on the water, 18 px apart.
 - Each item has a small grey **detail line** beside it, so the menu tells you something before you open anything:
-  - **Continue:** where the save is.
+  - **Play:** how many jellies she has.
   - **Sea-pedia:** how much you have found.
   - **Statistics:** your best room.
 - **The focused item** turns coral and moves 12 px right.
-- **Continue** goes on with the jelly played last (`SaveFile.Chosen`), where her dive stands; it shows only when there
-  is one, and is then first and focused. **Play** shows her save slots, the jellies floating side by side in the sea
+- **Play** shows her save slots, the jellies floating side by side in the sea
   with a card under each (no drawer: docs/DIVE.md §1, docs/GAME.md §9).
 
 **Sub-screens** open as drawers, as the game's pause menu does (`DrawerStyle`):
@@ -130,35 +126,6 @@ In the drawers (`DrawerStyle`, shared with the game's pause menu and the bay's m
 - the ring dims behind it, and the backdrop keeps moving.
 
 ## 4. The screens
-
-### 4.1 New run
-
-- Starts at once with a new random seed: no confirmation.
-- If a suspended run exists, the item asks first, in a small inline card: "Start a new run? Your saved run (Depth 1
-  · Room 3) will be lost." It offers **Start new** and **Keep it**.
-
-### 4.2 Seeded run
-
-**The seed box**
-- Choosing the item opens the box right under it, inline, without opening a card.
-- It is a pill-shaped field in IBM Plex Mono at 28 px, showing two groups of four: `KELP 7Q2Z`.
-- It is the game's own seed format: 8 characters from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`, with no I, O, 0 or 1.
-
-**Typing**
-- Typing is forgiving:
-  - lower case is upper-cased;
-  - the space between the groups is added for you;
-  - I, O, 0 and 1 are not in the alphabet (they look alike), so typing one refuses it with a small shake of the box.
-  - Pasting a whole code works, with or without the space.
-- **Validity shows as you type:** a mint rim and a ✓ when the seed is complete; a coral underline under any character
-  that is not in the alphabet.
-
-**The box's controls and rules**
-- A **dice button** (⚄) fills in a random seed; pressing it again rolls again.
-- A note under the box: "Seeded runs don't earn achievements or unlock pearls."
-- **Enter**, or the **Dive** button, starts the run; **Esc** closes the box.
-- The last five seeds you played are listed under the box as chips, so you can replay one with a click.
-- The box opens pre-filled with the last seed you played.
 
 ### 4.3 Statistics
 
@@ -187,7 +154,7 @@ in a separate "seeded" column, so records stay honest.
 | Shells collected | 3,904 | Earned | 3 / 5 |
 | Shells spent | 2,610 | Most shells in a room | 74 |
 | Pearls absorbed | 166 | Untouchable rooms | 4 |
-| Favourite pearl | Triple Tentacle (29 runs) | Seeded runs played | 6 |
+| Favourite pearl | Triple Tentacle (29 runs) | | |
 
 **At the bottom: How runs ended.** A horizontal bar per cause of death (by Ninja-dot shot, by Queen Clam's pearls, by
 her snap, and so on), sorted by count. Each bar is coral with the count at its end.
@@ -242,39 +209,6 @@ A pearl card with two tabs, **Pearls** and **Creatures**. Each tab is a grid of 
 - **Defeated** counts foes she beat (bosses: times freed).
 - **Defeated you** counts runs that one ended (the killing blow).
 - **Encounters** counts how many of them noticed her.
-
-### 4.5 Save & load
-
-The game saves on its own; this screen shows that and gives you the controls. It is a pearl card with three blocks.
-
-**1. Your run**
-- A slot card with:
-  - the seed;
-  - depth and room;
-  - HP;
-  - shells;
-  - the pearls held (a row of small pearls);
-  - the time played;
-  - when it was saved ("today, 21:14").
-- It offers **Continue** and **Abandon run**. Abandoning asks first, and counts the run as ended in the statistics.
-- **The run is saved automatically:**
-  - at the start of every room, once its splash is dismissed;
-  - when you choose **Save & quit to title** from the pause menu.
-- Continuing always restarts the room it was saved in, in the same state it was in when the room began (DESIGN-2D
-  §13.1). The pause item says so: "Save & quit. You'll resume at the start of this room."
-
-**2. Backup**
-- **Copy save code.** This copies the whole save (profile and run) as one text code. It uses `SaveCodec`'s export
-  format: gzip plus base64url, with a version prefix. A toast confirms "Save code copied".
-- **Import save code.** This opens a field for pasting a code.
-  - A good code shows a preview first: runs, pearls found and achievements. Then **Replace my save** confirms.
-  - A bad code says why (not a save code, a newer version, damaged) and changes nothing.
-
-**3. Profile**
-- **Erase everything** clears the profile and the run. It is guarded: you type `ERASE`, then confirm.
-- The save file's location is shown in small mono text, for people who back up files.
-- If the save on disk was unreadable at boot, a coral notice explains that a fresh profile was started and that the
-  old file was kept as `save.bad.json`. That fallback already exists in `SaveStore`.
 
 ### 4.6 Settings (small, needed by the rest)
 
@@ -379,13 +313,11 @@ deterministically from the sim's events by a new `ProfileRecorder` in Core, so i
 
 **UI pieces**
 - **`TitleMenu`:** the column, focus and the detail lines.
-- **`SeedBox`:** parsing via `SeedCode.TryParse`, the per-character check, the dice and the recent chips.
 - **`StatsCard`.**
 - **`SeaPedia`:**
   - the tabs, the grid and the detail pane;
   - the pearl tiles share one SubViewport atlas with `PearlMaterials`;
   - the creature portraits are SubViewport renders of the creature meshes, made once.
-- **`SaveCard`.**
 - **`Toast`.**
 - **A shared `SurfaceDive` motion helper:** Tween presets plus the water-line clip and the particles, reused by the
   achievement banner.
@@ -399,15 +331,12 @@ deterministically from the sim's events by a new `ProfileRecorder` in Core, so i
 - the recorder's counts from scripted event streams;
 - save round-trips and the version 1 → 2 migration;
 - export and import, including bad codes;
-- seed input (paste, spacing, invalid characters);
-- Continue restoring the room's starting state.
 
 **Order of work:**
 1. Saves version 2 and the recorder.
-2. The title scene with New run, Seeded run, Continue and Save & quit.
+2. The title scene with Play and Save & quit.
 3. Statistics.
 4. Sea-pedia.
-5. Save & load (export/import/erase).
 6. The motion pass.
 7. Settings.
 
@@ -416,9 +345,7 @@ deterministically from the sim's events by a new `ProfileRecorder` in Core, so i
 1. **"Failed" in the glossary.** For creatures it means *Defeated you* (the runs one ended). For pearls it means
    *Runs lost holding it*.
 2. **One profile and one saved run**, plus the backup code.
-3. **Seeded runs count** in the statistics, and are also counted on their own.
 4. **A menu over the live sea.** The free-swim Tide Pool hub is for later.
-5. **Continue resumes at the start of the room.**
 
 ## 11. Not in this first pass
 

@@ -21,7 +21,7 @@ namespace OctoShoots.Game.Title;
 /// The title screen (docs/TITLE-MENU.md): a menu over the live sea. Clementine swims slowly up and down the longest
 /// straight channel of a fixed seed's reef in the middle of the screen, the camera following her, and the menu's items stand
 /// in a ring round her:
-/// Play, Seeded run, Sea-pedia, Statistics, Save &amp; load, Settings and Quit. She turns to face the
+/// Play (a jelly's dive in the cube reef: the one game), Sea-pedia, Statistics, Settings and Quit. She turns to face the
 /// pointer (her crosshair, GonadCursor), or with the controller the item in focus, her first gonad toward it, as in the
 /// game. With the controller the left stick points from her: her crosshair stands round her the way it is pushed and the
 /// item that way takes the focus (the D-pad still steps round the ring); choosing an item, she shoots her light at it, and what it does happens as the shot strikes it.
@@ -208,15 +208,6 @@ public partial class TitleMain : Node3D
 
     void SkipToGame()
     {
-        // The cube world's prototype (docs/proposals/CUBE-WORLD-PLAN.md §14): `--cubes`.
-        if (OS.GetCmdlineUserArgs().Contains("--cubes"))
-        {
-            var cubes = new OctoShoots.Game.Cubes.CubeMain();
-            GetTree().Root.AddChild(cubes);
-            GetTree().CurrentScene = cubes;
-            QueueFree();
-            return;
-        }
         GetTree().ChangeSceneToFile(RunLaunch.GameScene);
     }
 
@@ -461,10 +452,8 @@ public partial class TitleMain : Node3D
 
         // Play opens her save slots (pick a jelly to wake, or make a new one).
         AddItem("reef", "Play", () => OpenCard("jellies"));
-        AddItem("seeded", "Seeded run", ToggleSeedBox);
         AddItem("pedia", "Sea-pedia", () => OpenCard("pedia"));
         AddItem("stats", "Statistics", () => OpenCard("stats"));
-        AddItem("save", "Save & load", () => OpenCard("save"));
         AddItem("settings", "Settings", () => OpenCard("settings"));
         AddItem("quit", "Quit", () => GetTree().Quit());
         Refresh();
@@ -513,15 +502,13 @@ public partial class TitleMain : Node3D
             TitleStyle.Bloom(button.GetParent<Control>(), 0.55f + 0.06f * i++, Reduced);
         }
         _items.First(it => it.Button.GetParent<Control>().Visible).Button.GrabFocus();
-        if (_autoLaunch is "jelly" or "reef" && GameSave.ReadOnly)
+        if (_autoLaunch is not null && GameSave.ReadOnly)
         {
             // Review: a jelly of the sample save (never written) dives.
             if (GameSave.Current.Jellies.Count == 0)
                 GameSave.Current.Jellies.Add(new Jelly { Name = "Mira", Seed = SeedCode.NewRandom().ToString(), Look = new JellyLook { Glow = "#7FE7FF" } });
             GetTree().CreateTimer(1.2).Timeout += () => PlayJelly(0);
         }
-        else if (_autoLaunch is { } launch)
-            GetTree().CreateTimer(1.2).Timeout += () => Launch(launch == "continue" ? LaunchMode.Continue : LaunchMode.New, SeedCode.NewRandom());
         if (_autoPick is { } pick && _items.Any(it => it.Id == pick))
         {
             _byPad = true;
@@ -530,8 +517,7 @@ public partial class TitleMain : Node3D
         }
         if (_openCard is { } open)
         {
-            if (open == "seed") ToggleSeedBox();
-            else OpenCard(open);
+            OpenCard(open);
             if (_reviewLook is { } look && _card is JellyCard jellies) Callable.From(() => jellies.SetForm(look)).CallDeferred();
         }
     }
@@ -669,54 +655,11 @@ public partial class TitleMain : Node3D
         var save = GameSave.Current;
         var p = save.Profile;
         Item("reef").Detail.Text = save.Jellies.Count > 0 ? $"{save.Jellies.Count} of {JellyNames.MaxJellies} jellies" : "make your jelly";
-        Item("seeded").Detail.Text = p.RecentSeeds.Count > 0 ? $"last: {p.RecentSeeds[0]}" : "type a seed to share a reef";
         Item("pedia").Detail.Text = $"{SeaPediaCard.PearlsFound(p)} / {PlaneRun.PortedPearls.Length + PlaneRun.CrabPearls.Length} pearls · {SeaPediaCard.CreaturesMet(p)} / {SeaPediaCard.Creatures.Count} creatures";
         Item("stats").Detail.Text = p.Stats.Runs > 0 ? $"best: {StatsCard.Reach(p.Stats)} · {p.Stats.Runs} runs" : "no runs yet";
-        Item("save").Detail.Text = save.Run is { } r ? $"saved run: {r.Where}" : "no saved run";
     }
 
     // ───────────────────────── runs ─────────────────────────
-
-    /// <summary>Asks before a new run replaces the saved one, right under the item.</summary>
-    void ConfirmReplace(Button item, SuspendedRun run, Action start)
-    {
-        CloseInline();
-        var card = new PanelContainer();
-        card.AddThemeStyleboxOverride("panel", TitleStyle.Box(TitleStyle.Pearl, TitleStyle.Coral, 3, 16, 16));
-        var box = new VBoxContainer();
-        box.AddThemeConstantOverride("separation", 10);
-        card.AddChild(box);
-        box.AddChild(TitleStyle.Text($"Start a new run? Your saved run ({run.Where}) will be lost.", 17, TitleStyle.Ink, TitleStyle.BodyBold));
-        var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 10);
-        box.AddChild(row);
-        var yes = TitleStyle.Pill("Start new", size: 16);
-        var no = TitleStyle.Pill("Keep it", primary: false, size: 16);
-        yes.Pressed += () =>
-        {
-            AbandonSavedRun();
-            start();
-        };
-        no.Pressed += () =>
-        {
-            CloseInline();
-            item.GrabFocus();
-        };
-        row.AddChild(yes);
-        row.AddChild(no);
-        ShowInline(card, item);
-        no.GrabFocus();
-    }
-
-    /// <summary>The saved run ends here: it counts as abandoned.</summary>
-    static void AbandonSavedRun()
-    {
-        var save = GameSave.Current;
-        if (save.Run is not { } run) return;
-        new PlaneProfileRecorder(save.Profile).RunAbandoned(run.Elapsed);
-        save.Run = null;
-        GameSave.Write();
-    }
 
     /// <summary>The jelly wakes in Lantern Bay (the open reef, docs/archive/RPG-PROPOSAL.md).</summary>
     void PlayJelly(int index)
@@ -733,40 +676,23 @@ public partial class TitleMain : Node3D
         }
         OctoShoots.Game.Fx.HerColor.SetLook(save.Jellies[index].Look);
         SeedCode.TryParse(save.Jellies[index].Seed, out var seed);
-        Launch(LaunchMode.Jelly, seed);
+        Launch(seed);
     }
 
     /// <summary>
     /// The menu fades and Clementine swims off to the right, the camera after her and the loading page over the shot, the
     /// first level being shaped meanwhile.
     /// </summary>
-    void Launch(LaunchMode mode, SeedCode seed)
+    void Launch(SeedCode seed)
     {
-        if (_launching) return;
+        if (_launching || GameSave.Current.Current is not { } jelly) return;
         _launching = true;
-        RunLaunch.Pending = mode;
+        RunLaunch.Pending = true;
         RunLaunch.Seed = seed;
-        // The run as the game will take it.
-        SuspendedRun? saved = null;
-        if (mode == LaunchMode.Continue && GameSave.Current.Run is { } run && SeedCode.TryParse(run.Seed, out var kept))
-        {
-            saved = run;
-            seed = kept;
-        }
-        if (mode == LaunchMode.Jelly && GameSave.Current.Current is { } jelly)
-        {
-            // Her dive, shaped behind the page (docs/DIVE.md §1).
-            var (diveSeed, id, luck) = TopDownMain.DiveStart(jelly);
-            RunLaunch.Shaping = (diveSeed, id, luck, TopDownMain.Shape(diveSeed, id, luck));
-            TopDownMain.FillDiveSplash(_splash, jelly, id);
-        }
-        else
-        {
-            var id = saved is not null ? RunLaunch.Start(saved) : RunLaunch.Start(GameSave.Current.Profile, _view);
-            float luck = saved?.Luck ?? 0f;
-            RunLaunch.Shaping = (seed, id, luck, TopDownMain.Shape(seed, id, luck));
-            TopDownMain.FillFirstSplash(_splash, seed, saved?.CustomSeed ?? mode == LaunchMode.Seeded, id, saved, _catalog, _tuning);
-        }
+        // Her dive, shaped behind the page (docs/DIVE.md §1).
+        var (diveSeed, id, luck) = TopDownMain.DiveStart(jelly);
+        RunLaunch.Shaping = (diveSeed, id, luck, TopDownMain.Shape(diveSeed, id, luck));
+        TopDownMain.FillDiveSplash(_splash, jelly, id);
 
         Input.MouseMode = Input.MouseModeEnum.Hidden;
         CloseInline();
@@ -850,25 +776,6 @@ public partial class TitleMain : Node3D
         GetTree().ChangeSceneToFile(RunLaunch.GameScene);
     }
 
-    // ───────────────────────── the seed box ─────────────────────────
-
-    void ToggleSeedBox()
-    {
-        if (_inline is SeedBox)
-        {
-            CloseInline();
-            Item("seeded").Button.GrabFocus();
-            return;
-        }
-        var box = new SeedBox(GameSave.Current.Profile.RecentSeeds, seed =>
-        {
-            if (GameSave.Current.Run is { } run) ConfirmReplace(Item("seeded").Button, run, () => Launch(LaunchMode.Seeded, seed));
-            else Launch(LaunchMode.Seeded, seed);
-        });
-        ShowInline(box, Item("seeded").Button);
-        box.FocusField();
-    }
-
     /// <summary>Shows a small card right under a menu item (the seed box, a confirmation).</summary>
     void ShowInline(Control content, Button under)
     {
@@ -901,7 +808,6 @@ public partial class TitleMain : Node3D
             "stats" => new StatsCard(GameSave.Current.Profile, id => _catalog is not null && _catalog.TryGet(id, out var it) ? it.Name : id, close),
             "pedia" or "creatures" => new SeaPediaCard(GameSave.Current.Profile, _catalog, close),
             "jellies" => new JellyCard(PlayJelly, close),
-            "save" => new SaveCard(_catalog, () => Launch(LaunchMode.Continue, default), () => AbandonSavedRun(), Refresh, close),
             _ => new SettingsCard(_view, ApplyView, close),
         };
         var size = PageSize;

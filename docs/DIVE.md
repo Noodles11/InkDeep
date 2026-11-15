@@ -192,5 +192,5 @@ A secret room is a sub-level too: a cube she claims opens one time in three, its
 
 Built, each step playable on its own: jellies dive (§1, §2); the camera stands back (§3); havens and their services
 (§4); folk bosses (§5); leak caves (§6); requests and chains (§7); the open reef removed; and the cube reef in place of
-the seeded levels and their dive graph (CUBE-WORLD-PLAN §15). `--classic` (verification) still shows one seeded level,
-for what the places behind mouths are made of.
+the seeded levels and their dive graph (CUBE-WORLD-PLAN §15). The cube reef is the only game: every way in is a jelly's
+dive (the title's Play); the seeded levels' generator lives on only to make the places behind mouths.

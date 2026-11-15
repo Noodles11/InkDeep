@@ -488,14 +488,13 @@ Against §14.3:
 - **Ten cubes and three layers:** no seam, no missing cube, no pause, the ring and the dives as above.
 - **Worth exploring by eye:** judged so, and built into the game (§15). Its rock's face is smooth (§4.2).
 
-How to see it: `godot -- --cubes` (WASD, the mouse to aim, Shift or the d-pad's down to dive, Q or its up to climb,
+How it was seen (the prototype scene is gone now: the game is the cube reef): `godot -- --cubes` (WASD, the mouse to aim, Shift or the d-pad's down to dive, Q or its up to climb,
 F3 for the overlay), `--cube-route` or `--cube-dives` to watch her do it, `--cube-perf=seconds` for the numbers.
 
 ## 15. In the game
 
 A new dive is in the cube reef, in the game itself (`TopDownMain.Reef.cs`): her HUD, light, pearls and maps as on any
-level, the prompt over a way to another layer. `--classic` keeps the seeded levels; `--cube-reef` puts a verification
-run in the reef (`--cube-boss`, `--cube-chart=`, `--cube-save=`, `--cube-resume=`, `--autopilot` help verify it).
+level. It is the only game: there is no other mode left. A verification run is in the reef too (`--cube-boss`, `--cube-chart=`, `--cube-save=`, `--cube-resume=`, `--autopilot` help verify it).
 
 1. **The layer as a level** (§5.3): done.
 2. **Creatures:** each cube she claims buds its stock (`CubeStock`): 3 + 4 × the layer's Menace of the roster's
@@ -508,8 +507,7 @@ run in the reef (`--cube-boss`, `--cube-chart=`, `--cube-save=`, `--cube-resume=
    continuing puts her back in that haven. The pause menu's chart is her layer's claimed cubes.
 6. **The seeded levels' dive retired:** every dive is in the cube reef; diving down holes to a level below, the hole
    views and the dive graph's chart are gone, and GAME, DIVE and LIGHT-AND-GRAPH describe the reef. The dive graph and
-   level plans stay in Core, where the generator (the sub-levels) and the test suite's levels are made with them;
-   `--classic` shows one seeded level for verification.
+   level plans stay in Core, where the generator (the sub-levels) and the test suite's levels are made with them.
 
 
 ## 16. Still open
