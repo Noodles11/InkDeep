@@ -13,12 +13,33 @@ namespace OctoShoots.Game.TopDown;
 public partial class PortalView : Node3D
 {
     static Shader? _shader, _throat, _ink;
+    readonly List<ShaderMaterial> _throats = new();
+
+    /// <summary>
+    /// The cutout (level_frame's see_through, at the swim plane's height plane; mask: which rock it may take,
+    /// LevelView.SeeMask): an opening's dark is gone whole where it takes the wall the opening is in.
+    /// </summary>
+    public void SeeThrough(Vector3 her, float radius, float amount, float plane, (Texture2D Heights, Texture2D Keep, Vector3 Box)? mask)
+    {
+        foreach (var m in _throats)
+        {
+            m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_through"), new Vector4(her.X, her.Z, radius, amount));
+            m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_through_y"), plane);
+            if (mask is { } k)
+            {
+                m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_heights"), k.Heights);
+                m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_keep"), k.Keep);
+                m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_heights_box"), k.Box);
+            }
+        }
+    }
 
     /// <param name="dangers">Each mouth's danger: a dangerous one weeps the Leak's ink down its face and onto the floor
     /// before it, the more the more dangerous (a dive's leak caves, all of them, docs/DIVE.md §6).</param>
     public void Show(LevelMap map, IReadOnlySet<int>? shut = null, IReadOnlyList<int>? dangers = null)
     {
         foreach (var child in GetChildren()) child.QueueFree();
+        _throats.Clear();
         for (int i = 0; i < map.Mouths.Count; i++)
         {
             if (shut?.Contains(i) == true) continue;
@@ -97,6 +118,7 @@ public partial class PortalView : Node3D
         const float floor = -1.3f;
         float height = Doorway.ArchTop + 0.1f - floor;
         var material = new ShaderMaterial { Shader = _throat };
+        _throats.Add(material);
         material.SetShaderParameter("half_width", LevelView.DoorArchHalf);
         material.SetShaderParameter("spring", LevelView.DoorSpring - floor);
         material.SetShaderParameter("height", height);

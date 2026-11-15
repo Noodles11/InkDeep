@@ -687,6 +687,7 @@ public partial class TopDownMain
         // (Her layer's reef life and mouths are cut with its rock; its map tells which rock the cut may take.)
         _level.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, SeeScale(_reefSeeThrough));
         _reefView.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, SeeScale(_reefSeeThrough), _level.SeeMask);
+        _portals.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, SeeScale(_reefSeeThrough), _level.Position.Y + LevelMap.SwimBand, _level.SeeMask);
     }
 
     /// <summary>

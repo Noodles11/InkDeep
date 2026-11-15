@@ -3,6 +3,11 @@
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
 
+#include "res://assets/shaders/level_frame.gdshaderinc"
+
+varying vec3 world;
+void vertex() { world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
+
 // The arch in metres on the sheet: its half-span, the height its round top springs from (over the sheet's foot), and
 // the sheet's height.
 uniform float half_width = 1.85;
@@ -10,6 +15,8 @@ uniform float spring = 2.25;
 uniform float height = 4.2;
 
 void fragment() {
+	// (Gone whole where the cutout takes the wall it is in: under a cut roof the passage is open water.)
+	if (see_through.w > 0.0 && lf_see_takes(world) && lf_see_front(world, CAMERA_POSITION_WORLD) > 0.0) discard;
 	vec2 m = vec2((UV.x - 0.5) * 2.0 * half_width, (1.0 - UV.y) * height);
 	float r = length(vec2(m.x, max(m.y - spring, 0.0)));
 	ALBEDO = vec3(0.004, 0.006, 0.01);

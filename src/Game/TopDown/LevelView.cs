@@ -246,15 +246,13 @@ public partial class LevelView : Node3D
         _below = below;
 
         foreach (var surface in shape.Ground) AddChild(new MeshInstance3D { Mesh = ToMesh(surface), MaterialOverride = _ground });
-        // The see floor: a patch of seabed under her, in the ground's own skin, drawn only inside the cutout's opening
-        // (topdown_ground's see_floor), so the floor is seen running on under a wall cut open in front of her.
-        _seeFloor = new MeshInstance3D
-        {
-            Mesh = new PlaneMesh { Size = new Vector2(SeeFloorSize, SeeFloorSize), SubdivideWidth = 6, SubdivideDepth = 6 },
-            MaterialOverride = _ground, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = false,
-        };
-        _seeFloor.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("see_floor"), 1f);
-        AddChild(_seeFloor);
+        // The caps: the cutout's dotted fill inside all the rock at the cut's height, there all the time (only seen where
+        // the rock over it is cut away).
+        if (shape.Ground.Count > 0)
+            for (int cy = 0; cy < map.Size; cy += CapChunk)
+            for (int cx = 0; cx < map.Size; cx += CapChunk)
+                if (Cap(_map.Size, (x, y) => SmoothHeight(map, x, y), cx, cy, Math.Min(cx + CapChunk, map.Size), Math.Min(cy + CapChunk, map.Size)) is { } cap)
+                    AddChild(new MeshInstance3D { Mesh = ToMesh(cap), MaterialOverride = _ground, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         // A woven reef's coral (WovenReef, the look prototype), in its own paint.
         if (map.Pieces.Count > 0)
         {
@@ -397,23 +395,39 @@ public partial class LevelView : Node3D
         var v = new Vector4(her.X, her.Z, radius, amount);
         if (v == _seeThrough) return;
         _seeThrough = v;
-        if (_seeFloor is { } floor && IsInstanceValid(floor))
-        {
-            floor.Visible = amount > 0f && !NoSeeFloor;
-            // At the cut's height (level_frame's lf_see_height: coming down from over the walls' tops as it opens), the
-            // cut's solid fill where rock was cut over it.
-            _seeFloorY = her.Y + Mathf.Lerp(SeeCutTop, SeeCutOver, Mathf.Clamp(amount, 0f, 1f)) - Position.Y;
-            floor.Position = new Vector3(her.X - Position.X, _seeFloorY, her.Z - Position.Z);
-        }
         if (amount > 0f) SeeHeights(her);
         foreach (var m in _materials)
         {
             m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_through"), KeptWhole(m) ? v with { W = 0f } : v);
-            m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_through_y"), her.Y);
+            // (Cut at the swim plane's own height, never her bobbing: where the caps lie.)
+            m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_through_y"), Position.Y + LevelMap.SwimBand);
         }
     }
     Vector4 _seeThrough;
-    MeshInstance3D? _seeFloor;
+
+    /// <summary>
+    /// The height (local metres) the cutout cuts at, and the caps lie at: CapOver over the swim plane (level_frame's
+    /// LF_SEE_OVER); the caps a hair under it, so the cut rock's rim stands just over them.
+    /// </summary>
+    public const float CapOver = 0.5f, CapHeight = LevelMap.SwimBand + CapOver - 0.02f;
+    const int CapChunk = 32;
+
+    /// <summary>The caps' vertex colour: its alpha marks them for topdown_ground (and keeps them from rising with the walls).</summary>
+    static readonly Color CapColour = new(0.5f, 0.5f, 0.5f, 0.5f);
+
+    /// <summary>
+    /// A cap over a square of ground (its height there): flat at CapHeight wherever the rock stands over it, its outline
+    /// on the rock's own line at that height. Null where no rock does.
+    /// </summary>
+    public static LevelShape.Surface? Cap(int size, Func<float, float, float> height, int x0, int y0, int x1, int y1)
+    {
+        if (SurfaceMesh(size, (_, _) => CapHeight, x0, y0, x1, y1, null, (x, y) => height(x, y) - CapHeight) is not { } s) return null;
+        var colours = new Color[s.Colors.Length];
+        Array.Fill(colours, CapColour);
+        var normals = new Vector3[s.Normals.Length];
+        Array.Fill(normals, Vector3.Up);
+        return new LevelShape.Surface(s.Vertices, normals, colours, s.Indices);
+    }
 
     /// <summary>
     /// The map round her for the cutout, a metre a texel (level_frame's see_heights, see_keep, see_heights_box): its
@@ -484,7 +498,7 @@ public partial class LevelView : Node3D
         {
             _seeKeepAt = at;
             _seeKeepToward = toward;
-            var keep = SeeKeep(_seeH, n, _seeBox, her, toward, _seeKeepWas);
+            var keep = SeeKeep(_seeH, n, _seeBox, her, Position.Y + LevelMap.SwimBand, toward, _seeKeepWas);
             _seeKeepWas = keep;
             var image = Image.CreateFromData(n, n, false, Image.Format.R8, keep);
             if (_seeKeep is null) _seeKeep = ImageTexture.CreateFromImage(image);
@@ -505,11 +519,11 @@ public partial class LevelView : Node3D
     /// SeeHideReach of it); every other wall in front of her is cut. The open floor round a kept wall is marked kept for
     /// two metres, so its smooth skin past its cells is kept with it.
     /// </summary>
-    static byte[] SeeKeep(float[] heights, int n, Vector3 box, Vector3 her, Vector2 toward, byte[]? before)
+    static byte[] SeeKeep(float[] heights, int n, Vector3 box, Vector3 her, float plane, Vector2 toward, byte[]? before)
     {
         var keep = new byte[n * n];
         Array.Fill(keep, (byte)255);
-        float over = her.Y + 0.5f;
+        float over = plane + CapOver;
         var wall = new int[n * n];
         Array.Fill(wall, -1);
         var cells = new List<int>();
@@ -563,13 +577,6 @@ public partial class LevelView : Node3D
             stack.Push(c);
         }
     }
-    static readonly bool NoSeeFloor = OS.GetCmdlineUserArgs().Contains("--dbg-nofloor");
-    /// <summary>
-    /// The cut's fill (the see floor): its square (metres a side: all the screen shows round her), and the heights it is
-    /// laid at over her plane, as level_frame's cut (LF_SEE_TOP as it starts to open, LF_SEE_OVER open).
-    /// </summary>
-    const float SeeFloorSize = 200f, SeeCutTop = 34f, SeeCutOver = 0.5f;
-    float _seeFloorY;
 
     /// <summary>How far round her middle (metres) rock counts as hiding her: her bell and the strands under it.</summary>
     const float HerReach = 0.8f;
@@ -1284,7 +1291,10 @@ public partial class LevelView : Node3D
             var side = new Vector3(door.Across.X, 0f, door.Across.Y);
             var fwd = new Vector3(door.Into.X, 0f, door.Into.Y);
             float floor = SmoothHeight(map, at.X, at.Y) - 0.4f;
-            AddChild(new MeshInstance3D { Mesh = GateMesh(new Vector3(at.X, 0f, at.Y), side, fwd, DoorArchHalf + 0.1f, floor, DoorSpring), MaterialOverride = Rock(0.25f) });
+            // (Its dark cut away whole with the roof over it: under a cut roof the passage is open.)
+            var gate = Rock(0.25f);
+            gate.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_whole"), true);
+            AddChild(new MeshInstance3D { Mesh = GateMesh(new Vector3(at.X, 0f, at.Y), side, fwd, DoorArchHalf + 0.1f, floor, DoorSpring), MaterialOverride = gate });
             if (k >= map.Mouths.Count || rock.Plug is not { } plug) return;
             var shut = new MeshInstance3D { Mesh = ToMesh(plug), MaterialOverride = skin, Visible = false };
             AddChild(shut);

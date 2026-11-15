@@ -36,16 +36,15 @@ vec3 lf_local(vec3 world) { return world - level_offset; }
 vec3 lf_pattern(vec3 local) { return vec3(local.x + level_origin.x, local.y, local.z + level_origin.y); }
 
 // The cutout: while something stands between the camera and her, everything on the camera's side of her (from
-// see_through.z metres behind her, out past the screen's edges) is cut off flat a little over her plane: the walls and
-// peaks in front of her gone down to their stumps, the cut filled solid (topdown_ground's cap, dotted) and outlined. What
-// stands behind her stays whole. As it opens (see_through.w, eased by the game) the cut comes down from over the
-// tallest walls; as it closes it lifts away.
+// see_through.z metres behind her, out past the screen's edges) is cut off flat LF_SEE_OVER over her level's swim plane
+// (see_through_y): the walls and peaks in front of her gone down to their stumps, showing the reef's cap there (a flat
+// dotted fill drawn inside all the rock at that height at all times, topdown_ground's cap), and outlined. What stands
+// behind her stays whole. It is on (see_through.w > 0) or off: no transition.
 
-// How far it has come down (eased by the game), and the height it cuts at now: from over the walls' tops to its own.
+// How open it is, and the height it cuts at (the caps' own: LevelView.CapHeight).
 float lf_see_open() { return clamp(see_through.w, 0.0, 1.0); }
-const float LF_SEE_TOP = 34.0;
 const float LF_SEE_OVER = 0.5;
-float lf_see_height() { return mix(see_through_y + LF_SEE_TOP, see_through_y + LF_SEE_OVER, lf_see_open()); }
+float lf_see_height() { return see_through_y + LF_SEE_OVER; }
 // (The lowest height anything is cut at.)
 float lf_see_slice() { return lf_see_height(); }
 

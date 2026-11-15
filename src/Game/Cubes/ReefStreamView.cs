@@ -116,7 +116,8 @@ public partial class ReefStreamView : Node3D
             _here.SetShaderParameter(SN.Of("see_heights_box"), m.Box);
         }
         _here.SetShaderParameter(SN.Of("see_through"), new Vector4(her.X, her.Z, radius, open));
-        _here.SetShaderParameter(SN.Of("see_through_y"), her.Y);
+        // (Cut at her layer's swim plane, where its caps lie, never her bobbing.)
+        _here.SetShaderParameter(SN.Of("see_through_y"), _lift + OctoShoots.Core.Gen.TopDown.LevelMap.SwimBand);
     }
 
     /// <summary>The stream's changes taken: shapes queued for upload, what was let go returned to the pool.</summary>

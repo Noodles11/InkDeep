@@ -1,22 +1,19 @@
 // The level's ground: the reef's skin (reef_surface.gdshaderinc) on the heightfield. What stands between the camera and
-// Clementine is sliced off flat just over her plane (level_frame's lf_see_cut); the cut is filled solid (see_floor: a
-// plane laid at the cut's height, drawn only where rock stood over it) and outlined.
+// Clementine is sliced off flat just over her plane (level_frame's lf_see_cut); the cut shows the cap, a flat dotted
+// fill laid inside all the rock at that height at all times (its vertices' colour alpha CAP_ALPHA: LevelView.Caps), so
+// it is only ever seen where the rock over it is cut away, and outlined.
 shader_type spatial;
-// (Both sides: where the cutout opens the rock, its far faces seen from inside are its solid inside.)
-render_mode cull_disabled;
+render_mode cull_back;
 
 #include "res://assets/shaders/reef_surface.gdshaderinc"
 
 uniform bool debug_normals = false;
-/// The see floor (LevelView.SeeThrough): the cut's fill, a plane at the cut's height round her.
-instance uniform float see_floor = 0.0;
 
 // The level's cave openings (LevelView.AddDoors, docs/DIVE.md §6): each one's threshold (xy, map metres) and
 // the way into it (zw), and the passages' depth, open half-width and arch top. The deeper into one, the darker, until
 // its back is black: the dark of the cave beyond.
-// The cutout's inside (level_frame's lf_see_cut): the rock it cuts through shows solid, a flat grey faintly dotted
-// (see_dot, every see_dot_step pixels), and its edge outlined in the dots' colour (see_line_width metres, or a couple
-// of pixels): quiet, plainly a cut. The see floor caps only what lies under rock (level_frame's see_heights).
+// The cap (the cutout's inside): a flat grey faintly dotted (see_dot, every see_dot_step pixels), and the cut's edge on
+// the rock outlined in the dots' colour (see_line_width metres, or a couple of pixels): quiet, plainly a cut.
 uniform vec3 see_cap = vec3(0.12, 0.13, 0.15);
 uniform vec3 see_dot = vec3(0.18, 0.19, 0.22);
 uniform float see_dot_step = 7.0;
@@ -28,6 +25,8 @@ uniform vec3 door_size = vec3(4.5, 1.7, 2.8);
 
 varying vec3 world;
 varying vec3 world_normal;
+// The cap's vertices are marked by their colour's alpha (LevelView.CapColour).
+varying float is_cap;
 
 // The cube reef's tall walls (ReefStreamView): rock above rise_from metres rises by up to rise metres (fully by rise_to),
 // so every wall stands on up out of view as one tall structure; its normals tilted to match. A vertex colour's alpha
@@ -37,7 +36,8 @@ uniform float rise_from = 1.4;
 uniform float rise_to = 3.2;
 
 void vertex() {
-	if (rise > 0.0) {
+	is_cap = abs(COLOR.a - 0.5) < 0.1 ? 1.0 : 0.0;
+	if (rise > 0.0 && is_cap < 0.5) {
 		float t = clamp((VERTEX.y - rise_from) / (rise_to - rise_from), 0.0, 1.0);
 		float k = t * t * (3.0 - 2.0 * t) * COLOR.a;
 		float stretch = 1.0 + rise * COLOR.a * 6.0 * t * (1.0 - t) / (rise_to - rise_from);
@@ -81,22 +81,22 @@ float door_dark(vec3 p) {
 void fragment() {
 	// (Not from the sun's eye: the rock's shadows stay as they are.)
 	if (lf_portal_cut(world, FRAGCOORD.xy) || !IN_SHADOW_PASS && lf_see_cut(world, CAMERA_POSITION_WORLD, FRAGCOORD.xy)) discard;
-	// The cut's fill (the see floor, laid at the cut's height): solid where rock was cut off over it, dotted; outlined
-	// round its rim, where the rock's face meets the cut. Elsewhere nothing.
+	// The cap: unlit, dotted, everywhere inside the rock at the cut's height (not from the sun's eye).
+	if (is_cap > 0.5) {
+		if (IN_SHADOW_PASS) discard;
+		vec2 cell = mod(FRAGCOORD.xy, see_dot_step) - see_dot_step * 0.5;
+		float dotted = 1.0 - smoothstep(see_dot_step * 0.12, see_dot_step * 0.12 + 0.8, length(cell));
+		ALBEDO = vec3(0.0);
+		EMISSION = mix(see_cap, see_dot, dotted);
+		BACKLIGHT = vec3(0.0);
+		SPECULAR = 0.0;
+		ROUGHNESS = 1.0;
+		NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+	} else {
+	// The cut's edge on what is left of the rock: a sharp line along it.
 	float line_width = max(see_line_width, 2.0 * length(fwidth(world.xz)));
 	bool outline = false;
-	bool cap = !FRONT_FACING;
-	if (see_floor > 0.5) {
-		if (see_through.w <= 0.0 || lf_see_front(world, CAMERA_POSITION_WORLD) < 0.0 || see_heights_box.z <= 0.0 || !lf_see_takes(world)) discard;
-		vec2 huv = (world.xz - see_heights_box.xy) / see_heights_box.z;
-		float under = huv.x < 0.0 || huv.y < 0.0 || huv.x > 1.0 || huv.y > 1.0 ? -100.0 : texture(see_heights, huv).r;
-		if (under <= world.y) discard;
-		cap = true;
-		// (Its back edge, where the cut stops short of her; round its rim the rock's own line shows.)
-		outline = lf_see_front(world, CAMERA_POSITION_WORLD) < line_width;
-	}
-	// Its edge on what is left of the rock: a sharp line along the cut.
-	else if (!IN_SHADOW_PASS && see_through.w > 0.0) {
+	if (!IN_SHADOW_PASS && see_through.w > 0.0) {
 		// (A couple of pixels wide however steep the rock; measured on the cut's own distance, not where rock kept
 		// whole meets it.)
 		float edge = max(lf_see_height() - world.y, -lf_see_front(world, CAMERA_POSITION_WORLD));
@@ -130,24 +130,23 @@ void fragment() {
 	// The caustics ride to light() in BACKLIGHT (this shader does its own lighting, so nothing else reads it).
 	// (And how much the showcase shows it as it is, in .y: lit plainly there, not in the drawn look's steps.)
 	// (.z: the see floor, lit as the open floor is, out of the rock's shadow over it.)
-	BACKLIGHT = vec3(s.caustic * 1.5, reef_art == 7 ? 0.0 : show, see_floor);
+	BACKLIGHT = vec3(s.caustic * 1.5, reef_art == 7 ? 0.0 : show, 0.0);
 	ALBEDO = s.albedo;
 	EMISSION = s.emission;
 	NORMAL = normalize((VIEW_MATRIX * vec4(s.normal, 0.0)).xyz);
 	ROUGHNESS = s.rough;
 	// Matte: next to no reflection of the water's light.
 	SPECULAR = 0.06;
-	if (cap || outline) {
-		// Unlit, flat: the cut through solid reef, dotted; its edge a line.
-		vec2 cell = mod(FRAGCOORD.xy, see_dot_step) - see_dot_step * 0.5;
-		float dotted = 1.0 - smoothstep(see_dot_step * 0.12, see_dot_step * 0.12 + 0.8, length(cell));
+	if (outline) {
+		// Unlit, flat: the cut's edge a line in the dots' colour.
 		ALBEDO = vec3(0.0);
-		EMISSION = outline ? see_dot : mix(see_cap, see_dot, dotted);
+		EMISSION = see_dot;
 		BACKLIGHT = vec3(0.0);
 		SPECULAR = 0.0;
 		ROUGHNESS = 1.0;
 	}
 	if (debug_normals) { ALBEDO = vec3(0.0); EMISSION = (s.normal * 0.5 + 0.5) * 0.6; }
+	}
 }
 
 void light() {

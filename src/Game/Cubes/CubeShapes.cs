@@ -43,7 +43,11 @@ public static class CubeShapes
         var surfaces = new List<LevelShape.Surface>();
         for (int cy = 0; cy < h; cy += Chunk)
         for (int cx = 0; cx < w; cx += Chunk)
+        {
             if (LevelView.SurfaceMesh(1 << 20, Height, x0 + cx, y0 + cy, x0 + cx + Chunk, y0 + cy + Chunk, null, Kept) is { } s) surfaces.Add(s);
+            // (The cutout's dotted cap inside its rock at the cut's height: LevelView.Cap.)
+            if (LevelView.Cap(1 << 20, Height, x0 + cx, y0 + cy, x0 + cx + Chunk, y0 + cy + Chunk) is { } cap) surfaces.Add(cap);
+        }
         if (Arches(t) is { } arches) surfaces.Add(arches);
         return new CubeShape(surfaces);
     }
