@@ -28,6 +28,9 @@ levels one after another: the layers are the depths.
   the higher the softer (topdown_post's tall blur); the layer she goes to grows its walls as she reaches it. Most
   gates between cubes and most tunnels through rock are **roofed** (§4.4): openings carved through the walls, the rock
   running on whole over them. A wall or roof between her and the camera is cut open round her.
+- **The water below:** under her layer the water is thick and soft (topdown_post's deep veil): the layer below shows
+  through it only as faint shapes, much blurred and four fifths hidden in the depth's water, and nothing under that
+  layer (nor any fish down there) is seen at all.
 - **The warm-up layer** (layer 0) is where she learns: bright, its menace low, no creatures, no curse rooms and no
   boss. Veterans dive straight through it. (There is no tutorial level.)
 - **Diving and climbing** (CUBE-WORLD-PLAN §7): Shift or the d-pad's down over the void, Q or its up under a well of

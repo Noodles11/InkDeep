@@ -513,6 +513,8 @@ public partial class TopDownMain : Node3D
         _blight.Vapour = _vapour;
         _camera = new CameraRig();
         AddChild(_camera);
+        // (The water below her layer only faintly shows the layer under it: DIVE §1.)
+        _camera.SetDeepVeil(CameraRig.DeepVeil);
         _snow = new MarineSnow(900, new Vector3(22f, 7f, 17f), 0.11f);
         AddChild(_snow);
         _plankton = new GlowPlankton { Visible = false };

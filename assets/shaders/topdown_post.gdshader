@@ -51,6 +51,14 @@ uniform float reef_water = 3.0;
 uniform float far_water = 28.0;
 // Debug (F1 "Floor fog", --dbg-nofog): off, the floor below her plane is seen clear — no murk, no depth blur.
 uniform bool floor_fog = true;
+// The cube reef's water below her layer (CameraRig.SetDeepVeil; DIVE §1): from deep_from to deep_to metres under her plane
+// the picture blurs deep_blur more and fills with the depth's water to deep_veil, so the layer below shows only as faint
+// shapes; past deep_gone (that layer's own floor and anything under it) the water alone. 0: off.
+uniform float deep_veil = 0.0;
+uniform float deep_blur = 2.4;
+uniform float deep_from = 2.5;
+uniform float deep_to = 7.0;
+uniform float deep_gone = 13.0;
 // Prism Pearl's split (CameraRig.Aberrate): the picture's red and blue pulled apart from its middle for a moment, 0..1.
 uniform float aberration = 0.0;
 // An art direction under study (reef_art.gdshaderinc, docs/ART-LOOKS.md): painted, depth is told by flat layers of
@@ -376,6 +384,9 @@ void fragment() {
 	float peak = open_deep ? 0.0 : smoothstep(peak_from, peak_from + peak_span, h);
 	lod += peak_blur * peak;
 	lod += open_deep ? 0.0 : tall_blur * smoothstep(peak_from + peak_span, tall_to, h);
+	// (The layer below: much softer still, only its shapes left.)
+	float deep_w = deep_veil > 0.0 && floor_fog ? (open_deep ? 1.0 : smoothstep(deep_from, deep_to, below)) : 0.0;
+	lod += deep_blur * deep_w;
 	// Watercolour: the walls stay crisp at every height; all that lies under her plane runs soft, wet into wet.
 	if (paper) lod = paper_blur * smoothstep(0.5, 4.0, below);
 	vec3 col = blurred(suv, lod);
@@ -467,7 +478,13 @@ void fragment() {
 			vec2 at = fcam.xz + fray.xz * (swim_level - deep_fish[i].z - fcam.y) * down;
 			shadow = max(shadow, fish_shadow(at, deep_fish[i], deep_fish_ways[i]));
 		}
-		col *= 1.0 - deep_fish_shade * shadow * smoothstep(0.0, 1.5, below);
+		col *= 1.0 - deep_fish_shade * shadow * smoothstep(0.0, 1.5, below) * (1.0 - deep_w);
+	}
+	// The layer below filled with water: its shapes faint through it; under its floor, nothing but the water.
+	if (deep_w > 0.0) {
+		float gone = open_deep ? 1.0 : smoothstep(deep_gone, deep_gone + 4.0, below);
+		vec3 deep_water = mix(reef_water_deep, reef_murk, 0.55);
+		col = mix(col, deep_water, deep_w * mix(deep_veil, 1.0, gone));
 	}
 	// A way down: the ground gives way to the water itself.
 	col = mix(col, reef_water_deep, hole_deep);

@@ -191,6 +191,15 @@ public partial class CameraRig : Node3D
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("swell_count"), swells.Count);
     }
 
+    /// <summary>
+    /// The water below her layer in the cube reef (topdown_post's deep_veil; DIVE §1): how much of the layer below it hides
+    /// (0 off: the open water's own look, as on the title), leaving its shapes faint; nothing under that layer shows at all.
+    /// </summary>
+    public void SetDeepVeil(float veil) => _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("deep_veil"), veil);
+
+    /// <summary>How much of the layer below the water hides.</summary>
+    public const float DeepVeil = 0.8f;
+
     /// <summary>The fish far under her plane (DeepShoals): where they are and how they swim.</summary>
     public void SetDeepFish(OctoShoots.Game.Fx.DeepShoals shoals)
     {
