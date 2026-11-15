@@ -425,14 +425,18 @@ public partial class LevelView : Node3D
     float[] _seeH = Array.Empty<float>();
     Vector2 _seeHeightsAt = new(float.MaxValue, float.MaxValue), _seeKeepAt = new(float.MaxValue, float.MaxValue);
     Vector2 _seeKeepToward;
+    byte[]? _seeKeepWas;
     Vector3 _seeBox;
 
     /// <summary>The cutout's map round her (null until it is first cut), for the cube reef's rock.</summary>
     public (Texture2D Heights, Texture2D Keep, Vector3 Box)? SeeMask =>
         _seeHeights is null || _seeKeep is null ? null : (_seeHeights, _seeKeep, _seeBox);
 
-    /// <summary>How far to her side of the line from her to the camera rock hides her (metres): her body and a margin.</summary>
-    const float SeeHideReach = 1.6f;
+    /// <summary>
+    /// How far to her side of the line from her to the camera rock hides her (metres): her body and a margin; and how far
+    /// for a wall already cut, so a wall at the edge of it does not flick between whole and cut as she moves.
+    /// </summary>
+    const float SeeHideReach = 1.6f, SeeHideKeep = 2.8f;
 
     /// <summary>
     /// The height map round her made again once she has swum a quarter of its span from where it was made; which rock
@@ -471,6 +475,7 @@ public partial class LevelView : Node3D
             // (Texel centres on the metres: its corner half a metre short of the first.)
             _seeBox = new Vector3(x0 - 0.5f + Position.X, y0 - 0.5f + Position.Z, n);
             _seeKeepAt = new(float.MaxValue, float.MaxValue);
+            _seeKeepWas = null;
         }
         var cam = GetViewport()?.GetCamera3D();
         var toward = cam is null ? new Vector2(0f, 1f) : new Vector2(cam.GlobalPosition.X - her.X, cam.GlobalPosition.Z - her.Z);
@@ -479,7 +484,8 @@ public partial class LevelView : Node3D
         {
             _seeKeepAt = at;
             _seeKeepToward = toward;
-            var keep = SeeKeep(_seeH, n, _seeBox, her, toward);
+            var keep = SeeKeep(_seeH, n, _seeBox, her, toward, _seeKeepWas);
+            _seeKeepWas = keep;
             var image = Image.CreateFromData(n, n, false, Image.Format.R8, keep);
             if (_seeKeep is null) _seeKeep = ImageTexture.CreateFromImage(image);
             else _seeKeep.Update(image);
@@ -499,7 +505,7 @@ public partial class LevelView : Node3D
     /// SeeHideReach of it); every other wall in front of her is cut. The open floor round a kept wall is marked kept for
     /// two metres, so its smooth skin past its cells is kept with it.
     /// </summary>
-    static byte[] SeeKeep(float[] heights, int n, Vector3 box, Vector3 her, Vector2 toward)
+    static byte[] SeeKeep(float[] heights, int n, Vector3 box, Vector3 her, Vector2 toward, byte[]? before)
     {
         var keep = new byte[n * n];
         Array.Fill(keep, (byte)255);
@@ -515,7 +521,7 @@ public partial class LevelView : Node3D
             cells.Clear();
             stack.Push(start);
             wall[start] = walls;
-            bool back = false, front = false, hides = false;
+            bool back = false, front = false, hides = false, cut = false, near = false;
             while (stack.Count > 0)
             {
                 int c = stack.Pop();
@@ -525,13 +531,14 @@ public partial class LevelView : Node3D
                 float f = x * toward.X + z * toward.Y, side = Mathf.Abs(x * toward.Y - z * toward.X);
                 // (Past her line by a cell more than the cut reaches back.)
                 if (f < -2.5f) back = true;
-                if (f > 0f) { front = true; if (side < SeeHideReach) hides = true; }
+                if (f > 0f) { front = true; if (side < SeeHideReach) hides = true; else if (side < SeeHideKeep) near = true; }
+                if (before is not null && before[c] != 0) cut = true;
                 if (cx > 0) Visit(c - 1);
                 if (cx < n - 1) Visit(c + 1);
                 if (cy > 0) Visit(c - n);
                 if (cy < n - 1) Visit(c + n);
             }
-            if (back && front && !hides)
+            if (back && front && !hides && !(near && cut))
                 foreach (int c in cells) keep[c] = 0;
             walls++;
         }

@@ -1339,8 +1339,10 @@ at mist distance (inherited fade rule).
     pixels wide. It is kept quiet: it never draws the eye, yet plainly reads as a cut.
   - **What it cuts:** the rock (the ground's heightfield and the free rock) and the coral and flora on it; the floor
     she swims over stays whole. The shadows stay as they are (the cut is not made from the sun's eye).
-  - **Its timing:** it opens with a quick ease out (0.18 s), the slice coming down from 34 m over her plane, and closes
-    with an ease in (0.35 s), lifting away. A wall she only swims beside stays whole. A canopy fading over Clementine is
+  - **Its timing:** no transition: it is there at once, whole, the moment something hides her, and stays 0.8 s after the
+    last moment anything did, then is gone at once, so it never flickers as she swims along a wall's edge. A wall once
+    cut stays cut while it still crosses within 2.8 m of the line from her toward the camera (1.6 m to be cut at all).
+    A wall she only swims beside stays whole. A canopy fading over Clementine is
     drawn unblurred while it fades.
   - **Verification:** `--at=hidden` starts her where rock hides her (`--dbg-hidden2`: another such spot);
     `--dbg-nocarve` keeps every wall whole; `--dbg-nofloor` leaves out the cut's grey fill.

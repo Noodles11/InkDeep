@@ -299,7 +299,7 @@ what burn the corrupted. Caves are dark. The sim is in `src/Core/Plane/PlaneHerL
     is pressed back a little (7 cm) and shudders against it. Lit from all round (a pool, a firefly), only a soft glow of
     its colour wells off it.
   - **It strips the corruption off in layers** (`BlightView.Strip`): the ink's violet brackets ("(", ")", "[", "]",
-    mostly its deep violets, now and then a bright one) peel up off the side facing her light, curl back along its skin
+    mostly its deep violets, now and then a bright one, all the same small size) peel up off the side facing her light, curl back along its skin
     and are flung off downstream, sinking as they slow: 30 a second for a murkling, more for a bigger body. Every so
     often (2.6 times a second on average) a whole layer lifts away at once: an arc of 9–14 of them over its lit face,
     thrown off together. The water in her beam itself stays still (no hot-air shimmer).

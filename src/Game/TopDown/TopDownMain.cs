@@ -75,27 +75,18 @@ public partial class TopDownMain : Node3D
     Vector2? _dbgSteer;
     bool _dbgSteerFight;
     bool _dbgGate;
-    /// <summary>How far round her the rock between the camera and her is carved away.</summary>
     /// <summary>How far behind her the cutout reaches (metres): what stands beyond that stays whole.</summary>
     const float SeeThroughRadius = 1.5f;
 
-    /// <summary>The cutout's opening and closing (seconds): out quickly, in more gently.</summary>
-    const float SeeOpenSeconds = 0.18f, SeeCloseSeconds = 0.35f;
+    /// <summary>How long the cutout stays after the last moment something hid her (seconds), so it never flickers.</summary>
+    const float SeeHoldSeconds = 0.8f;
 
-    /// <summary>
-    /// The cutout's scale from its progress (0 shut, 1 open): an ease out (cubic), so opening it springs out quickly and
-    /// settles, and closing it (the same curve run back) starts gently and shuts quickly: an ease in.
-    /// </summary>
-    static float SeeScale(float progress)
-    {
-        float u = 1f - Mathf.Clamp(progress, 0f, 1f);
-        return 1f - u * u * u;
-    }
+    /// <summary>The cutout from its hold: there at once, all of it, while any of the hold is left; else gone at once.</summary>
+    static float SeeScale(float hold) => hold > 0f ? 1f : 0f;
 
-    /// <summary>The cutout's progress a frame on, toward open while she is hidden, else toward shut.</summary>
-    static float SeeStep(float progress, bool hidden, float dt) =>
-        Mathf.MoveToward(progress, hidden ? 1f : 0f, dt / (hidden ? SeeOpenSeconds : SeeCloseSeconds));
-    /// <summary>How far the walls round her are carved away (0 whole → 1 open while they hide her).</summary>
+    /// <summary>The cutout's hold a frame on: full while she is hidden, else running out.</summary>
+    static float SeeStep(float hold, bool hidden, float dt) => hidden ? SeeHoldSeconds : Mathf.Max(0f, hold - dt);
+    /// <summary>How long the walls round her stay carved away (seconds left of the hold; 0 whole).</summary>
     float _seeThrough;
     /// <summary>Verification (--dbg-nocarve): the walls are not carved away round her.</summary>
     readonly bool _dbgNoCarve = OS.GetCmdlineUserArgs().Contains("--dbg-nocarve");

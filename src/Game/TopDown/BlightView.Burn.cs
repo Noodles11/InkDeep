@@ -67,6 +67,9 @@ public partial class BlightView
     const float StripRate = 30f, LayerRate = 2.6f;
     const int LayerLeast = 9, LayerMost = 14;
 
+    /// <summary>How big each bracket it strips off is (metres across): all the same, small, whatever it is stripped from.</summary>
+    const float PeelSize = 0.12f;
+
     /// <summary>The corruption her light strips off (the ink's violet brackets, MagicParticles).</summary>
     MagicParticles _peel = null!;
 
@@ -103,8 +106,7 @@ public partial class BlightView
         var slide = flow - normal * flow.Dot(normal);
         slide = slide.LengthSquared() > 1e-4f ? slide.Normalized() : across * Mathf.Sign(side + 1e-3f);
         var v = (normal * _peel.RandRange(1.2f, 2.4f) + slide * _peel.RandRange(1.6f, 3.2f) + flow * _peel.RandRange(1f, 2.4f) + Vector3.Up * 0.3f) * push;
-        _peel.EmitBracket(from, v, _peel.RandRange(0.55f, 0.95f), _peel.RandRange(0.14f, 0.24f) * Mathf.Clamp(radius / BlightTuning.MurkRadius, 0.9f, 1.5f),
-            gravity: 0.9f, drag: 2.4f, color: PeelColour());
+        _peel.EmitBracket(from, v, _peel.RandRange(0.55f, 0.95f), PeelSize, gravity: 0.9f, drag: 2.4f, color: PeelColour());
     }
 
     /// <summary>
