@@ -76,7 +76,7 @@ public partial class TopDownMain : Node3D
     bool _dbgSteerFight;
     bool _dbgGate;
     /// <summary>How far round her the rock between the camera and her is carved away.</summary>
-    const float SeeThroughRadius = 7f;
+    const float SeeThroughRadius = 10f;
 
     /// <summary>The cutout's opening and closing (seconds): out quickly, in more gently.</summary>
     const float SeeOpenSeconds = 0.18f, SeeCloseSeconds = 0.35f;

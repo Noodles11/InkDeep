@@ -407,6 +407,7 @@ public partial class LevelView : Node3D
             _seeFloorShown = floor.Visible;
             floor.Position = new Vector3(her.X - Position.X, _seeFloorY, her.Z - Position.Z);
         }
+        if (amount > 0f) SeeHeights(her);
         foreach (var m in _materials)
         {
             m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_through"), KeptWhole(m) ? v with { W = 0f } : v);
@@ -415,6 +416,45 @@ public partial class LevelView : Node3D
     }
     Vector4 _seeThrough;
     MeshInstance3D? _seeFloor;
+
+    /// <summary>The map's height round her (for the see floor: it caps only what lies under rock), a metre a texel.</summary>
+    const int SeeHeightsSize = 128;
+    ImageTexture? _seeHeights;
+    Vector2 _seeHeightsAt = new(float.MaxValue, float.MaxValue);
+
+    /// <summary>The height map round her made again once she has swum a quarter of its span from where it was made.</summary>
+    void SeeHeights(Vector3 her)
+    {
+        var at = new Vector2(her.X - Position.X, her.Z - Position.Z);
+        if (_seeHeights is not null && at.DistanceTo(_seeHeightsAt) < SeeHeightsSize * 0.25f) return;
+        _seeHeightsAt = at;
+        int n = SeeHeightsSize;
+        float x0 = Mathf.Floor(at.X) - n / 2, y0 = Mathf.Floor(at.Y) - n / 2;
+        var data = new float[n * n];
+        for (int j = 0; j < n; j++)
+        for (int i = 0; i < n; i++)
+        {
+            int gx = (int)x0 + i, gy = (int)y0 + j;
+            float h = -100f;
+            if (gx >= 0 && gy >= 0 && gx <= _map.Size && gy <= _map.Size)
+            {
+                h = _map[gx, gy];
+                // (A tunnel's roof or a cave's lid is rock over it too.)
+                float roof = _map.RoofAt(gx, gy), lid = _map.LidAt(gx, gy);
+                if (!float.IsNaN(roof)) h = Mathf.Max(h, roof);
+                if (!float.IsNaN(lid)) h = Mathf.Max(h, lid);
+            }
+            data[j * n + i] = h + Position.Y;
+        }
+        var bytes = new byte[data.Length * 4];
+        Buffer.BlockCopy(data, 0, bytes, 0, bytes.Length);
+        var image = Image.CreateFromData(n, n, false, Image.Format.Rf, bytes);
+        if (_seeHeights is null) _seeHeights = ImageTexture.CreateFromImage(image);
+        else _seeHeights.Update(image);
+        _ground.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_heights"), _seeHeights);
+        // (Texel centres on the metres: its corner half a metre short of the first.)
+        _ground.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_heights_box"), new Vector3(x0 - 0.5f + Position.X, y0 - 0.5f + Position.Z, n));
+    }
     static readonly bool NoSeeFloor = OS.GetCmdlineUserArgs().Contains("--dbg-nofloor");
     /// <summary>The see floor's square (metres a side: the opening and its channel to the screen's edge), and the highest it lies (the seabed); it lies a little under the floor under her, so the real floor wins wherever it is.</summary>
     const float SeeFloorSize = 80f, SeeFloorHeight = -1.2f;

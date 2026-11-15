@@ -31,10 +31,10 @@ vec3 lf_pattern(vec3 local) { return vec3(local.x + level_origin.x, local.y, loc
 
 // The cutout: whatever stands between the camera and her plane round her — rock, a tunnel's roof, the coral and sponges
 // on it — is cut away, so no wall ever hides her: a round opening about her that runs on as a channel its own width
-// toward the camera, out past the screen's edge, so she is never framed in a hole. It opens and closes by its scale
-// (see_through.w, eased by the game: out quickly as something comes to hide her, in as it clears). Its edge is sharp;
-// the cut faces left round it carry a faint glow (lf_see_rim). Only what is on the camera's side of her and above her
-// plane is cut: the floor she swims over and what stands behind her stay whole.
+// up the screen (away from the camera), out past the screen's edge. It opens and closes by its scale (see_through.w,
+// eased by the game: out quickly as something comes to hide her, in as it clears). Its edge is sharp and outlined, and
+// the rock it cuts through shows solid inside, dotted (topdown_ground). Only what stands above her plane is cut: the
+// floor she swims over stays whole.
 
 // How open the opening is (its scale, eased by the game), and the lowest height anything is cut at: just over her plane.
 float lf_see_open() { return clamp(see_through.w, 0.0, 1.0); }
@@ -51,14 +51,10 @@ float lf_see_dist(vec3 world, vec3 cam) {
 	// Where the camera's ray to it crosses her plane (what it hides there; for the see floor, below her plane, what
 	// stands over it along the ray).
 	vec3 hid = cam + d * ((band - cam.y) / d.y);
-	vec2 ahead = normalize(d.xz + vec2(1e-5));
-	// (Only what stands on the camera's side of her is cut; the see floor under her plane is seen wherever the rock
-	// over it along the ray is cut, beyond her too.)
-	if (world.y > band && dot(world.xz - see_through.xy, ahead) > 0.4) return 1e3;
 	vec2 off = hid.xz - see_through.xy;
 	float r = see_through.z * lf_see_open();
-	// Toward the camera it runs on as a channel its own width, out past the screen's edge.
-	vec2 toward = normalize(cam.xz - see_through.xy + vec2(1e-5, 0.0));
+	// Away from the camera (up the screen) it runs on as a channel its own width, out past the screen's edge.
+	vec2 toward = normalize(see_through.xy - cam.xz + vec2(1e-5, 0.0));
 	float along = dot(off, toward);
 	if (along > 0.0) return abs(off.x * toward.y - off.y * toward.x) - r;
 	return length(off) - r;

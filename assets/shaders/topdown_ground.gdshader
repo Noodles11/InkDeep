@@ -2,7 +2,8 @@
 // Clementine is cut open round her (level_frame's lf_see_cut), a faint glow round the opening; the seabed is seen on
 // under the rock through it (see_floor: this skin on a patch under her, drawn only inside the opening).
 shader_type spatial;
-render_mode cull_back;
+// (Both sides: where the cutout opens the rock, its far faces seen from inside are its solid inside.)
+render_mode cull_disabled;
 
 #include "res://assets/shaders/reef_surface.gdshaderinc"
 
@@ -13,6 +14,18 @@ instance uniform float see_floor = 0.0;
 // The level's cave openings (LevelView.AddDoors, docs/DIVE.md §6): each one's threshold (xy, map metres) and
 // the way into it (zw), and the passages' depth, open half-width and arch top. The deeper into one, the darker, until
 // its back is black: the dark of the cave beyond.
+// The cutout's inside (level_frame's lf_see_cut): the rock it cuts through shows solid, a flat dark tone dotted over
+// (see_dot, every see_dot_step pixels), and its edge outlined (see_line, see_line_width metres at least a pixel and a
+// half). The see floor caps only what lies under rock: see_heights is the map's height round her (box: x, z of its
+// corner, its span in metres; span 0: cap all of it).
+uniform vec3 see_cap = vec3(0.13, 0.11, 0.17);
+uniform vec3 see_dot = vec3(0.34, 0.3, 0.42);
+uniform float see_dot_step = 7.0;
+uniform vec3 see_line = vec3(0.92, 0.95, 1.0);
+uniform float see_line_width = 0.22;
+uniform sampler2D see_heights : filter_linear, repeat_disable;
+uniform vec3 see_heights_box = vec3(0.0);
+
 uniform vec4 doors[8];
 uniform int door_count = 0;
 uniform vec3 door_size = vec3(4.5, 1.7, 2.8);
@@ -73,6 +86,20 @@ void fragment() {
 	// (Not from the sun's eye: the rock's shadows stay as they are.)
 	if (lf_portal_cut(world, FRAGCOORD.xy) || !IN_SHADOW_PASS && lf_see_cut(world, CAMERA_POSITION_WORLD, FRAGCOORD.xy)) discard;
 	if (see_floor > 0.5 && lf_see_dist(world, CAMERA_POSITION_WORLD) > 0.0) discard;
+	// The cutout's inside: the rock's far faces seen from within it, and the see floor where rock stands over it, are
+	// the reef cut through: solid, dotted.
+	bool cap = !FRONT_FACING;
+	if (see_floor > 0.5) {
+		if (see_heights_box.z > 0.0) {
+			vec2 huv = (world.xz - see_heights_box.xy) / see_heights_box.z;
+			if (huv.x < 0.0 || huv.y < 0.0 || huv.x > 1.0 || huv.y > 1.0 || texture(see_heights, huv).r <= lf_see_slice()) discard;
+		}
+		cap = true;
+	}
+	// Its edge: a sharp line round it, on what is left of the rock and round the inside.
+	float edge = !IN_SHADOW_PASS && see_through.w > 0.0 && world.y > lf_see_slice() ? lf_see_dist(world, CAMERA_POSITION_WORLD) : 1e3;
+	float line_width = max(see_line_width, 1.5 * length(fwidth(world.xz)));
+	bool outline = abs(edge) < line_width;
 	vec3 local = lf_local(world);
 	float px = length(fwidth(world.xz));
 	ReefSkin s = reef_surface(local, normalize(world_normal), TIME, px);
@@ -103,11 +130,21 @@ void fragment() {
 	// (.z: the see floor, lit as the open floor is, out of the rock's shadow over it.)
 	BACKLIGHT = vec3(s.caustic * 1.5, reef_art == 7 ? 0.0 : show, see_floor);
 	ALBEDO = s.albedo;
-	EMISSION = s.emission + LF_SEE_RIM * lf_see_rim(world, CAMERA_POSITION_WORLD) * 0.35;
+	EMISSION = s.emission;
 	NORMAL = normalize((VIEW_MATRIX * vec4(s.normal, 0.0)).xyz);
 	ROUGHNESS = s.rough;
 	// Matte: next to no reflection of the water's light.
 	SPECULAR = 0.06;
+	if (cap || outline) {
+		// Unlit, flat: the cut through solid reef, dotted; its edge a line.
+		vec2 cell = mod(FRAGCOORD.xy, see_dot_step) - see_dot_step * 0.5;
+		float dotted = 1.0 - smoothstep(see_dot_step * 0.16, see_dot_step * 0.16 + 0.8, length(cell));
+		ALBEDO = vec3(0.0);
+		EMISSION = outline ? see_line : mix(see_cap, see_dot, dotted);
+		BACKLIGHT = vec3(0.0);
+		SPECULAR = 0.0;
+		ROUGHNESS = 1.0;
+	}
 	if (debug_normals) { ALBEDO = vec3(0.0); EMISSION = (s.normal * 0.5 + 0.5) * 0.6; }
 }
 
