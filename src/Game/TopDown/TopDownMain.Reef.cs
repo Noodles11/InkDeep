@@ -43,6 +43,52 @@ public partial class TopDownMain
     int _cubeFootprint = CubeTuning.Footprint, _cubeLayers = CubeTuning.Layers;
     /// <summary>Verification (--cube-boss): every layer below the warm-up holds a boss (and --autopilot swims to its arena).</summary>
     bool _cubeBoss;
+    /// <summary>
+    /// Verification (--fight=id or --fight=id@layer): the dive opens inside a boss's arena on the top layer, the fight
+    /// begun at once. The id is one of the Drowned Court's (BossCourt.All; --fight=list prints them) or a neighbour's
+    /// (tull, kip, fennel, ottilie, bubbles); the layer is the one whose strength it has (its band's first, unnamed).
+    /// </summary>
+    string? _fight;
+    int _fightLayer;
+
+    /// <summary>The boss --fight names, as its layer makes it (null: none named, or no such boss).</summary>
+    OctoShoots.Core.Bosses.BossSpec? FightBoss()
+    {
+        if (_fight is null) return null;
+        if (OctoShoots.Core.Bosses.BossCourt.Get(_fight) is { } who)
+            return OctoShoots.Core.Bosses.BossCourt.Make(who.Id, _seed.Value, _fightLayer > 0 ? _fightLayer : who.From);
+        if (Folk.Get(_fight) is { } folk)
+            return OctoShoots.Core.Bosses.FolkBosses.For(folk.Id, folk.Level, OctoShoots.Core.Bosses.BossCourt.MenaceOf(Math.Max(1, _fightLayer)));
+        return null;
+    }
+
+    /// <summary>
+    /// The top layer's map; with --fight, an arena opened on it a few cubes from her start (before any of it is drawn)
+    /// and its boss waiting there.
+    /// </summary>
+    LevelMap FirstLayer(CubeReef reef)
+    {
+        CubeId? arena = null;
+        if (_fight is not null)
+        {
+            if (FightBoss() is null)
+            {
+                GD.Print($"--fight={_fight}: no such boss. The court: {string.Join(", ", OctoShoots.Core.Bosses.BossCourt.All.Select(b => $"{b.Id} ({b.Name}, layers {b.From}+)"))}; the neighbours: tull, kip, fennel, ottilie, bubbles.");
+                _fight = null;
+            }
+            else if ((arena = reef.ArenaOf(0) ?? _director.ArenaFor(reef.Space, CubeId.Of(reef.Start, 0))) is { } cube) reef.RestoreArena(cube);
+        }
+        var map = reef.Layer(0, reef.Start);
+        if (arena is { } at)
+        {
+            map.HasBoss = true;
+            map.Exit.Position = at.Middle;
+            map.Exit.Radius = CubeTerrain.ArenaRadius;
+            _startAt ??= "arena";
+        }
+        return map;
+    }
+
     /// <summary>Verification (--cube-chart=seconds): that long into the run, the pause menu opens on its chart.</summary>
     float _cubeChartAt;
     /// <summary>Verification: a haven's checkpoint also written to this file (--cube-save=), and a dive taken up from one (--cube-resume=).</summary>
@@ -95,6 +141,13 @@ public partial class TopDownMain
     void ParseReefArg(string arg)
     {
         if (arg == "--cube-boss") _cubeBoss = true;
+        else if (arg.StartsWith("--fight="))
+        {
+            // (--fight=id, or --fight=id@layer for it as that layer makes it.)
+            var parts = arg["--fight=".Length..].Split('@');
+            _fight = parts[0];
+            if (parts.Length > 1 && int.TryParse(parts[1], out int at)) _fightLayer = Math.Clamp(at, 1, CubeTuning.Layers);
+        }
         else if (arg.StartsWith("--cube-chart=") && float.TryParse(arg["--cube-chart=".Length..], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float chartAt)) _cubeChartAt = chartAt;
         else if (arg.StartsWith("--cube-save=")) _cubeSaveTo = arg["--cube-save=".Length..];
         else if (arg.StartsWith("--cube-resume=")) _cubeResumeFrom = arg["--cube-resume=".Length..];
@@ -186,7 +239,7 @@ public partial class TopDownMain
     };
 
     /// <summary>A layer as the level she is on (made off the main thread; kept while she may come back to it).</summary>
-    LevelMap LayerMap(int z) => _layerMaps.TryGetValue(z, out var map) ? map : _layerMaps[z] = _reef!.Layer(z, _reef.Start);
+    LevelMap LayerMap(int z) => _layerMaps.TryGetValue(z, out var map) ? map : _layerMaps[z] = z == 0 ? FirstLayer(_reef!) : _reef!.Layer(z, _reef.Start);
 
     /// <summary>The warm-up layer's map and its (bare) shape: the first level of a dive in the reef.</summary>
     Task<LevelShape> ReefFirstShape()
@@ -199,7 +252,7 @@ public partial class TopDownMain
             int mouth = _diveCave;
             return Task.Run(() => PrepareBehind(seed, map, mouth));
         }
-        return Task.Run(() => LevelShape.Bare(reef.Layer(0, reef.Start)));
+        return Task.Run(() => LevelShape.Bare(FirstLayer(reef)));
     }
 
     /// <summary>
@@ -283,9 +336,14 @@ public partial class TopDownMain
     {
         var options = new PlaneOptions { Corruption = false, Pufferlings = false, Vases = false, Adventure = false, InkMurklings = false, Shots = true, Reef = true };
         if (!_map.HasBoss) return options;
-        if (DebugBoss() is { Boss: { } forced }) options.Boss = forced;
+        // Its boss: the neighbour the Leak made the boss of the depth the layer stands for, until she is freed; else one
+        // of the Drowned Court, from the layer's pool (BossCourt; BOSS-GENERATOR §15).
+        if (_layer == 0 && FightBoss() is { } fight) options.Boss = fight;
+        else if (DebugBoss() is { Boss: { } forced }) options.Boss = forced;
         else if (_jelly is { } jelly && Dives.FolkBossOf(CubeReef.IdOf(_layer - 1), jelly) is { } folk && Folk.Get(folk) is { } n
             && OctoShoots.Core.Bosses.FolkBosses.For(n.Id, n.Level, _map.Menace) is { } spec) options.Boss = spec;
+        else options.Boss = OctoShoots.Core.Bosses.BossCourt.For(_seed.Value, _layer);
+        if (options.Boss is { } met) GD.Print($"Cube reef: layer {_layer}'s boss is {met.Name} ({met.Form}, {met.Concept})");
         return options;
     }
 

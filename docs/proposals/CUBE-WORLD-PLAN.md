@@ -360,7 +360,8 @@ terrain is made again and laid over the layer's map:
   freed, and nothing dives into it from above.
 - While the battle runs its ways out are held shut, and they open when it ends.
 - Its boss is the neighbour the Leak made the boss of the depth the layer stands for (layer 1 the first depth's), as on
-  the dives, unless she has freed her; else the depth's own (`BossRoster`).
+  the dives, unless she has freed her; else one of the Drowned Court from the layer's pool (`BossCourt`,
+  BOSS-GENERATOR §15).
 
 Leaving the layer with its boss unfreed, or before meeting it, counts as a layer left without one. The warm-up layer
 counts as neither.

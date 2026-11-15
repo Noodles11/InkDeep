@@ -102,8 +102,10 @@ its wells stay sealed till the boss is freed.
 
 The boss is a neighbour as the Leak made her (`Dives.FolkBossOf`, `FolkBosses`), by the depth the layer stands for:
 layer 1 Grandmother Tull, layer 2 Kip, layer 3 Fennel, layer 4 Ottilie, layer 5 Bubbles, each at her own level. Freeing
-her saves her as freed at once and unlocks her for every later haven; from then on, and below layer 5, the boss is the
-Leak's own, Drippus Prime.
+her saves her as freed at once and unlocks her for every later haven; from then on, and below layer 5, the boss is one
+of the **Drowned Court** (BOSS-GENERATOR §15): the Palace's old household, a pool for each band of layers (the
+Gardens 1–5, the Sunk Stair 6–12, the Dark Halls 13–24, Under the Keystone 25–36), one drawn per boss layer from the
+reef's seed, never the same on two boss layers running.
 
 ### 5.1 The danger clock
 

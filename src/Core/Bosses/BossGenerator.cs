@@ -292,6 +292,13 @@ public static class BossGenerator
         return spec;
     }
 
+    /// <summary>
+    /// A fight and a body's plain roll at a menace (its middle values, no spice), for an author to name and tune: the
+    /// Drowned Court's (BossCourt).
+    /// </summary>
+    internal static BossSpec Plain(Rng rng, ulong seed, int depth, float menace, BossTier tier, BodyForm form, BossConcept concept) =>
+        Roll(rng, seed, 1, depth, menace, tier, form, Concept(concept), plain: true);
+
     /// <summary>One roll of a concept on a body (plain: its middle values, no spice — the fallback that always passes).</summary>
     static BossSpec Roll(Rng rng, ulong runSeed, int cycle, int depth, float menace, BossTier tier, BodyForm form, ConceptDef concept, bool plain)
     {

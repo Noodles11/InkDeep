@@ -89,8 +89,8 @@ the reef was never being called home. It was being kept.
   | 6 | The Tank | The Hand | **planned**: the finale and the ending (§12) |
 
   A layer's boss is rolled as she first arrives (more likely the more layers she has left without freeing one) and
-  waits in an arena basin a few cubes away (DIVE §5). Once a neighbour is freed, her layer's boss from then on is the
-  Leak's own, Drippus Prime; so is every boss below layer 5. The reef goes 36 layers down; the Tank's finale is not
+  waits in an arena basin a few cubes away (DIVE §5). Once a neighbour is freed, her layer's boss from then on is one
+  of the Drowned Court (§7); so is every boss below layer 5. The reef goes 36 layers down; the Tank's finale is not
   placed in it yet.
 - **What a cube holds** (CUBE-WORLD-PLAN §9) is decided as she first swims into it: its murklings (never on the warm-up
   layer, never in the cube she dives into), and now and then a mouth into a place of its own. The pause menu's chart
@@ -143,6 +143,12 @@ emptied, it is freed, leaving a core of light.
   pearl (Tull's sigh, Kip's flank, Fennel hiding in the kelp, Ottilie shielding hers, Bubbles's ink sacs). Freed, each
   goes home to the haven and opens something there.
 - **Drippus Prime** (CORRUPTION): the Leak's own boss, a murkling prime grown huge; every birth costs it some of its body.
+- **The Drowned Court** (BOSS-GENERATOR §15): the Dragon Palace's old household, still at their duties, each holding a
+  splinter of the tide jewels. Eleven of them, in a pool for each band of layers: Queen Clam, the Tide Bell and Old
+  Compass in the Gardens (layers 1–5); the Gatekeeper, the Hour Drummer, the Thorn Crown and the Court Scribe on the
+  Sunk Stair (6–12); the Lantern Procession, the Conch Herald and Drippus Prime in the Dark Halls (13–24, the Crown and
+  the Scribe still met there); the Physician with those three Under the Keystone (25–36). A boss layer draws one of
+  its pool from the reef's seed.
 - **The boss generator** (BOSS-GENERATOR): rolls bosses within hard fairness budgets, with Queen Clam as its reference.
 - Each boss is met in a short cut-in (`BossIntro`), real animals, no cartoon faces.
 

@@ -23,12 +23,13 @@ how authored pieces combine, never from noise.
 
 ## 1. Where bosses come from
 
-**Parked.** For now bosses are hardcoded, one per depth (`BossRoster`; DESIGN-TOPDOWN §12.2): every depth meets
-Drippus Prime (docs/CORRUPTION.md), scaled by Menace. It is authored, not generated: its body plan (Ink: a creature of
+**The cube reef's bosses are the Drowned Court (§15):** authored on this generator's fights and bodies, a pool per band
+of layers. The free roll below is parked: outside the reef, bosses are hardcoded, one per depth (`BossRoster`;
+DESIGN-TOPDOWN §12.2), and every depth meets Drippus Prime (docs/CORRUPTION.md), scaled by Menace. It is authored, not generated: its body plan (Ink: a creature of
 ink, no animal), form (Murkling), concept (The Brood), exposure (Whole: its whole body takes her light) and attacks
 (Brood, Fan) are its own, and the generator never rolls them (`BossGenerator.Authored`). The generator, its validator
-and its rigs stay in the code and its tests, unused by the game, for when the roster is grown from it again; Queen
-Clam stays its reference roll. What follows is how it works when it is in use.
+and its rigs stay in the code and its tests; the court uses its concepts, bodies, validator and rigs, not its free
+roll; Queen Clam stays its reference roll. What follows is how it works when it is in use.
 
 - **Generated:** the boss of every real depth's boss level — Depths 1–5 (Kelp Jungle → Abyss).
 - **Authored:** only **The Hand** (Depth 6, the Tank), never generated (not built yet; until it is, Depth 6 rolls a
@@ -279,8 +280,8 @@ a clam shuffles aside and lies open — and is gone once off screen. The Crack o
 - Shared pieces stay in `BossView`: the pearl (where the sim has it), the crust (lumps gathered on the mutation sites
   and over the pearl, two a layer; the stain deepens with the crust too), the drip, the pulse rings, the sacs bursting,
   the freeing, and the arena (shadow, landing wave, mud cloud, snap rim). A hit only brightens the body a little.
-- Verification: `--boss=<Concept>` (or `queen`) names the boss, `--boss-level` starts on the depth's boss level,
-  `--at=boss-near` and `--dbg-follow=boss` frame it.
+- Verification: `--fight=<id>` opens the dive inside that boss's arena, the fight begun (§15). `--boss=<Concept>` (or
+  `queen`) names the boss a boss layer holds, `--at=boss-near` and `--dbg-follow=boss` frame it.
 
 ## 14. Tests
 
@@ -290,3 +291,50 @@ a clam shuffles aside and lies open — and is gone once off screen. The Crack o
 - The reference roll reproduces Queen Clam's fight numbers.
 - The fight sim: a scripted attacker frees every concept's boss within the length budget, and a passive player is
   never hit by an attack with no tell.
+
+## 15. The Drowned Court
+
+The cube reef's bosses (`BossCourt`). When the Dragon Palace went dark its household stayed at their posts. The Leak
+found each of them and rewrote it round the splinter of the tide jewels it held, and each still does its one duty,
+wrongly, for no one. Freed, each is the small true creature it was (§12). None is a villain; each is sad at its work.
+
+**How one is made.** Each is authored on one of §4's fights and one of §3's bodies: that fight's plain roll at the
+layer's menace (its middle values, no spice), then its name, colours, proportions, fillers and phases set by hand. So
+each keeps every rule of §0 and passes the validator (§9) on every layer it is met on, and each differs from the
+others in body, in how its pearl is reached, and in what it throws. All bar their arena while the fight runs.
+
+**Where they are met.** Four bands of layers, each with its pool. A boss layer (CUBE-WORLD-PLAN §9.1) whose neighbour
+is already home, or which has none, draws one of its pool from the reef's seed and the layer, never the one the boss
+layer before it drew.
+
+| Band | Layers | Its pool |
+|---|---|---|
+| The Gardens | 1–5 | Queen Clam, the Tide Bell, Old Compass |
+| The Sunk Stair | 6–12 | The Gatekeeper, the Hour Drummer, the Thorn Crown, the Court Scribe |
+| The Dark Halls | 13–24 | The Lantern Procession, the Conch Herald, Drippus Prime, the Thorn Crown, the Court Scribe |
+| Under the Keystone | 25–36 | The Physician, the Lantern Procession, the Conch Herald, Drippus Prime |
+
+**The court.**
+
+| Id | Name | Its duty, and what is left of it | Body | Fight (§4) | Reaching its pearl | What it throws |
+|---|---|---|---|---|---|---|
+| `queen` | Queen Clam | Breathes out the Palace as she remembers it (the mirage clam) and guards the picture. | Giant clam | The Lid | Open while she fires | Rings, walls; from half the spiral, a homing pearl, her snap |
+| `bell` | The Tide Bell | Rang the tides in and out; rings still, and no tide answers. | Moon jelly, pale green and brass | Pulse Bell | Open while it rings; it drifts in pulses | Three rings an act, the swell of its toll after; the spiral from half |
+| `compass` | Old Compass | The couriers steered by it; it turns and cannot find the Palace. | Seven-armed sea star, amber | Turning Star | Always, but the pearl travels round against its turning | Rings, lobbed bombs; quickens at half |
+| `gate` | The Gatekeeper | Opens and shuts the Palace gate for callers who never come. | Giant clam, slate and red, large | Snapping Gate | Open while it fires, turned to face her | The spiral, walls, a snap if she is close; from half shorter openings and a homing pearl |
+| `drummer` | The Hour Drummer | Beat the hours on the stair; has lost count and beats them all. | Five-armed sea star, dark red | Slam and Sigh | Bare while it gets its breath after its act | Four swells beaten out of the floor, standing still; bombs; a ring from half. It creeps to where she last shook the floor |
+| `crown` | The Thorn Crown | The King's crown, set down on the stair the day the light went out. | Urchin, gold with violet | Turning Star | Always, the pearl riding fast round its rim | Rings through its spines, bombs; swells from a third; its spines grow on from two thirds |
+| `scribe` | The Court Scribe | Ground the King's ink and wrote the summons that sent the jellyfish. | Sea hare, ink-dark with paper-pale frills | The Spreader | Bare when it is spent after its act | Lobbed blots of ink, one pearl that follows her; the spiral from half |
+| `procession` | The Lantern Procession | The lamp bearers, walking the halls in one long line, their lamps all ink. | Siphonophore of six bells, pale with lamp orange | Trailing Curtain | Always, passed along the line of its bells | Walls laid across the arena as it circles without rest, a homing pearl; rings and a quicker pace from half |
+| `herald` | The Conch Herald | Blew the King's comings and goings; hides now from its own call. | Great snail, shell-pink | Shy Shell | Out of its shell only while it sounds its call | Pearls that follow her, bombs from its shell; quickens at half |
+| `drippus` | Drippus Prime | The Leak's own: a vast dark shape rising where the water was calm (CORRUPTION). | A murkling prime grown huge | The Brood | Its whole body takes her light | Broods of murklings, rings, fans, bombs; the spiral joins, then it quickens |
+| `physician` | The Physician | Named the cure the jellyfish was sent for; its jars hold only ink now. | Sea hare, sage green, its jars ink sacs | Boil-Heart | Buried: she bursts its sacs with her light to bring it up | Sacs bursting in sprays, bombs; the spiral from a third; more sacs from two thirds |
+
+**Strength by depth.** The court's menace is the layer over 12, to 1.5 from layer 18 (`BossCourt.MenaceOf`): meters,
+blows, pearl speed, counts, telegraphs and rests follow it as §7.4 sets them. Below layer 18 a meter grows 2% a layer
+more. Queen Clam and Drippus Prime keep their own numbers, their meters growing with the menace.
+
+**Verification.** `--fight=<id>` opens the dive inside that boss's arena on the top layer, the fight begun at once, the
+boss as strong as on its band's first layer; `--fight=<id>@<layer>` as strong as on that layer (`--fight=herald@1` is
+the gentlest Herald). The ids are the table's, and the neighbours' (`tull`, `kip`, `fennel`, `ottilie`, `bubbles`); an
+unknown id prints the list.
