@@ -169,9 +169,6 @@ uniform int debug_view = 0;
 uniform float look_slant = 0.577;
 uniform float look_squash = 0.866;
 
-// Her beam's shimmer against a leak's hot water.
-const float BEAM_SHIMMER = 0.6;
-
 void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
 }
@@ -396,7 +393,7 @@ void fragment() {
 	// the currents' shimmer (CurrentView): the picture wavers, bent by eddies of denser water boiling as they go, and is
 	// shoved outward along the ring; the water thickens a shade where it passes. No surface ripple, no lines.
 	float swell_density = 0.0;
-	if (swell_count > 0 || current_count > 0 || leak_count > 0 || her_beam_show.w > 0.0) {
+	if (swell_count > 0 || current_count > 0 || leak_count > 0) {
 		vec3 cam, ray;
 		view_ray(uv, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX, cam, ray);
 		vec3 sp = cam + ray * ((swim_level + 0.4 - cam.y) / min(ray.y, -1e-3));
@@ -440,16 +437,6 @@ void fragment() {
 			if (dot(d, d) > 4.0) continue;
 			float hot = (1.0 - smoothstep(0.35, 1.1, length(d))) * leaks[i].z;
 			suv += (eddy * 0.9 + vec2(0.0, sin(TIME * 5.0 + sp.x * 3.0) * 0.12)) * hot * 0.6 / 25.6 * vec2(VIEWPORT_SIZE.y / VIEWPORT_SIZE.x, 1.0);
-		}
-		// Her beam: the water it lights shimmers as the hot water over a leak does, at BeamShimmer of its strength, over
-		// the whole of its cone (soft at its sides, near her and at its reach).
-		if (her_beam_show.w > 0.0 && her_show_dir.y > 0.0) {
-			vec2 to = sp.xz - her_beam_show.xz;
-			float bd = length(to);
-			float ang = acos(clamp(dot(to / max(bd, 1e-3), normalize(her_show_dir.xz)), -1.0, 1.0));
-			float cone = (1.0 - smoothstep(her_show_dir.w * 0.7, her_show_dir.w * 1.05, ang)) * smoothstep(0.3, 1.2, bd)
-				* (1.0 - smoothstep(her_beam_show.w * 0.7, her_beam_show.w, bd)) * her_show_dir.y;
-			suv += (eddy * 0.9 + vec2(0.0, sin(TIME * 5.0 + sp.x * 3.0) * 0.12)) * cone * BEAM_SHIMMER * 0.6 / 25.6 * vec2(VIEWPORT_SIZE.y / VIEWPORT_SIZE.x, 1.0) * wobble;
 		}
 		// The currents: the picture wavers, like the air over a hot road, bent by eddies of denser water rolling down the
 		// course with the flow and boiling as they go. It only bends: the water stays as bright as it is.

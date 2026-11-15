@@ -10,9 +10,11 @@ namespace OctoShoots.Game.TopDown;
 /// Her light burning the corrupted (docs/ADVENTURE.md §8; the light on their skin is her_burn.gdshaderinc), the
 /// particles: her light strikes a body as a strong current strikes a stone. Where it meets the side facing it, it splashes
 /// in its own colours, sheeting round the body and shooting off past its sides; streaks of it run on past the body's
-/// edges downstream; and flakes of the ink it wears away are torn off and carried with it. A murkling in it is pressed
-/// back a little and shudders (BlightView.cs). As its corruption goes, it bleeds it: drops of ink well out of it and are
-/// carried off downstream, with faint violet wisps of the Leak's light, the faster the faster her light takes it
+/// edges downstream; and flakes of the ink it wears away are torn off and carried with it. Above all her light strips
+/// its corruption off in layers (Strip): the ink's violet brackets peel up off the side facing her, curl back along its
+/// skin and are flung off downstream, a whole layer of them lifting away at once every so often. A murkling in it is
+/// pressed back a little and shudders (BlightView.cs). As its corruption goes, it bleeds it: drops of ink well out of it
+/// and are carried off downstream, with violet wisps of the Leak's light, the faster the faster her light takes it
 /// (Bleed). A creature a shot's light dazzles gives one sharp glint and a ring of sparks.
 /// </summary>
 public partial class BlightView
@@ -56,7 +58,54 @@ public partial class BlightView
     Dictionary<object, float> _meterWas = new(), _meterNow = new();
 
     /// <summary>Drops of ink a second a creature bleeds at the least while its corruption goes, and more per share of its meter lost a second.</summary>
-    const float BleedLeast = 24f, BleedPerShare = 120f, BleedMost = 120f;
+    const float BleedLeast = 36f, BleedPerShare = 160f, BleedMost = 170f;
+
+    /// <summary>
+    /// The layers her light strips off (Strip), for a body of a murkling's size (bigger bodies more): brackets peeled up a
+    /// second, how often a whole layer lifts away at once (a second), and how many brackets a layer.
+    /// </summary>
+    const float StripRate = 30f, LayerRate = 2.6f;
+    const int LayerLeast = 9, LayerMost = 14;
+
+    /// <summary>The corruption her light strips off (the ink's violet brackets, MagicParticles).</summary>
+    MagicParticles _peel = null!;
+
+    /// <summary>A bracket of the ink's violet: mostly its deep tones, now and then a bright one catching her light.</summary>
+    Color PeelColour()
+    {
+        float r = _peel.RandRange(0f, 1f);
+        return r < 0.45f ? MagicParticles.Violet : r < 0.8f ? MagicParticles.DeepViolet : MagicParticles.BrightViolet;
+    }
+
+    /// <summary>
+    /// Her light stripping a body's corruption off (its middle and radius, the way her light flows past it, across it):
+    /// brackets peeling up off the side facing her, curling back along its skin and flung off downstream; and every so
+    /// often a whole layer lifting away at once, an arc of them over its lit face thrown off together.
+    /// </summary>
+    void Strip(Vector3 at, float radius, Vector3 flow, Vector3 across, float dt)
+    {
+        float size = Mathf.Clamp(radius / BlightTuning.MurkRadius, 0.6f, 3f);
+        float rate = StripRate * size;
+        int n = (int)(rate * dt) + (_peel.RandRange(0f, 1f) < rate * dt % 1f ? 1 : 0);
+        for (int k = 0; k < n; k++) PeelOne(at, radius, flow, across, _peel.RandRange(-1f, 1f), 1f);
+        if (_peel.RandRange(0f, 1f) >= LayerRate * dt) return;
+        // A layer: an arc over its lit face, all lifting off together.
+        int count = Mathf.RoundToInt(Mathf.Lerp(LayerLeast, LayerMost, _peel.RandRange(0f, 1f)) * Mathf.Sqrt(size));
+        for (int k = 0; k < count; k++) PeelOne(at, radius, flow, across, Mathf.Lerp(-1f, 1f, (k + _peel.RandRange(0f, 1f)) / count), 1.35f);
+    }
+
+    /// <summary>One bracket peeled off a lit face: from a point of it (side: −1..1 across it), up off the skin, curling back along it and away downstream.</summary>
+    void PeelOne(Vector3 at, float radius, Vector3 flow, Vector3 across, float side, float push)
+    {
+        float a = side * 1.25f;
+        var normal = (-flow * Mathf.Cos(a) + across * Mathf.Sin(a) + Vector3.Up * _peel.RandRange(-0.15f, 0.45f)).Normalized();
+        var from = at + normal * radius * _peel.RandRange(0.95f, 1.08f);
+        var slide = flow - normal * flow.Dot(normal);
+        slide = slide.LengthSquared() > 1e-4f ? slide.Normalized() : across * Mathf.Sign(side + 1e-3f);
+        var v = (normal * _peel.RandRange(1.2f, 2.4f) + slide * _peel.RandRange(1.6f, 3.2f) + flow * _peel.RandRange(1f, 2.4f) + Vector3.Up * 0.3f) * push;
+        _peel.EmitBracket(from, v, _peel.RandRange(0.55f, 0.95f), _peel.RandRange(0.14f, 0.24f) * Mathf.Clamp(radius / BlightTuning.MurkRadius, 0.9f, 1.5f),
+            gravity: 0.9f, drag: 2.4f, color: PeelColour());
+    }
 
     /// <summary>
     /// A creature losing its corruption bleeds it (lit from a light there, on her plane, or from all round): drops of
@@ -83,7 +132,7 @@ public partial class BlightView
             // (Each drop with the Leak's violet glimmering in it, so it shows on the dark water too.)
             _motes.Emit(from, d * _motes.RandRange(0.3f, 0.9f) + flow * _motes.RandRange(0.6f, 1.4f) + Vector3.Down * 0.15f, _motes.RandRange(0.5f, 0.9f),
                 _motes.RandRange(0.08f, 0.12f), 0.02f, new Color(0.75f, 0.2f, 1.3f, 0.9f), new Color(0.3f, 0.06f, 0.55f, 0f), drag: 1.5f, buoyancy: -0.3f);
-            if (_motes.RandRange(0f, 1f) < 0.35f)
+            if (_motes.RandRange(0f, 1f) < 0.55f)
                 _motes.Emit(from, d * 0.3f + flow * 0.8f + Vector3.Up * 0.3f, _motes.RandRange(0.5f, 0.9f), _motes.RandRange(0.05f, 0.08f), 0.02f,
                     new Color(1f, 0.45f, 1.6f, 0.9f), new Color(0.3f, 0.08f, 0.5f, 0f), drag: 1.8f, buoyancy: 0.35f);
         }
@@ -106,6 +155,7 @@ public partial class BlightView
         }
         flow = flow.Normalized();
         var across = new Vector3(-flow.Z, 0f, flow.X);
+        Strip(at, radius, flow, across, dt);
         var bright = new Color(c.R * 1.7f, c.G * 1.7f, c.B * 1.7f, 0.9f);
         var gone = new Color(c.R, c.G, c.B, 0f);
         for (int k = 0; k < n; k++)
