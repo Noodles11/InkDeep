@@ -1339,7 +1339,7 @@ at mist distance (inherited fade rule).
   - **Its shape:** a flat, horizontal slice 0.5 m over her plane through the walls in front of her, out past the
     screen's edges: they are cut down to their stumps. The walls are told apart on a metre-a-texel map of the rock round
     her (`LevelView.SeeKeep`). A wall with anything on the camera's side of her line (1.5 m behind her) is taken whole:
-    all of it on that side, and on along the wall for 14 m past the line, so no faces of a cut mountain are left
+    all of it on that side, and on along the wall for 24 m past the line, so no faces of a cut mountain are left
     standing. The open floor on the camera's side of her line is taken too (a roof or an arch over a passage in front
     of her goes), but not within 2 m of rock left standing. What stands only behind her (up the screen) is drawn whole, and so is a wall reaching back past her that
     does not hide her (it does not cross the line from her toward the camera within 1.6 m of it; 2.8 m for a wall
@@ -1351,7 +1351,7 @@ at mist distance (inherited fade rule).
     bundles of short hatching strokes in a band inside it along the edge (each bundle at its own angle, stopping at its
     own depth; the odd pebble past the band). Its vertices carry how far into the rock they lie, so the band follows
     the edge. Whole rock hides it; wherever the cut takes the rock over it, it shows, steady, never re-made as she
-    moves. The rock's inside faces are never drawn. The cut's edge on the stumps is outlined in the same ink, a couple of
+    moves. The rock's inside, seen where a cut stops part way along a wall, is drawn solid in the cap's near-black. The cut's edge on the stumps is outlined in the same ink, a couple of
     pixels wide. It is kept quiet: it never draws the eye, yet plainly reads as a cut. An opening's dark (its throat, its gate) is gone whole
     where the cut takes the wall it is in.
   - **What it cuts:** the rock (the ground's heightfield and the free rock) and the coral and flora on it; the floor

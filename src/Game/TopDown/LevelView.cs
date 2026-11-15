@@ -457,7 +457,7 @@ public partial class LevelView : Node3D
     float _seeReach;
 
     /// <summary>How far past her line (metres, along the wall) a wall the cut takes is taken with it: so it goes whole.</summary>
-    const float SeeWholeReach = 14f;
+    const float SeeWholeReach = 24f;
     Vector3 _seeBox;
 
     /// <summary>The cutout's map round her (null until it is first cut), for the cube reef's rock.</summary>

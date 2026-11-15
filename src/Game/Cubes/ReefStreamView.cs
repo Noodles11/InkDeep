@@ -63,8 +63,12 @@ public partial class ReefStreamView : Node3D
     public void Follow(Vector3 her) => _murk.Position = new Vector3(her.X, _lift - LayerDrop + VoidHeight + 0.5f, her.Z);
 
     /// <summary>The layer she is on (the one drawn at the swim plane), and the dive's lift.</summary>
-    /// <summary>How far her layer's walls rise above their own rock (out of view: one tall structure), metres.</summary>
-    public const float Rise = 26f;
+    /// <summary>
+    /// How far her layer's walls rise above their own rock, metres: past the camera's own height (CameraRig.Distance at
+    /// its tilt, about 48 m), so no wall's top is ever seen: every wall runs on out past the screen's edge, one tall
+    /// structure, until the cutout takes it.
+    /// </summary>
+    public const float Rise = 60f;
 
     /// <summary>
     /// The walls' rise on each layer drawn (0–1 of Rise): hers in full; the one she goes to growing as she nears it, the

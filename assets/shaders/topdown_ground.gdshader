@@ -3,7 +3,8 @@
 // fill laid inside all the rock at that height at all times (its vertices' colour alpha CAP_ALPHA: LevelView.Caps), so
 // it is only ever seen where the rock over it is cut away, and outlined.
 shader_type spatial;
-render_mode cull_back;
+// (Both sides: where a cut stops part way along a wall, the rock's inside seen through it is drawn solid, as the cap.)
+render_mode cull_disabled;
 
 #include "res://assets/shaders/reef_surface.gdshaderinc"
 
@@ -128,7 +129,15 @@ void fragment() {
 	// (Not from the sun's eye: the rock's shadows stay as they are.)
 	if (lf_portal_cut(world, FRAGCOORD.xy) || !IN_SHADOW_PASS && lf_see_cut(world, CAMERA_POSITION_WORLD, FRAGCOORD.xy)) discard;
 	// The cap: unlit, inked, everywhere inside the rock at the cut's height (not from the sun's eye).
-	if (is_cap > 0.5) {
+	// The rock's inside (its far faces, seen only through a cut): solid, the cap's near-black.
+	if (is_cap < 0.5 && !FRONT_FACING) {
+		if (IN_SHADOW_PASS) discard;
+		ALBEDO = vec3(0.0);
+		EMISSION = see_cap;
+		BACKLIGHT = vec3(0.0);
+		SPECULAR = 0.0;
+		ROUGHNESS = 1.0;
+	} else if (is_cap > 0.5) {
 		if (IN_SHADOW_PASS) discard;
 		float ppm = 1.0 / max(length(fwidth(world.xz)) * 0.7071, 1e-4);
 		float d_px = cap_in * ppm;
