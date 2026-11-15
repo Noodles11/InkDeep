@@ -66,6 +66,8 @@ public partial class BlightView : Node3D
         AddChild(_motes);
         _droplets = new FxParticles(512, additive: false);
         AddChild(_droplets);
+        _peel = new MagicParticles(1536);
+        AddChild(_peel);
     }
 
     float Floor(System.Numerics.Vector2 p) => _map is null ? -1f : Mathf.Min(_map.HeightAt(p), LevelMap.BlockHeight);
@@ -88,6 +90,7 @@ public partial class BlightView : Node3D
         ClearMurkBodies();
         _motes.Clear();
         _droplets.Clear();
+        _peel.Clear();
         foreach (var root in world.Blightroots) _roots.Add(MakeRoot(root));
     }
 
@@ -118,6 +121,7 @@ public partial class BlightView : Node3D
         {
             _motes.Tick(dt, camera.GlobalBasis);
             _droplets.Tick(dt, camera.GlobalBasis);
+            _peel.Tick(dt, camera.GlobalBasis);
         }
     }
 

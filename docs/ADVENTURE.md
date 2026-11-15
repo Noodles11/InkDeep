@@ -298,12 +298,15 @@ what burn the corrupted. Caves are dark. The sim is in `src/Core/Plane/PlaneHerL
     the body's edges downstream, and flakes of the ink it wears away are torn off and carried along. A murkling in it
     is pressed back a little (7 cm) and shudders against it. Lit from all round (a pool, a firefly), only a soft glow of
     its colour wells off it.
-  - **The water in her beam shimmers** (`topdown_post.gdshader`, `BEAM_SHIMMER`) as the hot water over a leak does, at
-    60% of its strength, over the whole of its cone.
+  - **It strips the corruption off in layers** (`BlightView.Strip`): the ink's violet brackets ("(", ")", "[", "]",
+    mostly its deep violets, now and then a bright one) peel up off the side facing her light, curl back along its skin
+    and are flung off downstream, sinking as they slow: 30 a second for a murkling, more for a bigger body. Every so
+    often (2.6 times a second on average) a whole layer lifts away at once: an arc of 9–14 of them over its lit face,
+    thrown off together. The water in her beam itself stays still (no hot-air shimmer).
   - **It bleeds its corruption** (`BlightView.Bleed`): as its meter falls, drops of dark ink glimmering with the Leak's
     violet well out of it, mostly from its side away from her light, and are carried off downstream and sink; brighter
-    violet wisps rise off it. The faster her light takes its corruption the more: 24 a second at least, more by the
-    share of its meter lost (a bigger body bleeds more).
+    violet wisps rise off it. The faster her light takes its corruption the more: 36 a second at least, more by the
+    share of its meter lost, up to 170 (a bigger body bleeds more).
 - **It dazzles:**
   - **Who:** a murkling, an Inkwarden or a Hearthguard coming into a shot's light.
   - **The freeze:** it stops dead for 0.8 s and lets go of a throw it was winding up; an Inkwarden's spin and spikes
