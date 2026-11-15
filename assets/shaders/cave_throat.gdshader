@@ -16,7 +16,7 @@ uniform float height = 4.2;
 
 void fragment() {
 	// (Gone whole where the cutout takes the wall it is in: under a cut roof the passage is open water.)
-	if (see_through.w > 0.0 && lf_see_takes(world) && lf_see_front(world, CAMERA_POSITION_WORLD) > 0.0) discard;
+	if (lf_see_column(world, CAMERA_POSITION_WORLD)) discard;
 	vec2 m = vec2((UV.x - 0.5) * 2.0 * half_width, (1.0 - UV.y) * height);
 	float r = length(vec2(m.x, max(m.y - spring, 0.0)));
 	ALBEDO = vec3(0.004, 0.006, 0.01);

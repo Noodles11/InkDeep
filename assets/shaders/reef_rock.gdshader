@@ -44,7 +44,7 @@ uniform bool see_whole = false;
 void fragment() {
 	if (fade < 0.999 && lf_dither(FRAGCOORD.xy) >= fade) discard;
 	if (lf_portal_cut(world, FRAGCOORD.xy) || !IN_SHADOW_PASS && lf_see_cut(world, CAMERA_POSITION_WORLD, FRAGCOORD.xy)) discard;
-	if (see_whole && !IN_SHADOW_PASS && see_through.w > 0.0 && lf_see_takes(world) && lf_see_front(world, CAMERA_POSITION_WORLD) > 0.0) discard;
+	if (see_whole && !IN_SHADOW_PASS && lf_see_column(world, CAMERA_POSITION_WORLD)) discard;
 	vec3 local = lf_local(world);
 	float px = length(fwidth(world.xz));
 	ReefSkin s = reef_surface(local, normalize(world_normal), TIME, px);
