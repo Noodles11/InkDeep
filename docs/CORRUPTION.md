@@ -401,7 +401,8 @@ a sealed leak's wave shows it; the others while they are on the screen. An empti
 **Sensing the unseen** (`BlightView.SenseUnseen`; the Bible's Unseen Test): she is never harmed by something she had
 no way to sense. A murkling that no light shows, within 13 m of her (`SenseReach`), gives itself away without being
 seen:
-- **the water is troubled round it**: a pale ripple spreads from where it is, every 1.5 s at the edge of her sensing
+- **the water is troubled round it**: the water shimmers out from where it is (the game's moving water: a ripple of distortion, like the air
+  over a hot road, never a drawn ring), every 1.5 s at the edge of her sensing
   and as often as every 0.55 s as it closes on her;
 - **it is heard** once as it comes within her sensing, from where it is (a low gurgle, placed in the world), and again
   only after it has been out of her sensing for 4 s;
