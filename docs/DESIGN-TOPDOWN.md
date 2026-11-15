@@ -1190,7 +1190,9 @@ The FP staging ("look up through the surface") is replaced:
   a haven, "*" a treasure cave, "?" a secret, "$" a shop, "o" a shell cache, "%" a crab's deal, "X" the boss's arena,
   "^" a way out, a dot what a request names). While a place is off the screen its emblem waits at the screen's edge
   on the line from the middle toward it, a small pointer on its ring turned to it; once the place's entrance comes on
-  the screen, the emblem goes on to it and stays locked on it, one motion as she swims toward it. Places within 1.5 m
+  the screen, the emblem goes on to it and stays locked on it, one motion as she swims toward it. Waiting at the edge
+  it is small (two thirds of its size); on its place it grows to four thirds, eased in and out over 0.3 s (and shrinks
+  back as the place leaves the screen). Places within 1.5 m
   share one emblem. As she dives, climbs or rides into a place, they slide out past the edges; once she has settled,
   the new place's slide in from outside.
 - **Pause menu** (`PauseMenu`; Esc or Start): the sea and the clock are held, and she still moves in place. A drawer

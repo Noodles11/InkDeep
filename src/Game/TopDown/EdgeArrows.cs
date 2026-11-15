@@ -21,13 +21,22 @@ public partial class EdgeArrows : Control
     /// </summary>
     const float Inset = 34f, Radius = 16f, Pointer = 8f, SlideIn = 0.55f, SettleWait = 0.35f;
 
+    /// <summary>
+    /// An emblem's size against Radius: smaller waiting at the edge, bigger on its place; and how long it takes to grow
+    /// or shrink between them (seconds, eased in and out).
+    /// </summary>
+    const float EdgeSize = 2f / 3f, OnSize = 4f / 3f, Grow = 0.3f;
+
+    /// <summary>Each place's way from its edge size (0) to its size on it (1), by where it is.</summary>
+    readonly Dictionary<System.Numerics.Vector2, float> _grown = new();
+
     /// <summary>Two places nearer than this (metres) share one emblem (the first: a request's mark over a mouth's own).</summary>
     const float Same = 1.5f;
 
     static readonly Color Disc = new(0.03f, 0.045f, 0.07f, 0.62f), Ink = new(0.03f, 0.045f, 0.07f, 0.9f);
 
     readonly List<(System.Numerics.Vector2 At, Color Colour, string Sign)> _targets = new();
-    readonly List<(Vector2 At, Vector2 Way, Color Colour, string Sign, bool Off)> _shown = new();
+    readonly List<(Vector2 At, Vector2 Way, Color Colour, string Sign, bool Off, float Size)> _shown = new();
     /// <summary>0: in place; 1: slid out past the edges.</summary>
     float _out;
     /// <summary>Since she settled (−1: not sliding in).</summary>
@@ -110,8 +119,17 @@ public partial class EdgeArrows : Control
                 toEdge = Mathf.Max(0f, Mathf.Min(ex, ey));
             }
             place += way * _out * (toEdge + Inset + Radius * 2f + Pointer + 8f);
-            _shown.Add((place, way, colour, sign, off));
+            // Growing as its place comes on the screen, shrinking as it leaves.
+            _grown.TryGetValue(at, out float grown);
+            grown = Mathf.MoveToward(grown, off ? 0f : 1f, dt / Grow);
+            _grown[at] = grown;
+            float grownSize = Mathf.Lerp(EdgeSize, OnSize, Mathf.SmoothStep(0f, 1f, grown));
+            _shown.Add((place, way, colour, sign, off, grownSize));
         }
+        // (Places gone forgotten.)
+        if (_grown.Count > _targets.Count)
+            foreach (var key in new List<System.Numerics.Vector2>(_grown.Keys))
+                if (!_targets.Exists(t => t.At == key)) _grown.Remove(key);
         QueueRedraw();
     }
 
@@ -119,8 +137,11 @@ public partial class EdgeArrows : Control
     {
         var font = ThemeDB.FallbackFont;
         const int fontSize = 22;
-        foreach (var (at, way, colour, sign, off) in _shown)
+        foreach (var (place, way, colour, sign, off, size) in _shown)
         {
+            // (Drawn about its middle at its size.)
+            DrawSetTransform(place, 0f, new Vector2(size, size));
+            var at = Vector2.Zero;
             // Off the screen: a small pointer on its ring, turned to it.
             if (off)
             {
@@ -143,5 +164,6 @@ public partial class EdgeArrows : Control
                 DrawString(font, pos, sign, HorizontalAlignment.Center, Radius * 2f, fontSize, colour);
             }
         }
+        DrawSetTransform(Vector2.Zero, 0f, Vector2.One);
     }
 }
