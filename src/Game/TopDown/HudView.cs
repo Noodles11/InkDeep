@@ -341,7 +341,8 @@ public partial class HudView : Control
         }
         SyncShells(dt);
         // Over the shaft: how to dive, or why not yet.
-        bool over = (world.OverShaft || LayerPrompt is not null) && !world.Defeated && !Diving;
+        // (No hint to dive over a hole: only the cube reef's word on what holds her.)
+        bool over = LayerPrompt is not null && !world.Defeated && !Diving;
         _promptAction = OctoShoots.Game.Controls.InputSetup.Dive;
         if (LayerPrompt is { } layer)
         {

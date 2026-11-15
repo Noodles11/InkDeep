@@ -211,7 +211,7 @@ different visual channel, so they can never be confused.
   her light always flies her full range.
 - **Key hints follow the device in use** (`InputSetup.UsingPad`, `InputSetup.Hint`): the last input decides (the
   title's carries into the run). Every hint names the action's own binding on that device, as set in Settings: the
-  dive cap over the shaft (SHIFT, or the controller's dive button: LB, RB, X…), the splash's prompt (Enter or click,
+  the splash's prompt (Enter or click,
   else the menu's confirm and back buttons), Resume in the pause menu (Esc, else the pause and back buttons), the
   pause menu's tab buttons (LB and RB, shown only on a controller), and the title cards' Close (Esc, else the back button).
   - *Critical:* at a quarter or less, the last ring's light pulses slowly in and
@@ -1210,7 +1210,7 @@ The FP staging ("look up through the surface") is replaced:
   stick scrolls the list.
 - **Minimap**: circular, top-right, rotates so forward is up (inherited); fog of
   war; landmark icons (inherited §27); the map shows your floor only.
-- **Tab map**: full floor, legend, crater-accurate (inherited §26).
+- **No Tab map**: Tab (Select) opens no map of the level.
 - **Item captions**: name, tagline, one line per effect with numbers (inherited
   §29). No comic onomatopoeia (retired with the comic look); neon event
   language inherited (§11.3 glow events as light, not text).

@@ -3726,8 +3726,8 @@ public partial class TopDownMain : Node3D
             _debugPanel.Visible = _debugMap.Visible;
         }
         _f3Latched = f3;
-        // The whole level's map (Tab / Select): in the adventure only with Sea Chart Nautilus, as the minimap.
-        if (!OS.GetCmdlineUserArgs().Contains("--map")) _fullMap.Visible = Input.IsActionPressed(InputSetup.Review) && !typing && HasMap;
+        // No whole level's map under Tab / Select (verification only: --map).
+        if (!OS.GetCmdlineUserArgs().Contains("--map")) _fullMap.Visible = false;
     }
 
     /// <summary>

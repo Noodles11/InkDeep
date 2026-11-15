@@ -240,7 +240,7 @@ rules below means a claim.
 
 ## 7. Diving and climbing
 
-- **Where:** §3's rule. Over a spot that allows it the HUD's dive prompt shows, as over a hole today.
+- **Where:** §3's rule. No hint shows over a spot that allows it.
 - **Controls:** down and up on the controller's d-pad dive and climb; on the keyboard Shift dives and Q climbs (the
   bindings Dive and Climb).
 - **Cooldown:** 30 s after any change of layer before the next, either way. The prompt shows the time left.

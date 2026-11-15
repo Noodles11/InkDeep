@@ -113,8 +113,8 @@ the reef was never being called home. It was being kept.
 - **Its life**: healthy reef fish (clownfish in anemones, blue tangs, schools of chromis, pufferfish, flounders) going
   about their day; the ink never turns them; currents and geysers; the reef director that keeps the reef acting when she is not
   there.
-- **Where she is shown**: no minimap; emblems mark the places round her (locked on each entrance once it is on the screen, waiting at the screen's edge till then), the Tab map
-  shows the whole layer under fog, the chart her layer's claimed cubes.
+- **Where she is shown**: no minimap; emblems mark the places round her (locked on each entrance once it is on the screen, waiting at the screen's edge till then); there is no
+  map under Tab; the pause menu's chart shows her layer's claimed cubes.
 
 ## 6. The corrupted
 

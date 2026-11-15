@@ -28,7 +28,8 @@ levels one after another: the layers are the depths.
   boss. Veterans dive straight through it. (There is no tutorial level.)
 - **Diving and climbing** (CUBE-WORLD-PLAN §7): Shift or the d-pad's down over the void, Q or its up under a well of
   the layer above (only one layer above the deepest she has reached). Thirty seconds between changes of layer, and no
-  diving again within 32 m of where she arrived. The HUD's prompt says how, or why not yet.
+  diving again within 32 m of where she arrived. No hint shows for it (nor why not yet); only as she
+  tries to go back the HUD says what holds her.
 - **Currents** (§8): a gentle drift leads her toward cubes she has not been in; crossing into a cube shuts the edge she
   crossed before that one with a current she cannot swim against, for as long as she is on the layer.
 

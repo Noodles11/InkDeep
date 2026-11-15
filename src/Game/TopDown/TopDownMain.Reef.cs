@@ -402,20 +402,8 @@ public partial class TopDownMain
         if (_up is LayerBlock.None or LayerBlock.Cooldown && InArena(p, _layer) && _world.Boss is { Freed: false }) _up = LayerBlock.NoWay;
         _hoverDown = _down is LayerBlock.None or LayerBlock.Cooldown ? _hoverDown + dt : 0f;
         _hoverUp = _up is LayerBlock.None or LayerBlock.Cooldown ? _hoverUp + dt : 0f;
-        string wait = $"{Mathf.Ceil(_cubeDiving.CooldownLeft):0} s";
-        _hud.LayerPrompt = _heldShown > 0f ? (_world.BossBattle ? "The arena is sealed till the fight is over" : "A current holds the way back", false, InputSetup.Dive)
-            : _down switch
-            {
-                LayerBlock.None => ("dive", true, InputSetup.Dive),
-                LayerBlock.Cooldown => ($"Dive in {wait}", false, InputSetup.Dive),
-                LayerBlock.TooNear => ("Too near where you came down: swim on to dive again", false, InputSetup.Dive),
-                _ => _up switch
-                {
-                    LayerBlock.None => ("climb", true, InputSetup.Climb),
-                    LayerBlock.Cooldown => ($"Climb in {wait}", false, InputSetup.Climb),
-                    _ => null,
-                },
-            };
+        // No hint to dive or climb (nor why not yet): only, as she tries to go back, what holds her.
+        _hud.LayerPrompt = _heldShown > 0f ? (_world.BossBattle ? "The arena is sealed till the fight is over" : "A current holds the way back", false, InputSetup.Dive) : null;
         bool downKey = Input.IsActionPressed(InputSetup.Dive) || _autoDive && _down == LayerBlock.None && !(_cubeBoss && _world.Boss is { Freed: false });
         bool upKey = Input.IsActionPressed(InputSetup.Climb);
         bool begun = false;
