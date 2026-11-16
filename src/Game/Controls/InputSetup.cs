@@ -62,8 +62,9 @@ public static class InputSetup
 		new(Beam, "Shine the beam (hold)", "mouse:Left", "axis:TriggerRight:+"),
 		new(Dash, "Dash", "key:Space", "axis:TriggerLeft:+"),
 		new(Glow, "Glow on / off (dark, beam off: unseen)", "key:Ctrl", "button:RightShoulder"),
-		new(Dive, "Dive to the layer below", "key:Shift", "button:DpadDown"),
-		new(Climb, "Climb to the layer above", "key:Q", "button:DpadUp"),
+		// (The arrows ↓ and ↑, or the D-pad's: the keys kept, as the arrows also aim.)
+		new(Dive, "Dive to the layer below", "key:Down", "button:DpadDown", KeyLocked: true),
+		new(Climb, "Climb to the layer above", "key:Up", "button:DpadUp", KeyLocked: true),
 		new(Active, "Use the active pearl (first slot)", "key:F", "button:Y"),
 		new(Review, "Level map (hold)", "key:Tab", "button:Back"),
 		// Esc always pauses (and cancels a rebind), so its key stays.
@@ -278,6 +279,9 @@ public static class InputSetup
 
 	// ───────────── saving ─────────────
 
+	/// <summary>A controller binding no longer used for its action (diving on LB): its default instead.</summary>
+	static string? Retired(string action, string? pad) => action == Dive && pad == "button:LeftShoulder" ? SpecOf(action).Pad : pad;
+
 	static void Load()
 	{
 		Current.Clear();
@@ -289,7 +293,7 @@ public static class InputSetup
 			if (saved is null) return;
 			foreach (var (action, slots) in saved)
 				if (Bindable.Any(s => s.Action == action) && slots.Length == 2)
-					Current[action] = (SpecOf(action).KeyLocked ? SpecOf(action).Key : slots[0], slots[1]);
+					Current[action] = (SpecOf(action).KeyLocked ? SpecOf(action).Key : slots[0], Retired(action, slots[1]));
 		}
 		catch (Exception e)
 		{

@@ -16,8 +16,8 @@ namespace OctoShoots.Game.TopDown;
 /// A dive in the cube reef (docs/proposals/CUBE-WORLD-PLAN.md §15.1): one continuous reef of layers, each a level as the
 /// game's systems see it (CubeReef stitches its cubes into one map), its rock drawn as it streams in round her
 /// (ReefStream, ReefStreamView). She claims the cubes she swims into, the wake current shuts the edge behind the one she
-/// came by, the frontier drift leads her on to new water; over the void she dives to the layer below (Shift, the
-/// d-pad's down), under a well of the layer above she climbs back (Q, the d-pad's up), the game's dive played either way.
+/// came by, the frontier drift leads her on to new water; over the void she dives to the layer below (↓, the
+/// d-pad's down), under a well of the layer above she climbs back (↑, the d-pad's up), the game's dive played either way.
 /// The cube reef is the one game: every dive is in it.
 /// </summary>
 public partial class TopDownMain

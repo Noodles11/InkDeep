@@ -276,8 +276,8 @@ rules below means a claim.
 ## 7. Diving and climbing
 
 - **Where:** §3's rule. No hint shows over a spot that allows it.
-- **Controls:** down and up on the controller's d-pad dive and climb; on the keyboard Shift dives and Q climbs (the
-  bindings Dive and Climb).
+- **Controls:** down and up on the controller's d-pad dive and climb, and on the keyboard the arrows ↓ and ↑ (the
+  bindings Dive and Climb; the keys fixed, as the arrows also aim).
 - **Cooldown:** 30 s after any change of layer before the next, either way. The prompt shows the time left.
 - **No chain dives:** after arriving, she may not dive within S / 2 (32 m) of where she arrived. If no reachable
   spot in her cube is that far (a small sealed pocket), the limit shrinks to 80% of the distance of the farthest

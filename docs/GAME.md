@@ -71,7 +71,7 @@ the reef was never being called home. It was being kept.
   squares laid in two-square cubes, each cube made only as she swims near it and always matching those round it. The layers are slices of one
   body (stacked noise maps blended down the depths): each carries on the caverns and walls of the one above, and most
   ways through its walls are roofed openings rather than clefts open to the top. Over the void she dives to the
-  layer below (Shift, the d-pad's down); under a well of the layer above she climbs back one layer (Q, its up); thirty
+  layer below (↓, the d-pad's down); under a well of the layer above she climbs back one layer (↑, its up); thirty
   seconds between changes of layer. A gentle drift leads her to cubes she has not been in, and the edge behind the one
   she came by is shut by a current she cannot swim against.
 - **The warm-up layer**, the Sunlit Shallows: bright, no creatures, no curse rooms, no boss; where a new jelly learns,

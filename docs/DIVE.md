@@ -47,7 +47,7 @@ levels one after another: the layers are the depths.
   near-black, so the reef never ends in a cut edge with the water or the layer below showing past it.
 - **The warm-up layer** (layer 0) is where she learns: bright, its menace low, no creatures, no curse rooms and no
   boss. Veterans dive straight through it. (There is no tutorial level.)
-- **Diving and climbing** (CUBE-WORLD-PLAN §7): Shift or the d-pad's down over the void, Q or its up under a well of
+- **Diving and climbing** (CUBE-WORLD-PLAN §7): ↓ (the arrow key) or the d-pad's down over the void, ↑ or its up under a well of
   the layer above (only one layer above the deepest she has reached). Thirty seconds between changes of layer, and no
   diving again within 32 m of where she arrived. No hint shows for it (nor why not yet); only as she
   tries to go back the HUD says what holds her.

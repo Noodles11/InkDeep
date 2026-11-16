@@ -679,7 +679,7 @@ public partial class HudView : Control
         {
             float a = _promptShown;
             const int fs = 18;
-            // The key cap: whatever dive is bound to on the device in use (RB on a controller, SHIFT on the keyboard…).
+            // The key cap: whatever dive is bound to on the device in use (the d-pad's down on a controller, ↓ on the keyboard).
             string key = OctoShoots.Game.Controls.InputSetup.Hint(_promptAction);
             var ks = font.GetStringSize(key, HorizontalAlignment.Left, -1, 14);
             var ws = font.GetStringSize(_prompt, HorizontalAlignment.Left, -1, fs);

@@ -21,7 +21,7 @@ namespace OctoShoots.Game.TopDown;
 /// The top-down game (DESIGN-TOPDOWN), current pass: generate a level from a seed, show it, and swim it; over the level's
 /// shaft, Shift dives down into the next one, which has been readied underneath meanwhile (§4.6). Opened from the title
 /// screen (RunLaunch); run directly with verification flags, it starts a run on its own and saves nothing.
-/// WASD swims (north is up), Space dashes, Shift dives (InputSetup), the mouse aims, F1 opens the debug menu (any
+/// WASD swims (north is up), Space dashes, ↓ dives (InputSetup), the mouse aims, F1 opens the debug menu (any
 /// level, any pearls), F3 toggles the debug map, R regenerates from the seed field.
 /// Verification flags: --seed=, --cycle=, --depth=, --level=, --at=start|arch|arch-near|cave|exit|hole|kelp|shop|shop-out|cache|cache-near|secret|secret-in|treasure|treasure-out|clam-pearl|mob|boss|spring|spring-in,
 /// --autopilot, --dive (dives whenever it can), --dbg-pad (on the controller from the start), --calm (no creatures), --fire, --pearls=, --hp=, --luck=, --boss-hp=, --paused, --map, --f3, --no-focus, --dbg-nofog (no floor fog),
@@ -2996,7 +2996,7 @@ public partial class TopDownMain : Node3D
         int left = _world.Mobs.Count(m => m.Alive);
         _info.Text = $"{_id} · mobs {left}/{_world.Mobs.Count} · pearls {_run!.Items.Count}   attempt {_map.Attempt + 1}   pos {p.Position.X:0.0}, {p.Position.Y:0.0}   " +
                      $"{Engine.GetFramesPerSecond():0} FPS" +
-                     "\nWASD swim · Space dash · hold the left mouse or arrows to shine · Shift over a hole dives · Tab map · Esc pause · F1 debug menu · F3 debug map · R regenerate";
+                     "\nWASD swim · Space dash · hold the left mouse or arrows to shine · ↓ over the void dives · Tab map · Esc pause · F1 debug menu · F3 debug map · R regenerate";
         Capture();
     }
 
