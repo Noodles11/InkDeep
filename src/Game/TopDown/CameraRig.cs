@@ -27,15 +27,15 @@ public partial class CameraRig : Node3D
         camera.Projection == Camera3D.ProjectionType.Orthogonal ? camera.Size : 2f * distance * Mathf.Tan(Mathf.DegToRad(camera.Fov) * 0.5f);
     /// <summary>
     /// Distance from the followed point while the reef is calm: ~36 m of ground top to bottom and ~54 m across at 16:9,
-    /// about a tenth of a 140 m level (docs/DIVE.md §3). In a fight the camera draws in (FightZoom).
+    /// about a tenth of a 140 m level (docs/DIVE.md §3). It holds there with creatures round her; only a boss's arena
+    /// draws it in (BossZoom).
     /// </summary>
     public const float Distance = 55f;
     /// <summary>
-    /// In a fight (the corrupted near her, PlaneWorld.Calm false) the camera draws in to this share of its distance
-    /// (38 m), and to BossZoom in a boss's arena (the whole arena stays in view); it eases in at ZoomIn a second and
-    /// back out, slower, at ZoomOut.
+    /// In a boss's battle the camera draws in to this share of its distance (47 m: the whole arena stays in view); it
+    /// eases in at ZoomIn a second and back out, slower, at ZoomOut.
     /// </summary>
-    public const float FightZoom = 0.69f, BossZoom = 0.85f, ZoomIn = 0.5f, ZoomOut = 0.18f;
+    public const float BossZoom = 0.85f, ZoomIn = 0.5f, ZoomOut = 0.18f;
     const float Follow = 6f;
     /// <summary>The zoom: fixed for players at 1 (55 m); the debug menu alone moves it, from 0.5 (farther) to 2 (closer).</summary>
     public const float DefaultZoom = 1f, MinZoom = 0.5f, MaxZoom = 2f;
@@ -53,13 +53,13 @@ public partial class CameraRig : Node3D
     public Camera3D Camera { get; private set; } = null!;
     /// <summary>The dive pulls the camera in (1 is the usual distance).</summary>
     public float Zoom { get; set; } = 1f;
-    /// <summary>The fight's draw-in (1 calm, FightZoom in a fight), eased by Tense.</summary>
+    /// <summary>The boss battle's draw-in (1 otherwise, BossZoom in it), eased by Tense.</summary>
     public float Close { get; private set; } = 1f;
 
-    /// <summary>Eases the fight's draw-in toward its mark: in quickly as danger nears, out slowly once it is calm.</summary>
-    public void Tense(bool fight, bool boss, float dt)
+    /// <summary>Eases the boss battle's draw-in toward its mark: in quickly as it begins, out slowly once it is over.</summary>
+    public void Tense(bool boss, float dt)
     {
-        float to = boss ? BossZoom : fight ? FightZoom : 1f;
+        float to = boss ? BossZoom : 1f;
         Close = Mathf.MoveToward(Close, to, dt * (to < Close ? ZoomIn : ZoomOut));
     }
     Vector3 _focus;

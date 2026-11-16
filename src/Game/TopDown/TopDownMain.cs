@@ -3087,7 +3087,8 @@ public partial class TopDownMain : Node3D
         _camera.Zoom = Mathf.Lerp(1f, MenuZoom, framing);
         // In a fight the camera draws in on her (and so tells her of danger near that she cannot see yet); calm, it
         // stands back again. Not in a haven, nor while the pause menu frames her.
-        _camera.Tense(!Paused && !_world.Calm && !_world.Defeated && _world.Time > ExperienceTuning.CalmSeconds + 0.5f, _world.Boss is { Stage: BossStage.Fight }, dt);
+        // (Creatures round her never draw the camera in: only a boss's battle does.)
+        _camera.Tense(_world.Boss is { Stage: BossStage.Fight }, dt);
         // Dashing, the camera leads a little the way she dashes (quickly), and eases back once she is through.
         var dasher = _world.Player;
         var dashTo = dasher.IsDashing && dasher.Velocity.LengthSquared() > 0.01f && !Paused
