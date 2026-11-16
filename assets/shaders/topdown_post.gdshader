@@ -125,6 +125,13 @@ uniform vec2 current_flows[6];
 uniform int current_count = 0;
 // How many metres a side the currents' map covers (the level's size).
 uniform float current_span = 110.0;
+// The wakes of everything that swims (WakeField): a map round her, each cell the way the water is pushed there (rg, 0.5
+// none) and how hard; its corner (world x, z) and metres a side.
+uniform sampler2D wake_map : filter_linear, repeat_disable;
+uniform vec2 wake_origin = vec2(0.0);
+uniform float wake_span = 64.0;
+uniform float wake_on = 0.0;
+uniform vec2 current_origin = vec2(0.0);
 // The leaks (AdventureView): where each is on her plane (x, z) and how open (0..1).
 uniform vec3 leaks[8];
 uniform int leak_count = 0;
@@ -393,7 +400,8 @@ void fragment() {
 	// the currents' shimmer (CurrentView): the picture wavers, bent by eddies of denser water boiling as they go, and is
 	// shoved outward along the ring; the water thickens a shade where it passes. No surface ripple, no lines.
 	float swell_density = 0.0;
-	if (swell_count > 0 || current_count > 0 || leak_count > 0) {
+	float wake_glint = 0.0;
+	if (swell_count > 0 || current_count > 0 || leak_count > 0 || wake_on > 0.5) {
 		vec3 cam, ray;
 		view_ray(uv, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX, cam, ray);
 		vec3 sp = cam + ray * ((swim_level + 0.4 - cam.y) / min(ray.y, -1e-3));
@@ -456,6 +464,20 @@ void fragment() {
 				vec2 cbend = vec2(ca - 0.5, cb - 0.5) + (cfine - 0.5) * vec2(0.55, -0.55);
 				float cmask = cm.b * flow.y * mix(0.35, 1.0, smoothstep(0.25, 0.7, cbig));
 				suv += cbend * 0.5 * cmask / 25.6 * vec2(VIEWPORT_SIZE.y / VIEWPORT_SIZE.x, 1.0);
+			}
+		}
+		// The wakes: as the currents' water, the picture wavers along each arm of a body's V, pushed out from its way and
+		// boiling with the eddies; no lines, no colour.
+		if (wake_on > 0.5) {
+			vec2 wuv = (sp.xz - wake_origin) / wake_span;
+			if (wuv.x > 0.0 && wuv.y > 0.0 && wuv.x < 1.0 && wuv.y < 1.0) {
+				vec2 push = texture(wake_map, wuv).rg * 2.0 - 1.0;
+				float wk = length(push);
+				if (wk > 0.01) {
+					suv += (push * 0.7 + eddy * wk * 1.6) * 0.9 / 25.6 * vec2(VIEWPORT_SIZE.y / VIEWPORT_SIZE.x, 1.0);
+					// (The disturbed water catching the light a shade, patchy as the eddies boil.)
+					wake_glint = wk * smoothstep(0.35, 0.75, value_noise(sp.xz * 2.2 + eddy * 3.0 + vec2(TIME * 1.3, -TIME)));
+				}
 			}
 		}
 	}
@@ -575,6 +597,8 @@ void fragment() {
 	col = mix(col, reef_water_deep, hole_deep);
 	// Her swells thicken the water a shade where they pass.
 	col = mix(col, reef_water_deep, clamp(swell_density, 0.0, 1.0) * 0.05);
+	// The wakes: a faint shimmer of light along each arm.
+	col += vec3(0.9, 1.0, 1.0) * wake_glint * 0.06 * (0.4 + dot(col, vec3(0.3, 0.5, 0.2)));
 
 	// Her glow lands on the floor (DESIGN-TOPDOWN §5): in daylight bioluminescence reads not as brightness but as a
 	// warm tint on what is near, and as shadow contrast. A broad warm pool (her_glow.w metres, showing on pale sand
