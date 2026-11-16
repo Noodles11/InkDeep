@@ -13,6 +13,13 @@ namespace OctoShoots.Core.Tests;
 /// <summary>A layer of the reef as the game's map (CUBE-WORLD-PLAN §15.1): the cubes' own rock, read as a level's.</summary>
 public class CubeReefTests
 {
+    /// <summary>A layer's map with every cube of the window made and laid on it (the game lays them as she comes near).</summary>
+    public static LevelMap Whole(CubeReef reef, int z)
+    {
+        System.Threading.Tasks.Parallel.ForEach(reef.Space.CubesOf(z).ToList(), c => reef.Terrain(c));
+        return reef.Layer(z, reef.Start);
+    }
+
     [Theory]
     [MemberData(nameof(CubeTerrainTests.Seeds), MemberType = typeof(CubeTerrainTests))]
     public void A_layers_map_is_its_cubes_rock(ulong seed)
@@ -20,7 +27,7 @@ public class CubeReefTests
         var reef = new CubeReef(seed, 5, 3);
         for (int z = 0; z < 2; z++)
         {
-            var map = reef.Layer(z, reef.Start);
+            var map = CubeReefTests.Whole(reef, z);
             Assert.Equal(5 * Side, map.Size);
             var field = new CubeField(reef.Made, CellCoord.Of(reef.Start, z), 5);
             var rng = new System.Random((int)seed + z);
@@ -40,10 +47,33 @@ public class CubeReefTests
 
     [Theory]
     [MemberData(nameof(CubeTerrainTests.Seeds), MemberType = typeof(CubeTerrainTests))]
+    public void A_layer_holds_only_the_cubes_made_and_each_is_laid_on_it_as_it_is_made(ulong seed)
+    {
+        var reef = new CubeReef(seed, Window, 3);
+        var map = reef.Layer(1, reef.Start);
+        // Nothing of layer 1 made yet: all of it rock.
+        var here = CubeId.Of(reef.Start, 1);
+        Assert.Empty(reef.LaidOn(1));
+        Assert.All(Enumerable.Range(0, 200), i => Assert.False(map.IsOpen(here.Origin + new Vector2(i % 20 * 3.1f, i / 20 * 6.1f))));
+        // Made (on any thread), then settled: on the map, as its own rock and water.
+        var t = reef.Terrain(here);
+        Assert.Equal(new[] { here }, reef.Settle());
+        Assert.Equal(new[] { here }, reef.LaidOn(1));
+        Assert.Equal(t.HeightAt((int)here.Middle.X, (int)here.Middle.Y), map[(int)here.Middle.X, (int)here.Middle.Y]);
+        Assert.Contains(Enumerable.Range(0, 400), i => map.IsOpen(here.Origin + new Vector2(i % 20 * 3.1f, i / 20 * 6.1f)));
+        // A cube of the start's layer made since is laid on that layer's map once it is asked for, not on this one.
+        Assert.Empty(reef.Settle());
+        var top = reef.Layer(0, reef.Start);
+        Assert.Contains(CubeId.Of(reef.Start, 0), reef.LaidOn(0));
+        Assert.True(top.IsOpen(reef.Start));
+    }
+
+    [Theory]
+    [MemberData(nameof(CubeTerrainTests.Seeds), MemberType = typeof(CubeTerrainTests))]
     public void She_starts_in_open_water_on_a_world_of_the_layer(ulong seed)
     {
         var reef = new CubeReef(seed, 5, 3);
-        var map = reef.Layer(0, reef.Start);
+        var map = CubeReefTests.Whole(reef, 0);
         var world = new PlaneWorld(map, new Tuning(), options: new PlaneOptions { Corruption = false, InkMurklings = false });
         Assert.Equal(reef.Start, world.Player.Position);
         Assert.True(world.Clear(world.Player.Position, world.Radius));
@@ -57,7 +87,7 @@ public class CubeReefTests
 public class CubeStockTests
 {
     static PlaneWorld LayerWorld(CubeReef reef, int z) =>
-        new(reef.Layer(z, reef.Start), new Tuning(), options: new PlaneOptions { Corruption = false, InkMurklings = false, Reef = true });
+        new(CubeReefTests.Whole(reef, z), new Tuning(), options: new PlaneOptions { Corruption = false, InkMurklings = false, Reef = true });
 
     [Theory]
     [MemberData(nameof(CubeTerrainTests.Seeds), MemberType = typeof(CubeTerrainTests))]
@@ -120,7 +150,7 @@ public class CubeSocketTests
     public void Most_cubes_have_a_socket_whose_passage_she_can_swim_into(ulong seed)
     {
         var reef = new CubeReef(seed, 5, 2);
-        var map = reef.Layer(1, reef.Start);
+        var map = CubeReefTests.Whole(reef, 1);
         int cubes = 0, with = 0, sockets = 0;
         foreach (var cube in reef.Space.CubesOf(1))
         {
@@ -211,7 +241,7 @@ public class CubeArenaTests
     [MemberData(nameof(CubeTerrainTests.Seeds), MemberType = typeof(CubeTerrainTests))]
     public void The_arena_lies_away_from_her_and_every_gate_reaches_its_basin(ulong seed)
     {
-        var reef = new CubeReef(seed, 7, 3);
+        var reef = new CubeReef(seed, Window, 3);
         var director = new CubeDirector(seed);
         var arrival = CubeId.Of(reef.Start, 1);
         var arena = director.ArenaFor(reef.Space, arrival);
@@ -219,7 +249,7 @@ public class CubeArenaTests
         var a = arena!.Value;
         Assert.NotEqual(arrival, a);
         var plain = reef.Terrain(a);
-        var map = reef.Layer(1, reef.Start);
+        var map = CubeReefTests.Whole(reef, 1);
         reef.SetArena(a, map);
         var t = reef.Terrain(a);
         Assert.True(t.Arena);

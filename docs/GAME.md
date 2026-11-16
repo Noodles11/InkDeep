@@ -67,8 +67,8 @@ the reef was never being called home. It was being kept.
 
 - **A jelly is a save slot** (three on the title). Choosing one takes her dive up in the haven it was saved in, or
   starts a new one (DIVE §1).
-- **The cube reef** (DIVE §1; docs/proposals/CUBE-WORLD-PLAN.md): one continuous reef, layer under layer, each layer a
-  9 × 9 footprint of 64 m squares laid in two-square cubes and streamed in round her. The layers are slices of one
+- **The cube reef** (DIVE §1; docs/proposals/CUBE-WORLD-PLAN.md): one continuous reef, layer under layer, of 64 m
+  squares laid in two-square cubes, each cube made only as she swims near it and always matching those round it. The layers are slices of one
   body (stacked noise maps blended down the depths): each carries on the caverns and walls of the one above, and most
   ways through its walls are roofed openings rather than clefts open to the top. Over the void she dives to the
   layer below (Shift, the d-pad's down); under a well of the layer above she climbs back one layer (Q, its up); thirty

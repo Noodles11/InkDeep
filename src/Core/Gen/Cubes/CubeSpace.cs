@@ -36,73 +36,59 @@ public sealed class FloorSpec
 public readonly record struct CornerSpec(CornerId Id, float Radius);
 
 /// <summary>
-/// The cube world's plan (CUBE-WORLD-PLAN §4.1): from the seed alone, which cubes the reef holds and every edge's,
-/// corner's and floor's boundary conditions. Each layer's open edges hold a spanning tree of its cubes, so all of a layer
-/// joins up; the reef's rim is closed. Thread safe; what is kept is the reef's cubes and each layer's tree.
+/// The cube world's plan (CUBE-WORLD-PLAN §4.1): from the seed alone, every edge's, corner's and floor's boundary
+/// conditions, each from the seed and the id of the thing two or three cubes share, so any cube can be made by itself, in
+/// any order, and always matches its neighbours and the cubes over and under it. The reef runs on every way; a run reads
+/// it in a window of Window squares a side, outside which no cube is made and every edge is closed. Thread safe; it keeps
+/// only the edges it has worked out.
 /// </summary>
 public sealed class CubeSpace
 {
-    public CubeSpace(ulong seed, int footprint = CubeTuning.Footprint, int layers = CubeTuning.Layers)
+    public CubeSpace(ulong seed, int window = CubeTuning.Window, int layers = CubeTuning.Layers)
     {
         Seed = seed;
-        Footprint = footprint;
+        Window = window;
         Layers = layers;
-        _reef = Reef(footprint);
     }
 
     public ulong Seed { get; }
-    public int Footprint { get; }
+    public int Window { get; }
     public int Layers { get; }
 
-    /// <summary>
-    /// The reef's cubes on every layer (laid the same on each): those wholly within the footprint's squares, the largest
-    /// set of them joined by their sides. A square of the footprint whose cube is not one of them is rock.
-    /// </summary>
-    readonly HashSet<CubeId> _reef;
+    /// <summary>The square in the window's middle (where a run begins).</summary>
+    public CellCoord Middle(int z) => new(Window / 2, Window / 2, z);
 
-    /// <summary>The reef's cubes of one layer.</summary>
-    public IEnumerable<CubeId> CubesOf(int z)
+    /// <summary>A cube is in the window when both its squares are.</summary>
+    public bool Inside(CubeId c) => InWindow(c.First) && InWindow(c.Second);
+
+    /// <summary>A square is the reef's when its cube is in the window (a square of the window whose cube sticks out is rock).</summary>
+    public bool Inside(CellCoord c) => Inside(CubeId.Of(c));
+
+    bool InWindow(CellCoord c) => c.Z >= 0 && c.Z < Layers && c.X >= 0 && c.Y >= 0 && c.X < Window && c.Y < Window;
+
+    /// <summary>Every cube of the window on layer <paramref name="z"/> (for tests and tools: the game makes only those she comes near).</summary>
+    public IEnumerable<CubeId> CubesOf(int z) => CubesNear(new CellCoord(Window / 2, Window / 2, z), Window);
+
+    /// <summary>The cubes of layer <paramref name="z"/> with a square within <paramref name="reach"/> squares of <paramref name="center"/> (inside the window).</summary>
+    public IEnumerable<CubeId> CubesNear(CellCoord center, int reach)
     {
-        foreach (var c in _reef) yield return c.OnLayer(z);
-    }
-
-    public bool Inside(CubeId c) => c.Z >= 0 && c.Z < Layers && _reef.Contains(c.OnLayer(0));
-
-    public bool Inside(CellCoord c) => c.Z >= 0 && c.Z < Layers && _reef.Contains(CubeId.Of(c with { Z = 0 }));
-
-    static HashSet<CubeId> Reef(int footprint)
-    {
-        bool InSquare(CellCoord c) => c.X >= 0 && c.Y >= 0 && c.X < footprint && c.Y < footprint;
-        var whole = new HashSet<CubeId>();
-        for (int y = 0; y < footprint; y++)
-        for (int x = 0; x < footprint; x++)
-        {
-            var cube = CubeId.Of(new CellCoord(x, y, 0));
-            if (InSquare(cube.First) && InSquare(cube.Second)) whole.Add(cube);
-        }
-        var best = new HashSet<CubeId>();
         var seen = new HashSet<CubeId>();
-        foreach (var from in whole)
+        for (int y = center.Y - reach; y <= center.Y + reach; y++)
+        for (int x = center.X - reach; x <= center.X + reach; x++)
         {
-            if (!seen.Add(from)) continue;
-            var part = new HashSet<CubeId> { from };
-            var todo = new Queue<CubeId>(part);
-            while (todo.Count > 0)
-                foreach (var (_, _, across) in todo.Dequeue().Outer())
-                {
-                    var next = CubeId.Of(across);
-                    if (!whole.Contains(next) || !seen.Add(next)) continue;
-                    part.Add(next);
-                    todo.Enqueue(next);
-                }
-            if (part.Count > best.Count) best = part;
+            var c = CubeId.Of(new CellCoord(x, y, center.Z));
+            if (Inside(c) && seen.Add(c)) yield return c;
         }
-        return best;
     }
 
     public uint NoiseSeed(int use) => ReefHash.NoiseSeed(Seed, use);
 
-    public EdgeSpec Edge(EdgeId id)
+    /// <summary>The edges worked out so far (each is a function of the seed and its id alone, read many times a frame).</summary>
+    readonly ConcurrentDictionary<EdgeId, EdgeSpec> _edges = new();
+
+    public EdgeSpec Edge(EdgeId id) => _edges.GetOrAdd(id, MakeEdge);
+
+    EdgeSpec MakeEdge(EdgeId id)
     {
         var rng = ReefHash.Rng(Seed, ReefHash.Edge, id.X, id.Y, id.Z, (int)id.Axis);
         // (Every draw made whatever the edge turns out to be, so each one means the same on every edge.)
@@ -113,8 +99,9 @@ public sealed class CubeSpace
         // (Its wall's shape is its line's at every depth, read at the layer's depth: CubeTerrain.SharedNear.)
         uint wall = (uint)(ReefHash.Of(Seed, ReefHash.Edge, id.X, id.Y, -1, (int)id.Axis) >> 32);
         // (Between the two squares of one cube there is no edge to speak of: its water runs across.)
-        bool inside = Inside(id.Low) && Inside(id.High) && CubeId.Of(id.Low) != CubeId.Of(id.High);
-        bool open = inside && (TreeOf(id.Z).Contains(id) || extra < EdgeOpenExtra);
+        bool inside = Inside(CubeId.Of(id.Low)) && Inside(CubeId.Of(id.High)) && CubeId.Of(id.Low) != CubeId.Of(id.High);
+        // Open by its own chance; or, should a cube beside it be left with none, the one of that cube's edges likeliest to be.
+        bool open = inside && (extra < EdgeOpen || Forced(CubeId.Of(id.Low)) == id || Forced(CubeId.Of(id.High)) == id);
         var gates = new List<Gate>();
         if (open)
         {
@@ -185,43 +172,31 @@ public sealed class CubeSpace
 
     static float Between(float lo, float hi, float t) => lo + (hi - lo) * t;
 
-    readonly ConcurrentDictionary<int, HashSet<EdgeId>> _trees = new();
+    /// <summary>An edge's own chance of being open (Edge's first draw).</summary>
+    float Chance(EdgeId id) => ReefHash.Rng(Seed, ReefHash.Edge, id.X, id.Y, id.Z, (int)id.Axis).NextFloat();
 
-    /// <summary>A layer's spanning tree of its cubes (Kruskal over the edges between them, in a seeded order).</summary>
-    HashSet<EdgeId> TreeOf(int z) => _trees.GetOrAdd(z, layer =>
+    /// <summary>
+    /// Should none of a cube's edges (to cubes in the window) be open by its own chance, the one nearest to being: so no
+    /// cube is ever shut in. Null: it has one open already, or none to open.
+    /// </summary>
+    EdgeId? Forced(CubeId cube)
     {
-        var cubes = new List<CubeId>(CubesOf(layer));
-        cubes.Sort((a, b) => a.Y != b.Y ? a.Y.CompareTo(b.Y) : a.X.CompareTo(b.X));
-        var index = new Dictionary<CubeId, int>();
-        for (int i = 0; i < cubes.Count; i++) index[cubes[i]] = i;
-        var edges = new List<EdgeId>();
-        foreach (var cube in cubes)
-        foreach (var (edge, inside, across) in cube.Outer())
-            if (edge.Low == inside && index.ContainsKey(CubeId.Of(across))) edges.Add(edge);
-        edges.Sort((a, b) => a.Y != b.Y ? a.Y.CompareTo(b.Y) : a.X != b.X ? a.X.CompareTo(b.X) : a.Axis.CompareTo(b.Axis));
-        var rng = ReefHash.Rng(Seed, ReefHash.Layer, layer);
-        for (int i = edges.Count - 1; i > 0; i--)
+        if (!Inside(cube)) return null;
+        EdgeId? best = null;
+        float least = float.MaxValue;
+        foreach (var (edge, _, across) in cube.Outer())
         {
-            int j = rng.Int(i + 1);
-            (edges[i], edges[j]) = (edges[j], edges[i]);
+            if (!Inside(CubeId.Of(across))) continue;
+            float chance = Chance(edge);
+            if (chance < EdgeOpen) return null;
+            if (chance < least)
+            {
+                least = chance;
+                best = edge;
+            }
         }
-        var parent = new int[cubes.Count];
-        for (int i = 0; i < parent.Length; i++) parent[i] = i;
-        int Find(int i)
-        {
-            while (parent[i] != i) i = parent[i] = parent[parent[i]];
-            return i;
-        }
-        var tree = new HashSet<EdgeId>();
-        foreach (var e in edges)
-        {
-            int a = Find(index[CubeId.Of(e.Low)]), b = Find(index[CubeId.Of(e.High)]);
-            if (a == b) continue;
-            parent[a] = b;
-            tree.Add(e);
-        }
-        return tree;
-    });
+        return best;
+    }
 }
 
 /// <summary>A layer's slice of a stacked field: its four maps' seeds and its weights on them (their squares summing to 1).</summary>

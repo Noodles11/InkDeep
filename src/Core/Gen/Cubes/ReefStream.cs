@@ -45,8 +45,9 @@ public struct StreamFocus
 
 /// <summary>
 /// The world-streaming manager (CUBE-WORLD-PLAN §5.2), core side, on the main thread: from where she is, which cubes
-/// are wanted in which state; the work missing for them, handed to the worker most needed first (her cube, the cubes she
-/// can reach, those she can see, the layer below, the layer above, the cube ahead) and a few at a time; finished work
+/// are wanted in which state (her cube; the cubes through its open gates; the cube under hers, and over it while she may
+/// climb; the cube past a gate she heads for; nothing else); the work missing for them, handed to the worker most needed
+/// first and a few at a time; finished work
 /// kept or, if no longer wanted, thrown away; and what is no longer wanted let go only after it has been unwanted for
 /// UnloadDelay and while nothing pins it. The view follows <see cref="Changes"/>.
 /// </summary>
@@ -58,6 +59,8 @@ public sealed class ReefStream
     public const int MaxInFlight = 2;
     /// <summary>How near a gate she must be, heading for it, for the cube beyond its far side to be made early.</summary>
     public const float PredictReach = 20f;
+    /// <summary>How far from her a gate can be seen (the camera's view, tilted, reaches about this far): the cube past one is drawn.</summary>
+    public const float ViewReach = 50f;
 
     readonly CubeSpace _space;
     readonly ICubeWorker _worker;
@@ -224,16 +227,24 @@ public sealed class ReefStream
         _rank.Clear();
         var cell = CellCoord.Of(f.Position, f.Layer);
         var here = CubeId.Of(cell);
-        // Rank: the order work is done in (lower first): her cube, those she can reach, those she sees, below, above, ahead.
+        // Rank: the order work is done in (lower first): her cube, those through its gates, below, above, ahead.
         Mark(here, CubeState.Active, 0);
         foreach (var (edge, inside, across) in here.Outer())
         {
             var spec = _space.Edge(edge);
             var next = CubeId.Of(across);
-            bool reach = spec.Open && !(f.Shut?.Invoke(edge) ?? false);
-            Mark(next, reach ? CubeState.Preloaded : CubeState.Preview, reach ? 1 : 2);
-            if (!reach) continue;
-            // The cube past the square beyond, made early when she heads for a gate into it.
+            // (Only the cubes its open gates lead to: a cube behind a closed edge is never made for her.)
+            if (!spec.Open || (f.Shut?.Invoke(edge) ?? false)) continue;
+            Mark(next, CubeState.Preloaded, 1);
+            // Its own gates in view of her: the cube each leads to drawn too, so no water she can see ends at a line.
+            foreach (var (e2, _, a2) in next.Outer())
+            {
+                var past = CubeId.Of(a2);
+                if (past == here || !_space.Edge(e2).Open || (f.Shut?.Invoke(e2) ?? false)) continue;
+                foreach (var g2 in _space.Edge(e2).Gates)
+                    if (Vector2.Distance(e2.Point(g2.Along, 0f), f.Position) <= ViewReach) Mark(past, CubeState.Preview, 5);
+            }
+            // The cube past the square beyond, made early when she heads for a gate into it (and a gate leads on into it).
             foreach (var gate in spec.Gates)
             {
                 var at = edge.Point(gate.Along, 0f);
@@ -241,27 +252,34 @@ public sealed class ReefStream
                 if (Vector2.Dot(f.Velocity, at - f.Position) <= 0f) continue;
                 var beyond = CubeId.Of(new CellCoord(2 * across.X - inside.X, 2 * across.Y - inside.Y, here.Z));
                 if (beyond == next) beyond = CubeId.Of(new CellCoord(3 * across.X - 2 * inside.X, 3 * across.Y - 2 * inside.Y, here.Z));
-                Mark(beyond, CubeState.Preview, 6);
+                // (Only through a gate of the cube between.)
+                bool through = false;
+                foreach (var (e2, _, a2) in next.Outer())
+                    if (CubeId.Of(a2) == beyond && _space.Edge(e2).Open) through = true;
+                if (through) Mark(beyond, CubeState.Preview, 6);
             }
         }
-        // The squares round hers (as far as the view reaches), their cubes; under them, and over them.
-        for (int dy = -1; dy <= 1; dy++)
-        for (int dx = -1; dx <= 1; dx++)
+        // The cube under hers (every layer is laid the same: the one she lands in should she dive), seen through her
+        // void; readied in full when a dive may come. Over hers, while she may climb, only to know where she may.
+        var under = here.OnLayer(here.Z + 1);
+        Mark(under, f.ReadyBelow ? CubeState.Preloaded : CubeState.Below, f.ReadyBelow ? 0 : 3);
+        if (f.ReadyBelow) Through(under, f.Shut);
+        if (f.Climbable)
         {
-            var near = new CellCoord(cell.X + dx, cell.Y + dy, cell.Z);
-            Mark(CubeId.Of(near), CubeState.Preview, 2);
-            // (A dive or a climb coming: the layer she will arrive on readied in full, the cube she lands in first.)
-            Mark(CubeId.Of(near with { Z = cell.Z + 1 }), f.ReadyBelow ? CubeState.Preview : CubeState.Below, f.ReadyBelow ? 1 : 3);
-            if (f.Climbable) Mark(CubeId.Of(near with { Z = cell.Z - 1 }), f.ReadyAbove ? CubeState.Preview : CubeState.Mask, f.ReadyAbove ? 1 : 4);
+            var over = here.OnLayer(here.Z - 1);
+            Mark(over, f.ReadyAbove ? CubeState.Preloaded : CubeState.Mask, f.ReadyAbove ? 0 : 4);
+            if (f.ReadyAbove) Through(over, f.Shut);
         }
-        // The layer below seen further through the void (a tilted view reaches it beyond her own squares): a ring of its
-        // squares two out, simplified, so its edge is never in view.
-        for (int dy = -2; dy <= 2; dy++)
-        for (int dx = -2; dx <= 2; dx++)
-            if (Math.Max(Math.Abs(dx), Math.Abs(dy)) == 2)
-                Mark(CubeId.Of(new CellCoord(cell.X + dx, cell.Y + dy, cell.Z + 1)), CubeState.Below, 5);
-        if (f.ReadyBelow) Mark(CubeId.Of(cell with { Z = cell.Z + 1 }), CubeState.Preloaded, 0);
-        if (f.ReadyAbove && f.Climbable) Mark(CubeId.Of(cell with { Z = cell.Z - 1 }), CubeState.Preloaded, 0);
+    }
+
+    /// <summary>
+    /// The cube she is about to arrive in (a dive or a climb coming): the cubes its open gates lead to readied as well, so
+    /// they stand round her as she lands, as they would have round her cube had she swum there.
+    /// </summary>
+    void Through(CubeId arrival, Func<EdgeId, bool>? shut)
+    {
+        foreach (var (edge, _, across) in arrival.Outer())
+            if (_space.Edge(edge).Open && !(shut?.Invoke(edge) ?? false)) Mark(CubeId.Of(across), CubeState.Preview, 2);
     }
 
     /// <summary>A cube wanted at least so (and its work at least this soon).</summary>

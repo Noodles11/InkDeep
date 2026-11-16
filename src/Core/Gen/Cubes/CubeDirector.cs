@@ -83,6 +83,9 @@ public sealed class CubeDirector
         Streak = freed ? 0 : Streak + 1;
     }
 
+    /// <summary>How many cubes out from her arrival an arena is looked for (the reef runs on).</summary>
+    public const int ArenaSearch = 6;
+
     /// <summary>
     /// The arena on a layer she has arrived on in <paramref name="arrival"/>: a cube two to four cubes from hers along open
     /// edges, with at least two open edges, none of its squares within two of hers (so never drawn yet); failing that, any
@@ -100,7 +103,7 @@ public sealed class CubeDirector
             {
                 if (!space.Edge(edge).Open) continue;
                 var next = CubeId.Of(across);
-                if (!space.Inside(next) || steps.ContainsKey(next)) continue;
+                if (!space.Inside(next) || steps.ContainsKey(next) || steps[c] >= ArenaSearch) continue;
                 steps[next] = steps[c] + 1;
                 todo.Enqueue(next);
             }

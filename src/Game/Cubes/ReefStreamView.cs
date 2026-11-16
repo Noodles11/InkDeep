@@ -43,24 +43,30 @@ public partial class ReefStreamView : Node3D
     public const float MurkSize = 400f;
 
     /// <summary>
-    /// The pall (DIVE §1): every square round her layer that holds none of the reef's cubes (past its rim, and the
-    /// footprint's squares left as rock) filled as the cut rock's inside is (the cap, LevelView.Cap: near-black, deep
-    /// past its hatching) at the cap's own height, so the reef never ends in a cut edge with the water or the layer
-    /// below showing past it.
+    /// The pall (DIVE §1): every square round her that shows none of her layer's cubes (one not made yet, one behind a
+    /// closed edge, anything past the window) filled as the cut rock's inside is (the cap, LevelView.Cap: near-black,
+    /// deep past its hatching) at the cap's own height, so the reef never ends in a cut edge with the water or the layer
+    /// below showing past it. Laid again as her square changes or her layer's cubes come and go.
     /// </summary>
-    MeshInstance3D? _pall;
-    /// <summary>How far past the footprint the pall reaches (metres: past anything the camera sees), and its height (the cap's).</summary>
+    MeshInstance3D _pall = null!;
+    bool _pallStale = true;
+    CellCoord _pallAt = new(int.MinValue, int.MinValue, 0);
+    /// <summary>The squares either side of hers the pall is laid square by square over; past them, out to PallReach metres, it is whole.</summary>
+    public const int PallSquares = 6;
     public const float PallReach = 2000f, PallHeight = LevelView.CapHeight;
 
-    /// <summary>The pall laid for this reef's footprint (the same on every layer).</summary>
-    public void Pall(CubeSpace space)
+    /// <summary>The pall laid round her square: each square of the block round it with no cube of her layer shown, and all past the block.</summary>
+    void LayPall(CellCoord at)
     {
-        var held = new HashSet<CellCoord>();
-        foreach (var c in space.CubesOf(0))
-        {
-            held.Add(c.First);
-            held.Add(c.Second);
-        }
+        _pallAt = at;
+        _pallStale = false;
+        var shown = new HashSet<CellCoord>();
+        foreach (var ((cube, work), list) in _shown)
+            if (work == CubeWork.Mesh && cube.Z == _layer && list.Count > 0)
+            {
+                shown.Add(cube.First with { Z = 0 });
+                shown.Add(cube.Second with { Z = 0 });
+            }
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
         st.SetNormal(Vector3.Up);
@@ -75,19 +81,17 @@ public partial class ReefStreamView : Node3D
             st.AddVertex(a); st.AddVertex(b); st.AddVertex(c);
             st.AddVertex(a); st.AddVertex(c); st.AddVertex(d);
         }
-        float edge = space.Footprint * CubeTuning.Side;
-        // (Round the footprint: four slabs out to PallReach; in it, each square no cube holds.)
-        Quad(-PallReach, -PallReach, edge + PallReach, 0f);
-        Quad(-PallReach, edge, edge + PallReach, edge + PallReach);
-        Quad(-PallReach, 0f, 0f, edge);
-        Quad(edge, 0f, edge + PallReach, edge);
-        for (int y = 0; y < space.Footprint; y++)
-        for (int x = 0; x < space.Footprint; x++)
-            if (!held.Contains(new CellCoord(x, y, 0))) Quad(x * CubeTuning.Side, y * CubeTuning.Side, (x + 1) * CubeTuning.Side, (y + 1) * CubeTuning.Side);
-        _pall ??= new MeshInstance3D { MaterialOverride = _here, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+        const float side = CubeTuning.Side;
+        float x0 = (at.X - PallSquares) * side, y0 = (at.Y - PallSquares) * side;
+        float x1 = (at.X + PallSquares + 1) * side, y1 = (at.Y + PallSquares + 1) * side;
+        Quad(x0 - PallReach, y0 - PallReach, x1 + PallReach, y0);
+        Quad(x0 - PallReach, y1, x1 + PallReach, y1 + PallReach);
+        Quad(x0 - PallReach, y0, x0, y1);
+        Quad(x1, y0, x1 + PallReach, y1);
+        for (int y = at.Y - PallSquares; y <= at.Y + PallSquares; y++)
+        for (int x = at.X - PallSquares; x <= at.X + PallSquares; x++)
+            if (!shown.Contains(new CellCoord(x, y, 0))) Quad(x * side, y * side, (x + 1) * side, (y + 1) * side);
         _pall.Mesh = st.Commit();
-        if (_pall.GetParent() is null) AddChild(_pall);
-        Place();
     }
 
     public override void _Ready()
@@ -104,11 +108,18 @@ public partial class ReefStreamView : Node3D
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         };
         AddChild(_murk);
+        _pall = new MeshInstance3D { MaterialOverride = _here, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+        AddChild(_pall);
         Place();
     }
 
     /// <summary>The murk kept under her.</summary>
-    public void Follow(Vector3 her) => _murk.Position = new Vector3(her.X, _lift - LayerDrop + VoidHeight + 0.5f, her.Z);
+    public void Follow(Vector3 her)
+    {
+        _murk.Position = new Vector3(her.X, _lift - LayerDrop + VoidHeight + 0.5f, her.Z);
+        var at = CellCoord.Of(new System.Numerics.Vector2(her.X, her.Z), 0);
+        if (_pallStale || at != _pallAt) LayPall(at);
+    }
 
     /// <summary>The layer she is on (the one drawn at the swim plane), and the dive's lift.</summary>
     /// <summary>
@@ -242,7 +253,8 @@ public partial class ReefStreamView : Node3D
 
     void Place()
     {
-        if (_pall is not null) _pall.Position = new Vector3(0f, _lift, 0f);
+        _pall.Position = new Vector3(0f, _lift, 0f);
+        _pallStale = true;
         _here.SetShaderParameter(SN.Of("level_offset"), new Vector3(0f, _lift, 0f));
         _below.SetShaderParameter(SN.Of("level_offset"), new Vector3(0f, _lift - LayerDrop, 0f));
         _above.SetShaderParameter(SN.Of("level_offset"), new Vector3(0f, _lift + LayerDrop, 0f));
@@ -257,6 +269,7 @@ public partial class ReefStreamView : Node3D
         _shown.TryGetValue((cube, CubeWork.Mesh), out var full);
         _shown.TryGetValue((cube, CubeWork.PreviewMesh), out var simple);
         int rel = cube.Z - _layer;
+        if (rel == 0) _pallStale = true;
         bool fullShown = full is { Count: > 0 } && (rel is 0 or 1 || rel == -1 && _showAbove);
         var material = rel == 0 ? _here : rel < 0 ? _above : _below;
         float y = _lift - rel * LayerDrop;

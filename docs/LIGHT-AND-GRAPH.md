@@ -251,8 +251,8 @@ Drippus Prime and Queen Clam keep their rules (the whole body; the pearl while t
 The dive is no longer a line or a graph of seeded levels: it is one continuous reef of layers streamed in cubes,
 described in docs/proposals/CUBE-WORLD-PLAN.md and docs/DIVE.md. In short:
 
-- **Layers** for depths: the warm-up layer first, then layer under layer, each a 9 × 9 footprint of 64 m squares laid
-  in two-square cubes. Each layer stands for a depth (its look, its menace, its folk boss).
+- **Layers** for depths: the warm-up layer first, then layer under layer, each of 64 m squares laid in two-square cubes,
+  made only as she swims near them. Each layer stands for a depth (its look, its menace, its folk boss).
 - **The way down** is the void: over it, past the cooldown, she dives to the layer below; under a well of the layer
   above she may climb back one layer.
 - **What a cube holds** is decided as she first swims into it (`CubeDirector`): its stock of murklings, and now and then

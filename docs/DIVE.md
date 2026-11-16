@@ -12,9 +12,12 @@ levels one after another: the layers are the depths.
 - **A jelly is a save slot.** The title's jellyfish cards (docs/TITLE-MENU.md) are the three slots. Choosing
   one takes her dive up in the haven it was saved in, or starts a new one.
 - **A dive** (`Jelly.Dive`, a `SuspendedRun` with its `CubeDiveSave`) runs down the cube reef's layers from the
-  warm-up layer: 36 layers of a 9 × 9 footprint of 64 m squares, each layer's cubes bricks two squares long laid as a
-  herringbone (`CubeReef`, `CubeSpace`). The game shows each layer as a level (`CubeReef.Layer`), its rock streamed in
-  round her (`ReefStream`, `ReefStreamView`).
+  warm-up layer: 36 layers of 64 m squares, each layer's cubes bricks two squares long laid as a herringbone
+  (`CubeReef`, `CubeSpace`). Nothing is laid out ahead: a cube is made only as she comes near it (her cube, those its
+  gates lead to, the one under it), from the seed and its own place, so it always matches the cubes round it, over it
+  and under it. The game shows each layer as a level as wide as a 24-square window round her start
+  (`CubeReef.Layer`), each cube laid onto it as it is made, its rock streamed in round her (`ReefStream`,
+  `ReefStreamView`).
 - **Its seed** comes from the jelly's own seed and how many dives she has ended (`Dives.SeedOf`), so every dive is a
   different reef.
 - **The light by depth:** each layer wears the adventure's painted reef, its coral gardens and all; the top layer is
@@ -33,9 +36,9 @@ levels one after another: the layers are the depths.
 - **The water below:** under her layer the water is thick and soft (topdown_post's deep veil): the layer below shows
   through it only as faint shapes, much blurred and four fifths hidden in the depth's water, and nothing under that
   layer (nor any fish down there) is seen at all.
-- **Past the reef's rim:** every square that holds none of the reef (beyond its footprint, and the footprint's squares
-  left as rock) is filled at her plane as the cut rock's inside is (`ReefStreamView.Pall`): the same near-black, so the
-  reef never ends in a cut edge with the water or the layer below showing past it.
+- **What is not drawn:** every square round her with none of her layer's cubes drawn (not made yet, behind a closed
+  edge, past the window) is filled at her plane as the cut rock's inside is (`ReefStreamView.Pall`): the same
+  near-black, so the reef never ends in a cut edge with the water or the layer below showing past it.
 - **The warm-up layer** (layer 0) is where she learns: bright, its menace low, no creatures, no curse rooms and no
   boss. Veterans dive straight through it. (There is no tutorial level.)
 - **Diving and climbing** (CUBE-WORLD-PLAN §7): Shift or the d-pad's down over the void, Q or its up under a well of

@@ -40,26 +40,26 @@ public sealed class LevelShape
     {
         var shape = new LevelShape { Map = map };
         foreach (var door in map.Mouths) shape.Doors.Add(LevelView.DoorSurfaces(map, door));
-        // Its reef life as a level's (the coral gardens on its walls and ledges, the scattered rocks), worked out once.
-        var (flora, rocks, glows) = Life.GetValue(map, m =>
-        {
-            var f = new List<FloraItem>();
-            var r = new List<Transform3D>();
-            var g = new List<Transform3D>();
-            if (!OS.GetCmdlineUserArgs().Contains("--dbg-nodecor")) LevelView.DecorItems(m, f, r, g);
-            // (A cube reef's walls rise out of view: only the life at their feet and on the floor shows.)
-            f.RemoveAll(i => i.Transform.Origin.Y > 0.8f);
-            r.RemoveAll(t => t.Origin.Y > 0.8f);
-            return new Tuple<List<FloraItem>, List<Transform3D>, List<Transform3D>>(f, r, g);
-        }) is var t ? (t.Item1, t.Item2, t.Item3) : default;
-        shape.Flora.AddRange(flora);
-        shape.Rocks.AddRange(rocks);
-        shape.Glows.AddRange(glows);
+        // (Its reef life comes cube by cube as each is laid on it: ReefLife, LevelView.AddLife.)
         return shape;
     }
 
-    /// <summary>A bare map's reef life, worked out the first time it is shown (or warmed off the main thread).</summary>
-    static readonly System.Runtime.CompilerServices.ConditionalWeakTable<LevelMap, Tuple<List<FloraItem>, List<Transform3D>, List<Transform3D>>> Life = new();
+    /// <summary>
+    /// A cube reef's life (the coral gardens at its walls' feet and on its floor, the scattered rocks) over one cube's
+    /// <paramref name="area"/> of its layer's map (map metres): each point of it belongs to one cube, so cube by cube it
+    /// comes out as the whole would. Pure work: safe on any thread.
+    /// </summary>
+    public static (List<FloraItem> Flora, List<Transform3D> Rocks, List<Transform3D> Glows) ReefLife(LevelMap map, Rect2 area)
+    {
+        var f = new List<FloraItem>();
+        var r = new List<Transform3D>();
+        var g = new List<Transform3D>();
+        if (!OS.GetCmdlineUserArgs().Contains("--dbg-nodecor")) LevelView.DecorItems(map, f, r, g, area);
+        // (A cube reef's walls rise out of view: only the life at their feet and on the floor shows.)
+        f.RemoveAll(i => i.Transform.Origin.Y > 0.8f);
+        r.RemoveAll(t => t.Origin.Y > 0.8f);
+        return (f, r, g);
+    }
 
     /// <summary>Pure work on the map: safe to run on any thread.</summary>
     public static LevelShape Prepare(LevelMap map)
@@ -1889,7 +1889,7 @@ public partial class LevelView : Node3D
 
     // ───────────────────────── decoration ─────────────────────────
 
-    IReadOnlyList<FloraItem> _floraItems = Array.Empty<FloraItem>();
+    List<FloraItem> _floraItems = new();
 
     /// <summary>
     /// No corals or grass within this far of these spots (map coordinates): a flounder's patch is open sand, and the
@@ -1904,10 +1904,31 @@ public partial class LevelView : Node3D
         _flora.Show(_floraItems);
     }
 
+    /// <summary>A cube reef's life added as a cube is laid on her layer's map (LevelView.ReefLife).</summary>
+    public void AddLife(List<FloraItem> flora, List<Transform3D> rocks, List<Transform3D> glows)
+    {
+        if (flora.Count > 0)
+        {
+            _floraItems.AddRange(flora);
+            _flora.Show(_floraItems);
+        }
+        if (rocks.Count > 0) AddChild(Instances(new SphereMesh { Radius = 1f, Height = 2f, RadialSegments = 18, Rings = 9 }, Rock(0.22f), rocks));
+        if (glows.Count > 0)
+            AddChild(Instances(new SphereMesh { Radius = 1f, Height = 2f, RadialSegments = 8, Rings = 4 },
+                new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, AlbedoColor = new Color(0.4f, 1f, 0.9f), EmissionEnabled = true, Emission = new Color(0.4f, 1f, 0.9f), EmissionEnergyMultiplier = 2f }, glows, shadow: false));
+    }
+
+    /// <summary>Her map changed round her (a cube laid on it): the cutout's map of it made again at once.</summary>
+    public void SeeMaskStale()
+    {
+        _seeHeightsAt = new(float.MaxValue, float.MaxValue);
+        _seeKeepAt = new(float.MaxValue, float.MaxValue);
+    }
+
     void ShowDecor(LevelShape shape)
     {
         PaintFlora(ReefLook.For(shape.Map.Depth));
-        _floraItems = shape.Flora;
+        _floraItems = shape.Flora.ToList();
         _flora.Show(shape.Flora);
         AddChild(Instances(new SphereMesh { Radius = 1f, Height = 2f, RadialSegments = 18, Rings = 9 }, Rock(0.22f), shape.Rocks));
         if (shape.Glows.Count > 0)
@@ -1916,10 +1937,11 @@ public partial class LevelView : Node3D
     }
 
     /// <summary>Maps the generator's decoration onto the existing flora art. Positions, yaw and scale all come from the map.</summary>
-    internal static void DecorItems(LevelMap map, List<FloraItem> items, List<Transform3D> rocks, List<Transform3D> glows)
+    internal static void DecorItems(LevelMap map, List<FloraItem> items, List<Transform3D> rocks, List<Transform3D> glows, Rect2? area = null)
     {
         foreach (var d in map.Decor)
         {
+            if (area is { } a && !a.HasPoint(new Vector2(d.Position.X, d.Position.Y))) continue;
             var pos = new Vector3(d.Position.X, d.Height, d.Position.Y);
             var basis = new Basis(Vector3.Up, d.Yaw).Scaled(Vector3.One * d.Scale);
             // Only the seagrass meadows and the brain corals (the sponge-like rocks): the rest of the dressing drew the eye
@@ -1947,8 +1969,20 @@ public partial class LevelView : Node3D
                 items.Add(new FloraItem(k, new Transform3D(basis, pos), new Color(variant, bright, 1f, d.Yaw / Mathf.Tau)));
             }
         }
-        Scatter(map, items, rocks);
-        if (ReefLook.Painted) Gardens(map, items);
+        Scatter(map, items, rocks, area);
+        if (ReefLook.Painted) Gardens(map, items, area);
+    }
+
+    /// <summary>
+    /// A scatter's lattice over the map (inside its rim), or over the part of it in <paramref name="area"/>: its first
+    /// and last rows and columns, on the same lattice points either way.
+    /// </summary>
+    static (float Y0, float Y1, float X0, float X1) Span(LevelMap map, float step, Rect2? area)
+    {
+        float lo = LevelMap.RimWidth + 1f, hi = map.Size - LevelMap.RimWidth - 1f;
+        if (area is not { } a) return (lo, hi, lo, hi);
+        float From(float v) => lo + MathF.Max(0f, MathF.Ceiling((v - lo) / step)) * step;
+        return (From(a.Position.Y), MathF.Min(hi, a.End.Y), From(a.Position.X), MathF.Min(hi, a.End.X));
     }
 
     /// <summary>
@@ -1956,7 +1990,7 @@ public partial class LevelView : Node3D
     /// sponges, staghorn, sea fans and brain corals packed in patches on the walls' tops and ledges, and in a band along
     /// their feet at the edge of the open floor; the open sand and her plane's way left clear. For the look only.
     /// </summary>
-    static void Gardens(LevelMap map, List<FloraItem> items)
+    static void Gardens(LevelMap map, List<FloraItem> items, Rect2? area = null)
     {
         uint seed = unchecked((uint)(map.Seed ^ (map.Seed >> 32)) ^ (uint)(map.Level * 6151 + map.Depth * 98317 + map.Cycle * 3079) ^ 0x6A4D3Bu);
         float Hash(float x, float y, int k)
@@ -1970,8 +2004,9 @@ public partial class LevelView : Node3D
         FloraKind[] top = { FloraKind.SeaRod, FloraKind.TubeSponge, FloraKind.Staghorn, FloraKind.SeaFan, FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Elkhorn };
         FloraKind[] foot = { FloraKind.TubeSponge, FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Staghorn, FloraKind.BarrelSponge };
         const float step = 1.05f;
-        for (float y = LevelMap.RimWidth + 1f; y < map.Size - LevelMap.RimWidth - 1f; y += step)
-        for (float x = LevelMap.RimWidth + 1f; x < map.Size - LevelMap.RimWidth - 1f; x += step)
+        var (ys, ye, xs, xe) = Span(map, step, area);
+        for (float y = ys; y < ye; y += step)
+        for (float x = xs; x < xe; x += step)
         {
             var p = new System.Numerics.Vector2(x + Hash(x, y, 1) * step, y + Hash(x, y, 2) * step);
             if (map.InShaft(p, 3f)) continue;
@@ -2017,7 +2052,7 @@ public partial class LevelView : Node3D
     /// the feet of the walls and a lone coral head now and then out on the open sand. The exit is left clear round the
     /// shaft.
     /// </summary>
-    static void Scatter(LevelMap map, List<FloraItem> items, List<Transform3D> rocks)
+    static void Scatter(LevelMap map, List<FloraItem> items, List<Transform3D> rocks, Rect2? area = null)
     {
         uint seed = unchecked((uint)(map.Seed ^ (map.Seed >> 32)) ^ (uint)(map.Level * 7919 + map.Depth * 104729 + map.Cycle * 15485863));
         float Hash(float x, float y, int k)
@@ -2030,8 +2065,9 @@ public partial class LevelView : Node3D
         }
         var rift = map.Exit;
         const float step = 1.1f;
-        for (float y = LevelMap.RimWidth + 1f; y < map.Size - LevelMap.RimWidth - 1f; y += step)
-        for (float x = LevelMap.RimWidth + 1f; x < map.Size - LevelMap.RimWidth - 1f; x += step)
+        var (ys, ye, xs, xe) = Span(map, step, area);
+        for (float y = ys; y < ye; y += step)
+        for (float x = xs; x < xe; x += step)
         {
             var p = new System.Numerics.Vector2(x + Hash(x, y, 1) * step, y + Hash(x, y, 2) * step);
             float h = map.HeightAt(p);

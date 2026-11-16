@@ -22,9 +22,9 @@ public class CubeWorldTests
     const int F = 5;
 
     /// <summary>A layer's cubes, made, in the order the space lists them, and the look-up the world reads them by.</summary>
-    static (Func<CubeId, CubeTerrain?> Terrain, List<CubeTerrain> Cubes) Layer(ulong seed, int z = 0)
+    static (Func<CubeId, CubeTerrain?> Terrain, List<CubeTerrain> Cubes) Layer(ulong seed, int z = 0, int window = F)
     {
-        var space = new CubeSpace(seed, F, 3);
+        var space = new CubeSpace(seed, window, 3);
         var made = space.CubesOf(z).OrderBy(c => c.Y).ThenBy(c => c.X).ToDictionary(c => c, c => CubeTerrain.Make(space, c));
         return (c => made.TryGetValue(c, out var t) ? t : null, made.Values.ToList());
     }
@@ -95,16 +95,32 @@ public class CubeWorldTests
     [MemberData(nameof(Seeds))]
     public void A_long_swim_across_the_layer_is_the_same_whatever_window_holds_the_cubes(ulong seed)
     {
-        var (terrain, all) = Layer(seed);
-        var start = all[0].Gates[0].Mouth;
-        var goal = all.OrderByDescending(t => Vector2.Distance(t.Cube.Middle, all[0].Cube.Middle)).First().Gates[0].Mouth;
+        // (A wider layer, for a long way across it.)
+        const int W = 9;
+        var (terrain, all) = Layer(seed, window: W);
+        // (From the window's middle cube.)
+        var first = all.First(t => t.Cube == CubeId.Of(new CellCoord(W / 2, W / 2, 0)));
+        var start = first.Gates[0].Mouth;
+        // (The farthest cube joined to hers by gates: the reef's edges are each their own, so not all of a window joins up.)
+        var joined = new HashSet<CubeId> { first.Cube };
+        var queue = new Queue<CubeId>(joined);
+        while (queue.Count > 0)
+        {
+            var c = queue.Dequeue();
+            foreach (var (edge, _, _) in terrain(c)!.Gates)
+            {
+                var other = CubeId.Of(edge.Low) == c ? CubeId.Of(edge.High) : CubeId.Of(edge.Low);
+                if (terrain(other) is not null && joined.Add(other)) queue.Enqueue(other);
+            }
+        }
+        var goal = all.Where(t => joined.Contains(t.Cube)).OrderByDescending(t => Vector2.Distance(t.Cube.Middle, first.Cube.Middle)).First().Gates[0].Mouth;
         var tuning = new Tuning();
-        var path = Path(new CubeField(terrain, new CellCoord(F / 2, F / 2, 0), reach: F), start, goal, tuning.PlayerRadius + 0.25f);
+        var path = Path(new CubeField(terrain, new CellCoord(W / 2, W / 2, 0), reach: W), start, goal, tuning.PlayerRadius + 0.25f, W);
         Assert.NotNull(path);
 
         // The window round her (moving as she goes), and one holding every cube from the start.
         var near = new CubeWorld(terrain, start, 0, tuning);
-        var whole = new CubeWorld(terrain, start, 0, tuning, reach: F);
+        var whole = new CubeWorld(terrain, start, 0, tuning, reach: W);
         var cubes = new HashSet<CubeId>();
         int at = 0, ticks = 0;
         var rng = new Rng(seed);
@@ -173,9 +189,9 @@ public class CubeWorldTests
     }
 
     /// <summary>The shortest way over the water a body of <paramref name="clearance"/> fits (8-way steps, 1 m grid).</summary>
-    static List<Vector2>? Path(IReefField field, Vector2 from, Vector2 to, float clearance)
+    static List<Vector2>? Path(IReefField field, Vector2 from, Vector2 to, float clearance, int window = F)
     {
-        int n = F * Side + 1;
+        int n = window * Side + 1;
         bool Free(int x, int y) => x >= 0 && y >= 0 && x < n && y < n && ReefCollision.Clear(field, new Vector2(x, y), clearance);
         var a = (X: (int)MathF.Round(from.X), Y: (int)MathF.Round(from.Y));
         var b = (X: (int)MathF.Round(to.X), Y: (int)MathF.Round(to.Y));

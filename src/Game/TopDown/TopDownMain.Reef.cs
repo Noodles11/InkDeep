@@ -40,7 +40,7 @@ public partial class TopDownMain
     /// <summary>Her layer's arena while its boss is unfreed: its wells sealed; while the battle runs, its edges too.</summary>
     bool InArena(System.Numerics.Vector2 p, int layer) => _reef!.IsArena(CubeId.Of(p, layer));
     int _layer;
-    int _cubeFootprint = CubeTuning.Footprint, _cubeLayers = CubeTuning.Layers;
+    int _cubeWindow = CubeTuning.Window, _cubeLayers = CubeTuning.Layers;
     /// <summary>Verification (--cube-boss): every layer below the warm-up holds a boss (and --autopilot swims to its arena).</summary>
     bool _cubeBoss;
     /// <summary>
@@ -151,7 +151,7 @@ public partial class TopDownMain
         else if (arg.StartsWith("--cube-chart=") && float.TryParse(arg["--cube-chart=".Length..], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float chartAt)) _cubeChartAt = chartAt;
         else if (arg.StartsWith("--cube-save=")) _cubeSaveTo = arg["--cube-save=".Length..];
         else if (arg.StartsWith("--cube-resume=")) _cubeResumeFrom = arg["--cube-resume=".Length..];
-        else if (arg.StartsWith("--cube-footprint=") && int.TryParse(arg["--cube-footprint=".Length..], out int f)) _cubeFootprint = Math.Clamp(f, 2, CubeTuning.Footprint);
+        else if (arg.StartsWith("--cube-window=") && int.TryParse(arg["--cube-window=".Length..], out int f)) _cubeWindow = Math.Clamp(f, 4, 64);
         else if (arg.StartsWith("--cube-layers=") && int.TryParse(arg["--cube-layers=".Length..], out int l)) _cubeLayers = Math.Clamp(l, 2, CubeTuning.Layers);
     }
 
@@ -190,10 +190,10 @@ public partial class TopDownMain
     {
         if (_reefResume is { } saved)
         {
-            _cubeFootprint = saved.Footprint;
+            _cubeWindow = saved.Window > 0 ? saved.Window : CubeTuning.Window;
             _cubeLayers = saved.Layers;
         }
-        _reef = new CubeReef(_seed.Value, _cubeFootprint, _cubeLayers);
+        _reef = new CubeReef(_seed.Value, _cubeWindow, _cubeLayers);
         _id = CubeReef.IdOf(0);
         _layer = 0;
         _cubeWorker = new TaskCubeWorker(_reef.Space, BuildCube, _reef.Terrain);
@@ -203,10 +203,9 @@ public partial class TopDownMain
         _director = new CubeDirector(_seed.Value);
         _reefView = new ReefStreamView();
         AddChild(_reefView);
-        _reefView.Pall(_reef.Space);
         if (_reefResume is not null) ResumeReef(_reefResume);
         else if (Here.Arrive(_reef.Start) == Crossing.Claimed) Grant(CubeId.Of(_reef.Start, 0));
-        GD.Print($"Cube reef {_seed}: {_reef.Space.Footprint} × {_reef.Space.Footprint} squares, {_reef.Space.Layers} layers, {_reef.Space.CubesOf(0).Count()} cubes a layer");
+        GD.Print($"Cube reef {_seed}: read in a window of {_reef.Space.Window} × {_reef.Space.Window} squares, {_reef.Space.Layers} layers, made as she swims");
     }
 
     /// <summary>
@@ -305,7 +304,7 @@ public partial class TopDownMain
         record.Cubes = new CubeDiveSave
         {
             Terrain = CubeDiveSave.TerrainNow,
-            Footprint = _reef!.Space.Footprint, Layers = _reef.Space.Layers, Layer = _layer, Deepest = _cubeDiving.Deepest,
+            Window = _reef!.Space.Window, Layers = _reef.Space.Layers, Layer = _layer, Deepest = _cubeDiving.Deepest,
             HavenMouth = _diveCave, Director = _director.Save(),
             Arenas = Enumerable.Range(0, _reef.Space.Layers).Where(z => _reef.ArenaOf(z) is not null).ToDictionary(z => z, z => CubeDiveSave.CubeKey(_reef.ArenaOf(z)!.Value)),
             BossRolled = _bossRolled.ToList(), BossFreed = _bossFreed.ToList(), DangerClock = new Dictionary<int, float>(_dangerClock),
@@ -407,8 +406,54 @@ public partial class TopDownMain
         _stream.Update(ReefFocus(p), dt);
         _cubeWorker.Drain(_stream);
         while (_cubeWorker.Errors.TryDequeue(out var error)) GD.PushError($"Cube work failed: {error}");
+        SettleReef();
         _reefView.Take(_stream);
         _reefView.Apply();
+    }
+
+    /// <summary>When her layer's sun map was last cast, and whether a cube laid since wants it cast again.</summary>
+    float _sunCastAt;
+    bool _sunStale;
+
+    /// <summary>
+    /// The cubes made since last frame laid onto their layers' maps (CubeReef.Settle); those of her layer bring their reef
+    /// life with them, the cutout's map of her surroundings made again, and in a while the sun's.
+    /// </summary>
+    void SettleReef()
+    {
+        bool any = false;
+        foreach (var cube in _reef!.Settle())
+            if (cube.Z == _layer && InReef && _layerMaps.TryGetValue(_layer, out var map) && map == _map)
+            {
+                LaidHere(cube);
+                any = true;
+            }
+        // (Verification, --autopilot: a way on looked for again once more of the layer is laid.)
+        if (any && _autopilot && _route.Count == 0 && _layerMove == LayerMove.None) Route();
+        if (_sunStale && _layerMove == LayerMove.None && InReef && _elapsed - _sunCastAt > 1.5f)
+        {
+            _sunStale = false;
+            _sunCastAt = _elapsed;
+            OctoShoots.Game.Fx.SunMap.Build(_map, OctoShoots.Game.Fx.SunLight.Direction);
+        }
+    }
+
+    /// <summary>A cube of her layer laid on its map: its reef life shown, the cutout's map and the sun's made again.</summary>
+    void LaidHere(CubeId cube)
+    {
+        var (flora, rocks, glows) = LevelShape.ReefLife(_map, new Rect2(cube.Origin.X, cube.Origin.Y, cube.Size.X, cube.Size.Y));
+        _level.AddLife(flora, rocks, glows);
+        _level.SeeMaskStale();
+        _sunStale = true;
+    }
+
+    /// <summary>Her layer just shown: the reef life of every cube laid on it so far (the rest as each is laid).</summary>
+    void ShowLaidLife()
+    {
+        if (_reef is null || !InReef || !_layerMaps.TryGetValue(_layer, out var map) || map != _map) return;
+        _reef.Settle();
+        foreach (var cube in _reef.LaidOn(_layer)) LaidHere(cube);
+        _sunStale = false;
     }
 
     StreamFocus ReefFocus(PlaneBody p)
@@ -621,6 +666,8 @@ public partial class TopDownMain
         _hud.Diving = false;
         _hoverDown = _hoverUp = 0f;
         _id = CubeReef.IdOf(_layer);
+        // (The cube she arrives in laid on its map before the layer is shown.)
+        _reef.Settle();
         ShowLevel(LevelShape.Bare(_layerMaps[_layer]), keepRun: true, 0, _layerFrom);
         _arrows.Arrive();
         foreach (var view in LevelLife) ResetFade(view);
@@ -674,7 +721,16 @@ public partial class TopDownMain
         foreach (var (cube, record) in claimed) cubes.Add((cube, true, _reef.IsArena(cube), record.Places.Select(p => p.Kind).ToList()));
         foreach (var cube in beside) cubes.Add((cube, false, false, Array.Empty<PoiKind>()));
         var her = InReef ? _world.Player.Position : _caveMouth >= 0 && _layerMaps.TryGetValue(_layer, out var layer) && _caveMouth < layer.Mouths.Count ? layer.Mouths[_caveMouth].At : _reef.Start;
-        return new ChartView.ReefChart(space.Footprint, _layer, _cubeDiving.Deepest, cubes, Here.Shut.ToList(), her);
+        // (Framed on what she knows of the layer, a square's margin round it.)
+        var lo = her;
+        var hi = her;
+        foreach (var (cube, _, _, _) in cubes)
+        {
+            lo = System.Numerics.Vector2.Min(lo, cube.Origin);
+            hi = System.Numerics.Vector2.Max(hi, cube.Origin + cube.Size);
+        }
+        var area = new Rect2(lo.X - CubeTuning.Side, lo.Y - CubeTuning.Side, hi.X - lo.X + 2f * CubeTuning.Side, hi.Y - lo.Y + 2f * CubeTuning.Side);
+        return new ChartView.ReefChart(area, _layer, _cubeDiving.Deepest, cubes, Here.Shut.ToList(), her);
     }
 
     /// <summary>A cube claimed: the places the director grants it, each in one of its sockets (CUBE-WORLD-PLAN §9).</summary>

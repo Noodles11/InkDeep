@@ -10,8 +10,12 @@ public static class CubeTuning
 {
     /// <summary>A cube's side: every cube is Side × Side and one layer thick.</summary>
     public const int Side = 64;
-    /// <summary>A layer's cubes a side (the reef's footprint), and how many layers it goes down.</summary>
-    public const int Footprint = 9, Layers = 36;
+    /// <summary>
+    /// The squares a side of the window a run's layers are read in (CUBE-WORLD-PLAN §5.3: each layer is one map to the
+    /// game, as wide as this, her start in its middle), and how many layers the reef goes down. The reef itself runs on
+    /// past the window every way; only cubes wholly inside it are ever made.
+    /// </summary>
+    public const int Window = 24, Layers = 36;
     /// <summary>The samples of its neighbours a cube's arrays carry round it.</summary>
     public const int Apron = 2;
 
@@ -26,8 +30,8 @@ public static class CubeTuning
     public const float WallMax = WallCore + 2f * WallShift + WallSwell;
     /// <summary>A gate's edge is never nearer a corner than this; its width.</summary>
     public const float GateMargin = 13f, GateMinWidth = 6f, GateMaxWidth = 13f;
-    /// <summary>Edges open beyond each layer's spanning tree, and edges with two gates.</summary>
-    public const float EdgeOpenExtra = 0.35f, TwoGates = 0.35f;
+    /// <summary>The chance an edge is open (a cube left with none has its likeliest opened: CubeSpace.Edge), and of an open edge having two gates.</summary>
+    public const float EdgeOpen = 0.55f, TwoGates = 0.35f;
     /// <summary>The rock round a corner.</summary>
     public const float CornerMin = 8f, CornerMax = 10f;
     /// <summary>A well's radius; how far it lies from the cube's middle along each axis (into its quadrant); a second well's chance.</summary>

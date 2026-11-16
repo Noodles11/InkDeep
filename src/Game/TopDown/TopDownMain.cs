@@ -1321,6 +1321,8 @@ public partial class TopDownMain : Node3D
         _camera.SetWorldOrigin(_origin);
         _level.Show(shape);
         _level.Place(Vector3.Zero, _origin);
+        // (A reef layer's life comes with its cubes, those laid on it so far now.)
+        if (_reef is not null) ShowLaidLife();
         _levelShape = shape;
         EnterLevel(shape.Map, keepRun, ms, arriveAt);
         // A verification start applies to the first level only (later levels begin at their start).
@@ -1981,7 +1983,7 @@ public partial class TopDownMain : Node3D
         if (_reef is null) return null;
         var start = _world.Player.Position;
         System.Numerics.Vector2? best = null;
-        foreach (var cube in _reef.Space.CubesOf(_layer))
+        foreach (var cube in _reef.Space.CubesNear(OctoShoots.Core.Gen.Cubes.CellCoord.Of(start, _layer), 3))
         {
             var t = _reef.Terrain(cube);
             foreach (var (edge, gate, mouth) in t.Gates)

@@ -10,32 +10,66 @@ using static OctoShoots.Core.Gen.Cubes.CubeTuning;
 namespace OctoShoots.Core.Gen.Cubes;
 
 /// <summary>
-/// A dive's cube reef in the game (CUBE-WORLD-PLAN §15.1): its space, every cube's terrain made once (on any thread) and
-/// kept while its layer is, and each layer stitched into one <see cref="LevelMap"/> as wide as the footprint, so the game's
-/// own systems (collision, her light, the maps, the creatures to come) read a layer as they read a level. Squares of the
-/// footprint outside the reef are rock.
+/// A dive's cube reef in the game (CUBE-WORLD-PLAN §15.1): its space, each cube's terrain made the first time it is asked
+/// for (on any thread: the stream asks as she swims) and kept while its layer is, and each layer one <see cref="LevelMap"/>
+/// as wide as the window, so the game's own systems (collision, her light, the maps, the creatures) read a layer as they
+/// read a level. A layer's map begins as rock; each cube is laid onto it once made (<see cref="Settle"/>), so it holds
+/// only the cubes she has come near.
 /// </summary>
 public sealed class CubeReef
 {
-    /// <summary>The height a square outside the reef stands at (the rock's own top).</summary>
+    /// <summary>The height a layer's map stands at where no cube is laid (the rock's own top).</summary>
     public const float OutsideHeight = RockLow + RockRim;
 
-    public CubeReef(ulong seed, int footprint = Footprint, int layers = Layers)
+    public CubeReef(ulong seed, int window = Window, int layers = Layers)
     {
-        Space = new CubeSpace(seed, footprint, layers);
-        // Where a dive begins: a gate's mouth of the reef's cube nearest its north-west corner.
-        Start = Terrain(Space.CubesOf(0).OrderBy(c => c.Middle.Length()).First()).Gates[0].Mouth;
+        Space = new CubeSpace(seed, window, layers);
+        // Where a dive begins: a gate's mouth of the top layer's cube in the window's middle.
+        Start = Terrain(CubeId.Of(Space.Middle(0))).Gates[0].Mouth;
     }
 
     public CubeSpace Space { get; }
     public Vector2 Start { get; }
-    public int Size => Space.Footprint * Side;
+    public int Size => Space.Window * Side;
 
     readonly ConcurrentDictionary<CubeId, Lazy<CubeTerrain>> _made = new();
+    /// <summary>Cubes made and not yet laid onto their layer's map.</summary>
+    readonly ConcurrentQueue<CubeId> _fresh = new();
+    /// <summary>The layers' maps, each with the cubes laid on it (guarded by itself).</summary>
+    readonly Dictionary<int, (LevelMap Map, HashSet<CubeId> Laid)> _maps = new();
 
     /// <summary>A cube's terrain, made the first time it is asked for (once, whichever thread asks); a layer's arena with its basin.</summary>
     public CubeTerrain Terrain(CubeId c) =>
-        _made.GetOrAdd(c, id => new Lazy<CubeTerrain>(() => CubeTerrain.Make(Space, id, IsArena(id)), System.Threading.LazyThreadSafetyMode.ExecutionAndPublication)).Value;
+        _made.GetOrAdd(c, id => new Lazy<CubeTerrain>(() =>
+        {
+            var t = CubeTerrain.Make(Space, id, IsArena(id));
+            _fresh.Enqueue(id);
+            return t;
+        }, System.Threading.LazyThreadSafetyMode.ExecutionAndPublication)).Value;
+
+    /// <summary>
+    /// The cubes made since the last call laid onto their layers' maps (on the thread that runs the game: its systems read
+    /// the maps); those laid.
+    /// </summary>
+    public List<CubeId> Settle()
+    {
+        var laid = new List<CubeId>();
+        lock (_maps)
+            while (_fresh.TryDequeue(out var c))
+                // (Its terrain read whole: queued as it was made, it may be a moment from being handed out.)
+                if (_maps.TryGetValue(c.Z, out var layer) && _made.TryGetValue(c, out var made) && layer.Laid.Add(c))
+                {
+                    Lay(layer.Map, c, made.Value);
+                    laid.Add(c);
+                }
+        return laid;
+    }
+
+    /// <summary>The cubes laid on a layer's map so far.</summary>
+    public IReadOnlyList<CubeId> LaidOn(int z)
+    {
+        lock (_maps) return _maps.TryGetValue(z, out var layer) ? layer.Laid.ToList() : new List<CubeId>();
+    }
 
     readonly ConcurrentDictionary<int, CubeId> _arenas = new();
 
@@ -51,7 +85,12 @@ public sealed class CubeReef
     {
         _arenas[cube.Z] = cube;
         _made.TryRemove(cube, out _);
-        Lay(layer, cube, Terrain(cube));
+        var t = Terrain(cube);
+        lock (_maps)
+        {
+            Lay(layer, cube, t);
+            if (_maps.TryGetValue(cube.Z, out var kept) && kept.Map == layer) kept.Laid.Add(cube);
+        }
     }
 
     /// <summary>A layer's arena as a save kept it (before the layer is made: its map is made with the basin).</summary>
@@ -84,6 +123,7 @@ public sealed class CubeReef
     public void Forget(int z)
     {
         foreach (var c in _made.Keys.Where(c => c.Z == z).ToList()) _made.TryRemove(c, out _);
+        lock (_maps) _maps.Remove(z);
     }
 
     /// <summary>The level a layer counts as: its depth (the warm-up layer the first after the tutorial's), level 1.</summary>
@@ -96,13 +136,12 @@ public sealed class CubeReef
     public static int LookDepthOf(int z) => LevelPlan.Tutorial + 1 + Math.Min(z, 3);
 
     /// <summary>
-    /// A layer as one map: every cube's terrain made (in parallel), its heights laid onto the footprint's grid, her start
-    /// on it at <paramref name="start"/>. Pure work: safe on any thread.
+    /// A layer as one map as wide as the window: rock, with the cubes of it made so far laid on it (the rest as they are
+    /// made: <see cref="Settle"/>), her start on it at <paramref name="start"/>; it is the layer's map from then on. Safe
+    /// on any thread.
     /// </summary>
     public LevelMap Layer(int z, Vector2 start)
     {
-        var cubes = Space.CubesOf(z).ToList();
-        Parallel.ForEach(cubes, c => Terrain(c));
         var map = new LevelMap(Size)
         {
             Seed = Space.Seed, Id = IdOf(z), LookDepth = LookDepthOf(z),
@@ -111,7 +150,17 @@ public sealed class CubeReef
             Title = z == 0 ? "The warm-up reef" : $"Layer {z}",
         };
         Array.Fill(map.Heights, OutsideHeight);
-        foreach (var c in cubes) Lay(map, c, Terrain(c));
+        lock (_maps)
+        {
+            var laid = new HashSet<CubeId>();
+            foreach (var (c, made) in _made)
+                if (c.Z == z && made.IsValueCreated)
+                {
+                    Lay(map, c, made.Value);
+                    laid.Add(c);
+                }
+            _maps[z] = (map, laid);
+        }
         map.Pois.Add(new Poi { Kind = PoiKind.Start, Position = start, Radius = 3f });
         // (No exit: a layer is left by diving or climbing. The game's code asks for one, far off the reef.)
         map.Pois.Add(new Poi { Kind = PoiKind.Exit, Position = new Vector2(-1000f, -1000f), Radius = 1f });

@@ -43,14 +43,16 @@ a point's cube is two divisions and a remainder; no table is kept.
 
 World positions are global: a point of layer Z is `(x, y)` in metres in square `(floor(x / S), floor(y / S))` and that
 square's cube. Nothing is ever re-based, so shots, particles, lights and creatures cross cube lines without knowing
-they exist. A reef 9 squares across is under 600 m, well inside what a `float` holds to the millimetre.
+they exist. A window 24 squares across is about 1.5 km, well inside what a `float` holds to the millimetre.
 
-**The reef's footprint:** 9 × 9 squares a layer *(tune)* round the column she first dives into. The reef is the cubes
-wholly inside it, the largest set of them joined by their sides; a square of the footprint whose cube sticks out is
-rock. Edges on the reef's rim are always closed, so the reef has an outside wall rather than an endless plain.
+**No footprint: the reef runs on.** Nothing is laid out ahead of her. A cube exists only once she comes near it, made
+from the seed and its own coordinates (§4), so it matches its neighbours and the cubes over and under it whichever is
+made first, and the reef carries on every way she swims. A run reads its layers in a **window** of 24 × 24 squares
+*(tune)* with her start in its middle (§5.3: the game's systems read a layer as one map that size); no cube sticking out
+of the window is ever made, and edges into one are closed.
 
-**Why 64 m squares.** The camera sees about 62 × 35 m (35° at 55 m). With S = 64 her view never reaches past the
-eight squares round hers, so the cubes of a 3 × 3 window of squares are always enough. At her 6 m/s cruise a cube is
+**Why 64 m squares.** The camera sees about 62 × 35 m (35° at 55 m). With S = 64 her view rarely reaches past the
+cubes next to hers; where it does, the dark of the rock stands in (§5.5). At her 6 m/s cruise a cube is
 some 10–20 s straight across, 30–60 s as the water winds: long enough to ready what comes next, short enough that she
 is always arriving somewhere.
 
@@ -83,10 +85,10 @@ made in any order, on any thread, and always agree.
 Three small specs, each hashed from the seed and the id of the thing two or three cubes **share**:
 
 - **`EdgeSpec(EdgeId)`**: open or closed, and the seed of its shared wall's shape (its line's, the same on every
-  layer: §4.3). Each layer's open edges first
-  hold a spanning tree of its cubes (Kruskal over the edges between them, in a seeded order), so every cube of a
-  layer can be reached across them; each other edge is open by a 35% chance *(tune)*; edges on the reef's rim are
-  always closed. An open edge has one gate, or two on 35% of edges, each 6–13 m wide, its sides never nearer a corner
+  layer: §4.3). Each edge is open by its own chance, 55% *(tune)*; a cube left with none open has the one of its six
+  nearest to opening opened, so no cube is ever shut in. Both rules read only the edge and the two cubes beside it, so
+  no layer is planned as a whole: a layer is not certain to join up everywhere, but nearly all of it does (§12), and
+  she can always dive on. Edges into a cube outside the window are closed. An open edge has one gate, or two on 35% of edges, each 6–13 m wide, its sides never nearer a corner
   than 13 m. Two cubes may share two edges (along a long side), each with its own gates.
 - **`CornerSpec(CornerId)`**: rock 8–10 m round the corner, its size wandering slowly with depth, so a corner stands
   on down the layers as one pillar. With gates kept off the corners, no water ever joins two
@@ -180,22 +182,18 @@ Keeping them apart is what makes the preview layer and far neighbours nearly fre
 | State | Holds | Which cubes |
 |---|---|---|
 | **Active** | Terrain, meshes, stocking, full simulation. | The cube she is in. |
-| **Preloaded** | Terrain, meshes, stocking ready; creatures asleep till she is near. | The cubes across her cube's outer edges that she can reach through an open gate the wake current (§8.2) has not shut. |
-| **Preview** | Terrain and its full ground. | The other cubes of the 3 × 3 squares round hers (they are in the camera's view). |
-| **Below** | Terrain and a simplified ground (2 m grid). | The cubes of the 3 × 3 squares under hers, seen through the void. With a dive coming, they are readied as Preview, the one she lands in as Preloaded. |
-| **Mask** | Terrain only, not drawn. | The cubes of the 3 × 3 squares over hers, while she may climb there (to know where she may). |
-| **Unloaded** | Its record (§10), nothing else. | Everything else. |
+| **Preloaded** | Terrain, meshes, stocking ready; creatures asleep till she is near. | The cubes her cube's open gates lead to, those the wake current (§8.2) has not shut. |
+| **Preview** | Terrain and its full ground. | A cube a gate of a Preloaded one leads to, while that gate is within 50 m of her (in the camera's view), so no water she sees ends at a line; with a dive (or a climb) coming, the cubes the gates of the one she will land in lead to. |
+| **Below** | Terrain and a simplified ground (2 m grid). | The cube under hers, seen through her void. With a dive coming it is readied as Preloaded: she lands in it. |
+| **Mask** | Terrain only, not drawn. | The cube over hers, while she may climb there (to know where she may). |
+| **Unloaded** | Its record (§10), nothing else. | Everything else: a cube behind a closed edge is never made for her. |
 
-Two notes against the first sketch of the idea:
-
-- "The current cube and its six neighbours" is the six outer edges' cubes across (a herringbone brick has six
-  neighbours), plus the cubes below and above. The layer above is never drawn (it would hide her from a camera
-  looking down); only its terrain is kept, to know where she may climb.
-- Neighbours she cannot reach still need their **ground**, because the camera shows 31 m to either side of her. What
-  is saved for them is everything else: no stocking, no creatures, no simulation. That is where the cost is.
+So a run begins with one cube Active, the few its gates lead to, and the one under it; every other cube is made only
+as she swims near it. The layer above is never drawn (it would hide her from a camera looking down); only its
+terrain is kept, to know where she may climb. What is not drawn round her the dark of the rock fills (§5.5).
 
 **Prediction:** the cube past the square beyond a gate she is heading for has its terrain and ground made early once
-she is within 20 m of that gate and moving toward it.
+she is within 20 m of that gate and moving toward it, if a gate of the cube between leads into it.
 
 ### 5.2 The streaming manager
 
@@ -221,10 +219,12 @@ the player code nor the generator knows about loading.
 ### 5.3 The simulation reads its layer as a level
 
 The game's systems (collision, her light, the nav grid, the maps, creatures, bosses, the save's snapshot) read one
-`LevelMap`. A layer is given to them as one: `CubeReef` makes each cube's terrain once (on any thread, kept while
-its layer is) and stitches a layer's cubes into a map as wide as the footprint, made in parallel off the main thread
-(about 0.2 s for 36 cubes) as soon as she arrives on the layer above it. Squares of the footprint outside the reef
-are rock. A layer is then a level to the game: `PlaneWorld` is made on it as she arrives, sub-levels behind its
+`LevelMap`. A layer is given to them as one: a map as wide as the window, begun as rock (made as soon as she
+arrives on the layer above it). `CubeReef` makes each cube's terrain the first time the stream asks for it (on any
+thread, kept while its layer is) and lays it onto its layer's map on the main thread the frame after (`Settle`), so a
+layer's map holds only the cubes she has come near, and her layer's reef life, its cutout mask and its sun map follow
+as each is laid. Water not laid yet reads as rock, so nothing swims or shoots into it. A layer is then a level to the
+game: `PlaneWorld` is made on it as she arrives, sub-levels behind its
 mouths are classic levels as before, and a layer she climbs back to keeps its map.
 
 - **`IReefField`** (`HeightAt`, `IsOpen`, `Gradient`) with `ReefCollision` stays the one interface for rock; a level's
@@ -259,6 +259,9 @@ mouths are classic levels as before, and a layer she climbs back to keeps its ma
 - **Flora and rocks:** one `MultiMesh` per kind per cube, filled off-thread, shown in one step.
 - **Pools:** creatures' views, pickups, particle emitters and decoration nodes are taken from and returned to pools,
   never created or freed while she swims.
+- **What is not drawn:** every square round her with no cube of her layer drawn is filled at her plane in the cut
+  rock's near-black (`ReefStreamView.Pall`, laid again as her square changes or cubes come and go), so the reef never
+  ends in a cut edge with the water or the layer below showing past it.
 - **The layer below:** the same chunk meshes at half resolution (2 m grid), no flora, no stocking, drawn 8 m down
   through the void with the water's depth fog. Its own void is filled with flat murk, so nothing under it is ever
   needed. Her light reaches it faintly.
@@ -411,7 +414,11 @@ Core tests, run over many seeds and coordinates:
 - **Determinism:** a cube made twice, in either order with its neighbours, on any thread, is identical byte for byte.
 - **Seams:** for every edge, both cubes' samples in the seam band and apron are equal. Same for corners.
 - **Gates:** never within 13 m of a corner; no water joins two cubes that share only a corner.
-- **Connectivity:** inside a cube every gate reaches every other gate and every well.
+- **Connectivity:** inside a cube every gate reaches every other gate and every well. No cube is shut in; edges into
+  a cube outside the window are closed; from the window's middle, at least 85% of a layer's cubes are joined by open
+  edges.
+- **Made as she swims:** a layer's map holds only the cubes made, each laid on it as it is made; at rest the stream
+  holds her cube, those its gates lead to (and past a gate in view), the one under hers, and nothing else.
 - **Wells:** every floor face has at least two spots where §3's rule holds, and from any arrival point one of them is
   reachable and allowed by §7.
 - **Ring:** claim a ring of four cubes, change things in the first, come round: it is as it was left.
@@ -436,8 +443,9 @@ prompted 0.44.0's optimisation.
 | Stream bookkeeping | main | ≤ 0.1 ms a tick |
 | Field lookup (`IReefField`) | main | within 10% of today's `Map` read |
 
-Steady state in memory: the cubes of the 3 × 3 squares round her (five to seven cubes) with terrain and ground, as
-many below with a simplified ground, as many above as terrain only, at most seven stocked. Only one cube is simulated
+Steady state in memory: her cube and the three to six its gates lead to with terrain and ground (a few more past
+gates in view), one below with a simplified ground, one above as terrain only, at most seven stocked; and a layer's
+map as wide as the window (five float arrays of 1537², about 47 MB) for her layer, the one above and the one below. Only one cube is simulated
 in full, and the nav grid is smaller than a level's today.
 
 Measured so far (one thread for the terrain; the scene on an RTX 3090): a cube's terrain 21 ms, its ground 72 ms
@@ -551,7 +559,9 @@ Each has the default this plan assumes; none blocks the prototype.
 1. **The boss chance after she has just freed one** is not given in the rules; 35% is assumed.
 2. **How deep the reef goes** ("dozens"): 36 layers assumed. It only sets where the bottom is.
 3. **The warm-up layer's places:** assumed to be as anywhere (secrets, clam room, havens) but no curse rooms.
-4. **The footprint** (9 × 9) and **S** (64 m) are the two numbers the prototype is most likely to change.
+4. **The window** (24 × 24) and **S** (64 m) are the two numbers the prototype is most likely to change. The window
+   bounds how far she can swim on one layer from her start's column; letting it move with her (each layer's map
+   placed round where she arrives on it) would make the reef endless in play too.
 5. **The cube grid's trace:** with the walls' faces wandering and no pockets against them, the lines no longer read
    as fins; the throats' ends can still leave a small point of rock. If the grid reads in play, the next tries are
    fewer walls (open edges with wide gates) and chambers written by the edge across an open line.

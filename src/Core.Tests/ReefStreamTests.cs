@@ -52,8 +52,8 @@ public class ReefStreamTests
     /// <summary>The middle of a square.</summary>
     static Vector2 Middle(CellCoord c) => c.Origin + new Vector2(Side * 0.5f);
 
-    /// <summary>The square of the reef nearest the footprint's middle (whose 3 × 3 round it is all reef), its cube.</summary>
-    static CellCoord Centre(CubeSpace space) => new(space.Footprint / 2, space.Footprint / 2, 0);
+    /// <summary>The square in the window's middle.</summary>
+    static CellCoord Centre(CubeSpace space) => space.Middle(0);
 
     static StreamFocus At(Vector2 p, int layer = 0, bool climbable = false) => new() { Position = p, Layer = layer, Climbable = climbable };
 
@@ -79,25 +79,26 @@ public class ReefStreamTests
     }
 
     [Fact]
-    public void At_rest_she_has_her_cube_active_what_she_can_reach_preloaded_and_what_she_can_see_previewed()
+    public void At_rest_she_has_her_cube_active_those_its_gates_lead_to_preloaded_and_the_one_under_it_and_nothing_else()
     {
         var (stream, worker, space) = Make();
         var cell = Centre(space);
         var here = CubeId.Of(cell);
         Settle(stream, worker, At(Middle(cell)));
         Assert.Equal(CubeState.Active, stream.State(here));
-        // Across its six outer edges: what an open edge leads to she can swim into.
+        // Across its six outer edges: what an open edge leads to she can swim into; behind a closed one, nothing.
         var reach = here.Outer().GroupBy(o => CubeId.Of(o.Across)).ToDictionary(g => g.Key, g => g.Any(o => space.Edge(o.Edge).Open));
-        foreach (var (next, open) in reach)
-            if (space.Inside(next)) Assert.Equal(open ? CubeState.Preloaded : CubeState.Preview, stream.State(next));
-        // The cubes of the squares round hers (the view), and under them.
-        for (int dy = -1; dy <= 1; dy++)
-        for (int dx = -1; dx <= 1; dx++)
-        {
-            var near = CubeId.Of(new CellCoord(cell.X + dx, cell.Y + dy, 0));
-            if (near != here && !reach.ContainsKey(near)) Assert.Equal(CubeState.Preview, stream.State(near));
-            Assert.Equal(CubeState.Below, stream.State(CubeId.Of(new CellCoord(cell.X + dx, cell.Y + dy, 1))));
-        }
+        Assert.Contains(true, reach.Values);
+        foreach (var (next, open) in reach) Assert.Equal(open ? CubeState.Preloaded : CubeState.Unloaded, stream.State(next));
+        // The cube under hers, seen through her void; none other on the layer below, nor anything over it.
+        Assert.Equal(CubeState.Below, stream.State(here.OnLayer(1)));
+        // Past those, only a cube a gate of theirs in her view leads into, drawn (so no water she sees ends at a line).
+        var her = Middle(cell);
+        var past = reach.Where(r => r.Value).SelectMany(r => r.Key.Outer())
+            .Where(o => CubeId.Of(o.Across) != here && space.Edge(o.Edge).Open && space.Edge(o.Edge).Gates.Any(g => Vector2.Distance(o.Edge.Point(g.Along, 0f), her) <= ReefStream.ViewReach))
+            .Select(o => CubeId.Of(o.Across)).Where(c => !reach.ContainsKey(c)).ToHashSet();
+        foreach (var c in past) Assert.Equal(CubeState.Preview, stream.State(c));
+        Assert.Equal(1 + reach.Count(r => r.Value) + past.Count + 1, stream.Held.Count());
         Assert.Equal(stream.Wanted.Count, stream.Held.Count());
         Assert.All(stream.Held, c => Assert.Equal(stream.Wanted[c], stream.State(c)));
         Assert.DoesNotContain(stream.Held, c => c.Z == 2);
@@ -212,26 +213,27 @@ public class ReefStreamTests
         focus.ReadyBelow = true;
         Settle(stream, worker, focus);
         Assert.Equal(CubeState.Preloaded, stream.State(CubeId.Of(cell with { Z = 1 })));
-        // (The rest of the layer she will land on is readied in full too: its ground, not the simplified one.)
-        Assert.True(stream.State(CubeId.Of(new CellCoord(cell.X - 1, cell.Y - 1, 1))) >= CubeState.Preview);
+        // (And those its open gates lead to: none other of the layer below.)
+        var landing = CubeId.Of(cell with { Z = 1 });
+        var through = landing.Outer().Where(o => space.Edge(o.Edge).Open).Select(o => CubeId.Of(o.Across)).ToHashSet();
+        Assert.All(through, c => Assert.Equal(CubeState.Preview, stream.State(c)));
+        Assert.Equal(through.Append(landing).ToHashSet(), stream.Held.Where(c => c.Z == 1).ToHashSet());
 
         // Down a layer, the one she left above to climb back to.
         Run(stream, worker, At(Middle(cell), 1, climbable: true), ReefStream.UnloadDelay + 0.2f);
         Assert.Equal(CubeState.Active, stream.State(CubeId.Of(cell with { Z = 1 })));
-        for (int dy = -1; dy <= 1; dy++)
-        for (int dx = -1; dx <= 1; dx++)
-        {
-            var above = CubeId.Of(new CellCoord(cell.X + dx, cell.Y + dy, 0));
-            Assert.Equal(CubeState.Mask, stream.State(above));
-            Assert.False(stream.Has(above, CubeWork.Mesh) || stream.Has(above, CubeWork.PreviewMesh));
-        }
+        // The cube over hers, only to know where she may climb: none other of the layer above.
+        var over = CubeId.Of(cell);
+        Assert.Equal(CubeState.Mask, stream.State(over));
+        Assert.False(stream.Has(over, CubeWork.Mesh) || stream.Has(over, CubeWork.PreviewMesh));
+        Assert.Equal(new[] { over }, stream.Held.Where(c => c.Z == 0 && stream.Wanted.ContainsKey(c)));
         // Deeper than it now (she may no longer climb there): the layer above let go.
         Run(stream, worker, At(Middle(cell), 1, climbable: false), ReefStream.UnloadDelay + 0.2f);
         Assert.DoesNotContain(stream.Held, c => c.Z == 0);
     }
 
     [Fact]
-    public void Across_a_shut_edge_her_neighbour_is_only_seen()
+    public void Across_a_shut_edge_her_neighbour_is_let_go()
     {
         var (stream, worker, space) = Make();
         var cell = Centre(space);
@@ -243,21 +245,29 @@ public class ReefStreamTests
         Assert.Equal(CubeState.Preloaded, stream.State(next));
         focus.Shut = between.Contains;
         Run(stream, worker, focus, ReefStream.UnloadDelay + 0.2f);
-        Assert.Equal(CubeState.Preview, stream.Wanted[next]);
-        Assert.Equal(CubeState.Preview, stream.State(next));
+        // (Unless another of her gates leads into it too.)
+        if (here.Outer().Any(o => CubeId.Of(o.Across) == next && space.Edge(o.Edge).Open && !between.Contains(o.Edge))) return;
+        Assert.False(stream.Wanted.ContainsKey(next));
+        Assert.DoesNotContain(next, stream.Held);
     }
 
     [Fact]
     public void Heading_for_a_gate_makes_the_cube_beyond_it_early()
     {
         var (stream, worker, space) = Make(footprint: 9);
-        var cell = Centre(space);
-        var here = CubeId.Of(cell);
-        var (edge, inside, across) = here.Outer().First(o => space.Edge(o.Edge).Open);
+        // A gate of a cube near the middle whose cube across leads on by a gate of its own into the cube past it.
+        CubeId Beyond(CellCoord inside, CellCoord across)
+        {
+            var next = CubeId.Of(across);
+            var b = CubeId.Of(new CellCoord(2 * across.X - inside.X, 2 * across.Y - inside.Y, 0));
+            return b == next ? CubeId.Of(new CellCoord(3 * across.X - 2 * inside.X, 3 * across.Y - 2 * inside.Y, 0)) : b;
+        }
+        bool LeadsOn(CellCoord inside, CellCoord across) =>
+            CubeId.Of(across).Outer().Any(o => CubeId.Of(o.Across) == Beyond(inside, across) && space.Edge(o.Edge).Open);
+        var (edge, inside, across) = space.CubesNear(Centre(space), 2).SelectMany(c => c.Outer())
+            .First(o => space.Edge(o.Edge).Open && space.Inside(CubeId.Of(o.Across)) && LeadsOn(o.Inside, o.Across));
         var gate = edge.Point(space.Edge(edge).Gates[0].Along, 0f);
-        var next = CubeId.Of(across);
-        var beyond = CubeId.Of(new CellCoord(2 * across.X - inside.X, 2 * across.Y - inside.Y, 0));
-        if (beyond == next) beyond = CubeId.Of(new CellCoord(3 * across.X - 2 * inside.X, 3 * across.Y - 2 * inside.Y, 0));
+        var beyond = Beyond(inside, across);
         var from = gate + Vector2.Normalize(Middle(inside) - gate) * 12f;
         var focus = At(from);
         stream.Update(focus, Frame);

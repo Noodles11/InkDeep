@@ -128,22 +128,32 @@ public class CubeTerrainTests
 
     [Theory]
     [MemberData(nameof(Seeds))]
-    public void The_rim_is_closed_and_every_layer_joins_up_through_its_open_edges(ulong seed)
+    public void No_cube_is_shut_in_the_window_edge_is_closed_and_nearly_all_of_a_layer_joins_up(ulong seed)
     {
-        var space = new CubeSpace(seed, F, L);
-        for (int z = 0; z < L; z++)
+        // (A layer as wide as a run's window: what any one cube's edges decide, read across all of it.)
+        var space = new CubeSpace(seed, Window, 3);
+        for (int z = 0; z < 3; z++)
         {
             var cubes = space.CubesOf(z).ToList();
-            Assert.True(cubes.Count >= 4, $"{cubes.Count} cubes");
             foreach (var c in cubes)
-            foreach (var (edge, _, across) in c.Outer())
-                if (!space.Inside(CubeId.Of(across))) Assert.False(space.Edge(edge).Open);
-            var seen = new HashSet<CubeId> { cubes[0] };
+            {
+                bool any = false;
+                foreach (var (edge, _, across) in c.Outer())
+                {
+                    if (!space.Inside(CubeId.Of(across))) Assert.False(space.Edge(edge).Open);
+                    else any |= space.Edge(edge).Open;
+                }
+                Assert.True(any, $"{c}: shut in");
+            }
+            // From the middle, across open edges.
+            var start = CubeId.Of(space.Middle(z));
+            var seen = new HashSet<CubeId> { start };
             var todo = new Queue<CubeId>(seen);
             while (todo.Count > 0)
                 foreach (var (edge, _, across) in todo.Dequeue().Outer())
                     if (space.Edge(edge).Open && seen.Add(CubeId.Of(across))) todo.Enqueue(CubeId.Of(across));
-            Assert.Equal(cubes.Count, seen.Count);
+            _out.WriteLine($"layer {z}: {seen.Count} of {cubes.Count} joined to the middle");
+            Assert.True(seen.Count >= cubes.Count * 0.85f, $"layer {z}: only {seen.Count} of {cubes.Count} joined to the middle");
         }
     }
 
@@ -297,7 +307,7 @@ public class CubeTimingTests
     [Fact]
     public void A_cube_is_made_within_its_budget()
     {
-        var space = new CubeSpace(CubeTerrainTests.SeedValues[0], CubeTuning.Footprint, CubeTuning.Layers);
+        var space = new CubeSpace(CubeTerrainTests.SeedValues[0], CubeTuning.Window, CubeTuning.Layers);
         var cubes = space.CubesOf(4).Take(12).ToList();
         CubeTerrain.Make(space, cubes[0]);
         double best = double.MaxValue;

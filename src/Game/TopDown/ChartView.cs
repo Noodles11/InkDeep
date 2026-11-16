@@ -18,11 +18,11 @@ public partial class ChartView : Control
     }
 
     /// <summary>
-    /// The cube reef's chart (docs/proposals/CUBE-WORLD-PLAN.md §15.5): her layer's footprint, each cube a brick; those she
-    /// has claimed filled, with a mark for each place behind a mouth in it; the arena in the boss's colour once found;
+    /// The cube reef's chart (docs/proposals/CUBE-WORLD-PLAN.md §15.5): the part of her layer she knows (Area, map metres),
+    /// each cube a brick; those she has claimed filled, with a mark for each place behind a mouth in it; the arena in the boss's colour once found;
     /// the cubes next to her claimed ones a faint outline; the edges the wake current holds red; she a gold dot.
     /// </summary>
-    public sealed record ReefChart(int Footprint, int Layer, int Deepest, IReadOnlyList<(OctoShoots.Core.Gen.Cubes.CubeId Cube, bool Claimed, bool Arena, IReadOnlyList<PoiKind> Places)> Cubes,
+    public sealed record ReefChart(Rect2 Area, int Layer, int Deepest, IReadOnlyList<(OctoShoots.Core.Gen.Cubes.CubeId Cube, bool Claimed, bool Arena, IReadOnlyList<PoiKind> Places)> Cubes,
         IReadOnlyList<OctoShoots.Core.Gen.Cubes.EdgeId> Shut, System.Numerics.Vector2 Her);
 
     ReefChart? _reef;
@@ -45,10 +45,12 @@ public partial class ChartView : Control
     {
         var font = ThemeDB.FallbackFont;
         DrawString(font, new Vector2(4f, 18f), chart.Layer == 0 ? "The warm-up reef" : $"Layer {chart.Layer}  ·  deepest {chart.Deepest}", HorizontalAlignment.Left, -1, 18, Gold);
-        float metres = chart.Footprint * OctoShoots.Core.Gen.Cubes.CubeTuning.Side;
+        float metres = Mathf.Max(chart.Area.Size.X, chart.Area.Size.Y);
         float scale = Mathf.Min(Size.X - 2f * Side, CustomMinimumSize.Y - Top - 70f) / metres;
         var origin = new Vector2((Size.X - metres * scale) * 0.5f, Top);
-        Vector2 At(System.Numerics.Vector2 p) => origin + new Vector2(p.X, p.Y) * scale;
+        // (The area centred in the chart's square.)
+        var corner = chart.Area.GetCenter() - new Vector2(metres, metres) * 0.5f;
+        Vector2 At(System.Numerics.Vector2 p) => origin + (new Vector2(p.X, p.Y) - corner) * scale;
         DrawRect(new Rect2(origin, new Vector2(metres, metres) * scale), new Color(Ink, 0.5f));
         foreach (var (cube, claimed, arena, places) in chart.Cubes)
         {
