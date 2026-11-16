@@ -203,6 +203,7 @@ public partial class TopDownMain
         _director = new CubeDirector(_seed.Value);
         _reefView = new ReefStreamView();
         AddChild(_reefView);
+        _reefView.Pall(_reef.Space);
         if (_reefResume is not null) ResumeReef(_reefResume);
         else if (Here.Arrive(_reef.Start) == Crossing.Claimed) Grant(CubeId.Of(_reef.Start, 0));
         GD.Print($"Cube reef {_seed}: {_reef.Space.Footprint} × {_reef.Space.Footprint} squares, {_reef.Space.Layers} layers, {_reef.Space.CubesOf(0).Count()} cubes a layer");

@@ -33,6 +33,9 @@ levels one after another: the layers are the depths.
 - **The water below:** under her layer the water is thick and soft (topdown_post's deep veil): the layer below shows
   through it only as faint shapes, much blurred and four fifths hidden in the depth's water, and nothing under that
   layer (nor any fish down there) is seen at all.
+- **Past the reef's rim:** every square that holds none of the reef (beyond its footprint, and the footprint's squares
+  left as rock) is filled at her plane as the cut rock's inside is (`ReefStreamView.Pall`): the same near-black, so the
+  reef never ends in a cut edge with the water or the layer below showing past it.
 - **The warm-up layer** (layer 0) is where she learns: bright, its menace low, no creatures, no curse rooms and no
   boss. Veterans dive straight through it. (There is no tutorial level.)
 - **Diving and climbing** (CUBE-WORLD-PLAN §7): Shift or the d-pad's down over the void, Q or its up under a well of

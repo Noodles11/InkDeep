@@ -42,6 +42,54 @@ public partial class ReefStreamView : Node3D
     MeshInstance3D _murk = null!;
     public const float MurkSize = 400f;
 
+    /// <summary>
+    /// The pall (DIVE §1): every square round her layer that holds none of the reef's cubes (past its rim, and the
+    /// footprint's squares left as rock) filled as the cut rock's inside is (the cap, LevelView.Cap: near-black, deep
+    /// past its hatching) at the cap's own height, so the reef never ends in a cut edge with the water or the layer
+    /// below showing past it.
+    /// </summary>
+    MeshInstance3D? _pall;
+    /// <summary>How far past the footprint the pall reaches (metres: past anything the camera sees), and its height (the cap's).</summary>
+    public const float PallReach = 2000f, PallHeight = LevelView.CapHeight;
+
+    /// <summary>The pall laid for this reef's footprint (the same on every layer).</summary>
+    public void Pall(CubeSpace space)
+    {
+        var held = new HashSet<CellCoord>();
+        foreach (var c in space.CubesOf(0))
+        {
+            held.Add(c.First);
+            held.Add(c.Second);
+        }
+        var st = new SurfaceTool();
+        st.Begin(Mesh.PrimitiveType.Triangles);
+        st.SetNormal(Vector3.Up);
+        // (The cap's, its whole depth into the rock: no ink.)
+        st.SetColor(new Color(1f, 0f, 0f, 0.5f));
+        void Quad(float x0, float z0, float x1, float z1)
+        {
+            var a = new Vector3(x0, PallHeight, z0);
+            var b = new Vector3(x1, PallHeight, z0);
+            var c = new Vector3(x1, PallHeight, z1);
+            var d = new Vector3(x0, PallHeight, z1);
+            st.AddVertex(a); st.AddVertex(b); st.AddVertex(c);
+            st.AddVertex(a); st.AddVertex(c); st.AddVertex(d);
+        }
+        float edge = space.Footprint * CubeTuning.Side;
+        // (Round the footprint: four slabs out to PallReach; in it, each square no cube holds.)
+        Quad(-PallReach, -PallReach, edge + PallReach, 0f);
+        Quad(-PallReach, edge, edge + PallReach, edge + PallReach);
+        Quad(-PallReach, 0f, 0f, edge);
+        Quad(edge, 0f, edge + PallReach, edge);
+        for (int y = 0; y < space.Footprint; y++)
+        for (int x = 0; x < space.Footprint; x++)
+            if (!held.Contains(new CellCoord(x, y, 0))) Quad(x * CubeTuning.Side, y * CubeTuning.Side, (x + 1) * CubeTuning.Side, (y + 1) * CubeTuning.Side);
+        _pall ??= new MeshInstance3D { MaterialOverride = _here, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+        _pall.Mesh = st.Commit();
+        if (_pall.GetParent() is null) AddChild(_pall);
+        Place();
+    }
+
     public override void _Ready()
     {
         var shader = GD.Load<Shader>("res://assets/shaders/topdown_ground.gdshader");
@@ -194,6 +242,7 @@ public partial class ReefStreamView : Node3D
 
     void Place()
     {
+        if (_pall is not null) _pall.Position = new Vector3(0f, _lift, 0f);
         _here.SetShaderParameter(SN.Of("level_offset"), new Vector3(0f, _lift, 0f));
         _below.SetShaderParameter(SN.Of("level_offset"), new Vector3(0f, _lift - LayerDrop, 0f));
         _above.SetShaderParameter(SN.Of("level_offset"), new Vector3(0f, _lift + LayerDrop, 0f));
