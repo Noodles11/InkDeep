@@ -597,7 +597,7 @@ pops out in a quick swell, a third to two thirds of a second after it appeared.
   nothing tints or blurs them; their roundness is their own (a fixed soft key, a cold violet rim, a glint). Each is seen
   out of phase, a fixed chromatic aberration: its red printed a fifth of its radius to the left and its cyan as far to
   the right, so every drop wears a red fringe on its left and a cyan one on its right. Rock in front
-  still hides them. None within 2.5 m of a dive's gateway (the shaft). Drawn as camera-facing quads shaped in the shader,
+  still hides them. None within 2.5 m of a dive's gateway (the shaft), and none at all in a leak cave. Drawn as camera-facing quads shaped in the shader,
   in 64 chunked MultiMeshes (only those on screen are drawn), laid out off the main thread (a level below while she is
   still above it). Where the ground is cleansed a spot's drops stop coming, and the last of them light up gold as they
   go: only the drops glow, never the ground. A level's drift fades in over 1.2 s when it is shown, and fades out with

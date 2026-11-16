@@ -1933,12 +1933,9 @@ public partial class TopDownMain : Node3D
         _adventure.Show(_world);
         _crab.Show(_world);
         _springs.Show(_world);
-        // The shards were laid out already if she dived here; otherwise they are laid out now, off the main thread.
-        
-        {
-            _corruption.Show(null, null);
-            _bladeTask = CorruptionView.Plan(map, field);
-        }
+        // The drops rising out of the ink, laid out off the main thread; none in a leak cave.
+        _corruption.Show(null, null);
+        if (!map.LeakCave) _bladeTask = CorruptionView.Plan(map, field);
     }
 
     /// <summary>The corruption's per-frame work: its texture, shards arriving, the creatures.</summary>
