@@ -459,7 +459,7 @@ public sealed partial class PlaneWorld
                         if (bubble.FromPlayer && bubble.Life > 0f && Geo.SegmentDistance(bubble.Position, was, shot.Position) < bubble.Radius + shot.Radius)
                             Pop(bubble, was - bubble.Position);
                 // Rock and pots stop shots, and so does the sealed arena's wall.
-                if (!Map.IsOpen(shot.Position) || _rocks.Any(r => r.Contains(shot.Position)) || VaseAt(shot.Position, shot.Radius) is not null) shot.Life = 0f;
+                if (!Map.IsOpen(shot.Position) || _rocks.Any(r => r.Contains(shot.Position))) shot.Life = 0f;
             }
             if (shot.Life <= 0f) continue;
             if (shot.FromPlayer)
@@ -557,7 +557,6 @@ public sealed partial class PlaneWorld
             if (mob.Alive && Vector2.Distance(mob.Position, at) < reach + mob.Radius)
                 DamageMob(mob, damage, mob.Position - at);
         BlastBoss(at, reach, damage);
-        BlastVases(at, reach);
     }
 
     void BeginRitual(PlanePearl pearl)
@@ -1004,7 +1003,7 @@ public sealed partial class PlaneWorld
         for (int k = 1; k < n; k++)
         {
             var q = Vector2.Lerp(a, b, k / (float)n);
-            if (!Map.IsOpen(q) || _rocks.Any(r => r.Contains(q)) || VaseAt(q, radius) is not null) return q;
+            if (!Map.IsOpen(q) || _rocks.Any(r => r.Contains(q))) return q;
         }
         return b;
     }
@@ -1095,12 +1094,6 @@ public sealed partial class PlaneWorld
 
         Vector2 step = shot.Velocity * Dt;
         Vector2 next = FirstBlocked(shot.Line, shot.Line + step, shot.Radius);
-        // A pot in the way: broken if the bubble is strong enough, else it rocks and the bubble pops or bounces off.
-        if (VaseAt(next, shot.Radius) is { } vase && !(shot.Boomerang && shot.Returning))
-        {
-            BubbleMeetsVase(shot, vase, dir);
-            return;
-        }
         if (!Map.IsOpen(next) || _rocks.Any(r => r.Contains(next)))
         {
             // Her light striking a secret's seal lights its emblem (once a bubble, whatever it carries).
@@ -1179,7 +1172,6 @@ public sealed partial class PlaneWorld
             if (mob.Alive && Vector2.Distance(mob.Position, at) < reach + mob.Radius)
                 DamageMob(mob, damage, mob.Position - at);
         BlastBoss(at, reach, damage);
-        BlastVases(at, reach);
     }
 
     /// <summary>Her bubbles' own rolls (hover times, pops on a bump, where a film gives way), from the level's seed.</summary>

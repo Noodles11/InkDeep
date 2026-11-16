@@ -61,7 +61,6 @@ public partial class TopDownMain : Node3D
     /// <summary>How far each of the reef's holes has opened (0 under sand → 1 open): its sand drains as its leak is sealed.</summary>
     readonly List<float> _holeOpen = new();
     AbyssView _abyss = null!;
-    VaseView _vases = null!;
     VaultView _bubbleVaults = null!;
     /// <summary>Achievements: their data, what earns them on this run, and the banner that announces them (§8).</summary>
     AchievementCatalog? _achievementData;
@@ -470,8 +469,6 @@ public partial class TopDownMain : Node3D
         AddChild(_kelp);
         _abyss = new AbyssView();
         AddChild(_abyss);
-        _vases = new VaseView();
-        AddChild(_vases);
         _bubbleVaults = new VaultView();
         AddChild(_bubbleVaults);
         _boss = new BossView();
@@ -714,7 +711,7 @@ public partial class TopDownMain : Node3D
         if (spec is null) return null;
         var d = PlaneOptions.Default;
         GD.Print($"Debug boss: {spec.Name} ({spec.Tier} {spec.Form}, {spec.Concept}, {spec.Theme}, {spec.Exposure}, {spec.Signature})");
-        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Shots = d.Shots, Boss = spec };
+        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Adventure = d.Adventure, Shots = d.Shots, Boss = spec };
     }
 
     /// <summary>
@@ -726,7 +723,7 @@ public partial class TopDownMain : Node3D
         if (!_map.HasBoss || _map.Rift || _jelly is not { } jelly || Dives.FolkBossOf(_id, jelly) is not { } folk || Folk.Get(folk) is not { } n
             || OctoShoots.Core.Bosses.FolkBosses.For(n.Id, n.Level, _map.Menace) is not { } spec) return null;
         var d = PlaneOptions.Default;
-        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Shots = d.Shots, Boss = spec };
+        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Adventure = d.Adventure, Shots = d.Shots, Boss = spec };
     }
 
     /// <summary>The run as it stands at the start of this level.</summary>
@@ -1623,7 +1620,6 @@ public partial class TopDownMain : Node3D
         _swells.Clear();
         _kelp.Build(map, LookOf(map));
         _abyss.Build(map, LookOf(map));
-        _vases.Show(_world);
         _bubbleVaults.Show(_world);
         _puffers.Show(_world);
         _reefFish.Show(_world);
@@ -2125,8 +2121,6 @@ public partial class TopDownMain : Node3D
             "cache-near" => _map.Pois.Where(p => p.Kind == PoiKind.ShellCache)
                 .SelectMany(p => Enumerable.Range(0, 12).Select(k => p.Position + new System.Numerics.Vector2(Mathf.Cos(k * Mathf.Tau / 12f), Mathf.Sin(k * Mathf.Tau / 12f)) * 6f))
                 .Select(q => (System.Numerics.Vector2?)q).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
-            // A few metres south of the first pot, in water that sees it.
-            "vase" => _world.Vases.Select(v => (System.Numerics.Vector2?)(v.Position + new System.Numerics.Vector2(0f, 4f))).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
             "treasure" => _map.Caves.Where(c => _map.Pois[c.Poi].Kind == PoiKind.TreasureCave).Select(c => (System.Numerics.Vector2?)(c.Mouth - c.Facing * 2.5f)).FirstOrDefault(),
             // On a clam room's pearl: it is touched at once.
             "clam-pearl" => _map.Pois.Where(p => p.Kind == PoiKind.TreasureCave).Select(p => (System.Numerics.Vector2?)p.Position).FirstOrDefault(),
@@ -2487,9 +2481,9 @@ public partial class TopDownMain : Node3D
                 // how near her it went off.
                 if (Blast(e) is float power) Explode(e.Position, power);
                 // Her light struck something: flares burst round its outline (hits by a shot carry its direction).
-                if (e.Type is PlaneEventType.MobHit or PlaneEventType.MobDefeated or PlaneEventType.BossHit or PlaneEventType.VaseHit && e.Direction != default)
+                if (e.Type is PlaneEventType.MobHit or PlaneEventType.MobDefeated or PlaneEventType.BossHit && e.Direction != default)
                 {
-                    _combat.Flares(e.Position, Outline(e), e.Direction, e.Type == PlaneEventType.VaseHit ? 1f : e.Size / PlaneCombatTuning.ShotDamage);
+                    _combat.Flares(e.Position, Outline(e), e.Direction, e.Size / PlaneCombatTuning.ShotDamage);
                     // A squishy pop as it strikes (once a step, however many it struck).
                     if (!struck)
                     {
@@ -2700,12 +2694,6 @@ public partial class TopDownMain : Node3D
                     _haptics.Pulse(0.6f, 0.7f, 0.25f);
                     Say("A prank! The bubble held only a gust");
                 }
-                else if (e.Type == PlaneEventType.VaseHit) _vases.Hit(_world, e.Position, e.Direction);
-                else if (e.Type == PlaneEventType.VaseBroken)
-                {
-                    _vases.Break(_world, e.Position, e.Direction);
-                    _camera.Shake(0.1f);
-                }
                 else if (e.Type == PlaneEventType.ActiveDenied) Say("Already at full health");
                 else if (e.Type == PlaneEventType.BossLanded) _camera.Shake(0.9f);
                 else if (e.Type == PlaneEventType.BossStagger) _camera.Shake(0.45f);
@@ -2810,7 +2798,6 @@ public partial class TopDownMain : Node3D
             else _currents.Sync(_world, dt, _camera);
         });
         Guard("abyss", () => _abyss.Sync(_world, dt));
-        Guard("vases", () => _vases.Sync(dt));
         Guard("bubble vaults", () => _bubbleVaults.Sync(_world, dt));
         Guard("pufferlings", () => _puffers.Sync(_world, dt));
         Guard("reef fish", () => _reefFish.Sync(_world, dt));
@@ -2951,7 +2938,7 @@ public partial class TopDownMain : Node3D
     /// </summary>
     IEnumerable<Node> LevelLife => new Node[]
     {
-        _crab, _combat, _puffers, _reefFish, _curseDen, _clamRooms, _geysers, _boss, _damage, _currents, _vases, _abyss,
+        _crab, _combat, _puffers, _reefFish, _curseDen, _clamRooms, _geysers, _boss, _damage, _currents, _abyss,
         _kelp, _chargeStones, _prismStones, _cores, _lamps, _motes, _seals, _surgeView, _blight, _ash, _adventure, _springs, _portals,
         _mirrorView, _fanView, _vapour,
     };
@@ -3726,11 +3713,6 @@ public partial class TopDownMain : Node3D
             float d = System.Numerics.Vector2.Distance(p, at);
             if (d < best) (best, radius) = (d, r);
         }
-        if (e.Type == PlaneEventType.VaseHit)
-        {
-            foreach (var v in _world.Vases) Near(v.Position, v.Radius);
-            return radius;
-        }
         if (e.Type == PlaneEventType.BossHit)
             return _world.Boss is { } boss && System.Numerics.Vector2.Distance(boss.Position, at) < 0.5f ? boss.Radius : PlaneBossTuning.SacRadius;
         // (A murkling's drawn body, its lobes swelling round it, reaches past its radius.)
@@ -3967,6 +3949,9 @@ public partial class TopDownMain : Node3D
         _haptics.Pulse(Mathf.Lerp(0.05f, 0.8f, k), Mathf.Lerp(0f, 0.65f, k), Mathf.Lerp(0.03f, 0.14f, k));
     }
 
+    /// <summary>The current (m/s) that makes the controller hum at its strongest as it carries her.</summary>
+    const float FullFlow = 4.5f;
+
     /// <summary>
     /// The controller's buzz this frame: the pulses the sim's moments asked for, and a hum while a geyser or a corrupted
     /// current shoves her (stronger the harder it pushes; the main current carries her quietly). Only while she plays with
@@ -3978,7 +3963,7 @@ public partial class TopDownMain : Node3D
         if (playing)
         {
             var flow = _world!.Director.FlowAt(_world.Player.Position, _world.Time);
-            float k = Mathf.Clamp(flow.Length() / VaseTuning.FullFlow, 0f, 1f);
+            float k = Mathf.Clamp(flow.Length() / FullFlow, 0f, 1f);
             if (k > 0.05f) _haptics.Hold(0.1f + 0.12f * k, 0.18f * k);
             // Firefly Squid's surge: a faint steady hum while it pours out, firmer as it grows stronger.
             if (_world.LightSurge is { } surge) _haptics.Hold(0.05f + 0.05f * surge.Power, 0.02f * surge.Power);
@@ -4160,9 +4145,7 @@ public partial class TopDownMain : Node3D
                   .Concat(_world.Thumpsquirts.Where(t => t.Alive).Select(t => t.Position))
                   .Concat(_world.Lashjaws.Where(l => l.Alive).Select(l => l.Position))
                   .Where(q => System.Numerics.Vector2.Distance(q, from) < 14f)
-                  .OrderBy(q => System.Numerics.Vector2.Distance(q, from)).Select(q => (System.Numerics.Vector2?)q).FirstOrDefault()
-              // With no creature to shoot, the nearest standing pot.
-              ?? _world.Vases.Where(v => !v.Broken).OrderBy(v => System.Numerics.Vector2.Distance(v.Position, from)).Select(v => (System.Numerics.Vector2?)v.Position).FirstOrDefault();
+                  .OrderBy(q => System.Numerics.Vector2.Distance(q, from)).Select(q => (System.Numerics.Vector2?)q).FirstOrDefault();
         // Nothing to shoot at: straight ahead, the way she faces.
         input.Aim = target is { } at && System.Numerics.Vector2.DistanceSquared(at, from) > 1e-4f ? System.Numerics.Vector2.Normalize(at - from) : _world.Player.Aim;
         // With Pearl Diver, let go once the pearl is fully charged.

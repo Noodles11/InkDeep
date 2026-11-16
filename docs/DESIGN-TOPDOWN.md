@@ -851,7 +851,7 @@ Deterministic and cheap: the same level always schedules the same events.
   - **The push:** while it sprays, the water within 5 m is pushed straight out from the vent like a wave — 4 m/s at
     the vent, plus a burst of 10 m/s at the start that dies away (to a third in half a second), fading to nothing at
     the edge — so it moves her, the creatures, the fish, her shots, shells and
-    loose pearls alike, and may topple a pot. A deep bubbling pop marks it, with a jolt when she is near.
+    loose pearls alike. A deep bubbling pop marks it, with a jolt when she is near.
 
 **The currents** (`PlaneCurrents.cs`, `CurrentView`) are the level's own water, not events; none is on a timer.
 
@@ -990,7 +990,7 @@ exactly and cheaply, and the water glows where light passes through it.
 - **What throws a shadow** (from the sun and from every shadowed light): every solid body — all the creatures (murklings
   and their chunks, the Blightroot's pole, head and rootlets and its octopus arms, blotters, inkwardens, lashjaws,
   thumpsquirts, pufferlings, the reef fish, the bosses' pearl and crust, thrown ink), the reef's boulders, kelp, flora,
-  vases and their shards, and the shells she collects. What is light or water casts none: her own bell and strands,
+  and the shells she collects. What is light or water casts none: her own bell and strands,
   glows, rings and halos, particles and trails, decals, the light springs' god rays and the jellies' see-through
   bodies; nor do the copies drawn over her, so nothing is shadowed twice. Under the steep sun a creature's shadow
   lies close beneath it; round her lantern in the deep, shadows stretch away from her across the floor.
@@ -1140,7 +1140,7 @@ The FP staging ("look up through the surface") is replaced:
   | **Hermit Hoarder** | 100 shells collected on one level | Pirate's Doubloon |
 
   The unlocked pearls on the plane: **Mitosis** — a bubble that pops on a foe,
-  rock or a pot splits into two half-damage bubbles 40° either side of its way
+  or rock splits into two half-damage bubbles 40° either side of its way
   on (they fly 4 m and never split again; the foe it popped on is spared);
   **Giant Squid Eye** — 10% of hits deal ×3 (seeded); **Lucky Sea Glass** — +2
   luck: every freed foe leaves 2 more shells; **Pirate's Doubloon** — +15 shells
@@ -1230,7 +1230,7 @@ The FP staging ("look up through the surface") is replaced:
   at random, never the same twice running, its pitch a little apart each time, muffled by the water. A stronger volley
   is a little louder.
 - **Her light striking pops squishily** (`Sfx.PlayStrike`): whenever a shot of hers hits anything it can harm (a
-  creature, a boss, a vase), the squishy pop (audio/sfx/squishpop.mp3), once a step however many it struck, through
+  creature, a boss), the squishy pop (audio/sfx/squishpop.mp3), once a step however many it struck, through
   the same water.
 - **Every explosion is felt** (`TopDownMain.Explode`): hers (a Starburst burst — only a subtle tremor, since it comes
   with nearly every shot; a Pistol Shrimp's bang),
@@ -1456,10 +1456,10 @@ at mist distance (inherited fade rule).
     shots that touch merge into one, bigger and stronger, instead of bouncing apart (see Combat above).
   - **Firefly Squid** (`PlaneSurge.cs`, `SurgeView`): fire pours out one continuous, narrow surge of her light instead
     of shots. It reaches her full range the way she aims and
-    stops on rock, a pot, Queen Clam's shut shell or the first creature it meets. It strikes everything it touches every
+    stops on rock, Queen Clam's shut shell or the first creature it meets. It strikes everything it touches every
     step, smoothly, for 90% of her shots' damage per second (her damage, fire rate and Sardine Run's spin all count),
     so a creature's meter drains steadily for as long as it is held in the light; its hit numbers and flashes come
-    summed four times a second (a creature it frees shows at once). A pot breaks once 18 of it has landed. Held on rock
+    summed four times a second (a creature it frees shows at once). Held on rock
     it counts as one of her shots every shot's time, on a leak's mouth or a sealed wall's carving. It has no
     knockback and sends no surge back to her. Its tip and every impact steadily clear the ground's corruption round
     them (1 m plus its width, 2.25 density a second); the rest of its line does not. A ribbon of
@@ -1494,18 +1494,7 @@ at mist distance (inherited fade rule).
     three rings of sound swelling out from her; not usable at full HP ("Already at full health"). **Tide Pulse**
     (60 s; every run starts with it): three waves of water push everything loose away from her, leaving the water
     clear 6.6 m round her bell (docs/PEARLS.md, `PlanePushWave.cs`). A new active pearl takes the old one's place.
-- **Sunken amphorae (`PlaneVases.cs`, `VaseView`):** breakable pots on the seabed. Each level has 5–7 groups of
-  1–3, seeded, by the walls where the seabed lies 0.3–1.6 m under her swim plane (so they stand up into it), clear of
-  the start (20 m), the way down and the places: a tall two-handled amphora, a round jar or a squat pot, terracotta
-  with dark glaze bands and a painted cream shoulder band, algae creeping up the foot, each leaning a little. They are
-  solid: she and the creatures swim round them, and needles and Queen Clam's pearls stop on them.
-  - **A plain bubble is not enough:** it rocks the pot on its foot, and pops on the bump (40%) or bounces off, as on
-    rock. **What breaks one:** a bubble with an impact of 18 or more (merged, grown by Starfish Arm, or with the
-    damage stats), a Pearl Diver throw charged half way or more, any bubble with Captain's Hook's knockback, an Ink
-    Sac blast that reaches it, her ink dash into it — and, if she is lucky, a geyser: beside a spraying one a standing
-    pot may topple and break (4% a second at 4.5 m/s of push, less in a gentler one).
-  - **Broken,** it shatters: shards burst out along the blow, tumble down through the water and lie on the sand a
-    while before fading, and a puff of silt rises. It leaves **2–3 shells** (50%), **a heart** (20%) or nothing.
+- **No pots:** nothing breakable stands on the seabed; loot comes from what she frees, the places and the shop.
 - **Shells (the currency, first pass, `PlaneEconomy.cs`):** small shells lie in caches at the shell cache (6–9),
   and secret rooms (8–12; one secret room in ten holds a pearl in its middle instead, one she lacks or another copy
   of a non-unique one, from its own roll); they drift to her from 2.5 m. A freed mob (and every freed murkling, lesser or

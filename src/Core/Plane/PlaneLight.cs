@@ -580,7 +580,7 @@ public sealed partial class PlaneWorld
         // (A plain loop: this is asked thousands of times a frame, and a lambda would make garbage each time.)
         for (int i = 0; i < _rocks.Count; i++)
             if (_rocks[i].Contains(q)) return true;
-        return VaseAt(q, 0.05f) is not null;
+        return false;
     }
 
     /// <summary>Her beam's other ray at this index, made (registered with her as its owner, dark) when first needed.</summary>

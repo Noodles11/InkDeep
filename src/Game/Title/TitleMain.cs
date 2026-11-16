@@ -314,7 +314,7 @@ public partial class TitleMain : Node3D
     {
         var map = shape.Map;
         _level.Show(shape);
-        var options = new PlaneOptions { Corruption = false, Pufferlings = false, Vases = false, Adventure = false, InkMurklings = false, Shots = false };
+        var options = new PlaneOptions { Corruption = false, Pufferlings = false, Adventure = false, InkMurklings = false, Shots = false };
         _world = new PlaneWorld(map, _tuning, new PlaneRun(_catalog, _tuning), options);
         _world.Mobs.Clear();
         _world.AddWanderers(Middle, Fish, FishNear, FishFar, 0x7171UL);

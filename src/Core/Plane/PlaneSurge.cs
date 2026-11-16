@@ -283,12 +283,6 @@ public sealed partial class PlaneWorld
                 Stop(at);
                 break;
             }
-            if (VaseAt(next, w) is { } vase)
-            {
-                Struck(vase, gone + step);
-                Stop(next);
-                break;
-            }
             bool stopped = false;
             foreach (var target in SurgeTouches(next, w))
             {
@@ -536,16 +530,6 @@ public sealed partial class PlaneWorld
                     DamageSac(owner, sac, light, Vector2.Zero, quiet: true);
                     if (!sac.Alive) _surgeTally.Remove(target);
                     break;
-                case PlaneVase vase:
-                    if (vase.Broken) break;
-                    vase.Warmth += light;
-                    if (vase.Warmth >= VaseTuning.BreakImpact)
-                    {
-                        _surgeTally.Remove(target);
-                        BreakVase(vase, aim);
-                    }
-                    else _surgeTally[target] = told + light;
-                    break;
             }
         }
         // The murklings' throws it crosses in the air burst.
@@ -605,9 +589,6 @@ public sealed partial class PlaneWorld
                     break;
                 case BossSac sac when sac.Alive && Boss is { } owner:
                     Events.Add(new PlaneEvent(PlaneEventType.BossHit, owner.SacAt(sac), Vector2.Zero, light));
-                    break;
-                case PlaneVase vase when !vase.Broken:
-                    Events.Add(new PlaneEvent(PlaneEventType.VaseHit, vase.Position, Vector2.Zero));
                     break;
             }
         }

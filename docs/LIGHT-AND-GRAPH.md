@@ -359,10 +359,10 @@ her bell's), so a lattice is wider and cleverer, never simply more.
 
 | Pearl | Word | Where her light lands on rock |
 |---|---|---|
-| Mirror Scale | **Bounce** | it reflects off the rock as a mirror would (off a seal or a pot, straight back), 60% of its light, 60% of its reach; each copy one more bounce |
+| Mirror Scale | **Bounce** | it reflects off the rock as a mirror would (off a seal, straight back), 60% of its light, 60% of its reach; each copy one more bounce |
 | Mitosis | **Fork** | two short rays fork off it, 70° apart either side of the way a mirror would send it, 30% of its light each, 40% of its reach, narrower |
 | Boomerang Shrimp | **Return** | it comes back along its own way to where it left, 50% of its light: what stands in it is lit from both sides (×1.5 between her and the wall) |
-| Ghost Jelly | **Ghost** | through a wall of the reef up to 3 m thick (not a seal, not a pot) it goes on beyond, 50% as strong; a wall it passes through is not landed on |
+| Ghost Jelly | **Ghost** | through a wall of the reef up to 3 m thick (not a seal) it goes on beyond, 50% as strong; a wall it passes through is not landed on |
 
 - **One line, each word once**: a born ray takes the other words where it lands, never its own again; Bounce as many
   times as she has Mirror Scales; a Return's ray takes none. At most 24 born rays at once.

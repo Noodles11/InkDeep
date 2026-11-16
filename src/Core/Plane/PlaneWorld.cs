@@ -81,7 +81,7 @@ public sealed class PlaneInk
 
 public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, MobDefeated, MobNoticed, PlayerHit, PlayerDefeated, Dived, PufferSwells, NeedlesFired, PearlCollected, ShellCollected, HeartCollected, Purchased, CannotAfford, ShotPopped, BubbleFull,
     ChargeFull, LightBurst, ShieldBlocked, ActiveUsed, ActiveNotReady, ActiveDenied,
-    GeyserFizz, GeyserSpray, GeyserEnded, VaseHit, VaseBroken, FullBubbleFreed,
+    GeyserFizz, GeyserSpray, GeyserEnded, FullBubbleFreed,
     BlightrootDrank, BlightrootInflate, GuardiansWoke, BlightrootPulse, BlightrootBurst, MurklingBud, MurklingEmerged, MurklingBurst, MurklingThrow, MurklingWindup, ThumpWindup, ThumpLeap, ThumpLand, ThumpRoll, ThumpBurst, Warded, WardenFreed, LashWindup, LashOut, LashCatch, LashSwallow, LashBite, LashStun, LashFreed, SealLit, SealOpened, SealClosed, FishStruck, FishTurned, FishFreed,
     MurklingCling, BlightrootSwing, BlightrootSlam, CrackOpened, CrustBroken, PlayerDrained, SpringEntered, SpringCleansed, SpringSpent, BlotterBorn, BlotterBurst, DenCleared, ShotOut, BombThrown, BombSplash, MurkShotLanded, MurkShotBurst, BossLeap, PearlTouched, PearlShattered,
     CurseEndReached, CurseLaugh, CurseCleared, FountainSpout, Cavitation, Necklace, SchoolPoints, EchoFlare, FireflyDrunk, Frenzy,
@@ -178,7 +178,6 @@ public sealed partial class PlaneWorld : IBodyBlocker
         PlaceCrab();
         PlaceShells();
         PlaceBoss();
-        if (Options.Vases) PlaceVases();
         PlaceSprings();
         PlaceChargeStones();
         PlaceSeals();
@@ -278,7 +277,6 @@ public sealed partial class PlaneWorld : IBodyBlocker
         StepPrismStones();
 
         StepReef();
-        StepVases();
         StepSeals();
 
         foreach (var c in Clouds) c.Life -= Dt;
@@ -383,8 +381,7 @@ public sealed partial class PlaneWorld : IBodyBlocker
         if (!ReefCollision.Clear(Field, p, radius)) return false;
         foreach (var rock in _rocks)
             if (rock.Contains(p, radius)) return false;
-        if (ShutMouths.Count > 0 && Plug(p, radius) is not null) return false;
-        return VaseAt(p, radius) is null;
+        return ShutMouths.Count == 0 || Plug(p, radius) is null;
     }
 
     /// <summary>Uphill direction at p: the terrain gradient, or away from weak rock.</summary>
@@ -393,7 +390,6 @@ public sealed partial class PlaneWorld : IBodyBlocker
         foreach (var rock in _rocks)
             if (rock.Contains(p, radius))
                 return rock.Inward(p);
-        if (VaseAt(p, radius) is { } vase) return SafeNormalize(vase.Position - p);
         if (ShutMouths.Count > 0 && Plug(p, radius) is { } plug) return plug;
         return ReefCollision.WallNormal(Field, p, radius);
     }

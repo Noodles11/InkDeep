@@ -374,12 +374,6 @@ public class CorruptionTests
         Assert.True(w.Corruption!.At(b.Position) < CorruptionTuning.Clean);
     }
 
-    [Fact]
-    public void NoPotsWithTheCorruptionOn()
-    {
-        var w = Level(p => TestLevels.General(p) && !p.HasBoss && p.Id.Level > 1);
-        Assert.Empty(w.Vases);
-    }
 
     [Fact]
     public void ABlotterTakesHitsAnywhereOnItsShell()

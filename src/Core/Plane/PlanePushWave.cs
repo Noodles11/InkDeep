@@ -130,8 +130,6 @@ public sealed partial class PlaneWorld
             float dist = off.Length(), edge = front + BlotterTuning.SplashRadius * 0.5f;
             if (dist < edge) bomb.To = her + (dist > 1e-4f ? off / dist : -Vector2.UnitY) * edge;
         }
-        foreach (var vase in Vases)
-            if (!vase.Broken) SweepVase(vase, her, front);
     }
 
     /// <summary>
@@ -151,28 +149,4 @@ public sealed partial class PlaneWorld
 
     /// <summary>A velocity thrown outward along dir at kick at least (what it had along dir kept if faster; across, dropped).</summary>
     static Vector2 Throw(Vector2 velocity, Vector2 dir, float kick) => dir * MathF.Max(Vector2.Dot(velocity, dir), kick);
-
-    /// <summary>A pot inside the front slides out to it where the water is open and no other pot stands.</summary>
-    void SweepVase(PlaneVase vase, Vector2 her, float front)
-    {
-        var off = vase.Position - her;
-        float d = off.Length(), edge = front + vase.Radius;
-        if (d >= edge) return;
-        var dir = d > 1e-4f ? off / d : -Player.Aim;
-        float left = edge - d;
-        while (left > 1e-4f)
-        {
-            float step = MathF.Min(left, 0.1f);
-            var next = vase.Position + dir * step;
-            if (!Map.IsOpen(next) || !Map.IsOpen(next + dir * vase.Radius)) break;
-            bool free = true;
-            foreach (var rock in _rocks)
-                if (rock.Contains(next, vase.Radius)) free = false;
-            foreach (var other in Vases)
-                if (other != vase && !other.Broken && Vector2.Distance(other.Position, next) < other.Radius + vase.Radius) free = false;
-            if (!free) break;
-            vase.Position = next;
-            left -= step;
-        }
-    }
 }

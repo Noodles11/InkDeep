@@ -128,9 +128,8 @@ public sealed partial class PlaneWorld
                 // Its light where it lands, against what it had at her bell (light is conserved).
                 float left = worth * BeamFalloff(beam, len) / LightTuning.NearLight;
                 var landed = hue | HueAlong(beam.Position, at);
-                // Ghost: through a wall thin enough (the reef's rock, not a seal's nor a pot), and on beyond.
-                if ((words & PathWord.Ghost) != 0 && (taken & PathWord.Ghost) == 0 && !_rocks.Exists(r => r.Contains(at + beam.Direction * 0.1f))
-                    && VaseAt(at + beam.Direction * 0.1f, 0.05f) is null)
+                // Ghost: through a wall thin enough (the reef's rock, not a seal's), and on beyond.
+                if ((words & PathWord.Ghost) != 0 && (taken & PathWord.Ghost) == 0 && !_rocks.Exists(r => r.Contains(at + beam.Direction * 0.1f)))
                 {
                     float through = -1f;
                     for (float t = 0.1f; t <= PathTuning.GhostThick; t += 0.1f)

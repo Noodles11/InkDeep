@@ -2001,8 +2001,8 @@ public partial class LevelView : Node3D
             h ^= h >> 15;
             return (h & 0xFFFFFF) / 16777216f;
         }
-        FloraKind[] top = { FloraKind.SeaRod, FloraKind.TubeSponge, FloraKind.Staghorn, FloraKind.SeaFan, FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Elkhorn };
-        FloraKind[] foot = { FloraKind.TubeSponge, FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Staghorn, FloraKind.BarrelSponge };
+        FloraKind[] top = { FloraKind.SeaRod, FloraKind.Staghorn, FloraKind.SeaFan, FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Elkhorn };
+        FloraKind[] foot = { FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Staghorn };
         const float step = 1.05f;
         var (ys, ye, xs, xe) = Span(map, step, area);
         for (float y = ys; y < ye; y += step)

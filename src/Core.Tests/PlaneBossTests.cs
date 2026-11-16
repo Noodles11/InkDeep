@@ -24,7 +24,7 @@ public class PlaneBossTests
     });
 
     /// <summary>Queen Clam (the reference roll), so these tests pin her fight.</summary>
-    static readonly PlaneOptions Queen = new() { Corruption = false, Pufferlings = true, Vases = true, Boss = OctoShoots.Core.Bosses.BossGenerator.QueenClam(1UL, 1, 1) };
+    static readonly PlaneOptions Queen = new() { Corruption = false, Pufferlings = true, Boss = OctoShoots.Core.Bosses.BossGenerator.QueenClam(1UL, 1, 1) };
 
     static PlaneWorld World() => new(Shared.Value, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), Queen);
 

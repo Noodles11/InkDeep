@@ -334,7 +334,7 @@ public partial class TopDownMain
     /// </summary>
     PlaneOptions ReefOptions()
     {
-        var options = new PlaneOptions { Corruption = false, Pufferlings = false, Vases = false, Adventure = false, InkMurklings = false, Shots = true, Reef = true };
+        var options = new PlaneOptions { Corruption = false, Pufferlings = false, Adventure = false, InkMurklings = false, Shots = true, Reef = true };
         if (!_map.HasBoss) return options;
         // Its boss: the neighbour the Leak made the boss of the depth the layer stands for, until she is freed; else one
         // of the Drowned Court, from the layer's pool (BossCourt; BOSS-GENERATOR §15).

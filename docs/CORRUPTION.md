@@ -231,8 +231,7 @@ as her light clears it. No ring of light is drawn.
 
 ## Light orbs
 
-With the corruption on there are no pots (`PlaneOptions.Vases` is off), and nothing lies buried under the ink: loot
-comes from what she frees, the places and the shop.
+There are no pots, and nothing lies buried under the ink: loot comes from what she frees, the places and the shop.
 
 **Light orbs** replace hearts everywhere: drops and the shop's top-up stand. Each is a bubble with her light
 inside, like her old bubble shots, with a soft halo and a warm light. It washes 12 corruption away. The sim still calls

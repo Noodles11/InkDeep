@@ -53,7 +53,7 @@ between).
   The wave shows the hidden murklings it passes over as its front touches them (within 1.5 m of it), all of each,
   fading out over 1.2 s after (`BlightView.Wave`, `murkling`'s `wave_seen`).
 
-- **Coral gardens** (`LevelView.Gardens`): sea rods, tube sponges, staghorn, sea fans, elkhorn and brain corals packed
+- **Coral gardens** (`LevelView.Gardens`): sea rods, staghorn, sea fans, elkhorn and brain corals (no sponges) packed
   in drifting patches on the walls' tops and ledges, and in a band along their feet at the edge of the open floor.
 
 - **Her beam as a flashlight's, lit as light is** (`BeamView`, `BeamShadow`, `her_beam_volume.gdshader`): each frame
