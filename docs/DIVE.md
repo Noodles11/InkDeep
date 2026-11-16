@@ -15,9 +15,11 @@ levels one after another: the layers are the depths.
   warm-up layer: 36 layers of 64 m squares, each layer's cubes bricks two squares long laid as a herringbone
   (`CubeReef`, `CubeSpace`). Nothing is laid out ahead: a cube is made only as she comes near it (her cube, those its
   gates lead to, the one under it), from the seed and its own place, so it always matches the cubes round it, over it
-  and under it. The game shows each layer as a level as wide as a 24-square window round her start
-  (`CubeReef.Layer`), each cube laid onto it as it is made, its rock streamed in round her (`ReefStream`,
-  `ReefStreamView`).
+  and under it. The game shows each layer as a level as wide as a 24-square window (about 1.5 km) centred where she
+  comes onto it (`CubeReef.Layer`), each cube laid onto it as it is made, its rock streamed in round her (`ReefStream`,
+  `ReefStreamView`): so however far she has come, every new layer runs on as far every way from her arrival, and diving
+  on is endless. A layer is its own level in its own metres; the reef's cubes lie in the reef's (`LevelMap.ReefOrigin`
+  between them), and a change of layer moves her, the camera and all that is drawn from one to the other unseen.
 - **Its seed** comes from the jelly's own seed and how many dives she has ended (`Dives.SeedOf`), so every dive is a
   different reef.
 - **The light by depth:** each layer wears the adventure's painted reef, its coral gardens and all; the top layer is

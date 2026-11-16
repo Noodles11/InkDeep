@@ -22,6 +22,36 @@ public class CubeReefTests
 
     [Theory]
     [MemberData(nameof(CubeTerrainTests.Seeds), MemberType = typeof(CubeTerrainTests))]
+    public void A_layer_made_round_a_far_point_holds_the_reef_there_in_its_own_metres(ulong seed)
+    {
+        // (Far off the top layer's window, and on the far side of the reef's naught: the reef runs on every way.)
+        var reef = new CubeReef(seed, 5, 3);
+        var far = new Vector2(40.5f * Side, -17.5f * Side);
+        var map = reef.Layer(1, far);
+        Assert.Equal(new Vector2(38 * Side, -20 * Side), map.ReefOrigin);
+        var cubes = reef.Space.CubesOf(1).ToList();
+        Assert.NotEmpty(cubes);
+        foreach (var c in cubes) reef.Terrain(c);
+        reef.Settle();
+        Assert.Equal(cubes.Count, reef.LaidOn(1).Count);
+        foreach (var c in cubes)
+        {
+            var t = reef.Terrain(c);
+            for (int k = 0; k < 40; k++)
+            {
+                int x = (int)c.Origin.X + (k * 37) % (int)c.Size.X, y = (int)c.Origin.Y + (k * 53) % (int)c.Size.Y;
+                Assert.Equal(t.HeightAt(x, y), map.HeightAt(new Vector2(x, y) - map.ReefOrigin), 3);
+            }
+        }
+        // Made again round another point, the same reef in its new window.
+        var again = reef.Layer(1, far + new Vector2(2f * Side, 0f));
+        Assert.Equal(map.ReefOrigin + new Vector2(2f * Side, 0f), again.ReefOrigin);
+        var shared = new Vector2(41 * Side + 7, -17 * Side + 11);
+        Assert.Equal(map.HeightAt(shared - map.ReefOrigin), again.HeightAt(shared - again.ReefOrigin), 3);
+    }
+
+    [Theory]
+    [MemberData(nameof(CubeTerrainTests.Seeds), MemberType = typeof(CubeTerrainTests))]
     public void A_layers_map_is_its_cubes_rock(ulong seed)
     {
         var reef = new CubeReef(seed, 5, 3);
@@ -75,11 +105,12 @@ public class CubeReefTests
         var reef = new CubeReef(seed, 5, 3);
         var map = CubeReefTests.Whole(reef, 0);
         var world = new PlaneWorld(map, new Tuning(), options: new PlaneOptions { Corruption = false, InkMurklings = false });
-        Assert.Equal(reef.Start, world.Player.Position);
+        // (On the map, in its own metres: the reef's start less where the map lies.)
+        Assert.Equal(reef.Start - map.ReefOrigin, world.Player.Position);
         Assert.True(world.Clear(world.Player.Position, world.Radius));
         // A layer's rim squares outside the reef are rock.
         var outside = Enumerable.Range(0, 5).SelectMany(y => Enumerable.Range(0, 5).Select(x => new CellCoord(x, y, 0))).Where(c => !reef.Space.Inside(c)).ToList();
-        foreach (var c in outside) Assert.False(map.IsOpen(c.Origin + new Vector2(Side / 2f)));
+        foreach (var c in outside) Assert.False(map.IsOpen(c.Origin - map.ReefOrigin + new Vector2(Side / 2f)));
     }
 }
 

@@ -17,7 +17,7 @@ public sealed class CubeDiveSave
     /// <summary>The terrain generator it was made with: one saved under another reef's is let go (TerrainNow).</summary>
     public int Terrain { get; set; }
     /// <summary>The terrain generator's version now (raised whenever a seed's reef would come out different).</summary>
-    public const int TerrainNow = 3;
+    public const int TerrainNow = 4;
     /// <summary>The window its layers are read in (squares a side: CubeTuning.Window).</summary>
     public int Window { get; set; }
     public int Layers { get; set; }
@@ -33,6 +33,8 @@ public sealed class CubeDiveSave
     /// <summary>Each layer's danger clock (seconds she has been on it with its boss not freed: DangerTuning).</summary>
     public Dictionary<int, float> DangerClock { get; set; } = new();
     public List<CubeLayerSave> Records { get; set; } = new();
+    /// <summary>Each kept layer's window: its first square ("x/y"), so a layer's map is made again where it lay.</summary>
+    public Dictionary<int, string> Windows { get; set; } = new();
 
     public static string CubeKey(CubeId c) => $"{c.X}/{c.Y}/{c.Z}/{(c.OnEnd ? 1 : 0)}";
 

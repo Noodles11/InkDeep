@@ -47,9 +47,13 @@ they exist. A window 24 squares across is about 1.5 km, well inside what a `floa
 
 **No footprint: the reef runs on.** Nothing is laid out ahead of her. A cube exists only once she comes near it, made
 from the seed and its own coordinates (§4), so it matches its neighbours and the cubes over and under it whichever is
-made first, and the reef carries on every way she swims. A run reads its layers in a **window** of 24 × 24 squares
-*(tune)* with her start in its middle (§5.3: the game's systems read a layer as one map that size); no cube sticking out
-of the window is ever made, and edges into one are closed.
+made first, and the reef carries on every way she swims. A run reads each layer in a **window** of 24 × 24 squares
+*(tune)* centred where she comes onto that layer (§5.3: the game's systems read a layer as one map that size); no cube
+sticking out of the window is ever made or laid, and a gate at the window's line leads into rock. The reef itself is
+the same whatever window it is read in (no spec reads the window), so a layer's window can be set anywhere, any time.
+While she is on a layer, the window of the one under it (one she has never been on) follows her, so the cube under her
+is always made; as she dives onto it, it is made again round her arrival should she come down more than three squares
+off its middle. A layer she has been on keeps its window: climbing back, or diving again onto it, only where it holds.
 
 **Why 64 m squares.** The camera sees about 62 × 35 m (35° at 55 m). With S = 64 her view rarely reaches past the
 cubes next to hers; where it does, the dark of the rock stands in (§5.5). At her 6 m/s cruise a cube is
@@ -88,7 +92,7 @@ Three small specs, each hashed from the seed and the id of the thing two or thre
   layer: §4.3). Each edge is open by its own chance, 55% *(tune)*; a cube left with none open has the one of its six
   nearest to opening opened, so no cube is ever shut in. Both rules read only the edge and the two cubes beside it, so
   no layer is planned as a whole: a layer is not certain to join up everywhere, but nearly all of it does (§12), and
-  she can always dive on. Edges into a cube outside the window are closed. An open edge has one gate, or two on 35% of edges, each 6–13 m wide, its sides never nearer a corner
+  she can always dive on. An open edge has one gate, or two on 35% of edges, each 6–13 m wide, its sides never nearer a corner
   than 13 m. Two cubes may share two edges (along a long side), each with its own gates.
 - **`CornerSpec(CornerId)`**: rock 8–10 m round the corner, its size wandering slowly with depth, so a corner stands
   on down the layers as one pillar. With gates kept off the corners, no water ever joins two
@@ -220,7 +224,9 @@ the player code nor the generator knows about loading.
 
 The game's systems (collision, her light, the nav grid, the maps, creatures, bosses, the save's snapshot) read one
 `LevelMap`. A layer is given to them as one: a map as wide as the window, begun as rock (made as soon as she
-arrives on the layer above it). `CubeReef` makes each cube's terrain the first time the stream asks for it (on any
+arrives on the layer above it, round her arrival there; made again round where she comes onto it, should that lie
+off its middle), in its own metres: where it lies in the reef is `LevelMap.ReefOrigin`, and the game takes its points
+into the reef's metres and back wherever it meets the cubes. `CubeReef` makes each cube's terrain the first time the stream asks for it (on any
 thread, kept while its layer is) and lays it onto its layer's map on the main thread the frame after (`Settle`), so a
 layer's map holds only the cubes she has come near, and her layer's reef life, its cutout mask and its sun map follow
 as each is laid. Water not laid yet reads as rock, so nothing swims or shoots into it. A layer is then a level to the
@@ -415,9 +421,9 @@ Core tests, run over many seeds and coordinates:
 - **Determinism:** a cube made twice, in either order with its neighbours, on any thread, is identical byte for byte.
 - **Seams:** for every edge, both cubes' samples in the seam band and apron are equal. Same for corners.
 - **Gates:** never within 13 m of a corner; no water joins two cubes that share only a corner.
-- **Connectivity:** inside a cube every gate reaches every other gate and every well. No cube is shut in; edges into
-  a cube outside the window are closed; from the window's middle, at least 85% of a layer's cubes are joined by open
-  edges.
+- **Connectivity:** inside a cube every gate reaches every other gate and every well. No cube is shut in; every edge
+  is the same whatever window its layer is read in; from the window's middle, at least 85% of a layer's cubes are
+  joined by open edges inside it. A layer made round a far point (past the reef's naught too) holds the reef there.
 - **Made as she swims:** a layer's map holds only the cubes made, each laid on it as it is made; at rest the stream
   holds her cube, those its gates lead to (and past a gate in view), the one under hers, and nothing else.
 - **Wells:** every floor face has at least two spots where §3's rule holds, and from any arrival point one of them is
@@ -560,9 +566,9 @@ Each has the default this plan assumes; none blocks the prototype.
 1. **The boss chance after she has just freed one** is not given in the rules; 35% is assumed.
 2. **How deep the reef goes** ("dozens"): 36 layers assumed. It only sets where the bottom is.
 3. **The warm-up layer's places:** assumed to be as anywhere (secrets, clam room, havens) but no curse rooms.
-4. **The window** (24 × 24) and **S** (64 m) are the two numbers the prototype is most likely to change. The window
-   bounds how far she can swim on one layer from her start's column; letting it move with her (each layer's map
-   placed round where she arrives on it) would make the reef endless in play too.
+4. **The window** (24 × 24) and **S** (64 m): each layer's map is placed round where she arrives on it, so diving on is
+   endless; on one layer she can still swim only about 750 m from her arrival. A window sliding with her as she swims
+   would make each layer endless too.
 5. **The cube grid's trace:** with the walls' faces wandering and no pockets against them, the lines no longer read
    as fins; the throats' ends can still leave a small point of rock. If the grid reads in play, the next tries are
    fewer walls (open edges with wide gates) and chambers written by the edge across an open line.

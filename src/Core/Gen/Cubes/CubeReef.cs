@@ -24,12 +24,16 @@ public sealed class CubeReef
     public CubeReef(ulong seed, int window = Window, int layers = Layers)
     {
         Space = new CubeSpace(seed, window, layers);
-        // Where a dive begins: a gate's mouth of the top layer's cube in the window's middle.
+        // Where a dive begins: a gate's mouth of the top layer's cube in the middle of the window from (0, 0) (the top
+        // layer is read round it).
         Start = Terrain(CubeId.Of(Space.Middle(0))).Gates[0].Mouth;
     }
 
     public CubeSpace Space { get; }
     public Vector2 Start { get; }
+
+    /// <summary>The middle of a layer's window (the reef's metres): where a map made again in it is centred.</summary>
+    public Vector2 WindowCentre(int z) => Space.Middle(z).Origin + new Vector2(Side * 0.5f);
     public int Size => Space.Window * Side;
 
     readonly ConcurrentDictionary<CubeId, Lazy<CubeTerrain>> _made = new();
@@ -61,7 +65,8 @@ public sealed class CubeReef
         lock (_maps)
             while (laid.Count < most && _fresh.TryDequeue(out var c))
                 // (Its terrain read whole: queued as it was made, it may be a moment from being handed out.)
-                if (_maps.TryGetValue(c.Z, out var layer) && _made.TryGetValue(c, out var made) && layer.Laid.Add(c))
+                // (A cube outside its layer's window is never laid: that water is rock to her.)
+                if (_maps.TryGetValue(c.Z, out var layer) && Space.Inside(c) && _made.TryGetValue(c, out var made) && layer.Laid.Add(c))
                 {
                     Lay(layer.Map, c, made.Value);
                     laid.Add(c);
@@ -104,19 +109,24 @@ public sealed class CubeReef
         _made.TryRemove(cube, out _);
     }
 
-    /// <summary>A cube's heights (and the rock over its sockets, gates and tunnels) laid onto its layer's map.</summary>
+    /// <summary>
+    /// A cube's heights (and the rock over its sockets, gates and tunnels) laid onto its layer's map, where the map lies in
+    /// the reef (LevelMap.ReefOrigin).
+    /// </summary>
     void Lay(LevelMap map, CubeId c, CubeTerrain t)
     {
-        int last = Size;
-        int x0 = (int)c.Origin.X, y0 = (int)c.Origin.Y, x1 = Math.Min(x0 + (int)c.Size.X, last), y1 = Math.Min(y0 + (int)c.Size.Y, last);
+        int ox = (int)map.ReefOrigin.X, oy = (int)map.ReefOrigin.Y;
+        int x0 = Math.Max((int)c.Origin.X, ox), y0 = Math.Max((int)c.Origin.Y, oy);
+        int x1 = Math.Min((int)c.Origin.X + (int)c.Size.X, ox + map.Size), y1 = Math.Min((int)c.Origin.Y + (int)c.Size.Y, oy + map.Size);
         for (int y = y0; y <= y1; y++)
         for (int x = x0; x <= x1; x++)
         {
-            map[x, y] = t.HeightAt(x, y);
+            int at = (y - oy) * map.Samples + (x - ox);
+            map.Heights[at] = t.HeightAt(x, y);
             // (The rock over its sockets' passages, drawn by the mouths' views as a level's.)
-            if (t.Roof is not null && t.RoofAt(x, y) is var roof && !float.IsNaN(roof)) map.Roof[y * map.Samples + x] = roof;
+            if (t.Roof is not null && t.RoofAt(x, y) is var roof && !float.IsNaN(roof)) map.Roof[at] = roof;
             // (The roofs over its gates and tunnels, as rock over the water to the cutout: LevelView.SeeKeep.)
-            else if (t.CanopyAt(x, y) && t.CellAt(x, y) != CubeCell.Rock) map.Roof[y * map.Samples + x] = RoofHeight;
+            else if (t.CanopyAt(x, y) && t.CellAt(x, y) != CubeCell.Rock) map.Roof[at] = RoofHeight;
         }
     }
 
@@ -140,14 +150,29 @@ public sealed class CubeReef
     public static int LookDepthOf(int z) => LevelPlan.Tutorial + 1 + Math.Min(z, 3);
 
     /// <summary>
-    /// A layer as one map as wide as the window: rock, with the cubes of it made so far laid on it (the rest as they are
-    /// made: <see cref="Settle"/>), her start on it at <paramref name="start"/>; it is the layer's map from then on. Safe
-    /// on any thread.
+    /// A layer as one map as wide as the window, the window centred on <paramref name="centre"/> (the reef's metres: where
+    /// she comes onto the layer, so every layer runs on round her): rock, with the cubes of it made so far laid on it (the
+    /// rest as they are made: <see cref="Settle"/>), her start at that centre; it is the layer's map from then on (made
+    /// again, it is read in its new window). Safe on any thread.
     /// </summary>
-    public LevelMap Layer(int z, Vector2 start)
+    public LevelMap Layer(int z, Vector2 centre)
     {
+        Space.SetWindow(z, centre);
+        return Layer(z, (Vector2?)centre);
+    }
+
+    /// <summary>
+    /// A layer's map in the window it is read in now (Space.SetWindow, set on the game's thread before this is begun on
+    /// another): should the window move again before it is done, it is not the layer's map (the later one is).
+    /// </summary>
+    public LevelMap Layer(int z) => Layer(z, (Vector2?)null);
+
+    LevelMap Layer(int z, Vector2? start)
+    {
+        var corner = Space.WindowCorner(z);
         var map = new LevelMap(Size)
         {
+            ReefOrigin = corner.Origin,
             Seed = Space.Seed, Id = IdOf(z), LookDepth = LookDepthOf(z),
             // The warm-up layer is bright and its menace low (§9); below, the menace grows a layer at a time.
             Menace = Math.Min(1f, z / 8f),
@@ -158,14 +183,14 @@ public sealed class CubeReef
         {
             var laid = new HashSet<CubeId>();
             foreach (var (c, made) in _made)
-                if (c.Z == z && made.IsValueCreated)
+                if (c.Z == z && made.IsValueCreated && Space.Inside(c))
                 {
                     Lay(map, c, made.Value);
                     laid.Add(c);
                 }
-            _maps[z] = (map, laid);
+            if (Space.WindowCorner(z) == corner) _maps[z] = (map, laid);
         }
-        map.Pois.Add(new Poi { Kind = PoiKind.Start, Position = start, Radius = 3f });
+        map.Pois.Add(new Poi { Kind = PoiKind.Start, Position = (start ?? WindowCentre(z)) - map.ReefOrigin, Radius = 3f });
         // (No exit: a layer is left by diving or climbing. The game's code asks for one, far off the reef.)
         map.Pois.Add(new Poi { Kind = PoiKind.Exit, Position = new Vector2(-1000f, -1000f), Radius = 1f });
         // (Nor a shaft: one far off it, so nothing on the layer counts as standing in it.)

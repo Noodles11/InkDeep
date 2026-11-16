@@ -38,7 +38,16 @@ public partial class TopDownMain
     /// <summary>The layers whose boss has been rolled (on her first arrival).</summary>
     readonly HashSet<int> _bossRolled = new();
     /// <summary>Her layer's arena while its boss is unfreed: its wells sealed; while the battle runs, its edges too.</summary>
-    bool InArena(System.Numerics.Vector2 p, int layer) => _reef!.IsArena(CubeId.Of(p, layer));
+    bool InArena(System.Numerics.Vector2 p, int layer) => _reef!.IsArena(CubeId.Of(G(p), layer));
+
+    /// <summary>
+    /// Where her layer's map lies in the reef (LevelMap.ReefOrigin): the game's metres on a layer are its map's, the
+    /// reef's cubes the reef's own; <see cref="G"/> takes a point of hers into the reef, <see cref="L"/> one of the reef's
+    /// onto her map. A layer's map is centred where she comes onto it (CubeReef.Layer), so the reef runs on round her.
+    /// </summary>
+    System.Numerics.Vector2 Frame => _layerMaps.TryGetValue(_layer, out var m) ? m.ReefOrigin : System.Numerics.Vector2.Zero;
+    System.Numerics.Vector2 G(System.Numerics.Vector2 p) => p + Frame;
+    System.Numerics.Vector2 L(System.Numerics.Vector2 g) => g - Frame;
     int _layer;
     int _cubeWindow = CubeTuning.Window, _cubeLayers = CubeTuning.Layers;
     /// <summary>Verification (--cube-boss): every layer below the warm-up holds a boss (and --autopilot swims to its arena).</summary>
@@ -82,7 +91,7 @@ public partial class TopDownMain
         if (arena is { } at)
         {
             map.HasBoss = true;
-            map.Exit.Position = at.Middle;
+            map.Exit.Position = at.Middle - map.ReefOrigin;
             map.Exit.Radius = CubeTerrain.ArenaRadius;
             _startAt ??= "arena";
         }
@@ -239,7 +248,7 @@ public partial class TopDownMain
     };
 
     /// <summary>A layer as the level she is on (made off the main thread; kept while she may come back to it).</summary>
-    LevelMap LayerMap(int z) => _layerMaps.TryGetValue(z, out var map) ? map : _layerMaps[z] = z == 0 ? FirstLayer(_reef!) : _reef!.Layer(z, _reef.Start);
+    LevelMap LayerMap(int z) => _layerMaps.TryGetValue(z, out var map) ? map : _layerMaps[z] = z == 0 ? FirstLayer(_reef!) : _reef!.Layer(z, _reef.WindowCentre(z));
 
     /// <summary>The warm-up layer's map and its (bare) shape: the first level of a dive in the reef.</summary>
     Task<LevelShape> ReefFirstShape()
@@ -271,7 +280,11 @@ public partial class TopDownMain
         foreach (var (z, key) in saved.Arenas)
             if (CubeDiveSave.FromCubeKey(key) is { } arena) _reef!.RestoreArena(arena);
         foreach (var layer in saved.Records) CubeRecordSaving.Load(layer, _records.Of(layer.Layer));
-        var map = _reef!.Layer(_layer, _reef.Start);
+        // (Each kept layer read in the window it lay in.)
+        foreach (var (z, corner) in saved.Windows)
+            if (corner.Split('/') is [var x, var y] && int.TryParse(x, out int cx) && int.TryParse(y, out int cy))
+                _reef!.Space.SetWindow(z, new CellCoord(cx + _reef.Space.Window / 2, cy + _reef.Space.Window / 2, z).Origin + new System.Numerics.Vector2(CubeTuning.Side * 0.5f));
+        var map = _reef!.Layer(_layer, _reef.WindowCentre(_layer));
         MarkBoss(map, _layer);
         OpenMouths(map);
         _layerMaps[_layer] = map;
@@ -289,7 +302,7 @@ public partial class TopDownMain
     {
         if (_reef!.ArenaOf(layer) is not { } arena || _bossFreed.Contains(layer)) return;
         map.HasBoss = true;
-        map.Exit.Position = arena.Middle;
+        map.Exit.Position = arena.Middle - map.ReefOrigin;
         map.Exit.Radius = CubeTerrain.ArenaRadius;
     }
 
@@ -309,6 +322,7 @@ public partial class TopDownMain
             Arenas = Enumerable.Range(0, _reef.Space.Layers).Where(z => _reef.ArenaOf(z) is not null).ToDictionary(z => z, z => CubeDiveSave.CubeKey(_reef.ArenaOf(z)!.Value)),
             BossRolled = _bossRolled.ToList(), BossFreed = _bossFreed.ToList(), DangerClock = new Dictionary<int, float>(_dangerClock),
             Records = _records.Layers.Select(z => CubeRecordSaving.Save(_records.Of(z))).ToList(),
+            Windows = _layerMaps.Keys.ToDictionary(z => z, z => $"{_reef.Space.WindowCorner(z).X}/{_reef.Space.WindowCorner(z).Y}"),
         };
         jelly.Level = _run.XpLevel;
         jelly.Xp = _run.Xp;
@@ -352,6 +366,8 @@ public partial class TopDownMain
     void EnteredLayer(bool restored)
     {
         _layerMaps[_layer] = _map;
+        // (The reef's cubes drawn in this layer's frame.)
+        _reefView.SetFrame(Frame);
         // Its claimed cubes' places, their mouths on its map (those granted before it was made).
         if (_map.Mouths.Count is var mouthsWere && OpenMouths(_map)) ShowReefMouths(mouthsWere);
         // Back on a layer: its claimed cubes' stock put back as she left it.
@@ -364,17 +380,18 @@ public partial class TopDownMain
             _layerMaps.Remove(z);
             _reef!.Forget(z);
         }
-        StartMaking(_layer + 1);
+        // (Centred where she came onto this one: CubeReef.Layer.)
+        StartMaking(_layer + 1, G(_world.Player.Position));
     }
 
-    void StartMaking(int z)
+    void StartMaking(int z, System.Numerics.Vector2 centre)
     {
         if (_reef is not { } reef || z >= reef.Space.Layers || _layerMaps.ContainsKey(z) || _makingLayer == z) return;
         _makingLayer = z;
         // (Its reef life worked out with it, off the main thread.)
         _making = Task.Run(() =>
         {
-            var map = reef.Layer(z, reef.Start);
+            var map = reef.Layer(z, centre);
             LevelShape.Bare(map);
             return map;
         });
@@ -403,6 +420,7 @@ public partial class TopDownMain
         if (_world.Boss?.Freed == true) _bossFreed.Add(_layer);
         StepDanger(dt);
         var p = _world.Player;
+        if (_layerMove == LayerMove.None) FollowBelow(G(p.Position), _layer + 1);
         using (Timed("reef stream")) _stream.Update(ReefFocus(p), dt);
         using (Timed("reef drain")) _cubeWorker.Drain(_stream);
         while (_cubeWorker.Errors.TryDequeue(out var error)) GD.PushError($"Cube work failed: {error}");
@@ -469,17 +487,18 @@ public partial class TopDownMain
     {
         int had = _world.ChargeStones.Count;
         using var _ = Timed("laid: all");
-        using (Timed("laid: stones")) _world.PlaceChargeStonesIn(cube.Origin, cube.Origin + cube.Size, ReefHash.Of(_reef!.Space.Seed, ReefHash.Cube, cube.X, cube.Y, cube.Z, cube.OnEnd ? 1 : 0), CubeChargeStones);
+        using (Timed("laid: stones")) _world.PlaceChargeStonesIn(L(cube.Origin), L(cube.Origin + cube.Size), ReefHash.Of(_reef!.Space.Seed, ReefHash.Cube, cube.X, cube.Y, cube.Z, cube.OnEnd ? 1 : 0), CubeChargeStones);
         // (Verification, --dbg-charge: lit as they come.)
         if (_dbgChargeStones)
             for (int i = had; i < _world.ChargeStones.Count; i++) _world.ChargeStones[i].Charge = ChargeStoneTuning.GlowSeconds;
         // (Its life worked out on the pool, put in as it is ready: TakeLife.)
         var map = _map;
-        var area = new Rect2(cube.Origin.X, cube.Origin.Y, cube.Size.X, cube.Size.Y);
+        var corner = L(cube.Origin);
+        var area = new Rect2(corner.X, corner.Y, cube.Size.X, cube.Size.Y);
         _life.Add((map, area, _lifeAhead.Remove((map, cube), out var ahead) ? ahead : System.Threading.Tasks.Task.Run(() => LevelShape.ReefLife(map, area))));
         _level.SeeMaskStale();
         // (The way through the water found again over it: PlaneWorld.NavStale.)
-        _world.NavStale(cube.Origin, cube.Origin + cube.Size);
+        _world.NavStale(L(cube.Origin), L(cube.Origin + cube.Size));
         _sunStale = true;
     }
 
@@ -499,11 +518,11 @@ public partial class TopDownMain
     StreamFocus ReefFocus(PlaneBody p)
     {
         if (_layerMove != LayerMove.None)
-            return new StreamFocus { Position = _layerFrom, Layer = LayerTarget, Climbable = _layerMove == LayerMove.Down };
+            return new StreamFocus { Position = G(_layerFrom), Layer = LayerTarget, Climbable = _layerMove == LayerMove.Down };
         bool soon = _cubeDiving.CooldownLeft < 5f;
         return new StreamFocus
         {
-            Position = p.Position, Velocity = p.Velocity, Layer = _layer, Climbable = _cubeDiving.Climbable, Shut = Here.IsShut,
+            Position = G(p.Position), Velocity = p.Velocity, Layer = _layer, Climbable = _cubeDiving.Climbable, Shut = Here.IsShut,
             ReadyBelow = _hoverDown >= 0.5f || soon && _layer + 1 < _reef!.Space.Layers,
             ReadyAbove = _cubeDiving.Climbable && (_hoverUp >= 0.5f || soon),
         };
@@ -513,7 +532,7 @@ public partial class TopDownMain
     void StepReefCurrents()
     {
         var p = _world.Player;
-        var cube = CubeId.Of(p.Position, _layer);
+        var cube = CubeId.Of(G(p.Position), _layer);
         // The battle on: the arena's ways out are shut until it ends.
         if (_world.BossBattle && InArena(p.PrevPosition, _layer) && !InArena(p.Position, _layer))
         {
@@ -525,33 +544,33 @@ public partial class TopDownMain
         if (_reef!.Made(cube) is { } here && !InArena(p.Position, _layer))
         {
             _cubeCurrents.Prepare(here, _reef.Space, Here);
-            var flow = _cubeCurrents.DriftAt(p.Position) + CubeCurrents.WakeAt(p.Position, cube, _reef.Space, Here);
+            var flow = _cubeCurrents.DriftAt(G(p.Position)) + CubeCurrents.WakeAt(G(p.Position), cube, _reef.Space, Here);
             if (flow != System.Numerics.Vector2.Zero) _world.Move(ref p.Position, ref flow, _world.Radius, report: false);
         }
-        var to = p.Position;
-        var crossed = Here.Move(p.PrevPosition, ref to);
+        var to = G(p.Position);
+        var crossed = Here.Move(G(p.PrevPosition), ref to);
         if (crossed == Crossing.Held)
         {
-            p.Position = to;
+            p.Position = L(to);
             p.Velocity = System.Numerics.Vector2.Zero;
             _heldShown = 2f;
         }
         // A cube claimed: its stock buds (never the warm-up layer's, nor the cube she arrived in).
         else if (crossed == Crossing.Claimed)
         {
-            var claimed = CubeId.Of(p.Position, _layer);
+            var claimed = CubeId.Of(G(p.Position), _layer);
             // (The arena holds its boss alone: no stock, no places.)
             using var _ = Timed("reef claim");
             var sp = Timed("claim: spots");
-            var spots = _reef.IsArena(claimed) ? new List<StockSpot>() : CubeStock.Spots(_reef.Space.Seed, claimed, Here.Claimed[claimed].Claim, _map.Menace, p.Position, _world.Clear);
+            var spots = _reef.IsArena(claimed) ? new List<StockSpot>() : CubeStock.Spots(_reef.Space.Seed, claimed, Here.Claimed[claimed].Claim, _map.Menace, G(p.Position), (at, r) => _world.Clear(L(at), r));
             sp.Dispose();
-            using (Timed("claim: stock")) foreach (var s in spots) _world.PlaceStock(claimed, s.Spawn, s.Seed, s.Prime, new[] { s.At }, left: false);
+            using (Timed("claim: stock")) foreach (var s in spots) _world.PlaceStock(claimed, s.Spawn, s.Seed, s.Prime, new[] { L(s.At) }, left: false);
             using (Timed("claim: grant")) if (!_reef.IsArena(claimed)) Grant(claimed);
             using (Timed("claim: mouths")) if (_map.Mouths.Count is var mouthsWere && OpenMouths(_map)) ShowReefMouths(mouthsWere);
             GD.Print($"Cube reef: {claimed} claimed ({Here.Claims} on layer {_layer}), {spots.Count} of its stock budded");
             using (Timed("claim: route")) if (_autopilot) Route();
         }
-        if (++_revealTick % 6 == 0) Here.Reveal(p.Position, 12f);
+        if (++_revealTick % 6 == 0) Here.Reveal(G(p.Position), 12f);
     }
 
     /// <summary>
@@ -563,10 +582,12 @@ public partial class TopDownMain
         _cubeDiving.Tick(dt);
         _heldShown = Mathf.Max(0f, _heldShown - dt);
         var p = _world.Player.Position;
-        _down = _cubeDiving.CanDive(p, _world.Radius, _reef!.Made);
-        _up = _cubeDiving.CanClimb(p, _world.Radius, _reef.Made);
-        // (The layer she would arrive on must be made too.)
-        if (_down == LayerBlock.None && !_layerMaps.ContainsKey(_layer + 1)) _down = LayerBlock.NotReady;
+        _down = _cubeDiving.CanDive(G(p), _world.Radius, _reef!.Made);
+        _up = _cubeDiving.CanClimb(G(p), _world.Radius, _reef.Made);
+        // (The layer she would arrive on must be made too; one she has been on, kept as it lay, must hold where she would
+        // come onto it: one she has not is made again round her as she dives.)
+        if (_down == LayerBlock.None && (!_layerMaps.ContainsKey(_layer + 1) || !Recentres(_layer + 1) && !Holds(_layer + 1, G(p)))) _down = LayerBlock.NotReady;
+        if (_up == LayerBlock.None && _layerMaps.ContainsKey(_layer - 1) && !Holds(_layer - 1, G(p))) _up = LayerBlock.NoWay;
         // The arena's wells are sealed over until its boss is freed; nothing comes down into an arena from above.
         if (_down is LayerBlock.None or LayerBlock.Cooldown && (InArena(p, _layer) && _world.Boss is { Freed: false } || InArena(p, _layer + 1))) _down = LayerBlock.NoWay;
         if (_up == LayerBlock.None && !_layerMaps.ContainsKey(_layer - 1)) _up = LayerBlock.NotReady;
@@ -604,9 +625,69 @@ public partial class TopDownMain
         _hud.Diving = true;
         _hud.LayerPrompt = null;
         _reefView.ShowAbove(move == LayerMove.Up);
+        Recentre(move);
         RollBoss(move);
         GD.Print($"Cube reef: {(move == LayerMove.Down ? "dive" : "climb")} from layer {_layer} at {_layerFrom}");
         return true;
+    }
+
+    /// <summary>
+    /// A layer she has never been on is made round where she comes onto it (CubeReef.Layer): so on every layer the reef
+    /// runs on as far every way from her arrival, however far she has come.
+    /// </summary>
+    bool Recentres(int z) => _records.Of(z).Claims == 0;
+
+    /// <summary>Whether a layer's map, as it lies, holds a point of the reef (its cube inside the layer's window).</summary>
+    bool Holds(int z, System.Numerics.Vector2 g) => _reef!.Space.Inside(CubeId.Of(g, z));
+
+    /// <summary>The map of the layer she dives to, made again round her arrival on the pool as she dives (null: none).</summary>
+    Task<LevelMap>? _targetMaking;
+
+    /// <summary>
+    /// Diving to a layer she has never been on, that lies off where she comes onto it (her arrival more than
+    /// RecentreSlack squares off its window's middle): its window set round her arrival at once (the stream and its arena
+    /// read it), its map made again on the pool while she sinks (LayerReady waits for it).
+    /// </summary>
+    void Recentre(LayerMove move)
+    {
+        int to = LayerTarget;
+        _targetMaking = null;
+        if (move != LayerMove.Down || !Recentres(to)) return;
+        var g = G(_layerFrom);
+        var at = CellCoord.Of(g, to);
+        FollowBelow(g, to);
+        // (Its map as it lies already in that window: kept.)
+        if (_layerMaps.TryGetValue(to, out var kept) && kept.ReefOrigin == _reef!.Space.WindowCorner(to).Origin) return;
+        if (_makingLayer == to)
+        {
+            _making = null;
+            _makingLayer = -1;
+        }
+        _layerMaps.Remove(to);
+        var reef = _reef;
+        _targetMaking = Task.Run(() =>
+        {
+            var map = reef.Layer(to);
+            LevelShape.Bare(map);
+            return map;
+        });
+        GD.Print($"Cube reef: layer {to} made again round her arrival {at}");
+    }
+
+    /// <summary>How many squares off a layer's window's middle her arrival may lie before the layer is made again round it.</summary>
+    const int RecentreSlack = 3;
+
+    /// <summary>
+    /// The window of a layer she has never been on (the one under hers) kept round her as she swims (more than
+    /// RecentreSlack squares off its middle: set round her again), so the stream makes the cubes under her wherever she
+    /// is, and she may dive anywhere. Only its window moves: its map is made again in it as she dives (Recentre).
+    /// </summary>
+    void FollowBelow(System.Numerics.Vector2 g, int z)
+    {
+        if (z >= _reef!.Space.Layers || !Recentres(z)) return;
+        var at = CellCoord.Of(g, z);
+        var middle = _reef.Space.Middle(z);
+        if (Math.Max(Math.Abs(at.X - middle.X), Math.Abs(at.Y - middle.Y)) > RecentreSlack) _reef.Space.SetWindow(z, g);
     }
 
     /// <summary>The arena of the layer she dives to, made on the pool as she dives (null: none being made).</summary>
@@ -622,13 +703,20 @@ public partial class TopDownMain
         int to = LayerTarget;
         if (move != LayerMove.Down || to <= _cubeDiving.Deepest || !_bossRolled.Add(to)) return;
         _director.LeftLayer(_layer, _world.Boss?.Freed == true);
-        var arrival = CubeId.Of(_layerFrom, to);
-        if ((!_director.BossOn(to) && !_cubeBoss) || _director.ArenaFor(_reef!.Space, arrival) is not { } arena || !_layerMaps.TryGetValue(to, out var layerMap)) return;
-        layerMap.HasBoss = true;
-        layerMap.Exit.Position = arena.Middle;
-        layerMap.Exit.Radius = CubeTerrain.ArenaRadius;
+        var arrival = CubeId.Of(G(_layerFrom), to);
+        if ((!_director.BossOn(to) && !_cubeBoss) || _director.ArenaFor(_reef!.Space, arrival) is not { } arena) return;
         var reef = _reef;
-        _arenaMaking = System.Threading.Tasks.Task.Run(() => reef.SetArena(arena, layerMap));
+        // (On the layer's map once it is made: made again round her, or as it was.)
+        var making = _targetMaking ?? (_layerMaps.TryGetValue(to, out var kept) ? Task.FromResult(kept) : null);
+        if (making is null) return;
+        _arenaMaking = making.ContinueWith(made =>
+        {
+            var layerMap = made.Result;
+            layerMap.HasBoss = true;
+            layerMap.Exit.Position = arena.Middle - layerMap.ReefOrigin;
+            layerMap.Exit.Radius = CubeTerrain.ArenaRadius;
+            reef.SetArena(arena, layerMap);
+        });
         GD.Print($"Cube reef: layer {to} holds a boss, its arena {arena} (streak {_director.Streak})");
     }
 
@@ -639,7 +727,7 @@ public partial class TopDownMain
     /// </summary>
     void StepLayerMove(float dt)
     {
-        var arrival = CubeId.Of(_layerFrom, LayerTarget);
+        var arrival = CubeId.Of(G(_layerFrom), LayerTarget);
         bool ready = LayerReady(arrival);
         _layerTime += dt;
         if (!ready && _layerTime > LayerHold) _layerWaited += dt;
@@ -705,7 +793,15 @@ public partial class TopDownMain
     /// </summary>
     bool LayerReady(CubeId arrival)
     {
-        if (_layerWaited > LayerWaitMost) return _stream.State(arrival) == CubeState.Active;
+        // (The map of the layer she goes to, made again round her: kept once made.)
+        if (_targetMaking is { } making)
+        {
+            if (!making.IsCompleted) return false;
+            if (making.IsCompletedSuccessfully) _layerMaps[LayerTarget] = making.Result;
+            else GD.PushError($"Cube layer {LayerTarget} failed: {making.Exception}");
+            _targetMaking = null;
+        }
+        if (_layerWaited > LayerWaitMost) return _stream.State(arrival) == CubeState.Active && _layerMaps.ContainsKey(LayerTarget);
         if (_arenaMaking is { IsCompleted: false }) return false;
         if (_stream.State(arrival) != CubeState.Active || _reefView.Pending > 0 || !_reef!.Settled) return false;
         foreach (var (cube, want) in _stream.Wanted)
@@ -716,7 +812,8 @@ public partial class TopDownMain
         {
             if (!_lifeAhead.TryGetValue((map, cube), out var work))
             {
-                var area = new Rect2(cube.Origin.X, cube.Origin.Y, cube.Size.X, cube.Size.Y);
+                var corner = cube.Origin - map.ReefOrigin;
+                var area = new Rect2(corner.X, corner.Y, cube.Size.X, cube.Size.Y);
                 _lifeAhead[(map, cube)] = work = System.Threading.Tasks.Task.Run(() => LevelShape.ReefLife(map, area));
             }
             all &= work.IsCompleted;
@@ -737,14 +834,30 @@ public partial class TopDownMain
         if (_world.Boss?.Freed == true) _map.HasBoss = false;
         // The layer left: what is left of each claimed cube's stock, kept for her return.
         foreach (var record in Here.Claimed.Values) record.Left = _world.StockLeft(record.Cube);
-        if (down) _cubeDiving.Dived(_layerFrom, terrain);
-        else _cubeDiving.Climbed(_layerFrom, terrain);
+        // (Where she comes onto the layer, in the reef; and the frame she leaves.)
+        var g = G(_layerFrom);
+        var frameWas = Frame;
+        if (down) _cubeDiving.Dived(g, terrain);
+        else _cubeDiving.Climbed(g, terrain);
         _layer = _cubeDiving.Layer;
+        // Onto the layer's own map: she, and all that is drawn, in its frame (the camera, her bell and the water's motes
+        // moved with her, so the view is just as it was).
+        _layerFrom = L(g);
+        var by = frameWas - Frame;
+        if (by != System.Numerics.Vector2.Zero)
+        {
+            var shift = new Vector3(by.X, 0f, by.Y);
+            _camera.Shift(shift);
+            _bell.Shift(shift);
+            _snow.Shift(shift);
+            _plankton.Shift(shift);
+        }
+        _reefView.SetFrame(Frame);
         // (Its boss rolled, and its arena made, as the dive began: RollBoss.)
         if (_arenaMaking is { IsFaulted: true } failed) GD.PushError(failed.Exception?.ToString());
         _arenaMaking = null;
         _records.Changed(from, _layer, _cubeDiving.Deepest);
-        if (Here.Arrive(_layerFrom) == Crossing.Claimed) Grant(CubeId.Of(_layerFrom, _layer));
+        if (Here.Arrive(g) == Crossing.Claimed) Grant(CubeId.Of(g, _layer));
         _layerMove = LayerMove.None;
         _reefView.SetLayer(_layer);
         _reefView.ShowAbove(false);
@@ -774,17 +887,17 @@ public partial class TopDownMain
     List<System.Numerics.Vector2> ReefRoute()
     {
         var her = _world.Player.Position;
-        var cube = CubeId.Of(her, _layer);
+        var cube = CubeId.Of(G(her), _layer);
         if (_cubeBoss && _world.Boss is { Freed: false } && _reef!.ArenaOf(_layer) is { } arena)
-            return LevelValidator.ShortestPath(_map, her, arena.Middle, clearance: 1f);
-        foreach (var (edge, gate, _) in _reef!.Terrain(cube).Gates.OrderBy(g => System.Numerics.Vector2.Distance(g.Mouth, her)))
+            return LevelValidator.ShortestPath(_map, her, L(arena.Middle), clearance: 1f);
+        foreach (var (edge, gate, _) in _reef!.Terrain(cube).Gates.OrderBy(g => System.Numerics.Vector2.Distance(g.Mouth, G(her))))
         {
             if (Here.IsShut(edge)) continue;
             var inside = CubeId.Of(edge.High) == cube ? edge.High : new CellCoord(edge.High.X - (edge.Axis == EdgeAxis.X ? 1 : 0), edge.High.Y - (edge.Axis == EdgeAxis.Y ? 1 : 0), _layer);
             float into = edge.High == inside ? 1f : -1f;
             var across = edge.Point(gate.Along, -into * 8f);
-            if (Here.IsClaimed(CubeId.Of(across, _layer))) continue;
-            var path = LevelValidator.ShortestPath(_map, her, across, clearance: 1f);
+            if (Here.IsClaimed(CubeId.Of(across, _layer)) || !_reef.Space.Inside(CubeId.Of(across, _layer))) continue;
+            var path = LevelValidator.ShortestPath(_map, her, L(across), clearance: 1f);
             if (path.Count > 0) return path;
         }
         return new();
@@ -813,7 +926,8 @@ public partial class TopDownMain
         var cubes = new List<(CubeId, bool, bool, IReadOnlyList<PoiKind>)>();
         foreach (var (cube, record) in claimed) cubes.Add((cube, true, _reef.IsArena(cube), record.Places.Select(p => p.Kind).ToList()));
         foreach (var cube in beside) cubes.Add((cube, false, false, Array.Empty<PoiKind>()));
-        var her = InReef ? _world.Player.Position : _caveMouth >= 0 && _layerMaps.TryGetValue(_layer, out var layer) && _caveMouth < layer.Mouths.Count ? layer.Mouths[_caveMouth].At : _reef.Start;
+        // (In the reef's metres, as the chart's cubes are.)
+        var her = InReef ? G(_world.Player.Position) : _caveMouth >= 0 && _layerMaps.TryGetValue(_layer, out var layer) && _caveMouth < layer.Mouths.Count ? layer.Mouths[_caveMouth].At + layer.ReefOrigin : _reef.Start;
         // (Framed on what she knows of the layer, a square's margin round it.)
         var lo = her;
         var hi = her;
@@ -841,8 +955,10 @@ public partial class TopDownMain
     {
         bool any = false;
         foreach (var record in Here.Claimed.Values)
-            foreach (var (kind, mouth) in record.Places)
+            foreach (var (kind, granted) in record.Places)
             {
+                // (Granted in the reef's metres; on the map, in its own.)
+                var mouth = granted with { At = granted.At - map.ReefOrigin };
                 if (map.Mouths.Contains(mouth)) continue;
                 // (Its kinds kept beside its mouths, in step.)
                 while (map.MouthKinds.Count < map.Mouths.Count) map.MouthKinds.Add(PoiKind.LeakCave);
@@ -873,20 +989,20 @@ public partial class TopDownMain
     {
         _reefFlows.Clear();
         var her = _world.Player.Position;
-        var cube = CubeId.Of(her, _layer);
+        var cube = CubeId.Of(G(her), _layer);
         foreach (var (edge, inside, _) in cube.Outer())
         {
             if (!Here.IsShut(edge)) continue;
             float into = edge.High == inside ? 1f : -1f;
             foreach (var gate in _reef!.Space.Edge(edge).Gates)
-                _reefFlows.Add(new CurrentView.Flow(new[] { edge.Point(gate.Along, 0f), edge.Point(gate.Along, into * CubeCurrents.WakeReach) },
+                _reefFlows.Add(new CurrentView.Flow(new[] { L(edge.Point(gate.Along, 0f)), L(edge.Point(gate.Along, into * CubeCurrents.WakeReach)) },
                     gate.Width * 0.5f, 4f, 1f));
         }
         var drift = new List<System.Numerics.Vector2> { her };
         var at = her;
         for (int i = 0; i < 16; i++)
         {
-            var d = _cubeCurrents.DriftAt(at);
+            var d = _cubeCurrents.DriftAt(G(at));
             if (d.LengthSquared() < 1e-6f) break;
             at += System.Numerics.Vector2.Normalize(d) * 2.5f;
             drift.Add(at);
@@ -900,7 +1016,7 @@ public partial class TopDownMain
     void SyncReefView(float dt, Vector3 eye)
     {
         _reefView.Follow(eye);
-        var p = _world.Player.Position;
+        var p = G(_world.Player.Position);
         bool hidden = _reef!.Made(CubeId.Of(p, _layer))?.CanopyAt(Mathf.RoundToInt(p.X), Mathf.RoundToInt(p.Y)) == true
             || WallHides(_bell.GlobalPosition, _camera.Camera.GlobalPosition) || _level.Hides(_bell.GlobalPosition, _camera.Camera.GlobalPosition);
         _reefSeeThrough = SeeStep(_reefSeeThrough, hidden, dt);

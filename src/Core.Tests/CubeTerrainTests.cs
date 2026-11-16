@@ -128,30 +128,33 @@ public class CubeTerrainTests
 
     [Theory]
     [MemberData(nameof(Seeds))]
-    public void No_cube_is_shut_in_the_window_edge_is_closed_and_nearly_all_of_a_layer_joins_up(ulong seed)
+    public void No_cube_is_shut_in_nearly_all_of_a_window_joins_up_and_the_reef_is_the_same_in_any_window(ulong seed)
     {
         // (A layer as wide as a run's window: what any one cube's edges decide, read across all of it.)
         var space = new CubeSpace(seed, Window, 3);
+        // The same reef read in another window (as a layer centred elsewhere is): every edge alike.
+        var moved = new CubeSpace(seed, Window, 3);
+        for (int z = 0; z < 3; z++) moved.SetWindow(z, new Vector2(9.5f * Side, 15.5f * Side));
         for (int z = 0; z < 3; z++)
         {
             var cubes = space.CubesOf(z).ToList();
             foreach (var c in cubes)
             {
                 bool any = false;
-                foreach (var (edge, _, across) in c.Outer())
+                foreach (var (edge, _, _) in c.Outer())
                 {
-                    if (!space.Inside(CubeId.Of(across))) Assert.False(space.Edge(edge).Open);
-                    else any |= space.Edge(edge).Open;
+                    any |= space.Edge(edge).Open;
+                    Assert.Equal(space.Edge(edge).Open, moved.Edge(edge).Open);
                 }
                 Assert.True(any, $"{c}: shut in");
             }
-            // From the middle, across open edges.
+            // From the middle, across open edges, inside the window.
             var start = CubeId.Of(space.Middle(z));
             var seen = new HashSet<CubeId> { start };
             var todo = new Queue<CubeId>(seen);
             while (todo.Count > 0)
                 foreach (var (edge, _, across) in todo.Dequeue().Outer())
-                    if (space.Edge(edge).Open && seen.Add(CubeId.Of(across))) todo.Enqueue(CubeId.Of(across));
+                    if (space.Edge(edge).Open && space.Inside(CubeId.Of(across)) && seen.Add(CubeId.Of(across))) todo.Enqueue(CubeId.Of(across));
             _out.WriteLine($"layer {z}: {seen.Count} of {cubes.Count} joined to the middle");
             Assert.True(seen.Count >= cubes.Count * 0.85f, $"layer {z}: only {seen.Count} of {cubes.Count} joined to the middle");
         }

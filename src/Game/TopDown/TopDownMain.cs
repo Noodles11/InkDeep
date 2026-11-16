@@ -1318,7 +1318,8 @@ public partial class TopDownMain : Node3D
     void ShowLevel(LevelShape shape, bool keepRun, long ms, System.Numerics.Vector2? arriveAt = null)
     {
         ResetMenu();
-        _origin = Vector2.Zero;
+        // (Patterns read where a level truly lies: a cube reef's layer, where its map lies in the reef.)
+        _origin = new Vector2(shape.Map.ReefOrigin.X, shape.Map.ReefOrigin.Y);
         _camera.SetWorldOrigin(_origin);
         _level.Show(shape);
         _level.Place(Vector3.Zero, _origin);
@@ -1980,7 +1981,8 @@ public partial class TopDownMain : Node3D
     System.Numerics.Vector2? RoofedGate(bool inside)
     {
         if (_reef is null) return null;
-        var start = _world.Player.Position;
+        // (In the reef's metres; handed back on her map.)
+        var start = G(_world.Player.Position);
         System.Numerics.Vector2? best = null;
         foreach (var cube in _reef.Space.CubesNear(OctoShoots.Core.Gen.Cubes.CellCoord.Of(start, _layer), 3))
         {
@@ -1993,7 +1995,7 @@ public partial class TopDownMain : Node3D
                 if (best is null || System.Numerics.Vector2.Distance(at, start) < System.Numerics.Vector2.Distance(best.Value, start)) best = at;
             }
         }
-        return best;
+        return best is { } found ? L(found) : null;
     }
 
     /// <summary>Verification: start somewhere interesting.</summary>

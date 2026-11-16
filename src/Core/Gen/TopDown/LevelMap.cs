@@ -354,6 +354,12 @@ public sealed class LevelMap : IReefField
     /// A haven's water on a hand-drawn map (HandLayout.Haven: Lantern Bay, in a corner of the reef), the box it fills:
     /// nothing harms her in it, and coming into it heals her whole. Null where there is none.
     /// </summary>
+    /// <summary>
+    /// A cube reef's layer (CubeReef.Layer): where the map's corner lies in the reef's own metres. Everything on the map is
+    /// in the map's own metres, as on any level; the reef's cubes are where the map lies plus this.
+    /// </summary>
+    public Vector2 ReefOrigin;
+
     public (Vector2 Min, Vector2 Max)? Haven;
     /// <summary>Whether a point lies in the haven's water (or within <paramref name="margin"/> of it).</summary>
     public bool InHaven(Vector2 p, float margin = 0f) =>

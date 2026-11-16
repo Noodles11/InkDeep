@@ -113,9 +113,26 @@ public partial class ReefStreamView : Node3D
         Place();
     }
 
-    /// <summary>The murk kept under her.</summary>
+    /// <summary>
+    /// Where her layer's map lies in the reef (LevelMap.ReefOrigin): the cubes, made in the reef's own metres, are drawn
+    /// that much back, in the game's metres; their patterns read where they truly lie (level_origin), so nothing in them
+    /// moves when the frame does (a change of layer onto a map centred elsewhere).
+    /// </summary>
+    public void SetFrame(System.Numerics.Vector2 frame)
+    {
+        if (frame == _frame) return;
+        _frame = frame;
+        Position = new Vector3(-frame.X, 0f, -frame.Y);
+        foreach (var m in new[] { _here, _below, _above }) m.SetShaderParameter(SN.Of("level_origin"), new Vector2(frame.X, frame.Y));
+        _pallStale = true;
+    }
+
+    System.Numerics.Vector2 _frame;
+
+    /// <summary>The murk kept under her (her point in the game's metres).</summary>
     public void Follow(Vector3 her)
     {
+        her += new Vector3(_frame.X, 0f, _frame.Y);
         _murk.Position = new Vector3(her.X, _lift - LayerDrop + VoidHeight + 0.5f, her.Z);
         var at = CellCoord.Of(new System.Numerics.Vector2(her.X, her.Z), 0);
         if (_pallStale || at != _pallAt) LayPall(at);

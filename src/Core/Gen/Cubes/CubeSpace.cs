@@ -38,9 +38,10 @@ public readonly record struct CornerSpec(CornerId Id, float Radius);
 /// <summary>
 /// The cube world's plan (CUBE-WORLD-PLAN §4.1): from the seed alone, every edge's, corner's and floor's boundary
 /// conditions, each from the seed and the id of the thing two or three cubes share, so any cube can be made by itself, in
-/// any order, and always matches its neighbours and the cubes over and under it. The reef runs on every way; a run reads
-/// it in a window of Window squares a side, outside which no cube is made and every edge is closed. Thread safe; it keeps
-/// only the edges it has worked out.
+/// any order, and always matches its neighbours and the cubes over and under it. The reef runs on every way, the same
+/// whatever window it is read in: a run reads each layer in a window of Window squares a side, centred where she came onto
+/// that layer (SetWindow), outside which no cube of it is made or laid. Thread safe; it keeps only the edges it has
+/// worked out.
 /// </summary>
 public sealed class CubeSpace
 {
@@ -55,19 +56,42 @@ public sealed class CubeSpace
     public int Window { get; }
     public int Layers { get; }
 
-    /// <summary>The square in the window's middle (where a run begins).</summary>
-    public CellCoord Middle(int z) => new(Window / 2, Window / 2, z);
+    /// <summary>The square in a layer's window's middle (where a run begins, on the top layer).</summary>
+    public CellCoord Middle(int z) => WindowCorner(z) is var o ? new CellCoord(o.X + Window / 2, o.Y + Window / 2, z) : default;
 
-    /// <summary>A cube is in the window when both its squares are.</summary>
+    /// <summary>Each layer's window: its first square (none set: the one from (0, 0)).</summary>
+    readonly ConcurrentDictionary<int, CellCoord> _windows = new();
+
+    /// <summary>A layer's window's first (north-west) square.</summary>
+    public CellCoord WindowCorner(int z) => _windows.TryGetValue(z, out var c) ? c : new CellCoord(0, 0, z);
+
+    /// <summary>A layer read in the window round <paramref name="centre"/> (global metres), from now on; its first square.</summary>
+    public CellCoord SetWindow(int z, Vector2 centre)
+    {
+        var at = CellCoord.Of(centre, z);
+        var corner = new CellCoord(at.X - Window / 2, at.Y - Window / 2, z);
+        _windows[z] = corner;
+        return corner;
+    }
+
+    /// <summary>A cube is in its layer's window when both its squares are.</summary>
     public bool Inside(CubeId c) => InWindow(c.First) && InWindow(c.Second);
 
     /// <summary>A square is the reef's when its cube is in the window (a square of the window whose cube sticks out is rock).</summary>
     public bool Inside(CellCoord c) => Inside(CubeId.Of(c));
 
-    bool InWindow(CellCoord c) => c.Z >= 0 && c.Z < Layers && c.X >= 0 && c.Y >= 0 && c.X < Window && c.Y < Window;
+    bool InWindow(CellCoord c)
+    {
+        if (c.Z < 0 || c.Z >= Layers) return false;
+        var o = WindowCorner(c.Z);
+        return c.X >= o.X && c.Y >= o.Y && c.X < o.X + Window && c.Y < o.Y + Window;
+    }
+
+    /// <summary>A layer the reef has (its depth inside the reef's).</summary>
+    bool OnReef(int z) => z >= 0 && z < Layers;
 
     /// <summary>Every cube of the window on layer <paramref name="z"/> (for tests and tools: the game makes only those she comes near).</summary>
-    public IEnumerable<CubeId> CubesOf(int z) => CubesNear(new CellCoord(Window / 2, Window / 2, z), Window);
+    public IEnumerable<CubeId> CubesOf(int z) => CubesNear(Middle(z), Window);
 
     /// <summary>The cubes of layer <paramref name="z"/> with a square within <paramref name="reach"/> squares of <paramref name="center"/> (inside the window).</summary>
     public IEnumerable<CubeId> CubesNear(CellCoord center, int reach)
@@ -98,8 +122,9 @@ public sealed class CubeSpace
         _ = rng.NextU64();
         // (Its wall's shape is its line's at every depth, read at the layer's depth: CubeTerrain.SharedNear.)
         uint wall = (uint)(ReefHash.Of(Seed, ReefHash.Edge, id.X, id.Y, -1, (int)id.Axis) >> 32);
-        // (Between the two squares of one cube there is no edge to speak of: its water runs across.)
-        bool inside = Inside(CubeId.Of(id.Low)) && Inside(CubeId.Of(id.High)) && CubeId.Of(id.Low) != CubeId.Of(id.High);
+        // (Between the two squares of one cube there is no edge to speak of: its water runs across. The same whatever window
+        // the layer is read in: a gate at a window's line leads into rock there.)
+        bool inside = OnReef(id.Z) && CubeId.Of(id.Low) != CubeId.Of(id.High);
         // Open by its own chance; or, should a cube beside it be left with none, the one of that cube's edges likeliest to be.
         bool open = inside && (extra < EdgeOpen || Forced(CubeId.Of(id.Low)) == id || Forced(CubeId.Of(id.High)) == id);
         var gates = new List<Gate>();
@@ -151,7 +176,7 @@ public sealed class CubeSpace
     /// </summary>
     public FloorSpec Floor(FloorId id)
     {
-        if (!Inside(id.Upper) || !Inside(id.Lower)) return new FloorSpec { Id = id, Wells = Array.Empty<Well>() };
+        if (!OnReef(id.Upper.Z) || !OnReef(id.Lower.Z)) return new FloorSpec { Id = id, Wells = Array.Empty<Well>() };
         var rng = ReefHash.Rng(Seed, ReefHash.Floor, id.X, id.Y, id.Z);
         var middle = id.Upper.Origin + new Vector2(Side * 0.5f);
         var quadrants = (id.Z & 1) == 0
@@ -176,17 +201,16 @@ public sealed class CubeSpace
     float Chance(EdgeId id) => ReefHash.Rng(Seed, ReefHash.Edge, id.X, id.Y, id.Z, (int)id.Axis).NextFloat();
 
     /// <summary>
-    /// Should none of a cube's edges (to cubes in the window) be open by its own chance, the one nearest to being: so no
-    /// cube is ever shut in. Null: it has one open already, or none to open.
+    /// Should none of a cube's edges be open by its own chance, the one nearest to being: so no cube is ever shut in. Null:
+    /// it has one open already.
     /// </summary>
     EdgeId? Forced(CubeId cube)
     {
-        if (!Inside(cube)) return null;
+        if (!OnReef(cube.Z)) return null;
         EdgeId? best = null;
         float least = float.MaxValue;
         foreach (var (edge, _, across) in cube.Outer())
         {
-            if (!Inside(CubeId.Of(across))) continue;
             float chance = Chance(edge);
             if (chance < EdgeOpen) return null;
             if (chance < least)
