@@ -9,9 +9,10 @@ namespace OctoShoots.Core.Plane;
 /// The reef's charge stones (docs/LIGHT-AND-GRAPH.md §2.5): small clusters of coloured crystal shards set in the walls,
 /// each its own colour. Her beam charges one (the more of its light reaches it, the faster: PlaneWorld.BeamLight); charged,
 /// it glows on its own, full while it holds more than FadeSeconds of glow, then dimming as the last of it runs out, and
-/// out. Its light is round it, as her glow is, fainter even at full charge, and harms nothing; it shows the murklings in
-/// it as her glow does (ChargeStoneSees). It is a light in the registry like any, so a murkling may go to it instead of her
-/// and drink it down. A lure, and a lamp for the reef. Some levels hold a trio of them round a nook, alike in colour
+/// out: a full charge glows GlowSeconds. Spent, it is dark. Its light is round it, as her glow is, fainter even at full
+/// charge, and harms nothing; it shows the murklings in it as her glow does (ChargeStoneSees). It is a light in the
+/// registry like any, so a murkling may go to it instead of her and drink it down; and while her own light is wholly out
+/// (Hidden) a glowing one draws in every murkling within LureReach (Lure). A lure, and a lamp for the reef. Some levels hold a trio of them round a nook, alike in colour
 /// with three dark shards on the sand between them: all three glowing at once, a secret cache of shells bursts up from
 /// the sand there, once (ChargeTrio).
 /// </summary>
@@ -20,12 +21,18 @@ public static class ChargeStoneTuning
     /// <summary>The chance a level holds a trio; how far its stones are from its middle at most; the shells its cache holds.</summary>
     public const float TrioChance = 0.7f, TrioReach = 6.5f;
     public const int TrioShells = 12;
-    /// <summary>Seconds of glow a full charge holds; seconds of glow a second of her beam gives at one shot's light.</summary>
-    public const float MaxGlow = 14f, ChargeRate = 5f;
+    /// <summary>
+    /// Seconds a full charge glows (set for a run by --crystal-glow=seconds); seconds of glow a second of her beam gives at
+    /// one shot's light.
+    /// </summary>
+    public static float GlowSeconds = 20f;
+    public const float ChargeRate = 5f;
     /// <summary>It is full bright while it holds more than FadeSeconds of glow, dimming to nothing over them.</summary>
     public const float FadeSeconds = 5f;
     /// <summary>Its light at full: fainter than her aura (1), as far as a murkling may see it; drawn round it to ShownReach.</summary>
-    public const float Bright = 0.5f, Reach = 7f, ShownReach = 4.5f;
+    public const float Bright = 0.5f, Reach = 12f, ShownReach = 8f;
+    /// <summary>With her light wholly out, how far a glowing one draws the Leak's creatures in.</summary>
+    public const float LureReach = 30f;
     /// <summary>How many to a reef, how far apart, how far from her start.</summary>
     public const int Count = 16;
     public const float Apart = 9f, FromStart = 8f;
@@ -148,14 +155,35 @@ public sealed partial class PlaneWorld
         }
     }
 
-    /// <summary>The charge stones set in the walls: at the swim plane's edge of the rock, apart, from the level's own dice.</summary>
+    /// <summary>
+    /// The charge stones set in the walls: at the swim plane's edge of the rock, apart, from the level's own dice. On the
+    /// cube reef none at first: each cube brings its own as it is laid (PlaceChargeStonesIn).
+    /// </summary>
     void PlaceChargeStones()
     {
+        if (Options.Reef) return;
         PlaceChargeTrio();
         var rng = new Rng(Map.Seed ^ 0xC2757A15UL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Id.Lane << 40) ^ ((ulong)Map.Attempt << 50));
-        for (int tries = 0; tries < 3000 && ChargeStones.Count < ChargeStoneTuning.Count; tries++)
+        PlaceChargeStonesIn(new Vector2(6f), new Vector2(Map.Size - 6f), rng, ChargeStoneTuning.Count, 3000);
+    }
+
+    /// <summary>
+    /// <paramref name="count"/> charge stones set in the walls within <paramref name="lo"/>–<paramref name="hi"/> (map metres),
+    /// from that place's own dice (<paramref name="seed"/>), so a place always gets the same ones: a cube of the reef as it
+    /// is laid. Apart from every one already set.
+    /// </summary>
+    public void PlaceChargeStonesIn(Vector2 lo, Vector2 hi, ulong seed, int count)
+    {
+        int had = ChargeStones.Count;
+        PlaceChargeStonesIn(Vector2.Max(lo, new Vector2(6f)), Vector2.Min(hi, new Vector2(Map.Size - 6f)), new Rng(seed ^ 0xC2757A15UL), had + count, 400);
+    }
+
+    void PlaceChargeStonesIn(Vector2 lo, Vector2 hi, Rng rng, int upTo, int most)
+    {
+        if (hi.X <= lo.X || hi.Y <= lo.Y) return;
+        for (int tries = 0; tries < most && ChargeStones.Count < upTo; tries++)
         {
-            var p = new Vector2(rng.Range(6f, Map.Size - 6f), rng.Range(6f, Map.Size - 6f));
+            var p = new Vector2(rng.Range(lo.X, hi.X), rng.Range(lo.Y, hi.Y));
             if (!Map.IsOpen(p) || Map.InShaft(p, 4f) || Vector2.Distance(p, Map.Start.Position) < ChargeStoneTuning.FromStart) continue;
             // A wall just beside it, at her plane: the charge stone is set in its face.
             float a = rng.Range(0f, MathF.Tau);
@@ -208,6 +236,28 @@ public sealed partial class PlaneWorld
         return ChargeStoneSees(at, 0f) > 0.5f;
     }
 
+    /// <summary>
+    /// Her light wholly out (glow and beam: Hidden): the nearest glowing charge stone within LureReach of a creature at
+    /// <paramref name="at"/>, sight or none, its light what it goes to (null: none, or she shines).
+    /// </summary>
+    public LightEmitter? Lure(Vector2 at)
+    {
+        if (!Hidden) return null;
+        ChargeStone? best = null;
+        float bestD = ChargeStoneTuning.LureReach;
+        foreach (var c in ChargeStones)
+        {
+            if (c.Charge <= 0f || !c.Light.Shining) continue;
+            float d = Vector2.Distance(c.Position, at);
+            if (d < bestD)
+            {
+                bestD = d;
+                best = c;
+            }
+        }
+        return best?.Light;
+    }
+
     /// <summary>Her beams charge the charge stones they reach (the more light, the faster); a charged one glows on, then fades out.</summary>
     void StepChargeStones()
     {
@@ -226,7 +276,7 @@ public sealed partial class PlaneWorld
             bool was = c.Charge > 0f;
             if (light > 0f)
             {
-                c.Charge = MathF.Min(ChargeStoneTuning.MaxGlow, c.Charge + light * ChargeStoneTuning.ChargeRate * Dt);
+                c.Charge = MathF.Min(ChargeStoneTuning.GlowSeconds, c.Charge + light * ChargeStoneTuning.ChargeRate * Dt);
                 c.Lent = hue;
             }
             else c.Charge = MathF.Max(0f, c.Charge - Dt);

@@ -783,9 +783,12 @@ public sealed partial class PlaneWorld
         return roll >= share ? MurkKind.Basic : roll < share * 0.5f ? MurkKind.Thrower : MurkKind.Hunter;
     }
 
-    /// <summary>The brightest light a murkling at <paramref name="at"/> can see within <paramref name="scan"/> (her own not while her Ink Cloud hides her).</summary>
+    /// <summary>
+    /// The brightest light a murkling at <paramref name="at"/> can see within <paramref name="scan"/> (her own not while her
+    /// Ink Cloud hides her); none, and her light wholly out, a glowing charge stone that draws it in (Lure).
+    /// </summary>
     LightEmitter? SeekLight(Vector2 at, float scan = LightTuning.Scan, bool blind = false) =>
-        LightQuery.Brightest(Lights.All, at, scan, LightTuning.Threshold, LineOfSight, Unseen || blind ? e => e.Owner == Her : null);
+        LightQuery.Brightest(Lights.All, at, scan, LightTuning.Threshold, LineOfSight, Unseen || blind ? e => e.Owner == Her : null) ?? Lure(at);
 
     /// <summary>
     /// A basic murkling (docs/LIGHT-AND-GRAPH.md §3.1): it holds still and scans the lights every ScanEvery;
@@ -982,7 +985,8 @@ public sealed partial class PlaneWorld
             // In her Ink Cloud (or charmed by Siren Song) it has lost her: it goes about its own business.
             if (her && (Unseen || Charmed(m))) dist = float.MaxValue;
             // After her, round the rock rather than into it (a bait bubble it goes straight at).
-            Vector2 wish = dist < m.Sense ? her ? WayToHer(m.Position) : SafeNormalize(to) : Vector2.Zero;
+            // (A lure it goes to from however far it was drawn.)
+            Vector2 wish = dist < m.Sense || !her ? her ? WayToHer(m.Position) : SafeNormalize(to) : Vector2.Zero;
             // She is away: a den's murkling drifts home into its nave (DenTuning.Leash); else it hunts the reef's fish,
             // keeping a throw's distance from the one it is after.
             bool away = her && dist >= m.Sense;

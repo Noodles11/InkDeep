@@ -91,7 +91,7 @@ public class ChargeStoneTests
     {
         var w = World();
         var (c, from) = Target(w);
-        c.Charge = ChargeStoneTuning.MaxGlow;
+        c.Charge = ChargeStoneTuning.GlowSeconds;
         // Her glow out: the charge stone is the light it sees.
         Hold(w, from, new PlaneInput { ToggleGlow = true });
         var near = c.Position + c.Out * 1.6f;
@@ -104,7 +104,55 @@ public class ChargeStoneTests
         Assert.Equal(full, m.Corruption.Value);
         // It drinks the charge stone's glow away.
         for (int i = 0; i < 3 * PlaneWorld.TickRate; i++) Hold(w, from, default);
-        Assert.True(c.Charge < ChargeStoneTuning.MaxGlow - 3f);
+        Assert.True(c.Charge < ChargeStoneTuning.GlowSeconds - 3f);
+    }
+
+    [Fact]
+    public void A_full_charge_glows_its_set_seconds_and_a_spent_one_is_dark()
+    {
+        var w = World();
+        var (c, from) = Target(w);
+        c.Charge = ChargeStoneTuning.GlowSeconds;
+        Assert.Equal(20f, ChargeStoneTuning.GlowSeconds);
+        for (int i = 0; i < (int)((ChargeStoneTuning.GlowSeconds - ChargeStoneTuning.FadeSeconds - 0.5f) * PlaneWorld.TickRate); i++) Hold(w, from, default);
+        Assert.Equal(1f, c.Glow);
+        for (int i = 0; i < (int)((ChargeStoneTuning.FadeSeconds + 1f) * PlaneWorld.TickRate); i++) Hold(w, from, default);
+        Assert.Equal(0f, c.Glow);
+        Assert.False(c.Light.Shining);
+    }
+
+    [Fact]
+    public void Her_light_wholly_out_a_glowing_charge_stone_draws_in_murklings_from_far_off()
+    {
+        var w = World();
+        // A charge stone with open water 15–25 m before it, out of its own light's reach.
+        foreach (var c in w.ChargeStones)
+        {
+            Vector2? spot = null;
+            for (float d = 15f; d <= 25f && spot is null; d += 1f)
+            {
+                var at = c.Position + c.Out * d;
+                if (w.Clear(at, 1f)) spot = at;
+            }
+            if (spot is not { } far) continue;
+            // She far from both, her glow out and her beam dark.
+            var her = far + Vector2.Normalize(far - c.Position) * 40f;
+            if (!w.Clear(her, 0.8f)) her = far;
+            c.Charge = ChargeStoneTuning.GlowSeconds;
+            var m = new Murkling { Position = far, Bud = 0f };
+            w.Murklings.Add(m);
+            Hold(w, her, new PlaneInput { ToggleGlow = true });
+            Assert.True(w.Hidden);
+            Assert.Same(c.Light, w.Lure(far));
+            float before = Vector2.Distance(m.Position, c.Position);
+            for (int i = 0; i < 3 * PlaneWorld.TickRate; i++) Hold(w, her, default);
+            Assert.True(Vector2.Distance(m.Position, c.Position) < before - 3f || m.Feeding == c.Light, "drawn to it");
+            // Her glow back: no lure.
+            Hold(w, her, new PlaneInput { ToggleGlow = true });
+            Assert.Null(w.Lure(far));
+            return;
+        }
+        throw new InvalidOperationException("no charge stone with open water far before it");
     }
 
     [Fact]
@@ -115,7 +163,7 @@ public class ChargeStoneTests
         var near = c.Position + c.Out * 1.5f;
         var far = c.Position + c.Out * (ChargeStoneTuning.ShownReach + 2f);
         Assert.Equal(0f, w.ChargeStoneSees(near, 0.4f));
-        c.Charge = ChargeStoneTuning.MaxGlow;
+        c.Charge = ChargeStoneTuning.GlowSeconds;
         Assert.Equal(1f, w.ChargeStoneSees(near, 0.4f));
         Assert.Equal(0f, w.ChargeStoneSees(far, 0.4f));
         // Dimming, it shows less.

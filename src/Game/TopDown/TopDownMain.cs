@@ -567,6 +567,8 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--dbg-caverounds=") && int.TryParse(Value("--dbg-caverounds="), out int rounds)) _dbgCaveRounds = rounds;
             else if (arg.StartsWith("--dbg-caveback=") && float.TryParse(Value("--dbg-caveback="), NumberStyles.Float, CultureInfo.InvariantCulture, out float back)) _dbgCaveBack = back;
             else if (arg == "--dive") _autoDive = true;
+            // (How long a fully charged charge stone glows, seconds: ChargeStoneTuning.GlowSeconds.)
+            else if (arg.StartsWith("--crystal-glow=") && float.TryParse(Value("--crystal-glow="), NumberStyles.Float, CultureInfo.InvariantCulture, out float glow)) ChargeStoneTuning.GlowSeconds = Math.Max(1f, glow);
             else if (arg == "--calm") _calm = true;
             else if (arg.StartsWith("--at=")) _startAt = Value("--at=");
             else if (arg == "--autopilot") _autopilot = true;
@@ -1318,10 +1320,10 @@ public partial class TopDownMain : Node3D
         _camera.SetWorldOrigin(_origin);
         _level.Show(shape);
         _level.Place(Vector3.Zero, _origin);
-        // (A reef layer's life comes with its cubes, those laid on it so far now.)
-        if (_reef is not null) ShowLaidLife();
         _levelShape = shape;
         EnterLevel(shape.Map, keepRun, ms, arriveAt);
+        // (A reef layer's life and charge stones come with its cubes: those laid on it so far now.)
+        if (_reef is not null) ShowLaidLife();
         // A verification start applies to the first level only (later levels begin at their start).
         PlaceAt(_startAt);
         _startAt = null;
@@ -1601,7 +1603,7 @@ public partial class TopDownMain : Node3D
         EnterShowcase();
         DebugVault();
         if (_dbgChargeStones)
-            foreach (var crystal in _world.ChargeStones) crystal.Charge = ChargeStoneTuning.MaxGlow;
+            foreach (var crystal in _world.ChargeStones) crystal.Charge = ChargeStoneTuning.GlowSeconds;
         _achievements.EnterLevel();
         // A pearl unlocked by an achievement, offered here for the first time, wears a NEW chip.
         var fresh = new HashSet<string>();

@@ -96,21 +96,25 @@ moment it shines.
 
 Small clusters of coloured crystal shards are set in the reef's walls at her plane (`PlaneChargeStones.cs`,
 `ChargeStoneTuning`; drawn by `ChargeStoneView`): about sixteen a reef, 9 m apart at least, each in its own colour (cyan,
-magenta, amber, lime, violet, ice blue). Dark, a faint glint shows where one is.
+magenta, amber, lime, violet, ice blue). Spent, it does not glow at all.
 
 - **Her beam charges one**, the faster the more of its light reaches it (`PlaneWorld.BeamLight`): a second of beam at
-  one shot's light gives 5 s of glow, up to 14 s.
-- **Charged, it glows on its own**: full while it holds more than 5 s of glow, then dimming over those last 5 s, and
-  out. Its light is round it, as hers is, fainter even at full (half her aura's), and reaches about 4.5 m over the reef.
+  one shot's light gives 5 s of glow, up to 20 s (`ChargeStoneTuning.GlowSeconds`; `--crystal-glow=seconds` sets it
+  for a run): about four seconds of her beam fill one.
+- **Charged, it glows on its own**: its shards burn bright and its light spreads about 8 m over the reef, full while it
+  holds more than 5 s of glow, then dimming over those last 5 s, and out: a full charge glows 20 s. To the creatures
+  its light is fainter than hers (half her aura's) and reaches 12 m.
 - **It harms nothing**, but it is a light like any: a murkling may go to it instead of her (her glow out, or the
-  stone brighter where it is) and drink it down. A lure, and a lamp for the reef.
+  stone brighter where it is) and drink it down. **With her light wholly out** (her glow put out and her beam dark),
+  every creature of the Leak within 30 m of a glowing one is drawn to it, seen or not (`PlaneWorld.Lure`): the seekers
+  feed on it, the others gather at it. A lure, and a lamp for the reef.
 - **It shows what is in its light**, as her glow does (`PlaneWorld.ChargeStoneSees`): a murkling within most of its
   drawn light is seen fully, thinning at its edge, and less as the stone dims; not round rock. So she can watch what a
   lure has drawn in.
 - **A trio** (`ChargeTrio`, 70% of levels; none in a labyrinth): three charge stones of one colour in the walls round
   an open nook, at most 6.5 m from its middle and far apart in angle. On the sand in the middle lie three shards of
   their colour in a triangle, each pointing to its stone and burning while that stone glows. With all three glowing at
-  once (14 s of glow each gives her time to go round them), a secret cache of 12 shells bursts up from the sand there
+  once (20 s of glow each gives her time to go round them), a secret cache of 12 shells bursts up from the sand there
   with a burst of light, once; the shards then lie spent and dark.
 
 ### 2.6 Prism stones

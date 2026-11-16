@@ -162,17 +162,17 @@ public class PrismStoneTests
         Assert.All(three, c => Assert.True(Vector2.Distance(c.Position, w.Trio!.Middle) <= ChargeStoneTuning.TrioReach));
         w.Player.Position = w.Player.PrevPosition = w.Map.Start.Position;
         // Two of them lit: nothing.
-        three[0].Charge = three[1].Charge = ChargeStoneTuning.MaxGlow;
+        three[0].Charge = three[1].Charge = ChargeStoneTuning.GlowSeconds;
         w.Step(new PlaneInput());
         Assert.False(w.Trio!.Opened);
         int shells = w.Shells.Count;
-        three[2].Charge = ChargeStoneTuning.MaxGlow;
+        three[2].Charge = ChargeStoneTuning.GlowSeconds;
         w.Step(new PlaneInput());
         Assert.True(w.Trio.Opened);
         Assert.Contains(w.Events, e => e.Type == PlaneEventType.TrioOpened);
         Assert.Equal(shells + ChargeStoneTuning.TrioShells, w.Shells.Count);
         // Once only.
-        foreach (var c in three) c.Charge = ChargeStoneTuning.MaxGlow;
+        foreach (var c in three) c.Charge = ChargeStoneTuning.GlowSeconds;
         w.Step(new PlaneInput());
         Assert.Equal(shells + ChargeStoneTuning.TrioShells, w.Shells.Count);
     }

@@ -7,15 +7,16 @@ namespace OctoShoots.Game.TopDown;
 
 /// <summary>
 /// the charge stones in the walls (PlaneChargeStones.cs): each a little cluster of hexagonal shards set in the rock's face
-/// at her plane, leaning out of it, in its own colour. Dark, a faint glint in it so it can be found; charged, its shards
-/// burn in their colour and a soft round light spreads from it over the reef (ChargeStoneTuning.ShownReach), fainter than
-/// hers, dimming as its charge runs out. A level's trio (ChargeTrio) has its sign on the sand of the nook between them:
+/// at her plane, leaning out of it, in its own colour. Spent, it does not glow at all; charged, its shards burn
+/// bright in their colour and a round light spreads from it well over the reef (ChargeStoneTuning.ShownReach), dimming
+/// as its charge runs out. A level's trio (ChargeTrio) has its sign on the sand of the nook between them:
 /// three shards of its colour lying in a triangle, each pointing to its stone and burning while it glows; once the
 /// cache has burst up there, they are spent and dark.
 /// </summary>
 public partial class ChargeStoneView : Node3D
 {
-    const float DarkGlint = 0.18f, LitEmission = 3.2f, LightEnergy = 1.3f;
+    /// <summary>Spent, no glow at all; lit, its shards burn this bright and its light reaches over the reef (ShownReach).</summary>
+    const float LitEmission = 9f, LightEnergy = 9f;
 
     sealed class Shown
     {
@@ -68,7 +69,7 @@ public partial class ChargeStoneView : Node3D
             var material = new StandardMaterial3D
             {
                 AlbedoColor = colour.Darkened(0.55f), Roughness = 0.12f, Metallic = 0.25f, EmissionEnabled = true, Emission = colour,
-                EmissionEnergyMultiplier = DarkGlint, RimEnabled = true, Rim = 0.7f, RimTint = 0.6f,
+                EmissionEnergyMultiplier = 0f, RimEnabled = true, Rim = 0.7f, RimTint = 0.6f,
             };
             var face = new Vector3(c.Face.X, LevelMap.SwimBand - 0.1f, c.Face.Y);
             var outward = new Vector3(c.Out.X, 0f, c.Out.Y);
@@ -85,11 +86,12 @@ public partial class ChargeStoneView : Node3D
             }
             var light = new OmniLight3D
             {
-                LightColor = colour, LightEnergy = 0f, OmniRange = ChargeStoneTuning.ShownReach, OmniAttenuation = 1.6f, ShadowEnabled = false,
+                LightColor = colour, LightEnergy = 0f, OmniRange = ChargeStoneTuning.ShownReach * 1.3f, OmniAttenuation = 0.9f, ShadowEnabled = false,
                 LightSpecular = 0.3f, Position = new Vector3(c.Position.X, LevelMap.SwimBand + 0.2f, c.Position.Y), Visible = false,
             };
             AddChild(light);
-            _shown.Add(new Shown { Material = material, Light = light });
+            // (Made again with a cube's new ones: each lit one goes on as bright as it was.)
+            _shown.Add(new Shown { Material = material, Light = light, Glow = c.Glow });
         }
         if (world.Trio is { } trio)
             for (int i = 0; i < crystals.Count; i++)
@@ -100,7 +102,7 @@ public partial class ChargeStoneView : Node3D
                 var material = new StandardMaterial3D
                 {
                     AlbedoColor = colour.Darkened(0.55f), Roughness = 0.12f, Metallic = 0.25f, EmissionEnabled = true, Emission = colour,
-                    EmissionEnergyMultiplier = DarkGlint, RimEnabled = true, Rim = 0.7f, RimTint = 0.6f,
+                    EmissionEnergyMultiplier = 0f, RimEnabled = true, Rim = 0.7f, RimTint = 0.6f,
                 };
                 // Lying on the sand a little out from the nook's middle, pointing to its stone.
                 var to = System.Numerics.Vector2.Normalize(c.Position - trio.Middle);
@@ -114,7 +116,8 @@ public partial class ChargeStoneView : Node3D
 
     public void Sync(PlaneWorld world, float dt)
     {
-        if (!ReferenceEquals(world.ChargeStones, _for)) Build(world);
+        // (Made again when the world is new, or the cube reef has laid a cube with its own.)
+        if (!ReferenceEquals(world.ChargeStones, _for) || _shown.Count != world.ChargeStones.Count) Build(world);
         _time += dt;
         for (int i = 0; i < _shown.Count && i < world.ChargeStones.Count; i++)
         {
@@ -123,8 +126,7 @@ public partial class ChargeStoneView : Node3D
             // Easing to the sim's glow, so its light swells rather than snaps on.
             s.Glow = Mathf.MoveToward(s.Glow, c.Glow, dt * 3f);
             float flicker = 0.92f + 0.08f * Mathf.Sin(_time * 5.3f + c.Seed * 40f);
-            float glint = DarkGlint * (0.7f + 0.3f * Mathf.Sin(_time * 1.7f + c.Seed * 20f));
-            s.Material.EmissionEnergyMultiplier = Mathf.Lerp(glint, LitEmission * flicker, s.Glow);
+            s.Material.EmissionEnergyMultiplier = LitEmission * flicker * s.Glow;
             s.Light.Visible = s.Glow > 0.01f;
             s.Light.LightEnergy = LightEnergy * s.Glow * flicker;
             // Charged in a colour of hers, it glows in that colour (and lends it: docs/LIGHT-AND-GRAPH.md §10).
@@ -137,8 +139,7 @@ public partial class ChargeStoneView : Node3D
         foreach (var (material, stone) in _sign)
         {
             if (stone >= _shown.Count) continue;
-            float glint = DarkGlint * (0.7f + 0.3f * Mathf.Sin(_time * 1.7f + stone));
-            material.EmissionEnergyMultiplier = spent ? 0.05f : Mathf.Lerp(glint, LitEmission, _shown[stone].Glow);
+            material.EmissionEnergyMultiplier = spent ? 0f : LitEmission * _shown[stone].Glow;
         }
     }
 }

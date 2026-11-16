@@ -411,6 +411,9 @@ public partial class TopDownMain
         _reefView.Apply();
     }
 
+    /// <summary>Charge stones set in each cube's walls (PlaneWorld.PlaceChargeStonesIn).</summary>
+    const int CubeChargeStones = 2;
+
     /// <summary>When her layer's sun map was last cast, and whether a cube laid since wants it cast again.</summary>
     float _sunCastAt;
     bool _sunStale;
@@ -438,9 +441,14 @@ public partial class TopDownMain
         }
     }
 
-    /// <summary>A cube of her layer laid on its map: its reef life shown, the cutout's map and the sun's made again.</summary>
+    /// <summary>A cube of her layer laid on its map: its reef life and charge stones put in, the cutout's map and the sun's made again.</summary>
     void LaidHere(CubeId cube)
     {
+        int had = _world.ChargeStones.Count;
+        _world.PlaceChargeStonesIn(cube.Origin, cube.Origin + cube.Size, ReefHash.Of(_reef!.Space.Seed, ReefHash.Cube, cube.X, cube.Y, cube.Z, cube.OnEnd ? 1 : 0), CubeChargeStones);
+        // (Verification, --dbg-charge: lit as they come.)
+        if (_dbgChargeStones)
+            for (int i = had; i < _world.ChargeStones.Count; i++) _world.ChargeStones[i].Charge = ChargeStoneTuning.GlowSeconds;
         var (flora, rocks, glows) = LevelShape.ReefLife(_map, new Rect2(cube.Origin.X, cube.Origin.Y, cube.Size.X, cube.Size.Y));
         _level.AddLife(flora, rocks, glows);
         _level.SeeMaskStale();
