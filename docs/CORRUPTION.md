@@ -33,7 +33,10 @@ murklings).
   prime, a Blotter's guard, a Blotter born from corruption) drinks a fixed amount of ink (`CorruptionField.Plan`,
   `Drink`) from anywhere on the level: the nearest corrupted cells first, then further and further out until its
   cost is paid, however far that is. So its draught is small on thick ink and reaches far where the ink is thin or
-  gone. Only when the whole level holds less than its cost is it not born. The ground it drank is left
+  gone. Only when the whole level holds less than its cost is it not born. **Its birth shows only in light:** the ink
+  streaming into it and the blob it swells into are seen only while her glow, a beam of hers or a lit charge stone
+  falls on where it is born (`PlaneWorld.CoreLit`); in the dark it gathers unseen. Born, it rises with a ripple of the
+  water over it, wavering as the air over a hot road does, lit or not (`MurklingEmerged`). The ground it drank is left
   dark and empty: the shards there stop and no gold shows, since she did not cleanse it (`CorruptionField.Drunk`). A
   living Blightroot regrows that ground like any other. The creature holds the ink (`CorruptionField.Held`) until she
   frees it; then it is cleansed (`Release`). Costs are in density × m² (1 is a square metre of the thickest ink):

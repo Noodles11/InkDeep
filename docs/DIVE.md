@@ -117,8 +117,8 @@ reef's seed, never the same on two boss layers running.
 ### 5.1 The danger clock
 
 - **Each layer keeps a clock** (`TopDownMain.StepDanger`, `DangerTuning`), started unseen the first time she comes onto
-  it. It runs while she is on the layer (not while the game is held, nor in a cave or a haven off it, nor during a
-  change of layer) until the layer's boss is freed; it is saved with the dive (`CubeDiveSave.DangerClock`). A layer
+  it. It runs while she is on the layer (not while the game is held: the pause menu or any other; nor in a cave or a
+  haven off it, nor during a change of layer) until the layer's boss is freed; it is saved with the dive (`CubeDiveSave.DangerClock`). A layer
   that holds no boss keeps its clock running: the pressure to move on.
 - **Its ten minutes** (`DangerTuning.Minutes`, configurable) are cut into five equal steps. In the first, murklings
   come as the Menace alone has them; each step after, they come 30% more often and 25% more of them may stay round her

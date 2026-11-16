@@ -166,14 +166,14 @@ public partial class TopDownMain
     /// </summary>
     readonly Dictionary<int, float> _dangerClock = new();
 
-    /// <summary>Her layer's clock run on (not while the game is held, nor out of the reef), and the danger it is at, to the world and the HUD.</summary>
+    /// <summary>Her layer's clock run on (not while the game is held: the pause menu or any other; nor out of the reef), and the danger it is at, to the world and the HUD.</summary>
     void StepDanger(float dt)
     {
         int danger = 0;
         if (!_bossFreed.Contains(_layer))
         {
             _dangerClock.TryGetValue(_layer, out float seconds);
-            if (_layerMove == LayerMove.None && !_world.Defeated) seconds += dt * _dangerSpeed;
+            if (_layerMove == LayerMove.None && !_world.Defeated && !Paused) seconds += dt * _dangerSpeed;
             _dangerClock[_layer] = seconds;
             danger = DangerTuning.StepAt(seconds);
         }
