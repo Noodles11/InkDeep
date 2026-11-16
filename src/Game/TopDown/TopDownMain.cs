@@ -2287,9 +2287,31 @@ public partial class TopDownMain : Node3D
             GD.Print($"CENSUS {v.Nodes,5} nodes {v.Instances,7} inst {v.Casters,5} casters  {k}");
     }
 
+    /// <summary>Verification (--dbg-perf): the parts of this frame timed so far, printed should the frame turn out a hitch.</summary>
+    readonly List<(string What, double Ms)> _frameSpans = new();
+
+    /// <summary>Verification (--dbg-perf): a part of the frame timed (with using), into PerfAdd.</summary>
+    readonly struct PerfSpan : IDisposable
+    {
+        readonly TopDownMain? _main;
+        readonly string _what;
+        readonly long _start, _bytes;
+        public PerfSpan(TopDownMain main, string what)
+        {
+            _main = main._perf ? main : null;
+            _what = what;
+            _start = _main is null ? 0 : System.Diagnostics.Stopwatch.GetTimestamp();
+            _bytes = _main is null ? 0 : GC.GetAllocatedBytesForCurrentThread();
+        }
+        public void Dispose() => _main?.PerfAdd(_what, _start, _bytes);
+    }
+
+    PerfSpan Timed(string what) => new(this, what);
+
     void PerfAdd(string what, long start, long bytes)
     {
         double ms = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+        if (ms >= 1.0) _frameSpans.Add((what, ms));
         long allocated = GC.GetAllocatedBytesForCurrentThread() - bytes;
         var (total, worst, sum) = _perfCosts.TryGetValue(what, out var c) ? c : (0.0, 0.0, 0L);
         _perfCosts[what] = (total + ms, Math.Max(worst, ms), sum + allocated);
@@ -2337,7 +2359,9 @@ public partial class TopDownMain : Node3D
         // Verification: a frame that took long, with what the game's own code spent of it.
         // (The frame after a report carries the report's own printing, tens of milliseconds on Windows: not counted.)
         bool afterReport = _reported;
-        if (delta > 1.0 / 30.0 && !afterReport) GD.Print($"HITCH {1000.0 * delta:0.0} ms; the frame before spent {_lastFrameMs:0.0} ms in the game's code");
+        if (delta > 1.0 / 30.0 && !afterReport) GD.Print($"HITCH {1000.0 * delta:0.0} ms; the frame before spent {_lastFrameMs:0.0} ms in the game's code: "
+            + string.Join(", ", _frameSpans.OrderByDescending(s => s.Ms).Take(8).Select(s => $"{s.What} {s.Ms:0.0}")));
+        _frameSpans.Clear();
         _reported = PerfReport(afterReport ? 0.0 : delta, afterReport);
         long start = System.Diagnostics.Stopwatch.GetTimestamp();
         ProcessFrame(delta);
@@ -2479,8 +2503,12 @@ public partial class TopDownMain : Node3D
             float hpBefore = _world.Player.Hp;
             long simStart = _perf ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
             long simBytes = _perf ? GC.GetAllocatedBytesForCurrentThread() : 0;
-            _world.Step(ReadInput());
-            if (InReef) StepReefCurrents();
+            _world.DbgTime = _perf;
+            using (Timed("world")) _world.Step(ReadInput());
+            if (_perf && _world.DbgSlow.Count > 0) GD.Print("WORLD slow: " + string.Join(", ", _world.DbgSlow.Select(x => $"{x.Part} {x.Ms:0.0}")));
+            if (InReef)
+                using (Timed("reef currents"))
+                    StepReefCurrents();
             if (_perf) PerfAdd("sim", simStart, simBytes);
             _recorder.Observe(_world);
             Earned(_achievements.Observe(_world));

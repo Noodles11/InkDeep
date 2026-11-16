@@ -72,53 +72,76 @@ public partial class FloraViews : Node3D
         }
     }
 
+    /// <summary>Each tile's plants of each species, and the node drawing them.</summary>
+    readonly Dictionary<(FloraKind Kind, int X, int Z), (List<FloraItem> Items, MultiMeshInstance3D? Node)> _tiles = new();
+
     public void Clear()
     {
         foreach (var child in GetChildren()) child.QueueFree();
+        _tiles.Clear();
     }
 
     public void Show(IReadOnlyList<FloraItem> items)
     {
         Clear();
-        var groups = items.GroupBy(i => (i.Kind, X: Mathf.FloorToInt(i.Transform.Origin.X / Tile), Z: Mathf.FloorToInt(i.Transform.Origin.Z / Tile)));
-        foreach (var group in groups)
-        {
-            var (mesh, material) = _species[group.Key.Kind];
-            var look = Looks[group.Key.Kind];
-            var list = group.ToList();
-            var multimesh = new MultiMesh
-            {
-                TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-                UseCustomData = true,
-                Mesh = mesh,
-                InstanceCount = list.Count,
-            };
-            float minY = float.MaxValue, maxY = float.MinValue;
-            for (int i = 0; i < list.Count; i++)
-            {
-                multimesh.SetInstanceTransform(i, list[i].Transform);
-                multimesh.SetInstanceCustomData(i, list[i].Tint);
-                minY = Mathf.Min(minY, list[i].Transform.Origin.Y);
-                maxY = Mathf.Max(maxY, list[i].Transform.Origin.Y);
-            }
-            // The node sits at the tile's middle (visibility ranges are measured from it); instances are relative to it.
-            var centre = new Vector3((group.Key.X + 0.5f) * Tile, (minY + maxY) * 0.5f, (group.Key.Z + 0.5f) * Tile);
-            for (int i = 0; i < list.Count; i++) multimesh.SetInstanceTransform(i, list[i].Transform.Translated(-centre));
-            float half = (maxY - minY) * 0.5f + 3f;
-            AddChild(new MultiMeshInstance3D
-            {
-                Position = centre,
-                Multimesh = multimesh,
-                MaterialOverride = material,
-                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-                CustomAabb = new Aabb(new Vector3(-Tile * 0.5f - 3f, -half, -Tile * 0.5f - 3f), new Vector3(Tile + 6f, half * 2f, Tile + 6f)),
-                // (A level's own: out to past what the camera can see, ~70 m off, so no tile far beyond the screen is drawn
-                // or casts a shadow.)
-                VisibilityRangeEnd = Unlimited ? LevelRange + Tile * 0.5f : look.Range + Tile * 0.5f,
-                VisibilityRangeEndMargin = 8f,
-                VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self,
-            });
-        }
+        Add(items);
         GD.Print($"Flora: {items.Count} plants and animals ({string.Join(", ", items.GroupBy(i => i.Kind).Select(g => $"{g.Count()} {g.Key}"))})");
+    }
+
+    /// <summary>More plants drawn (a cube reef's cube laid): only the tiles they fall in made again.</summary>
+    public void Add(IEnumerable<FloraItem> items)
+    {
+        var touched = new HashSet<(FloraKind, int, int)>();
+        foreach (var item in items)
+        {
+            var key = (item.Kind, Mathf.FloorToInt(item.Transform.Origin.X / Tile), Mathf.FloorToInt(item.Transform.Origin.Z / Tile));
+            if (!_tiles.TryGetValue(key, out var tile)) _tiles[key] = tile = (new List<FloraItem>(), null);
+            tile.Items.Add(item);
+            touched.Add(key);
+        }
+        foreach (var key in touched) MakeTile(key);
+    }
+
+    void MakeTile((FloraKind Kind, int X, int Z) key)
+    {
+        var (list, old) = _tiles[key];
+        old?.QueueFree();
+        var (mesh, material) = _species[key.Kind];
+        var look = Looks[key.Kind];
+        var multimesh = new MultiMesh
+        {
+            TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+            UseCustomData = true,
+            Mesh = mesh,
+            InstanceCount = list.Count,
+        };
+        float minY = float.MaxValue, maxY = float.MinValue;
+        foreach (var item in list)
+        {
+            minY = Mathf.Min(minY, item.Transform.Origin.Y);
+            maxY = Mathf.Max(maxY, item.Transform.Origin.Y);
+        }
+        // The node sits at the tile's middle (visibility ranges are measured from it); instances are relative to it.
+        var centre = new Vector3((key.X + 0.5f) * Tile, (minY + maxY) * 0.5f, (key.Z + 0.5f) * Tile);
+        for (int i = 0; i < list.Count; i++)
+        {
+            multimesh.SetInstanceTransform(i, list[i].Transform.Translated(-centre));
+            multimesh.SetInstanceCustomData(i, list[i].Tint);
+        }
+        float half = (maxY - minY) * 0.5f + 3f;
+        var node = new MultiMeshInstance3D
+        {
+            Position = centre,
+            Multimesh = multimesh,
+            MaterialOverride = material,
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            CustomAabb = new Aabb(new Vector3(-Tile * 0.5f - 3f, -half, -Tile * 0.5f - 3f), new Vector3(Tile + 6f, half * 2f, Tile + 6f)),
+            // (A level's own: out to past what the camera can see, ~70 m off, so no tile far beyond the screen is drawn.)
+            VisibilityRangeEnd = Unlimited ? LevelRange + Tile * 0.5f : look.Range + Tile * 0.5f,
+            VisibilityRangeEndMargin = 8f,
+            VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self,
+        };
+        AddChild(node);
+        _tiles[key] = (list, node);
     }
 }

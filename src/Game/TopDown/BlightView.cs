@@ -59,6 +59,10 @@ public partial class BlightView : Node3D
     public override void _Ready()
     {
         _orb = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/corruption_orb.gdshader") };
+        // (Loaded and made ready now, as the level is: a murkling's body's material made for the first time compiles its
+        // shader, stalling that frame.)
+        _murkShader ??= GD.Load<Shader>("res://assets/shaders/murkling.gdshader");
+        _plainMurk ??= new ShaderMaterial { Shader = _murkShader };
         _sacMat = new ShaderMaterial { Shader = _orb.Shader };
         _sacMat.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ember_color"), new Color(0.9f, 0.25f, 0.55f));
         _ring = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/ink_ring.gdshader"), RenderPriority = 1 };

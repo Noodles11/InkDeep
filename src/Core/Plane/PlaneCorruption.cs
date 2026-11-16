@@ -232,32 +232,56 @@ public sealed class CorruptionField
         float want = cost / CorruptionTuning.CellArea;
         var draw = new InkDraw();
         float got = 0f, weighted = 0f;
-        var ring = new List<(float D, int I)>();
-        // Outward in rings (2 m at a time), each taken nearest first.
-        float maxReach = LevelMap.Seeded * 1.5f;
-        for (float inner = -1f, outer = 2f; got < want - 1e-4f && inner < maxReach; inner = outer, outer += 2f)
+        // Out to the last of the 2 m rings it once looked in, each cell taken nearest first (ties by index): the cells
+        // gathered square shell by square shell round hers, each looked at once, into a heap by distance; one is taken
+        // only once no shell not yet looked at can hold a nearer one.
+        float maxReach = LevelMap.Seeded * 1.5f, reach = 2f;
+        for (float inner = -1f, outer = 2f; inner < maxReach; inner = outer, outer += 2f) reach = outer;
+        const float C = CorruptionTuning.Cell;
+        int cx = (int)MathF.Floor(at.X / C), cy = (int)MathF.Floor(at.Y / C);
+        int shells = Math.Max(Math.Max(Math.Abs(cx), Math.Abs(N - 1 - cx)), Math.Max(Math.Abs(cy), Math.Abs(N - 1 - cy)));
+        var heap = new PriorityQueue<int, (float D, int I)>();
+        void Look(int x, int y)
         {
-            ring.Clear();
-            Span(at, outer, out int x0, out int y0, out int x1, out int y1);
-            for (int y = y0; y <= y1; y++)
-            for (int x = x0; x <= x1; x++)
+            if (x < 0 || y < 0 || x >= N || y >= N) return;
+            int i = Index(x, y);
+            if (Density[i] <= 0.02f) return;
+            float d = Vector2.Distance(CellCentre(x, y), at);
+            if (d <= reach) heap.Enqueue(i, (d, i));
+        }
+        int k = 0;
+        while (got < want - 1e-4f)
+        {
+            // (A cell of shell k lies at least k - ½ cells off: look on out while the nearest found may not be the nearest.)
+            while (k <= shells && (k - 0.5f) * C <= reach && (heap.Count == 0 || heap.TryPeek(out _, out var top) && top.D >= (k - 0.5f) * C))
             {
-                float d = Vector2.Distance(CellCentre(x, y), at);
-                int i = Index(x, y);
-                if (d > inner && d <= outer && Density[i] > 0.02f) ring.Add((d, i));
+                if (k == 0) Look(cx, cy);
+                else
+                {
+                    // (Only its part on the field.)
+                    int xa = Math.Max(0, cx - k), xb = Math.Min(N - 1, cx + k);
+                    int ya = Math.Max(0, cy - k + 1), yb = Math.Min(N - 1, cy + k - 1);
+                    for (int x = xa; x <= xb; x++)
+                    {
+                        Look(x, cy - k);
+                        Look(x, cy + k);
+                    }
+                    for (int y = ya; y <= yb; y++)
+                    {
+                        Look(cx - k, y);
+                        Look(cx + k, y);
+                    }
+                }
+                k++;
             }
-            ring.Sort((l, r) => l.D != r.D ? l.D.CompareTo(r.D) : l.I.CompareTo(r.I));
-            foreach (var (d, i) in ring)
-            {
-                float take = MathF.Min(Density[i], want - got);
-                draw.Cells.Add(i);
-                draw.Amounts.Add(take);
-                draw.Taken.Add(0f);
-                got += take;
-                weighted += Density[i];
-                draw.Radius = d + CorruptionTuning.Cell * 0.5f;
-                if (got >= want - 1e-4f) break;
-            }
+            if (!heap.TryDequeue(out int cell, out var at2)) break;
+            float take = MathF.Min(Density[cell], want - got);
+            draw.Cells.Add(cell);
+            draw.Amounts.Add(take);
+            draw.Taken.Add(0f);
+            got += take;
+            weighted += Density[cell];
+            draw.Radius = at2.D + CorruptionTuning.Cell * 0.5f;
         }
         if (got < want - 1e-4f) return null;
         draw.Total = got;

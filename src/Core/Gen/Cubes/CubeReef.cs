@@ -49,13 +49,14 @@ public sealed class CubeReef
 
     /// <summary>
     /// The cubes made since the last call laid onto their layers' maps (on the thread that runs the game: its systems read
-    /// the maps); those laid.
+    /// the maps), at most <paramref name="most"/> of them (the rest left for the next call, so no one frame lays many);
+    /// those laid.
     /// </summary>
-    public List<CubeId> Settle()
+    public List<CubeId> Settle(int most = int.MaxValue)
     {
         var laid = new List<CubeId>();
         lock (_maps)
-            while (_fresh.TryDequeue(out var c))
+            while (laid.Count < most && _fresh.TryDequeue(out var c))
                 // (Its terrain read whole: queued as it was made, it may be a moment from being handed out.)
                 if (_maps.TryGetValue(c.Z, out var layer) && _made.TryGetValue(c, out var made) && layer.Laid.Add(c))
                 {

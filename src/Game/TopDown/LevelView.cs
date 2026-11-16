@@ -1913,7 +1913,7 @@ public partial class LevelView : Node3D
         if (flora.Count > 0)
         {
             _floraItems.AddRange(flora);
-            _flora.Show(_floraItems);
+            _flora.Add(flora);
         }
         if (rocks.Count > 0) AddChild(Instances(new SphereMesh { Radius = 1f, Height = 2f, RadialSegments = 18, Rings = 9 }, Rock(0.22f), rocks));
         if (glows.Count > 0)

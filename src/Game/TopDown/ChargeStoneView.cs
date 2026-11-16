@@ -58,12 +58,25 @@ public partial class ChargeStoneView : Node3D
     void Build(PlaneWorld world)
     {
         var crystals = world.ChargeStones;
+        // (The cube reef's come a cube's at a time: only the new ones made, the rest left as they are.)
+        if (ReferenceEquals(crystals, _for) && _shown.Count < crystals.Count && world.Trio is null)
+        {
+            for (int i = _shown.Count; i < crystals.Count; i++) AddStone(crystals[i]);
+            return;
+        }
         foreach (var child in GetChildren()) child.QueueFree();
         _shown.Clear();
         _sign.Clear();
         _for = crystals;
         var shard = Shard();
-        foreach (var c in crystals)
+        foreach (var c in crystals) AddStone(c);
+        AddSign(world, shard);
+    }
+
+    /// <summary>One stone's shards (one mesh) and its light.</summary>
+    void AddStone(ChargeStone c)
+    {
+        var shard = Shard();
         {
             var colour = new Color(ChargeStoneTuning.Colours[c.Colour].X, ChargeStoneTuning.Colours[c.Colour].Y, ChargeStoneTuning.Colours[c.Colour].Z);
             var material = new StandardMaterial3D
@@ -97,6 +110,12 @@ public partial class ChargeStoneView : Node3D
             // (Made again with a cube's new ones: each lit one goes on as bright as it was.)
             _shown.Add(new Shown { Material = material, Light = light, Glow = c.Glow });
         }
+    }
+
+    /// <summary>A level's trio's sign on the sand of its nook.</summary>
+    void AddSign(PlaneWorld world, ArrayMesh shard)
+    {
+        var crystals = world.ChargeStones;
         if (world.Trio is { } trio)
             for (int i = 0; i < crystals.Count; i++)
             {

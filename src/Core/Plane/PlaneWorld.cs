@@ -221,6 +221,24 @@ public sealed partial class PlaneWorld : IBodyBlocker
     /// <summary>Her cruising speed: the tuning's, times her speed stat (Squid Ink Espresso, Dolphin Fin, Sea Cucumber…).</summary>
     public float CruiseSpeed => Tuning.PlaneCruiseSpeed * Run.Loadout.Stats.Speed;
 
+    /// <summary>Verification (--dbg-perf): each part of a step timed; the slow ones of the last step.</summary>
+    public bool DbgTime;
+    public readonly List<(string Part, double Ms)> DbgSlow = new();
+    long _dbgMark;
+
+    void DbgMark(string? part)
+    {
+        if (!DbgTime) return;
+        long now = System.Diagnostics.Stopwatch.GetTimestamp();
+        if (part is null) DbgSlow.Clear();
+        else
+        {
+            double ms = (now - _dbgMark) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+            if (ms > 2.0) DbgSlow.Add((part, ms));
+        }
+        _dbgMark = now;
+    }
+
     public void Step(in PlaneInput input)
     {
         Events.Clear();
@@ -275,44 +293,45 @@ public sealed partial class PlaneWorld : IBodyBlocker
         if (BodyMotion.Swim(p, wish, wishLen, t, cruise, Dt))
             Events.Add(new PlaneEvent(PlaneEventType.JetStarted, p.Position, wish / wishLen));
 
-        Move(ref p.Position, ref p.Velocity, Radius);
-        StepPrismStones();
+        DbgMark(null);
+        Move(ref p.Position, ref p.Velocity, Radius); DbgMark("move");
+        StepPrismStones(); DbgMark("StepPrismStones");
 
-        StepReef();
-        StepSeals();
+        StepReef(); DbgMark("StepReef");
+        StepSeals(); DbgMark("StepSeals");
 
         foreach (var c in Clouds) c.Life -= Dt;
         Clouds.RemoveAll(c => c.Life <= 0f);
 
-        StepBoss();
-        StepCombat(input);
+        StepBoss(); DbgMark("StepBoss");
+        StepCombat(input); DbgMark("StepCombat");
         if (input.ToggleGlow && !Defeated)
         {
             GlowOff = !GlowOff;
             Events.Add(new PlaneEvent(PlaneEventType.GlowToggled, Player.Position, Vector2.Zero, GlowOff ? 0f : 1f));
         }
-        SyncLights(input);
-        StepHerLight();
+        SyncLights(input); DbgMark("SyncLights");
+        StepHerLight(); DbgMark("StepHerLight");
         // Pistol Shrimp Claw's snaps where her beam ends on a creature (PlaneRhythm.cs).
-        StepSnap();
+        StepSnap(); DbgMark("StepSnap");
         // Murklings as big as their corruption (shrunk by her light, grown back in the dark).
-        StepMurkSizes();
-        StepChargeStones();
-        StepVaults();
-        StepAsh();
-        StepCorruption();
+        StepMurkSizes(); DbgMark("StepMurkSizes");
+        StepChargeStones(); DbgMark("StepChargeStones");
+        StepVaults(); DbgMark("StepVaults");
+        StepAsh(); DbgMark("StepAsh");
+        StepCorruption(); DbgMark("StepCorruption");
         if (Options.Adventure) StepAdventure();
-        StepDarkMurklings();
-        StepKnocks();
-        StepSprings();
-        StepFish();
-        StepReefFish();
-        StepCurse();
-        StepEconomy();
-        StepExperience();
-        StepPushWave();
-        StepHaven();
-        StepDiveCave();
+        StepDarkMurklings(); DbgMark("StepDarkMurklings");
+        StepKnocks(); DbgMark("StepKnocks");
+        StepSprings(); DbgMark("StepSprings");
+        StepFish(); DbgMark("StepFish");
+        StepReefFish(); DbgMark("StepReefFish");
+        StepCurse(); DbgMark("StepCurse");
+        StepEconomy(); DbgMark("StepEconomy");
+        StepExperience(); DbgMark("StepExperience");
+        StepPushWave(); DbgMark("StepPushWave");
+        StepHaven(); DbgMark("StepHaven");
+        StepDiveCave(); DbgMark("StepDiveCave");
         // Murklings made during the step (a prime's pieces) join the others now, never while a loop walks them.
         Murklings.AddRange(_madeLater);
         _madeLater.Clear();
@@ -327,7 +346,7 @@ public sealed partial class PlaneWorld : IBodyBlocker
     /// </summary>
     void StepReef()
     {
-        StepCurrents();
+        StepCurrents(); DbgMark("StepCurrents");
         _started.Clear();
         _ended.Clear();
         Director.Step(Time, _started, _ended);

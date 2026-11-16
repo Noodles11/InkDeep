@@ -393,7 +393,7 @@ public partial class TopDownMain
     /// <summary>Every frame on the reef: what the stream wants round her (or round where she is going), work taken in, meshes shown.</summary>
     void StepReef(float dt)
     {
-        TakeMade();
+        using (Timed("reef take made")) TakeMade();
         if (_cubeChartAt > 0f && _elapsed > _cubeChartAt)
         {
             _cubeChartAt = 0f;
@@ -403,12 +403,12 @@ public partial class TopDownMain
         if (_world.Boss?.Freed == true) _bossFreed.Add(_layer);
         StepDanger(dt);
         var p = _world.Player;
-        _stream.Update(ReefFocus(p), dt);
-        _cubeWorker.Drain(_stream);
+        using (Timed("reef stream")) _stream.Update(ReefFocus(p), dt);
+        using (Timed("reef drain")) _cubeWorker.Drain(_stream);
         while (_cubeWorker.Errors.TryDequeue(out var error)) GD.PushError($"Cube work failed: {error}");
-        SettleReef();
-        _reefView.Take(_stream);
-        _reefView.Apply();
+        using (Timed("reef settle")) SettleReef();
+        using (Timed("reef view take")) _reefView.Take(_stream);
+        using (Timed("reef view apply")) _reefView.Apply();
     }
 
     /// <summary>Charge stones set in each cube's walls (PlaneWorld.PlaceChargeStonesIn).</summary>
@@ -425,19 +425,42 @@ public partial class TopDownMain
     void SettleReef()
     {
         bool any = false;
-        foreach (var cube in _reef!.Settle())
+        TakeLife();
+        foreach (var cube in _reef!.Settle(SettleMost))
             if (cube.Z == _layer && InReef && _layerMaps.TryGetValue(_layer, out var map) && map == _map)
             {
                 LaidHere(cube);
                 any = true;
             }
         // (Verification, --autopilot: a way on looked for again once more of the layer is laid.)
-        if (any && _autopilot && _route.Count == 0 && _layerMove == LayerMove.None) Route();
+        if (any && _autopilot && _route.Count == 0 && _layerMove == LayerMove.None)
+            using (Timed("autopilot route"))
+                Route();
         if (_sunStale && _layerMove == LayerMove.None && InReef && _elapsed - _sunCastAt > 1.5f)
         {
             _sunStale = false;
             _sunCastAt = _elapsed;
-            OctoShoots.Game.Fx.SunMap.Build(_map, OctoShoots.Game.Fx.SunLight.Direction);
+            using (Timed("sun map")) OctoShoots.Game.Fx.SunMap.Build(_map, OctoShoots.Game.Fx.SunLight.Direction);
+        }
+    }
+
+    /// <summary>Cubes laid onto their maps a frame at most (CubeReef.Settle): the rest wait for the next.</summary>
+    const int SettleMost = 2;
+
+    /// <summary>Cubes' reef life being worked out on the pool (LevelShape.ReefLife: it only reads the map), for the map it was laid on.</summary>
+    readonly List<(LevelMap Map, Rect2 Area, System.Threading.Tasks.Task<(List<OctoShoots.Game.Fx.FloraItem>, List<Transform3D>, List<Transform3D>)> Work)> _life = new();
+
+    /// <summary>The reef life worked out so far put in, if her layer's map is still the one it was for (worked out here should the pool have failed).</summary>
+    void TakeLife()
+    {
+        for (int i = 0; i < _life.Count; i++)
+        {
+            var (map, area, work) = _life[i];
+            if (!work.IsCompleted) continue;
+            _life.RemoveAt(i--);
+            if (map != _map) continue;
+            var (flora, rocks, glows) = work.IsCompletedSuccessfully ? work.Result : LevelShape.ReefLife(map, area);
+            using (Timed("laid: add life")) _level.AddLife(flora, rocks, glows);
         }
     }
 
@@ -445,13 +468,18 @@ public partial class TopDownMain
     void LaidHere(CubeId cube)
     {
         int had = _world.ChargeStones.Count;
-        _world.PlaceChargeStonesIn(cube.Origin, cube.Origin + cube.Size, ReefHash.Of(_reef!.Space.Seed, ReefHash.Cube, cube.X, cube.Y, cube.Z, cube.OnEnd ? 1 : 0), CubeChargeStones);
+        using var _ = Timed("laid: all");
+        using (Timed("laid: stones")) _world.PlaceChargeStonesIn(cube.Origin, cube.Origin + cube.Size, ReefHash.Of(_reef!.Space.Seed, ReefHash.Cube, cube.X, cube.Y, cube.Z, cube.OnEnd ? 1 : 0), CubeChargeStones);
         // (Verification, --dbg-charge: lit as they come.)
         if (_dbgChargeStones)
             for (int i = had; i < _world.ChargeStones.Count; i++) _world.ChargeStones[i].Charge = ChargeStoneTuning.GlowSeconds;
-        var (flora, rocks, glows) = LevelShape.ReefLife(_map, new Rect2(cube.Origin.X, cube.Origin.Y, cube.Size.X, cube.Size.Y));
-        _level.AddLife(flora, rocks, glows);
+        // (Its life worked out on the pool, put in as it is ready: TakeLife.)
+        var map = _map;
+        var area = new Rect2(cube.Origin.X, cube.Origin.Y, cube.Size.X, cube.Size.Y);
+        _life.Add((map, area, System.Threading.Tasks.Task.Run(() => LevelShape.ReefLife(map, area))));
         _level.SeeMaskStale();
+        // (The way through the water found again over it: PlaneWorld.NavStale.)
+        _world.NavStale(cube.Origin, cube.Origin + cube.Size);
         _sunStale = true;
     }
 
@@ -509,12 +537,15 @@ public partial class TopDownMain
         {
             var claimed = CubeId.Of(p.Position, _layer);
             // (The arena holds its boss alone: no stock, no places.)
+            using var _ = Timed("reef claim");
+            var sp = Timed("claim: spots");
             var spots = _reef.IsArena(claimed) ? new List<StockSpot>() : CubeStock.Spots(_reef.Space.Seed, claimed, Here.Claimed[claimed].Claim, _map.Menace, p.Position, _world.Clear);
-            foreach (var s in spots) _world.PlaceStock(claimed, s.Spawn, s.Seed, s.Prime, new[] { s.At }, left: false);
-            if (!_reef.IsArena(claimed)) Grant(claimed);
-            if (_map.Mouths.Count is var mouthsWere && OpenMouths(_map)) ShowReefMouths(mouthsWere);
+            sp.Dispose();
+            using (Timed("claim: stock")) foreach (var s in spots) _world.PlaceStock(claimed, s.Spawn, s.Seed, s.Prime, new[] { s.At }, left: false);
+            using (Timed("claim: grant")) if (!_reef.IsArena(claimed)) Grant(claimed);
+            using (Timed("claim: mouths")) if (_map.Mouths.Count is var mouthsWere && OpenMouths(_map)) ShowReefMouths(mouthsWere);
             GD.Print($"Cube reef: {claimed} claimed ({Here.Claims} on layer {_layer}), {spots.Count} of its stock budded");
-            if (_autopilot) Route();
+            using (Timed("claim: route")) if (_autopilot) Route();
         }
         if (++_revealTick % 6 == 0) Here.Reveal(p.Position, 12f);
     }

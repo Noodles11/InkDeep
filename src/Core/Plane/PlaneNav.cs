@@ -26,11 +26,13 @@ public sealed partial class PlaneWorld
     /// <summary>The nav grid's cells a side (the map's square in NavTuning.Cell steps).</summary>
     int NavN => (int)(Map.Size / NavTuning.Cell);
     const int NavUnreached = int.MaxValue;
-    bool[]? _navOpen;
+    /// <summary>Each cell's open water, worked out as it is first asked for (0 not yet, 1 open, −1 not): a cube reef's map is far too big to work out whole.</summary>
+    sbyte[]? _navOpen;
     int[]? _navSteps;
     int _navHerCell = -1, _navRockKey;
     long _navBuilt = long.MinValue;
     readonly Queue<int> _navWalk = new();
+    readonly List<int> _navReached = new();
 
     /// <summary>
     /// The way for a creature at <paramref name="from"/> to swim toward her (a unit direction): straight at her while the
@@ -101,26 +103,46 @@ public sealed partial class PlaneWorld
         return true;
     }
 
-    /// <summary>The terrain's open cells (once a level; the sealed walls are laid over them as they stand).</summary>
+    /// <summary>The terrain's open cells, forgotten (to be worked out again as asked for) when a sealed wall opens or shuts.</summary>
     void BuildOpen()
     {
         if (_navOpen is not null && _navRockKey == RockKey()) return;
-        _navOpen ??= new bool[NavN * NavN];
+        if (_navOpen is null) _navOpen = new sbyte[NavN * NavN];
+        else Array.Clear(_navOpen);
         _navRockKey = RockKey();
-        for (int i = 0; i < NavN * NavN; i++)
-        {
-            var c = NavCentre(i);
-            bool open = TerrainOpen(c);
-            if (open)
-                foreach (var rock in _rocks)
-                    if (rock.Contains(c, NavTuning.Clearance))
-                    {
-                        open = false;
-                        break;
-                    }
-            _navOpen[i] = open;
-        }
         // The walls changed: the way must be found again.
+        _navBuilt = long.MinValue;
+    }
+
+    /// <summary>Whether a cell is open water a body can pass (the terrain, kept Clearance off it, and the sealed walls as they stand).</summary>
+    bool NavOpen(int i)
+    {
+        sbyte s = _navOpen![i];
+        if (s != 0) return s > 0;
+        var c = NavCentre(i);
+        bool open = TerrainOpen(c);
+        if (open)
+            foreach (var rock in _rocks)
+                if (rock.Contains(c, NavTuning.Clearance))
+                {
+                    open = false;
+                    break;
+                }
+        _navOpen[i] = open ? (sbyte)1 : (sbyte)-1;
+        return open;
+    }
+
+    /// <summary>
+    /// The map changed over an area (a cube of the reef laid on it): its cells' open water worked out again as asked for,
+    /// and the way found again.
+    /// </summary>
+    public void NavStale(Vector2 lo, Vector2 hi)
+    {
+        if (_navOpen is null) return;
+        int x0 = Math.Max(0, (int)MathF.Floor(lo.X / NavTuning.Cell) - 1), y0 = Math.Max(0, (int)MathF.Floor(lo.Y / NavTuning.Cell) - 1);
+        int x1 = Math.Min(NavN - 1, (int)MathF.Ceiling(hi.X / NavTuning.Cell) + 1), y1 = Math.Min(NavN - 1, (int)MathF.Ceiling(hi.Y / NavTuning.Cell) + 1);
+        for (int y = y0; y <= y1; y++)
+            if (x1 >= x0) Array.Clear(_navOpen, y * NavN + x0, x1 - x0 + 1);
         _navBuilt = long.MinValue;
     }
 
@@ -151,13 +173,20 @@ public sealed partial class PlaneWorld
         // As she swims, found again at most every RebuildTicks; at once when she has jumped (a start, a dive).
         bool jumped = _navHerCell < 0 || herCell < 0 || Math.Abs(herCell % NavN - _navHerCell % NavN) + Math.Abs(herCell / NavN - _navHerCell / NavN) > 3;
         if (_navSteps is not null && (herCell == _navHerCell || Tick - _navBuilt < NavTuning.RebuildTicks && !jumped)) return;
-        _navSteps ??= new int[NavN * NavN];
-        Array.Fill(_navSteps, NavUnreached);
+        if (_navSteps is null)
+        {
+            _navSteps = new int[NavN * NavN];
+            Array.Fill(_navSteps, NavUnreached);
+        }
+        // (Only the cells the last walk reached set back: the rest are unreached still.)
+        foreach (int c in _navReached) _navSteps[c] = NavUnreached;
+        _navReached.Clear();
         _navHerCell = herCell;
         _navBuilt = Tick;
         if (herCell < 0) return;
         _navWalk.Clear();
         _navSteps[herCell] = 0;
+        _navReached.Add(herCell);
         _navWalk.Enqueue(herCell);
         while (_navWalk.Count > 0)
         {
@@ -170,6 +199,7 @@ public sealed partial class PlaneWorld
                 int n = (y + dy) * NavN + x + dx;
                 if (_navSteps[n] != NavUnreached) continue;
                 _navSteps[n] = _navSteps[c] + 1;
+                _navReached.Add(n);
                 _navWalk.Enqueue(n);
             }
         }
@@ -179,8 +209,8 @@ public sealed partial class PlaneWorld
     bool NavStep(int x, int y, int dx, int dy)
     {
         int nx = x + dx, ny = y + dy;
-        if (nx < 0 || ny < 0 || nx >= NavN || ny >= NavN || !_navOpen![ny * NavN + nx]) return false;
-        return dx == 0 || dy == 0 || _navOpen[y * NavN + nx] && _navOpen[ny * NavN + x];
+        if (nx < 0 || ny < 0 || nx >= NavN || ny >= NavN || !NavOpen(ny * NavN + nx)) return false;
+        return dx == 0 || dy == 0 || NavOpen(y * NavN + nx) && NavOpen(ny * NavN + x);
     }
 
     /// <summary>The neighbour one step nearer her (−1: none).</summary>
@@ -209,7 +239,7 @@ public sealed partial class PlaneWorld
     {
         int c = NavCellOf(p);
         if (c < 0) return -1;
-        bool Usable(int i) => _navOpen![i] && (seeding || _navSteps![i] != NavUnreached);
+        bool Usable(int i) => NavOpen(i) && (seeding || _navSteps![i] != NavUnreached);
         if (Usable(c)) return c;
         int x = c % NavN, y = c / NavN, best = -1;
         float bestD = float.MaxValue;
@@ -230,7 +260,7 @@ public sealed partial class PlaneWorld
         return best;
     }
 
-    bool NavOpenAt(Vector2 p) => NavCellOf(p) is var c and >= 0 && _navOpen![c];
+    bool NavOpenAt(Vector2 p) => NavCellOf(p) is var c and >= 0 && NavOpen(c);
 
     int NavCellOf(Vector2 p)
     {
