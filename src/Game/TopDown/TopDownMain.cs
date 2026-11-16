@@ -2250,6 +2250,43 @@ public partial class TopDownMain : Node3D
     long _allocated;
     TimeSpan _paused;
 
+    int _perfReports;
+
+    /// <summary>Verification (--dbg-perf): what is drawn, once: the visible meshes counted by where they hang (and how many cast shadows), and the shadowed lights.</summary>
+    void Census()
+    {
+        var groups = new Dictionary<string, (int Nodes, int Instances, int Casters)>();
+        int lights = 0, shadowed = 0;
+        void Walk(Node n, string owner, int depth)
+        {
+            if (n is Node3D { Visible: false } or CanvasItem { Visible: false }) return;
+            string here = n.GetType().Namespace?.StartsWith("OctoShoots") == true ? n.GetType().Name : owner;
+            if (n is GeometryInstance3D g)
+            {
+                int count = g is MultiMeshInstance3D mm ? (mm.Multimesh?.VisibleInstanceCount is int v and >= 0 ? v : mm.Multimesh?.InstanceCount ?? 0) : 1;
+                string key = here + "/" + n.GetType().Name;
+                var (a, b, c) = groups.TryGetValue(key, out var e) ? e : (0, 0, 0);
+                groups[key] = (a + 1, b + count, c + (g.CastShadow != GeometryInstance3D.ShadowCastingSetting.Off ? 1 : 0));
+            }
+            if (n is CanvasItem ci && ci.IsVisibleInTree())
+            {
+                string key = "2D " + here + "/" + n.GetType().Name;
+                var (a, b, c) = groups.TryGetValue(key, out var e) ? e : (0, 0, 0);
+                groups[key] = (a + 1, b, c);
+            }
+            if (n is Light3D l)
+            {
+                lights++;
+                if (l.ShadowEnabled) { shadowed++; GD.Print($"CENSUS shadowed light {here} {l.GetType().Name} {(l as OmniLight3D)?.OmniShadowMode} {(l as DirectionalLight3D)?.DirectionalShadowMode}"); }
+            }
+            foreach (var child in n.GetChildren()) Walk(child, here, depth + 1);
+        }
+        Walk(this, Name, 0);
+        GD.Print($"CENSUS lights {lights}, shadowed {shadowed}");
+        foreach (var (k, v) in groups.OrderByDescending(kv => kv.Value.Nodes).Take(30))
+            GD.Print($"CENSUS {v.Nodes,5} nodes {v.Instances,7} inst {v.Casters,5} casters  {k}");
+    }
+
     void PerfAdd(string what, long start, long bytes)
     {
         double ms = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
@@ -2274,10 +2311,14 @@ public partial class TopDownMain : Node3D
         GD.Print($"PERF gc {gc0 - _gc0}/{gc1 - _gc1}/{gc2 - _gc2} paused {(paused - _paused).TotalMilliseconds:0.0} ms alloc {(allocated - _allocated) / 1024} KB/s");
         (_gc0, _gc1, _gc2, _allocated, _paused) = (gc0, gc1, gc2, allocated, paused);
         GD.Print($"PERF fps {_perfFrames / _perfClock:0} | worst {1000.0 * _perfWorst:0.0} ms, {_perfHitches} over 33 ms | render cpu {RenderingServer.ViewportGetMeasuredRenderTimeCpu(vp):0.00} ms gpu {RenderingServer.ViewportGetMeasuredRenderTimeGpu(vp):0.00} ms"
-            + $" | draws {Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame)} prims {Performance.GetMonitor(Performance.Monitor.RenderTotalPrimitivesInFrame) / 1000:0}k objs {Performance.GetMonitor(Performance.Monitor.RenderTotalObjectsInFrame)}");
+            + $" | draws {Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame)} prims {Performance.GetMonitor(Performance.Monitor.RenderTotalPrimitivesInFrame) / 1000:0}k objs {Performance.GetMonitor(Performance.Monitor.RenderTotalObjectsInFrame)}"
+            + $" (seen {RenderingServer.ViewportGetRenderInfo(vp, RenderingServer.ViewportRenderInfoType.Visible, RenderingServer.ViewportRenderInfo.ObjectsInFrame)}/{RenderingServer.ViewportGetRenderInfo(vp, RenderingServer.ViewportRenderInfoType.Visible, RenderingServer.ViewportRenderInfo.DrawCallsInFrame)} draws {RenderingServer.ViewportGetRenderInfo(vp, RenderingServer.ViewportRenderInfoType.Visible, RenderingServer.ViewportRenderInfo.PrimitivesInFrame) / 1000}k"
+            + $", shadow {RenderingServer.ViewportGetRenderInfo(vp, RenderingServer.ViewportRenderInfoType.Shadow, RenderingServer.ViewportRenderInfo.ObjectsInFrame)}/{RenderingServer.ViewportGetRenderInfo(vp, RenderingServer.ViewportRenderInfoType.Shadow, RenderingServer.ViewportRenderInfo.DrawCallsInFrame)} draws {RenderingServer.ViewportGetRenderInfo(vp, RenderingServer.ViewportRenderInfoType.Shadow, RenderingServer.ViewportRenderInfo.PrimitivesInFrame) / 1000}k"
+            + $", canvas {RenderingServer.ViewportGetRenderInfo(vp, RenderingServer.ViewportRenderInfoType.Canvas, RenderingServer.ViewportRenderInfo.ObjectsInFrame)})");
         // The costliest parts of a frame: average per frame, and the worst single one.
         GD.Print("  " + string.Join("  ", _perfCosts.OrderByDescending(kv => kv.Value.Total).Take(8).Select(kv => $"{kv.Key} {kv.Value.Total / _perfFrames:0.00}/{kv.Value.Worst:0.0}")));
         GD.Print("  alloc KB/s: " + string.Join("  ", _perfCosts.OrderByDescending(kv => kv.Value.Bytes).Take(10).Select(kv => $"{kv.Key} {kv.Value.Bytes / 1024}")));
+        if (++_perfReports == 4) Census();
         _perfCosts.Clear();
         _perfClock = _perfProcess = _perfWorst = 0;
         _perfFrames = _perfHitches = 0;

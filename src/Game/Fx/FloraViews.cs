@@ -8,12 +8,12 @@ namespace OctoShoots.Game.Fx;
 public readonly record struct FloraItem(FloraKind Kind, Transform3D Transform, Color Tint);
 
 /// <summary>
-/// Draws the reef's flora: one MultiMesh per species per 32 m tile, each fading out beyond the mist,
-/// so only the nearby reef costs anything. Sway, lattice, grooves and polyps are done in flora.gdshader.
+/// Draws the reef's flora: one MultiMesh per species per 64 m tile (few objects, each holding many), each fading out
+/// beyond the mist, so only the nearby reef costs anything; none casts a shadow. Sway, lattice, grooves and polyps are done in flora.gdshader.
 /// </summary>
 public partial class FloraViews : Node3D
 {
-    const float Tile = 32f;
+    const float Tile = 64f;
 
     sealed record Look(float Sway, float SwaySpeed, float Lattice, float Meander, float Polyps, float Rough, float Glow, float Backlight, float Range);
 
@@ -35,7 +35,7 @@ public partial class FloraViews : Node3D
     /// <summary>Each species' material (a level sets its frame and the dive's portal on them).</summary>
     public IEnumerable<ShaderMaterial> Materials => _species.Values.Select(s => s.Material);
 
-    /// <summary>Draw at any distance (the top-down camera sees the whole view at once), and cast shadows.</summary>
+    /// <summary>Draw at any distance (the top-down camera sees the whole view at once).</summary>
     public bool Unlimited { get; set; }
 
     /// <summary>A level's flora is drawn out to this far from the camera (the camera hangs ~55 m off; the screen's corners are within ~75 m).</summary>
@@ -110,7 +110,7 @@ public partial class FloraViews : Node3D
                 Position = centre,
                 Multimesh = multimesh,
                 MaterialOverride = material,
-                CastShadow = Unlimited ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
                 CustomAabb = new Aabb(new Vector3(-Tile * 0.5f - 3f, -half, -Tile * 0.5f - 3f), new Vector3(Tile + 6f, half * 2f, Tile + 6f)),
                 // (A level's own: out to past what the camera can see, ~70 m off, so no tile far beyond the screen is drawn
                 // or casts a shadow.)

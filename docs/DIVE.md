@@ -23,6 +23,12 @@ levels one after another: the layers are the depths.
 - **The light by depth:** each layer wears the adventure's painted reef, its coral gardens and all; the top layer is
   bright, the bottom one wholly dark (its rock seen only in her light), and each layer between a little darker than the
   one above, the dark gathering toward the bottom (`ReefLook.Layer`).
+- **Chalk:** the reef's rock and floor are drawn as chalk (`reef_surface.gdshaderinc`): one flat colour each, the
+  depth's own rock and sand drained toward grey and lifted, broken only by noise masks (broad soft blotches, faint
+  strata along the height, a fine dusty grain); matte, no relief, no caustics.
+- **What is drawn:** a cube's ground is one mesh per 32 m chunk, its cut cap with it (`CubeShape`); the flora one
+  batch per species per 64 m tile (`FloraViews`); a charge stone's shards one mesh. None of the flora or the charge
+  stones casts a shadow.
 - **One tall structure:** the layers are slices of one reef (CUBE-WORLD-PLAN §4.3): each layer's caverns, walls and
   corners lie largely where the layer above has its own, and the reef changes wholly only over about ten layers. Her
   layer's walls rise 60 m above their own rock where the layer above is rock (past the camera's own height, so no

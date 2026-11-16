@@ -8,16 +8,47 @@ using static OctoShoots.Core.Gen.Cubes.CubeTuning;
 namespace OctoShoots.Game.Cubes;
 
 /// <summary>
-/// A cube's ground: its 32 m chunks (none where a chunk is all void) and its roofs, as surfaces and as the meshes made
-/// of them. The meshes are made on the worker too (a mesh resource may be made off the main thread), so showing one costs
-/// the main thread next to nothing.
+/// A cube's ground: its 32 m chunks (none where a chunk is all void) and its roofs, as surfaces, and the meshes made of
+/// them: one a chunk, its ground and its cap together (one object to draw it, still culled chunk by chunk), and one for
+/// the roofs. The meshes are made on the worker too (a mesh resource may be made off the main thread), so showing one
+/// costs the main thread next to nothing.
 /// </summary>
 public sealed class CubeShape
 {
-    public CubeShape(List<LevelShape.Surface> surfaces)
+    public CubeShape(List<LevelShape.Surface> surfaces, List<List<LevelShape.Surface>> pieces)
     {
         Surfaces = surfaces;
-        Meshes = surfaces.ConvertAll(LevelView.ToMesh);
+        Meshes = pieces.FindAll(p => p.Count > 0).ConvertAll(p => LevelView.ToMesh(Merge(p)));
+    }
+
+    /// <summary>One surface, one mesh.</summary>
+    public CubeShape(LevelShape.Surface surface) : this(new List<LevelShape.Surface> { surface }, new List<List<LevelShape.Surface>> { new() { surface } }) { }
+
+    /// <summary>Surfaces joined into one (all drawn alike: the ground's material).</summary>
+    public static LevelShape.Surface Merge(List<LevelShape.Surface> surfaces)
+    {
+        if (surfaces.Count == 1) return surfaces[0];
+        int verts = 0, indices = 0;
+        foreach (var s in surfaces)
+        {
+            verts += s.Vertices.Length;
+            indices += s.Indices.Length;
+        }
+        var v = new Vector3[verts];
+        var n = new Vector3[verts];
+        var c = new Color[verts];
+        var i = new int[indices];
+        int vo = 0, io = 0;
+        foreach (var s in surfaces)
+        {
+            s.Vertices.CopyTo(v, vo);
+            s.Normals.CopyTo(n, vo);
+            s.Colors.CopyTo(c, vo);
+            for (int k = 0; k < s.Indices.Length; k++) i[io + k] = s.Indices[k] + vo;
+            vo += s.Vertices.Length;
+            io += s.Indices.Length;
+        }
+        return new LevelShape.Surface(v, n, c, i);
     }
 
     public List<LevelShape.Surface> Surfaces { get; }
@@ -41,15 +72,23 @@ public static class CubeShapes
         // (Kept down to just above the void's floor, its outline smooth: the layer below shows through the void.)
         float Kept(float x, float y) => Height(x, y) - (VoidHeight + 0.3f);
         var surfaces = new List<LevelShape.Surface>();
+        var pieces = new List<List<LevelShape.Surface>>();
         for (int cy = 0; cy < h; cy += Chunk)
         for (int cx = 0; cx < w; cx += Chunk)
         {
-            if (LevelView.SurfaceMesh(1 << 20, Height, x0 + cx, y0 + cy, x0 + cx + Chunk, y0 + cy + Chunk, null, Kept) is { } s) surfaces.Add(UnderAbove(t, s));
+            var piece = new List<LevelShape.Surface>();
+            if (LevelView.SurfaceMesh(1 << 20, Height, x0 + cx, y0 + cy, x0 + cx + Chunk, y0 + cy + Chunk, null, Kept) is { } s) piece.Add(UnderAbove(t, s));
             // (The cutout's dotted cap inside its rock at the cut's height: LevelView.Cap.)
-            if (LevelView.Cap(1 << 20, Height, x0 + cx, y0 + cy, x0 + cx + Chunk, y0 + cy + Chunk) is { } cap) surfaces.Add(cap);
+            if (LevelView.Cap(1 << 20, Height, x0 + cx, y0 + cy, x0 + cx + Chunk, y0 + cy + Chunk) is { } cap) piece.Add(cap);
+            surfaces.AddRange(piece);
+            pieces.Add(piece);
         }
-        if (Roofs(t) is { } roofs) surfaces.Add(roofs);
-        return new CubeShape(surfaces);
+        if (Roofs(t) is { } roofs)
+        {
+            surfaces.Add(roofs);
+            pieces.Add(new List<LevelShape.Surface> { roofs });
+        }
+        return new CubeShape(surfaces, pieces);
     }
 
     /// <summary>
@@ -180,7 +219,7 @@ public static class CubeShapes
             indices[o++] = d;
             indices[o++] = c;
         }
-        return new CubeShape(new List<LevelShape.Surface> { new(verts, normals, colors, indices) });
+        return new CubeShape(new LevelShape.Surface(verts, normals, colors, indices));
     }
 
     /// <summary>

@@ -75,6 +75,9 @@ public partial class ChargeStoneView : Node3D
             var outward = new Vector3(c.Out.X, 0f, c.Out.Y);
             var rng = new RandomNumberGenerator { Seed = (ulong)(c.Seed * 1e6f) + 7 };
             int shards = 3 + rng.RandiRange(0, 2);
+            // (Its shards one mesh: one object to draw a stone.)
+            var cluster = new SurfaceTool();
+            cluster.Begin(Mesh.PrimitiveType.Triangles);
             for (int k = 0; k < shards; k++)
             {
                 // Leaning out of the wall and up, splayed a little, each its own size.
@@ -82,8 +85,9 @@ public partial class ChargeStoneView : Node3D
                     + new Vector3(rng.RandfRange(-0.6f, 0.6f), 0f, rng.RandfRange(-0.6f, 0.6f))).Normalized();
                 var basis = new Basis(new Quaternion(Vector3.Up, lean)).Scaled(Vector3.One * rng.RandfRange(1.0f, 1.9f));
                 var at = face + new Vector3(rng.RandfRange(-0.18f, 0.18f), rng.RandfRange(-0.15f, 0.2f), rng.RandfRange(-0.18f, 0.18f));
-                AddChild(new MeshInstance3D { Mesh = shard, MaterialOverride = material, Transform = new Transform3D(basis, at) });
+                cluster.AppendFrom(shard, 0, new Transform3D(basis, at));
             }
+            AddChild(new MeshInstance3D { Mesh = cluster.Commit(), MaterialOverride = material, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
             var light = new OmniLight3D
             {
                 LightColor = colour, LightEnergy = 0f, OmniRange = ChargeStoneTuning.ShownReach * 1.3f, OmniAttenuation = 0.9f, ShadowEnabled = false,
