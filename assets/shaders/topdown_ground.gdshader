@@ -14,12 +14,17 @@ uniform bool debug_normals = false;
 // the way into it (zw), and the passages' depth, open half-width and arch top. The deeper into one, the darker, until
 // its back is black: the dark of the cave beyond.
 // The cap (the cutout's inside), as the old cave chart was inked: solid near-black (see_cap), a fine-liner along its
-// edge, and bundles of short hatching strokes in a band inside it along the edge (see_line; see_band_px pixels deep, the
+// edge, and bundles of long hatching strokes in a band inside it along the edge (see_line; see_band metres deep, the
 // odd pebble past it). The cut's edge on the rock outlined in the same ink (see_line_width metres, or a couple of
 // pixels). The cap's vertices carry how far into the rock they lie (colour red, in metres over CAP_DEPTH).
 uniform vec3 see_cap = vec3(0.025, 0.028, 0.035);
 uniform vec3 see_line = vec3(0.26, 0.27, 0.3);
-uniform float see_band_px = 18.0;
+// The hatching, in world metres: its band's depth into the rock, a bundle's size, the gap between its strokes; and a
+// stroke's weight in pixels.
+uniform float see_band = 1.3;
+uniform float see_cell = 0.75;
+uniform float see_gap = 0.2;
+uniform float see_stroke_px = 0.6;
 uniform float see_ink_px = 1.6;
 uniform float see_line_width = 0.18;
 const float CAP_DEPTH = 6.0;
@@ -74,38 +79,40 @@ float see_hash(vec2 p) {
 	return fract(p.x * p.y);
 }
 
-// The cap's ink at a point (w: world metres; d_px: pixels into the rock from its edge; ppm: pixels a metre): bundles of
-// short parallel strokes in a band along the edge, each bundle (a cell ~10 px across) at its own angle, a few left
-// bare, each stopping at its own depth; past the band the odd pebble.
-float see_hatch(vec2 w, float d_px, float ppm) {
-	float mpp = 1.0 / ppm;
-	float band = see_band_px * (1.0 + 0.28 * sin(w.x * 0.21 + w.y * 0.13) + 0.18 * sin(w.y * 0.37 - w.x * 0.11));
-	if (d_px > band + 12.0) return 0.0;
-	if (d_px > band + 1.5) {
-		vec2 g = w / (7.0 * mpp), id = floor(g);
+// The cap's ink at a point (w: world metres; d: metres into the rock from its edge; ppm: pixels a metre): bundles of
+// long parallel strokes in a band along the edge, each bundle (a cell see_cell metres across) at its own angle, a few
+// left bare, each stopping at its own depth; past the band the odd pebble. All of it laid in world metres, fixed to the
+// rock as the camera moves; only the strokes' weight is in pixels (see_stroke_px).
+float see_hatch(vec2 w, float d, float ppm) {
+	float band = see_band * (1.0 + 0.28 * sin(w.x * 0.21 + w.y * 0.13) + 0.18 * sin(w.y * 0.37 - w.x * 0.11));
+	if (d > band + 0.8) return 0.0;
+	if (d > band + 0.1) {
+		float pc = see_cell * 0.7;
+		vec2 id = floor(w / pc);
 		if (see_hash(id + 5.3) > 0.12) return 0.0;
-		vec2 c = (id + 0.3 + 0.4 * vec2(see_hash(id + 1.7), see_hash(id + 8.2))) * 7.0 * mpp;
-		float r = 1.1 + 0.9 * see_hash(id + 2.9);
-		return 1.0 - smoothstep(0.35, 0.9, abs(length(w - c) * ppm - r));
+		vec2 c = (id + 0.3 + 0.4 * vec2(see_hash(id + 1.7), see_hash(id + 8.2))) * pc;
+		float r = see_cell * (0.08 + 0.06 * see_hash(id + 2.9));
+		return 1.0 - smoothstep(0.35, 0.9, abs(length(w - c) - r) * ppm);
 	}
-	float cell = 10.0 * mpp;
-	vec2 g = w / cell, gi = floor(g);
+	vec2 g = w / see_cell, gi = floor(g);
 	float best = 1e9;
 	vec2 seed = vec2(0.0), id = vec2(0.0);
 	for (int y = -1; y <= 1; y++)
 	for (int x = -1; x <= 1; x++) {
 		vec2 n = gi + vec2(float(x), float(y));
 		vec2 s = n + 0.15 + 0.7 * vec2(see_hash(n), see_hash(n + 17.1));
-		float d = length(g - s);
-		if (d < best) { best = d; seed = s; id = n; }
+		float dd = length(g - s);
+		if (dd < best) { best = dd; seed = s; id = n; }
 	}
 	if (see_hash(id + 9.1) < 0.1) return 0.0;
 	float ang = see_hash(id + 3.7) * 3.14159;
 	vec2 dir = vec2(cos(ang), sin(ang));
-	float u = dot(w - seed * cell, dir) / (2.9 * mpp);
-	float stroke = 1.0 - smoothstep(0.3, 0.85, abs(fract(u) - 0.5) * 2.9);
+	float u = dot(w - seed * see_cell, dir) / see_gap;
+	// (Its distance from the nearest stroke's middle, in pixels: the weight stays the same at any zoom.)
+	float off_px = abs(fract(u) - 0.5) * see_gap * ppm;
+	float stroke = 1.0 - smoothstep(see_stroke_px * 0.5, see_stroke_px * 0.5 + 0.55, off_px);
 	float reach = band * (0.7 + 0.3 * see_hash(id + 1.3));
-	return stroke * (1.0 - smoothstep(reach - 1.0, reach + 0.5, d_px));
+	return stroke * (1.0 - smoothstep(reach - 0.05, reach + 0.03, d));
 }
 
 // How far into an opening's dark a point of the ground lies (0 outside, 1 black): along its passage, under its roof.
@@ -143,7 +150,7 @@ void fragment() {
 		float d_px = cap_in * ppm;
 		// The fine-liner along its edge, wavering a little; the hatching inside.
 		float liner = 1.0 - smoothstep(see_ink_px * (0.75 + 0.5 * see_hash(floor(world.xz * 0.5))) * 0.5, see_ink_px + 0.5, d_px);
-		float ink = max(liner, 0.85 * see_hatch(world.xz, d_px, ppm));
+		float ink = max(liner, 0.85 * see_hatch(world.xz, cap_in, ppm));
 		ALBEDO = vec3(0.0);
 		EMISSION = mix(see_cap, see_line, ink);
 		BACKLIGHT = vec3(0.0);
