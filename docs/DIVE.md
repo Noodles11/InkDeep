@@ -50,7 +50,9 @@ levels one after another: the layers are the depths.
 - **Diving and climbing** (CUBE-WORLD-PLAN §7): ↓ (the arrow key) or the d-pad's down over the void, ↑ or its up under a well of
   the layer above (only one layer above the deepest she has reached). Thirty seconds between changes of layer, and no
   diving again within 32 m of where she arrived. No hint shows for it (nor why not yet); only as she
-  tries to go back the HUD says what holds her.
+  tries to go back the HUD says what holds her. The dive's middle loops, her sinking (or rising) on through the murk,
+  until the layer she goes to is all there: every cube she will see on arrival drawn, its reef life worked out, a new
+  layer's boss arena made (rolled as the dive begins); at most six seconds.
 - **Currents** (§8): a gentle drift leads her toward cubes she has not been in; crossing into a cube shuts the edge she
   crossed before that one with a current she cannot swim against, for as long as she is on the layer.
 

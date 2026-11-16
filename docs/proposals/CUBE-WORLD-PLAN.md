@@ -287,9 +287,10 @@ rules below means a claim.
   and back out over the second. Climbing is the same played upward: she rises, the layer she leaves falls away into
   blur beneath her.
 - **No loading:** the cube under her has its stocking readied as soon as she has hovered over divable water for half
-  a second or the cooldown has under 5 s to run. Arrival cubes hold no creatures (§9), so this is light. If it is
-  somehow not ready, the animation's middle loops, Clementine sinking (or rising) through murk, until it is; there
-  is never a splash or a loading screen.
+  a second or the cooldown has under 5 s to run. Arrival cubes hold no creatures (§9), so this is light. The
+  animation's middle loops, Clementine sinking (or rising) through murk, until the layer she goes to is all there
+  (every cube the stream wants round her arrival drawn, its reef life worked out ahead, a new layer's arena made on
+  the pool as the dive begins; six seconds at most); there is never a splash or a loading screen.
 - **What changes underneath:** the layer she leaves becomes "the layer above": its cubes' records are kept, their
   nodes freed, only dive masks held. Shots and particles in flight are dropped, hidden by the animation.
 

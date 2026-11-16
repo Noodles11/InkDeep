@@ -87,11 +87,43 @@ public partial class TopoMap : Control
 
     /// <summary>
     /// The level's chart. Secret rooms still sealed (<paramref name="sealedCaves"/>) are drawn as wall, their way in
-    /// with them, so the map gives them away no more than the reef does.
+    /// with them, so the map gives them away no more than the reef does. Worked out off the main thread once the chart is
+    /// shown (and again each time it is shown anew: a cube reef's layer grows as she swims), never as a level is entered.
     /// </summary>
     public void SetMap(LevelMap map, IEnumerable<int>? sealedCaves = null)
     {
         _map = map;
+        _sealed = sealedCaves?.ToList();
+        _stale = true;
+    }
+
+    List<int>? _sealed;
+    bool _stale, _wasShown;
+    System.Threading.Tasks.Task<Chart>? _making;
+
+    sealed record Chart(LevelMap Map, (System.Numerics.Vector2 Min, System.Numerics.Vector2 Max) Outline, Image Heights, ReefLook Look,
+        List<(System.Numerics.Vector2 At, float Height)> Peaks, List<(System.Numerics.Vector2 At, float Height)> Soundings);
+
+    /// <summary>The chart made again as it is shown, off the main thread; put up once ready.</summary>
+    void Remake()
+    {
+        bool shown = IsVisibleInTree();
+        if (shown && !_wasShown) _stale = true;
+        _wasShown = shown;
+        if (_making is { IsCompleted: true } made)
+        {
+            _making = null;
+            if (made.IsCompletedSuccessfully && made.Result.Map == _map) Put(made.Result);
+            else if (made.IsFaulted) GD.PushError(made.Exception?.ToString());
+        }
+        if (!_stale || !shown || _making is not null || _map is not { } map) return;
+        _stale = false;
+        var sealedCaves = _sealed;
+        _making = System.Threading.Tasks.Task.Run(() => Make(map, sealedCaves));
+    }
+
+    static Chart Make(LevelMap map, IEnumerable<int>? sealedCaves)
+    {
         int N = map.Samples;
         // The outline's box: all its open water.
         var lo = new System.Numerics.Vector2(float.MaxValue);
@@ -103,7 +135,7 @@ public partial class TopoMap : Control
                 lo = System.Numerics.Vector2.Min(lo, new System.Numerics.Vector2(x, y));
                 hi = System.Numerics.Vector2.Max(hi, new System.Numerics.Vector2(x, y));
             }
-        _outline = lo.X <= hi.X ? (lo, hi) : (System.Numerics.Vector2.Zero, new System.Numerics.Vector2(LevelMap.Seeded));
+        var outline = lo.X <= hi.X ? (lo, hi) : (System.Numerics.Vector2.Zero, new System.Numerics.Vector2(LevelMap.Seeded));
         var shown = new float[N * N];
         for (int y = 0; y < N; y++)
         for (int x = 0; x < N; x++)
@@ -144,16 +176,29 @@ public partial class TopoMap : Control
             int i = y * N + x;
             image.SetPixel(x, y, new Color(shown[i], Mathf.Min(intoRock[i], 64f), Mathf.Min(intoWater[i], 64f)));
         }
+        var peaks = new List<(System.Numerics.Vector2 At, float Height)>();
+        var soundings = new List<(System.Numerics.Vector2 At, float Height)>();
+        Extremes(map, peaks, 8f, 14f, 1f);
+        Extremes(map, soundings, 6f, 18f, -1f);
+        return new Chart(map, outline, image, ReefLook.For(map.Depth), peaks, soundings);
+    }
+
+    void Put(Chart chart)
+    {
+        var map = chart.Map;
+        _outline = chart.Outline;
+        _peaks.Clear();
+        _peaks.AddRange(chart.Peaks);
+        _soundings.Clear();
+        _soundings.AddRange(chart.Soundings);
         // The depth's own water, and its reef rock in a stone tone (never paper white).
-        var look = ReefLook.For(map.Depth);
+        var look = chart.Look;
         _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("water_col"), look.WaterShallow);
         _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("deep_col"), look.Murk);
         _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("rock_col"), RockTone(look));
-        _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("heights"), ImageTexture.CreateFromImage(image));
+        _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("heights"), ImageTexture.CreateFromImage(chart.Heights));
         _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("samples"), (float)map.Samples);
         _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("shore"), LevelMap.BlockHeight);
-        Extremes(map, _peaks, 8f, 14f, 1f);
-        Extremes(map, _soundings, 6f, 18f, -1f);
         QueueRedraw();
     }
 
@@ -198,6 +243,7 @@ public partial class TopoMap : Control
 
     public override void _Process(double delta)
     {
+        Remake();
         if (_map is null || !IsVisibleInTree() || Size.X < 1f) return;
         var o = Origin;
         _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("view_origin"), new Vector2(o.X, o.Y));

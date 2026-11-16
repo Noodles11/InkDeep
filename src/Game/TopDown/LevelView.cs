@@ -243,7 +243,8 @@ public partial class LevelView : Node3D
         Track(_ground);
         foreach (var m in _flora.Materials) Track(m);
         var map = _map = shape.Map;
-        _rockCeiling = null;
+        // (Worked out on the pool: a cube reef's layer holds millions of heights. Till then, up to the camera.)
+        _rockCeiling = System.Threading.Tasks.Task.Run(() => Highest(map) + 0.5f);
         _below = below;
 
         foreach (var surface in shape.Ground) AddChild(new MeshInstance3D { Mesh = ToMesh(surface), MaterialOverride = _ground });
@@ -680,8 +681,18 @@ public partial class LevelView : Node3D
     }
 
     /// <summary>The level's highest rock (nothing above it can hide her).</summary>
-    float RockCeiling => _rockCeiling ??= _map.Heights.Concat(_map.Roof).Concat(_map.Lid).Where(h => !float.IsNaN(h)).Max() + 0.5f;
-    float? _rockCeiling;
+    float RockCeiling => _rockCeiling is { IsCompletedSuccessfully: true } top ? top.Result : float.MaxValue;
+
+    /// <summary>The highest of a map's heights, roofs and lids (a plain loop: a cube reef's layer holds millions).</summary>
+    static float Highest(LevelMap map)
+    {
+        float top = float.MinValue;
+        foreach (var a in new[] { map.Heights, map.Roof, map.Lid })
+            for (int i = 0; i < a.Length; i++)
+                if (a[i] > top) top = a[i];
+        return top;
+    }
+    System.Threading.Tasks.Task<float>? _rockCeiling;
 
     /// <summary>The highest rock at a point: the reef, or a tunnel's roof or a cave's lid over it.</summary>
     float RockTop(float x, float y) => Mathf.Max(SmoothHeight(_map, x, y), Mathf.Max(SmoothTunnelRoof(_map, x, y), SmoothRoof(_map, x, y)));

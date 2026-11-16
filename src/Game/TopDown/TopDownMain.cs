@@ -1471,7 +1471,7 @@ public partial class TopDownMain : Node3D
             _dbgThrow = false;
         }
         _camera.Track(Focus(1f), 0f, snap: true);
-        Route();
+        using (Timed("autopilot route")) Route();
     }
 
     /// <summary>

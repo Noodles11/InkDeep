@@ -476,7 +476,7 @@ public partial class TopDownMain
         // (Its life worked out on the pool, put in as it is ready: TakeLife.)
         var map = _map;
         var area = new Rect2(cube.Origin.X, cube.Origin.Y, cube.Size.X, cube.Size.Y);
-        _life.Add((map, area, System.Threading.Tasks.Task.Run(() => LevelShape.ReefLife(map, area))));
+        _life.Add((map, area, _lifeAhead.Remove((map, cube), out var ahead) ? ahead : System.Threading.Tasks.Task.Run(() => LevelShape.ReefLife(map, area))));
         _level.SeeMaskStale();
         // (The way through the water found again over it: PlaneWorld.NavStale.)
         _world.NavStale(cube.Origin, cube.Origin + cube.Size);
@@ -489,6 +489,10 @@ public partial class TopDownMain
         if (_reef is null || !InReef || !_layerMaps.TryGetValue(_layer, out var map) || map != _map) return;
         _reef.Settle();
         foreach (var cube in _reef.LaidOn(_layer)) LaidHere(cube);
+        // (What was worked out ahead, put in at once: no reef life popping in after she arrives.)
+        TakeLife();
+        // (What was worked out ahead for any other map let go.)
+        foreach (var key in _lifeAhead.Keys.Where(k => k.Item1 != map).ToList()) _lifeAhead.Remove(key);
         _sunStale = false;
     }
 
@@ -600,8 +604,32 @@ public partial class TopDownMain
         _hud.Diving = true;
         _hud.LayerPrompt = null;
         _reefView.ShowAbove(move == LayerMove.Up);
+        RollBoss(move);
         GD.Print($"Cube reef: {(move == LayerMove.Down ? "dive" : "climb")} from layer {_layer} at {_layerFrom}");
         return true;
+    }
+
+    /// <summary>The arena of the layer she dives to, made on the pool as she dives (null: none being made).</summary>
+    System.Threading.Tasks.Task? _arenaMaking;
+
+    /// <summary>
+    /// Diving to a new deepest layer: the layer left counts toward the boss streak, and the one she goes to rolls its boss
+    /// (§9.1), as the dive begins: its arena's terrain made again (with its basin) and laid on its map on the pool while
+    /// she sinks, so nothing of it is worked out as she arrives.
+    /// </summary>
+    void RollBoss(LayerMove move)
+    {
+        int to = LayerTarget;
+        if (move != LayerMove.Down || to <= _cubeDiving.Deepest || !_bossRolled.Add(to)) return;
+        _director.LeftLayer(_layer, _world.Boss?.Freed == true);
+        var arrival = CubeId.Of(_layerFrom, to);
+        if ((!_director.BossOn(to) && !_cubeBoss) || _director.ArenaFor(_reef!.Space, arrival) is not { } arena || !_layerMaps.TryGetValue(to, out var layerMap)) return;
+        layerMap.HasBoss = true;
+        layerMap.Exit.Position = arena.Middle;
+        layerMap.Exit.Radius = CubeTerrain.ArenaRadius;
+        var reef = _reef;
+        _arenaMaking = System.Threading.Tasks.Task.Run(() => reef.SetArena(arena, layerMap));
+        GD.Print($"Cube reef: layer {to} holds a boss, its arena {arena} (streak {_director.Streak})");
     }
 
     /// <summary>
@@ -612,8 +640,9 @@ public partial class TopDownMain
     void StepLayerMove(float dt)
     {
         var arrival = CubeId.Of(_layerFrom, LayerTarget);
-        bool ready = _stream.State(arrival) == CubeState.Active && _reefView.Pending == 0;
+        bool ready = LayerReady(arrival);
         _layerTime += dt;
+        if (!ready && _layerTime > LayerHold) _layerWaited += dt;
         if (!ready && _layerTime > LayerHold)
         {
             _layerTime = LayerHold;
@@ -660,8 +689,43 @@ public partial class TopDownMain
         _damage.Tick(dt);
         _hud.Elapsed = _elapsed;
         _hud.Track(_world, _catalog, dt);
-        if (_layerTime >= LayerSeconds && ready) FinishLayerMove(arrival);
+        if (_layerTime >= LayerSeconds && ready)
+            using (Timed("layer finish"))
+                FinishLayerMove(arrival);
     }
+
+    /// <summary>How long the dive's middle may loop waiting for the layer she goes to, at most (s).</summary>
+    const float LayerWaitMost = 6f;
+    float _layerWaited;
+
+    /// <summary>
+    /// Whether the layer she goes to is all there, so nothing pops in as she arrives: the cube she lands in Active, every
+    /// cube the stream wants round it ready and drawn, every cube made laid on its map, and the reef life of those laid
+    /// on her new layer worked out ahead (taken up as it is shown: LaidHere).
+    /// </summary>
+    bool LayerReady(CubeId arrival)
+    {
+        if (_layerWaited > LayerWaitMost) return _stream.State(arrival) == CubeState.Active;
+        if (_arenaMaking is { IsCompleted: false }) return false;
+        if (_stream.State(arrival) != CubeState.Active || _reefView.Pending > 0 || !_reef!.Settled) return false;
+        foreach (var (cube, want) in _stream.Wanted)
+            if (want != CubeState.Mask && _stream.State(cube) != want) return false;
+        if (!_layerMaps.TryGetValue(LayerTarget, out var map)) return false;
+        bool all = true;
+        foreach (var cube in _reef.LaidOn(LayerTarget))
+        {
+            if (!_lifeAhead.TryGetValue((map, cube), out var work))
+            {
+                var area = new Rect2(cube.Origin.X, cube.Origin.Y, cube.Size.X, cube.Size.Y);
+                _lifeAhead[(map, cube)] = work = System.Threading.Tasks.Task.Run(() => LevelShape.ReefLife(map, area));
+            }
+            all &= work.IsCompleted;
+        }
+        return all;
+    }
+
+    /// <summary>Reef life worked out ahead, for the layer she is diving or climbing to (LayerReady).</summary>
+    readonly Dictionary<(LevelMap, CubeId), System.Threading.Tasks.Task<(List<OctoShoots.Game.Fx.FloraItem>, List<Transform3D>, List<Transform3D>)>> _lifeAhead = new();
 
     /// <summary>The change over: she is on the layer she went to, its world made, the view just as it was.</summary>
     void FinishLayerMove(CubeId arrival)
@@ -676,20 +740,9 @@ public partial class TopDownMain
         if (down) _cubeDiving.Dived(_layerFrom, terrain);
         else _cubeDiving.Climbed(_layerFrom, terrain);
         _layer = _cubeDiving.Layer;
-        // A new deepest layer: the one left counts toward the boss streak, and this one rolls its boss (§9.1).
-        if (down && _layer == _cubeDiving.Deepest && _bossRolled.Add(_layer))
-        {
-            _director.LeftLayer(from, _world.Boss?.Freed == true);
-            if ((_director.BossOn(_layer) || _cubeBoss) && _director.ArenaFor(_reef.Space, arrival) is { } arena)
-            {
-                var layerMap = _layerMaps[_layer];
-                _reef.SetArena(arena, layerMap);
-                layerMap.HasBoss = true;
-                layerMap.Exit.Position = arena.Middle;
-                layerMap.Exit.Radius = CubeTerrain.ArenaRadius;
-                GD.Print($"Cube reef: layer {_layer} holds a boss, its arena {arena} (streak {_director.Streak})");
-            }
-        }
+        // (Its boss rolled, and its arena made, as the dive began: RollBoss.)
+        if (_arenaMaking is { IsFaulted: true } failed) GD.PushError(failed.Exception?.ToString());
+        _arenaMaking = null;
         _records.Changed(from, _layer, _cubeDiving.Deepest);
         if (Here.Arrive(_layerFrom) == Crossing.Claimed) Grant(CubeId.Of(_layerFrom, _layer));
         _layerMove = LayerMove.None;
@@ -707,7 +760,8 @@ public partial class TopDownMain
         _id = CubeReef.IdOf(_layer);
         // (The cube she arrives in laid on its map before the layer is shown.)
         _reef.Settle();
-        ShowLevel(LevelShape.Bare(_layerMaps[_layer]), keepRun: true, 0, _layerFrom);
+        _layerWaited = 0f;
+        using (Timed("layer show level")) ShowLevel(LevelShape.Bare(_layerMaps[_layer]), keepRun: true, 0, _layerFrom);
         _arrows.Arrive();
         foreach (var view in LevelLife) ResetFade(view);
         GD.Print($"Cube reef: {(down ? "dived" : "climbed")} to layer {_layer} (deepest {_cubeDiving.Deepest})");

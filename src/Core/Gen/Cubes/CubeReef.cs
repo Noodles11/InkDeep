@@ -35,6 +35,9 @@ public sealed class CubeReef
     readonly ConcurrentDictionary<CubeId, Lazy<CubeTerrain>> _made = new();
     /// <summary>Cubes made and not yet laid onto their layer's map.</summary>
     readonly ConcurrentQueue<CubeId> _fresh = new();
+
+    /// <summary>Whether every cube made so far is laid on its map (none waiting for <see cref="Settle"/>).</summary>
+    public bool Settled => _fresh.IsEmpty;
     /// <summary>The layers' maps, each with the cubes laid on it (guarded by itself).</summary>
     readonly Dictionary<int, (LevelMap Map, HashSet<CubeId> Laid)> _maps = new();
 

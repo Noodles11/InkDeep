@@ -22,9 +22,16 @@ public partial class DebugMapOverlay : Control
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
     }
 
+    /// <summary>The level shown: its picture made only once the overlay is drawn (F3), not as every level is entered.</summary>
     public void SetMap(LevelMap map)
     {
         _map = map;
+        _texture = null;
+        if (Visible) QueueRedraw();
+    }
+
+    void Build(LevelMap map)
+    {
         var image = Image.CreateEmpty(map.Size, map.Size, false, Image.Format.Rgba8);
         for (int y = 0; y < map.Size; y++)
         for (int x = 0; x < map.Size; x++)
@@ -36,7 +43,6 @@ public partial class DebugMapOverlay : Control
             image.SetPixel(x, y, c);
         }
         _texture = ImageTexture.CreateFromImage(image);
-        QueueRedraw();
     }
 
     public void SetPlayer(System.Numerics.Vector2 p)
@@ -52,7 +58,9 @@ public partial class DebugMapOverlay : Control
 
     public override void _Draw()
     {
-        if (_map is null || _texture is null) return;
+        if (_map is null) return;
+        if (_texture is null) Build(_map);
+        if (_texture is null) return;
         var map = _map;
         var o = Origin;
         DrawRect(new Rect2(o - Vector2.One * 6f, Vector2.One * (map.Size * Scale + 12f)), new Color(0f, 0f, 0f, 0.75f));

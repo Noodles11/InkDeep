@@ -55,13 +55,26 @@ public partial class ChargeStoneView : Node3D
         return _shard = st.Commit();
     }
 
+    /// <summary>The time (ms) a frame may spend making stones' views.</summary>
+    const double BuildBudget = 2.0;
+
     void Build(PlaneWorld world)
     {
         var crystals = world.ChargeStones;
-        // (The cube reef's come a cube's at a time: only the new ones made, the rest left as they are.)
-        if (ReferenceEquals(crystals, _for) && _shown.Count < crystals.Count && world.Trio is null)
+        // (The cube reef's come a cube's at a time, and a new layer's many at once: only the ones not made yet made, a
+        // few milliseconds' worth a frame, the rest left as they are.)
+        if (world.Trio is null && (ReferenceEquals(crystals, _for) && _shown.Count < crystals.Count || !ReferenceEquals(crystals, _for)))
         {
-            for (int i = _shown.Count; i < crystals.Count; i++) AddStone(crystals[i]);
+            if (!ReferenceEquals(crystals, _for))
+            {
+                foreach (var child in GetChildren()) child.QueueFree();
+                _shown.Clear();
+                _sign.Clear();
+                _for = crystals;
+            }
+            long start = System.Diagnostics.Stopwatch.GetTimestamp();
+            while (_shown.Count < crystals.Count && (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000.0 / System.Diagnostics.Stopwatch.Frequency < BuildBudget)
+                AddStone(crystals[_shown.Count]);
             return;
         }
         foreach (var child in GetChildren()) child.QueueFree();
@@ -84,23 +97,7 @@ public partial class ChargeStoneView : Node3D
                 AlbedoColor = colour.Darkened(0.55f), Roughness = 0.12f, Metallic = 0.25f, EmissionEnabled = true, Emission = colour,
                 EmissionEnergyMultiplier = 0f, RimEnabled = true, Rim = 0.7f, RimTint = 0.6f,
             };
-            var face = new Vector3(c.Face.X, LevelMap.SwimBand - 0.1f, c.Face.Y);
-            var outward = new Vector3(c.Out.X, 0f, c.Out.Y);
-            var rng = new RandomNumberGenerator { Seed = (ulong)(c.Seed * 1e6f) + 7 };
-            int shards = 3 + rng.RandiRange(0, 2);
-            // (Its shards one mesh: one object to draw a stone.)
-            var cluster = new SurfaceTool();
-            cluster.Begin(Mesh.PrimitiveType.Triangles);
-            for (int k = 0; k < shards; k++)
-            {
-                // Leaning out of the wall and up, splayed a little, each its own size.
-                var lean = (outward * rng.RandfRange(0.5f, 1f) + Vector3.Up * rng.RandfRange(0.4f, 1.1f)
-                    + new Vector3(rng.RandfRange(-0.6f, 0.6f), 0f, rng.RandfRange(-0.6f, 0.6f))).Normalized();
-                var basis = new Basis(new Quaternion(Vector3.Up, lean)).Scaled(Vector3.One * rng.RandfRange(1.0f, 1.9f));
-                var at = face + new Vector3(rng.RandfRange(-0.18f, 0.18f), rng.RandfRange(-0.15f, 0.2f), rng.RandfRange(-0.18f, 0.18f));
-                cluster.AppendFrom(shard, 0, new Transform3D(basis, at));
-            }
-            AddChild(new MeshInstance3D { Mesh = cluster.Commit(), MaterialOverride = material, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+            AddChild(new MeshInstance3D { Mesh = Cluster(c, shard), MaterialOverride = material, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
             var light = new OmniLight3D
             {
                 LightColor = colour, LightEnergy = 0f, OmniRange = ChargeStoneTuning.ShownReach * 1.3f, OmniAttenuation = 0.9f, ShadowEnabled = false,
@@ -111,6 +108,35 @@ public partial class ChargeStoneView : Node3D
             _shown.Add(new Shown { Material = material, Light = light, Glow = c.Glow });
         }
     }
+
+    /// <summary>
+    /// A stone's shards as one mesh (one object to draw a stone), kept by the stone, so a world made again on the same
+    /// layer (a dive back, a place left) takes them up rather than making them again.
+    /// </summary>
+    static ArrayMesh Cluster(ChargeStone c, ArrayMesh shard)
+    {
+        var key = (c.Seed, c.Face.X, c.Face.Y);
+        if (Clusters.TryGetValue(key, out var kept)) return kept;
+        if (Clusters.Count > 512) Clusters.Clear();
+        var face = new Vector3(c.Face.X, LevelMap.SwimBand - 0.1f, c.Face.Y);
+        var outward = new Vector3(c.Out.X, 0f, c.Out.Y);
+        var rng = new RandomNumberGenerator { Seed = (ulong)(c.Seed * 1e6f) + 7 };
+        int shards = 3 + rng.RandiRange(0, 2);
+        var cluster = new SurfaceTool();
+        cluster.Begin(Mesh.PrimitiveType.Triangles);
+        for (int k = 0; k < shards; k++)
+        {
+            // Leaning out of the wall and up, splayed a little, each its own size.
+            var lean = (outward * rng.RandfRange(0.5f, 1f) + Vector3.Up * rng.RandfRange(0.4f, 1.1f)
+                + new Vector3(rng.RandfRange(-0.6f, 0.6f), 0f, rng.RandfRange(-0.6f, 0.6f))).Normalized();
+            var basis = new Basis(new Quaternion(Vector3.Up, lean)).Scaled(Vector3.One * rng.RandfRange(1.0f, 1.9f));
+            var at = face + new Vector3(rng.RandfRange(-0.18f, 0.18f), rng.RandfRange(-0.15f, 0.2f), rng.RandfRange(-0.18f, 0.18f));
+            cluster.AppendFrom(shard, 0, new Transform3D(basis, at));
+        }
+        return Clusters[key] = cluster.Commit();
+    }
+
+    static readonly Dictionary<(float, float, float), ArrayMesh> Clusters = new();
 
     /// <summary>A level's trio's sign on the sand of its nook.</summary>
     void AddSign(PlaneWorld world, ArrayMesh shard)
