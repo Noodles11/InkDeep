@@ -315,16 +315,18 @@ void fragment() {
 			// Out to about 2.6 m (times its reach, z), quick at first (sharper still with a snap, w), easing; widening as
 			// it goes; fading out.
 			float reach = swell_dirs[i].z > 0.0 ? swell_dirs[i].z : 1.0;
-			float snap = swell_dirs[i].w > 0.0 ? swell_dirs[i].w : 2.0;
-			float front = mix(0.25, 2.6 * reach, 1.0 - pow(1.0 - age, snap));
+			// (A snap below naught: drawn in toward its middle rather than out: a murkling regrowing.)
+			bool inward = swell_dirs[i].w < 0.0;
+			float snap = abs(swell_dirs[i].w) > 0.0 ? abs(swell_dirs[i].w) : 2.0;
+			float front = inward ? mix(2.6 * reach, 0.05, pow(age, 1.0 / snap)) : mix(0.25, 2.6 * reach, 1.0 - pow(1.0 - age, snap));
 			float width = (0.35 + 0.55 * age) * sqrt(reach);
 			// A sharp leading edge, a softer wake behind it.
 			float ahead = r - front;
 			float band = exp(-pow(ahead / (ahead > 0.0 ? width * 0.6 : width * 1.3), 2.0));
 			// Strongest behind her (the water she pushed), still there ahead of her; a ring with no way, even.
 			float behind = dot(swell_dirs[i].xy, swell_dirs[i].xy) > 0.25 ? 0.45 + 0.55 * max(0.0, dot(out_dir, -swell_dirs[i].xy)) : 1.0;
-			float k = s.w * band * behind * patch * (1.0 - age) * (1.0 - age);
-			bend += (out_dir * 0.6 + eddy) * k;
+			float k = s.w * band * behind * patch * (inward ? sin(3.14159 * age) : (1.0 - age) * (1.0 - age));
+			bend += ((inward ? -out_dir : out_dir) * 0.6 + eddy) * k;
 			swell_density += k;
 		}
 		// Metres on her plane to the screen (east is right, south, +z, is down): the framing shows about 25.6 m top to

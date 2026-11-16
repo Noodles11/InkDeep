@@ -49,6 +49,19 @@ public sealed class WaterSwells
         _life[i] = Mathf.Max(life, 0.05f);
     }
 
+    /// <summary>
+    /// A ring of the water drawn in toward a spot (a murkling regrowing: docs/CORRUPTION.md): from reach × 2.6 m in to
+    /// it over life seconds, as strong as strength, swelling and fading as it comes.
+    /// </summary>
+    public void AddInward(Vector2 at, float strength, float reach, float life)
+    {
+        int i = Count < Max ? Count++ : Oldest();
+        Rings[i] = new Vector4(at.X, at.Y, 0f, Mathf.Clamp(strength, 0f, 2f));
+        Dirs[i] = new Vector4(0f, 0f, reach, -2f);
+        _age[i] = 0f;
+        _life[i] = Mathf.Max(life, 0.05f);
+    }
+
     int Oldest()
     {
         int o = 0;

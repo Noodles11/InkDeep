@@ -118,6 +118,7 @@ public partial class BlightView : Node3D
         // (Her light's hit outline, SyncHitGlows, is off for now.)
         StepRipples(dt);
         StepGathers(dt);
+        StepImplosions(dt);
         StepChunks(dt);
         ForgetBodies();
         FlinchAll(world);
@@ -137,11 +138,17 @@ public partial class BlightView : Node3D
             AddChild(m);
             _murks.Add(m);
             _murkFor.Add(null);
+            // (The water bent and whirling round it: murk_hole.)
+            _lensMat ??= new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/murk_hole.gdshader") };
+            var lens = new MeshInstance3D { Mesh = _lensDisc, MaterialOverride = _lensMat, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = false };
+            AddChild(lens);
+            _lenses.Add(lens);
         }
         for (int i = 0; i < _murks.Count; i++)
         {
             var view = _murks[i];
             view.Visible = i < world.Murklings.Count;
+            if (!view.Visible) _lenses[i].Visible = false;
             if (!view.Visible) continue;
             var m = world.Murklings[i];
             // Far off the screen (the open reef's far packs, asleep): it keeps the look it was last drawn with.
@@ -270,6 +277,7 @@ public partial class BlightView : Node3D
             view.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("seed"), m.Seed);
             view.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("ember"), ember);
             view.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("fade"), 1f);
+            Hole(world, m, body, view, _lenses[i], scale, colourOn, dt);
         }
 
         while (_throws.Count < world.MurkShots.Count)
@@ -329,7 +337,7 @@ public partial class BlightView : Node3D
     /// </summary>
     void SyncOutlines(PlaneWorld world)
     {
-        for (int i = 0; i < _murks.Count && i < world.Murklings.Count; i++) Outline(_murks[i], Worn(world.Murklings[i].Corruption));
+        // (Not on a murkling: a small black hole, its size shows its meter.)
         // A freed octopus swims off healthy: no outline.
         for (int i = 0; i < _roots.Count && i < world.Blightroots.Count; i++)
             Outline(_roots[i].Node, world.Blightroots[i].Alive ? Worn(world.Blightroots[i].Corruption) : 0f);
@@ -517,11 +525,9 @@ public partial class BlightView : Node3D
                 Swells?.AddRing(new Vector2(e.Position.X, e.Position.Y), 0.7f, 0.6f, 1.6f, snap: 2.5f);
                 break;
             case PlaneEventType.MurklingBurst:
-                // Freed: it pops like a water balloon, its ink showering out in its core's colour and evaporating (a
-                // prime's a great shower, Drippus Prime's the greatest: Direction.Y its size). Where its ember blooms,
-                // the floor's own cleansing shows it.
-                if (e.Direction.X > 0.5f) Pop(at, e.Direction.Y > 0f ? e.Direction.Y : BlightTuning.MurkRadius * BlightTuning.PrimeScale, Kin.PrimeCore);
-                else Pop(at, BlightTuning.MurkRadius, Kin.MurklingCore);
+                // Freed: it implodes (BlightView.Murklings: Implode; a prime's, Drippus Prime's brood's the same, Direction.Y
+                // its size). Where its ember blooms, the floor's own cleansing shows it.
+                Implode(at, e.Direction.X > 0.5f ? (e.Direction.Y > 0f ? e.Direction.Y : BlightTuning.MurkRadius * BlightTuning.PrimeScale) * 0.7f : ImplodeFrom);
                 break;
         }
     }

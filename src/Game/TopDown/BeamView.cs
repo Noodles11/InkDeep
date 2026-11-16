@@ -26,6 +26,12 @@ public partial class BeamView : Node3D
 {
     /// <summary>The spotlight's strength and how far down it tilts.</summary>
     const float SpotEnergy = 3.2f, SpotTilt = 0f;
+
+    /// <summary>
+    /// How bright her beam is drawn for her light's damage against a plain one's (PlaneWorld.LightPower): twice the damage
+    /// about 1.6× as bright, three times about 2×, between 0.6× and 2.5× (a murkling's core burns as bright: BlightView).
+    /// </summary>
+    public static float BrightOf(float power) => Mathf.Clamp(Mathf.Pow(Mathf.Max(power, 0.01f), 0.68f), 0.6f, 2.5f);
     /// <summary>How long a beam takes to shoot out of her bell to its full reach as it comes on (s).</summary>
     const float ExtendTime = 0.14f;
 
@@ -334,7 +340,8 @@ public partial class BeamView : Node3D
             m.SetShaderParameter("tint", tint);
             // (A coloured ray's haze a little thicker, so its colour shows.)
             // (A born ray drawn by the square root of its worth, so even a faint one shows: BornHaze.)
-            float bright = born is null ? beam.Intensity / LightTuning.BeamIntensity
+            // (Her own beam as bright as it burns: her damage stat, BrightOf.)
+            float bright = born is null ? beam.Intensity / LightTuning.BeamIntensity * BrightOf(world.LightPower)
                 : Mathf.Clamp(Mathf.Sqrt(born.Worth / HerLightTuning.BeamShots) * BornHaze, BornLeast, 1.2f);
             m.SetShaderParameter("strength", fan.On * dim * bright * rhythmLook * (rayHue is LightHue.None or LightHue.White ? 1f : ColouredHaze));
             m.SetShaderParameter("origin", origin);

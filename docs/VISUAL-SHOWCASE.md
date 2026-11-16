@@ -56,6 +56,10 @@ between).
 - **Coral gardens** (`LevelView.Gardens`): sea rods, staghorn, sea fans, elkhorn and brain corals (no sponges) packed
   in drifting patches on the walls' tops and ledges, and in a band along their feet at the edge of the open floor; like the seagrass and the coral heads, only half the spots are dressed (`LevelView.DecorShare`).
 
+- **Her beam as bright as it burns** (`BeamView.BrightOf`): her own beam is drawn by her light's damage against a plain
+  one's (her damage stat, her pearls' boosts): twice the damage about 1.6× as bright, three times about 2×, between
+  0.6× and 2.5×. Only the drawing: what it lights for the game is as ever.
+
 - **Her beam as a flashlight's, lit as light is** (`BeamView`, `BeamShadow`, `her_beam_volume.gdshader`): each frame
   a grid of 64 × 64 rays is cast in three dimensions from her bell over the whole of her round cone (±22°, a little
   past its rim), each going on until something stops it: the seabed under it, rock rising into it (rock across her
