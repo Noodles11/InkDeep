@@ -760,22 +760,49 @@ public partial class TopDownMain
         _portals.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, SeeScale(_reefSeeThrough), _level.Position.Y + LevelMap.SwimBand, _level.SeeMask);
     }
 
+    /// <summary>How far round her (metres, on the camera's side) the water is kept in view: rock between the camera and any of it is cut.</summary>
+    const float SeeClear = 5f;
+
     /// <summary>
-    /// Whether a wall of her layer, risen as it is drawn (ReefStreamView.Rise, topdown_ground's rise), stands between her
-    /// and the camera: the line from her to it stepped along, against each point's rock as it is drawn.
+    /// Whether rock of her layer, risen as it is drawn (ReefStreamView.Rise, topdown_ground's rise; a roof with its
+    /// wall), stands between the camera and her or the water SeeClear round her on the camera's side: each such line
+    /// stepped along, against each point's rock as it is drawn. So walls crowding in beside her are cut too, however
+    /// close the camera has drawn (CameraRig.Close).
     /// </summary>
     bool WallHides(Vector3 her, Vector3 camera)
     {
-        var way = camera - her;
-        for (int i = 1; i <= 40; i++)
+        var toward = new Vector3(camera.X - her.X, 0f, camera.Z - her.Z);
+        toward = toward.LengthSquared() < 1e-6f ? new Vector3(0f, 0f, 1f) : toward.Normalized();
+        var side = new Vector3(-toward.Z, 0f, toward.X);
+        if (LineHidden(her, camera)) return true;
+        for (int k = -2; k <= 2; k++)
         {
-            var at = her + way * (i / 40f);
-            if (at.Y > ReefStreamView.Rise + CubeTuning.RockLow + CubeTuning.RockRise) break;
-            float h = _map.HeightAt(new System.Numerics.Vector2(at.X, at.Z));
-            float t = Mathf.Clamp((h - 1.4f) / (3.2f - 1.4f), 0f, 1f);
-            if (h + ReefStreamView.Rise * t * t * (3f - 2f * t) > at.Y) return true;
+            float a = k * Mathf.Pi / 4f;
+            if (LineHidden(her + (toward * Mathf.Cos(a) + side * Mathf.Sin(a)) * SeeClear, camera)) return true;
         }
         return false;
+    }
+
+    bool LineHidden(Vector3 from, Vector3 camera)
+    {
+        var way = camera - from;
+        for (int i = 0; i <= 40; i++)
+        {
+            var at = from + way * (i / 40f);
+            if (at.Y > ReefStreamView.Rise + CubeTuning.RockLow + CubeTuning.RockRise) break;
+            if (DrawnHeight(at.X, at.Z) > at.Y) return true;
+        }
+        return false;
+    }
+
+    /// <summary>Her layer's rock at a point as it is drawn: its wall risen, a roof risen whole over its water.</summary>
+    float DrawnHeight(float x, float z)
+    {
+        int gx = Mathf.RoundToInt(x), gy = Mathf.RoundToInt(z);
+        if (gx >= 0 && gy >= 0 && gx <= _map.Size && gy <= _map.Size && !float.IsNaN(_map.RoofAt(gx, gy))) return ReefStreamView.Rise + CubeTuning.RoofHeight;
+        float h = _map.HeightAt(new System.Numerics.Vector2(x, z));
+        float t = Mathf.Clamp((h - 1.4f) / (3.2f - 1.4f), 0f, 1f);
+        return h + ReefStreamView.Rise * t * t * (3f - 2f * t);
     }
 
 }

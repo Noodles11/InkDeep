@@ -44,10 +44,13 @@ public partial class CameraRig : Node3D
     /// <summary>The fight's draw-in (1 calm, FightZoom in a fight), eased by Tense.</summary>
     public float Close { get; private set; } = 1f;
 
+    /// <summary>Verification: `--dbg-tense` holds the camera drawn in as in a fight.</summary>
+    readonly bool _dbgTense = OS.GetCmdlineUserArgs().Contains("--dbg-tense");
+
     /// <summary>Eases the fight's draw-in toward its mark: in quickly as danger nears, out slowly once it is calm.</summary>
     public void Tense(bool fight, bool boss, float dt)
     {
-        float to = boss ? BossZoom : fight ? FightZoom : 1f;
+        float to = boss ? BossZoom : fight || _dbgTense ? FightZoom : 1f;
         Close = Mathf.MoveToward(Close, to, dt * (to < Close ? ZoomIn : ZoomOut));
     }
     Vector3 _focus;
