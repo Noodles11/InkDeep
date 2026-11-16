@@ -10,7 +10,8 @@ namespace OctoShoots.Game.TopDown;
 /// corruption leave the very cells it drinks from (InkDraw) — nearest first, however far off the ink lies — creep, then
 /// whoosh in, stretching along their flight and arcing over any rock in the way, into a blob of darkness swelling
 /// low over the floor where it is born; once all the ink is in, the blob rises to her plane as the murkling
-/// (SyncMurklings grows and lifts it on the same clock). A prime's draught is far bigger and its dots far more.
+/// (SyncMurklings grows and lifts it on the same clock). A prime's draught is far bigger and its dots far more. All of it
+/// shows only while light (hers, her beam's, a lit charge stone's) falls where it is born.
 /// </summary>
 public partial class BlightView
 {
@@ -22,6 +23,8 @@ public partial class BlightView
         public MultiMeshInstance3D Node = null!;
         public System.Numerics.Vector2 At;
         public float Floor, Blob, Age, Life;
+        /// <summary>How much of it shows (0..1): only while light falls where it is born.</summary>
+        public float Seen;
         public Vector3[] From = null!;
         public float[] Depart = null!, Arrive = null!, Arc = null!, Size = null!, Swirl = null!;
     }
@@ -107,8 +110,12 @@ public partial class BlightView
         }
         mm.CustomAabb = new Aabb(lo - Vector3.One, hi - lo + Vector3.One * 2f);
         _gathers.Add(g);
-        // A small dark swirl where it is born.
-        AddRipple(at, floor + 0.06f, Mathf.Min(radius, 2f), 0.2f, life * GatherIn, new Color(Ink.R, Ink.G, Ink.B, 0.6f));
+        // A small dark swirl where it is born (seen only if light falls there).
+        if (Lit(g, at))
+        {
+            g.Seen = 1f;
+            AddRipple(at, floor + 0.06f, Mathf.Min(radius, 2f), 0.2f, life * GatherIn, new Color(Ink.R, Ink.G, Ink.B, 0.6f));
+        }
     }
 
     /// <summary>The swelling blob's centre (low over the floor while the ink pours in), at a share of the birth.</summary>
@@ -137,6 +144,9 @@ public partial class BlightView
         return new Vector3(g.At.X + off.X, y, g.At.Y + off.Y);
     }
 
+    /// <summary>Whether light falls on a birth's spot: her glow, a beam of hers reaching it, a lit charge stone.</summary>
+    bool Lit(object who, System.Numerics.Vector2 at) => _lastWorld?.CoreLit(who, at) == true;
+
     void StepGathers(float dt)
     {
         for (int k = _gathers.Count - 1; k >= 0; k--)
@@ -149,6 +159,8 @@ public partial class BlightView
                 _gathers.RemoveAt(k);
                 continue;
             }
+            g.Seen = Mathf.MoveToward(g.Seen, Lit(g, g.At) ? 1f : 0f, dt * 4f);
+            g.Node.Visible = g.Seen > 0.005f;
             float t = g.Age / g.Life, step = 0.01f;
             var mm = g.Node.Multimesh;
             for (int i = 0; i < g.From.Length; i++)
@@ -158,7 +170,7 @@ public partial class BlightView
                 // Stretched along its flight, the faster the longer; swallowed into the blob as it arrives.
                 var vel = (DotAt(g, i, t + step) - at) / (step * g.Life);
                 float speed = vel.Length();
-                float size = g.Size[i] * (1f - Mathf.SmoothStep(0.88f, 1f, u));
+                float size = g.Size[i] * (1f - Mathf.SmoothStep(0.88f, 1f, u)) * g.Seen;
                 var basis = Basis.Identity.Scaled(Vector3.One * Mathf.Max(size, 0.001f));
                 if (speed > 0.05f)
                 {

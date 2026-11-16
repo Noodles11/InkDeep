@@ -195,7 +195,9 @@ public partial class BlightView : Node3D
                 float rise = Mathf.Clamp((k - GatherIn) / (1f - GatherIn), 0f, 1f);
                 float e = rise * rise * (3f - 2f * rise);
                 y = Mathf.Lerp(BlobHeight(Floor(m.Position), m.Radius, k), y, e);
-                scale *= grow;
+                // (Only seen where light falls on it: in the dark it gathers unseen, and is known by the ripple it rises with.)
+                body.BudSeen = Mathf.MoveToward(body.BudSeen, core ? 1f : 0f, dt * 4f);
+                scale *= grow * body.BudSeen;
                 ember = 0.05f + 0.4f * e;
             }
             else if (m.Clinging)
@@ -514,6 +516,12 @@ public partial class BlightView : Node3D
                     BlightTuning.MurkRadius * (prime ? BlightTuning.PrimeScale : 1f));
                 break;
             }
+            case PlaneEventType.MurklingEmerged:
+                // Born: the water over it wavers as the air over a hot road does, lit or not: two rings of it, a quick wide
+                // one and a slower, closer one.
+                Swells?.AddRing(new Vector2(e.Position.X, e.Position.Y), 1.1f, 1.2f, 1.1f, snap: 3f);
+                Swells?.AddRing(new Vector2(e.Position.X, e.Position.Y), 0.7f, 0.6f, 1.6f, snap: 2.5f);
+                break;
             case PlaneEventType.MurklingBurst:
                 // Freed: it pops like a water balloon, its ink showering out in its core's colour and evaporating (a
                 // prime's a great shower, Drippus Prime's the greatest: Direction.Y its size). Where its ember blooms,

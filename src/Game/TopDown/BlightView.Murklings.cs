@@ -31,6 +31,8 @@ public partial class BlightView
         public float LastThrowAge = 10f;
         /// <summary>How much light on its core shows the whole of it (eased).</summary>
         public float Core;
+        /// <summary>How much of its budding shows (0..1): only while light falls on where it is born.</summary>
+        public float BudSeen;
         /// <summary>How much a sealed leak's wave of light, passing over it, still shows it (1 as it touches it, fading).</summary>
         public float Waved;
         /// <summary>Whether it showed at all this frame (her light, a charge stone's, the wave): its health bar is drawn only then.</summary>
