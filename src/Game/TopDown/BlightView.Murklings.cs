@@ -51,6 +51,136 @@ public partial class BlightView
         /// <summary>A second material drawing it over her (a Blightroot's head: murkling_over), kept in step with Material.</summary>
         public ShaderMaterial? Over;
         public MurkBody(ShaderMaterial material) { Material = material; }
+        /// <summary>A small black hole: how hard her light is burning it now (eased), how much the water round it shows (eased), its meter last frame, and till its next ring drawn in as it regrows (s).</summary>
+        public float Burn, Lens, LastMeter = -1f, Inhale;
+    }
+
+    // ───────────────────────── a small black hole ─────────────────────────
+
+    /// <summary>The water round each murkling (murk_hole.gdshader), its disc this many times its radius across (a radius's worth: 2.6).</summary>
+    readonly List<MeshInstance3D> _lenses = new();
+    ShaderMaterial? _lensMat;
+    readonly PlaneMesh _lensDisc = new() { Size = new Vector2(2f, 2f) };
+    const float LensReach = 2.6f;
+
+    /// <summary>Flecks of ink a second it sheds into her light at the least, and more per share of its meter she takes a second; how fast they drift to her, and how soon they burn away.</summary>
+    const float ShedLeast = 10f, ShedPerShare = 120f, ShedMost = 60f, ShedDrift = 1f, ShedLife = 0.5f;
+    /// <summary>Regrowing: a ring of the water drawn in to it every InhaleEvery seconds, from InhaleReach metres, over InhaleLife.</summary>
+    const float InhaleEvery = 0.6f, InhaleReach = 3f, InhaleLife = 0.9f;
+
+    /// <summary>
+    /// A murkling as a small black hole (docs/CORRUPTION.md): its body black, its photon ring and the water bent and whirling
+    /// round it while her light is on it; its core in her light's colour, as bright as her beam is drawn, while her light
+    /// burns it, flecks of its ink peeling off toward her and burning away; regrowing, the water drawn in to it.
+    /// </summary>
+    void Hole(PlaneWorld world, Murkling m, MurkBody body, MeshInstance3D view, MeshInstance3D lens, float scale, LightHue colourOn, float dt)
+    {
+        var mat = body.Material;
+        mat.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("hole"), 1f);
+        var lightCol = OctoShoots.Game.Fx.LightColour.Beam(colourOn, false);
+        var from = world.LitFrom(m);
+        bool burning = !m.Budding && from is not null;
+        body.Burn = Mathf.MoveToward(body.Burn, burning ? 1f : 0f, dt * (burning ? 8f : 2.5f));
+        body.Lens = Mathf.MoveToward(body.Lens, body.Shown && !m.Budding ? 1f : 0f, dt * 4f);
+        var her = world.Player.Position;
+        var light = from ?? her;
+        mat.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ring_from"), new Vector3(light.X, view.Position.Y, light.Y));
+        mat.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ring_color"), lightCol);
+        mat.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ring_on"), body.Lens);
+        mat.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("core_lit"), new Color(lightCol.R, lightCol.G, lightCol.B, body.Burn * BeamView.BrightOf(world.LightPower)));
+        // The water round it, only while her light is on it.
+        lens.Visible = body.Lens > 0.01f && scale > 0.01f;
+        if (lens.Visible)
+        {
+            lens.Position = view.Position;
+            lens.Scale = Vector3.One * scale * LensReach;
+            lens.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("shown"), body.Lens);
+            lens.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("seed"), m.Seed);
+        }
+        float meter = m.Corruption.Value;
+        float was = body.LastMeter < 0f ? meter : body.LastMeter;
+        body.LastMeter = meter;
+        if (m.Budding || dt <= 0f) return;
+        // Burnt: its ink peels off the side her light comes from, drifts to her and burns away in her light's colour.
+        if (burning)
+        {
+            float share = m.Corruption.Max > 0f ? Mathf.Max(0f, was - meter) / m.Corruption.Max / dt : 0f;
+            float rate = Mathf.Min(ShedLeast + ShedPerShare * share, ShedMost);
+            int n = (int)(rate * dt) + (_droplets.RandRange(0f, 1f) < rate * dt % 1f ? 1 : 0);
+            var toward = new Vector3(light.X - m.Position.X, 0f, light.Y - m.Position.Y);
+            toward = toward.LengthSquared() > 1e-4f ? toward.Normalized() : Vector3.Forward;
+            var across = new Vector3(-toward.Z, 0f, toward.X);
+            for (int k = 0; k < n; k++)
+            {
+                float a = _droplets.RandRange(-1f, 1f) * 1.05f;
+                var normal = (toward * Mathf.Cos(a) + across * Mathf.Sin(a) + Vector3.Up * _droplets.RandRange(-0.3f, 0.5f)).Normalized();
+                var at = view.Position + normal * scale * _droplets.RandRange(0.92f, 1.05f);
+                var v = toward * ShedDrift * _droplets.RandRange(0.7f, 1.3f) + normal * _droplets.RandRange(0.2f, 0.5f) + across * _droplets.RandRange(-0.25f, 0.25f);
+                float life = ShedLife * _droplets.RandRange(0.7f, 1.2f), size = _droplets.RandRange(0.035f, 0.075f);
+                _droplets.Emit(at, v, life, size, size * 0.4f, new Color(0.008f, 0.004f, 0.014f, 0.95f), new Color(lightCol.R, lightCol.G, lightCol.B, 0f), drag: 0.6f);
+                _motes.Emit(at, v, life, size * 0.5f, size * 1.2f, new Color(lightCol.R, lightCol.G, lightCol.B, 0f), new Color(lightCol.R * 1.6f, lightCol.G * 1.6f, lightCol.B * 1.6f, 0.9f), drag: 0.6f);
+            }
+        }
+        // Regrowing: the water drawn in to where it is, lit or not, for as long as it regrows.
+        if (meter > was + 1e-5f)
+        {
+            body.Inhale -= dt;
+            if (body.Inhale <= 0f)
+            {
+                body.Inhale = InhaleEvery;
+                Swells?.AddInward(new Vector2(m.Position.X, m.Position.Y), 0.9f, InhaleReach / 2.6f, InhaleLife);
+            }
+        }
+        else body.Inhale = 0f;
+    }
+
+    /// <summary>How big a freed murkling is as it implodes (m: its core's size, all it has left), and how long it takes.</summary>
+    const float ImplodeFrom = 0.3f, ImplodeTime = 0.25f;
+
+    sealed class Implosion
+    {
+        public MeshInstance3D Node = null!;
+        public float Age, Size;
+    }
+
+    readonly List<Implosion> _implosions = new();
+    StandardMaterial3D? _voidMat;
+
+    /// <summary>
+    /// Freed, it implodes: its black collapses to a point over ImplodeTime, the water drawn in with it; then one bright
+    /// flash of her light's colour and a quick ring of the water outward.
+    /// </summary>
+    void Implode(Vector3 at, float size)
+    {
+        _voidMat ??= new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, AlbedoColor = new Color(0f, 0f, 0f) };
+        var node = new MeshInstance3D { Mesh = _sphere, MaterialOverride = _voidMat, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Position = at, Scale = Vector3.One * size };
+        AddChild(node);
+        _implosions.Add(new Implosion { Node = node, Size = size });
+        Swells?.AddInward(new Vector2(at.X, at.Z), 1.3f, Mathf.Max(size * 5f, 1.5f) / 2.6f, ImplodeTime);
+    }
+
+    void StepImplosions(float dt)
+    {
+        for (int k = _implosions.Count - 1; k >= 0; k--)
+        {
+            var im = _implosions[k];
+            im.Age += dt;
+            float t = Mathf.Clamp(im.Age / ImplodeTime, 0f, 1f);
+            im.Node.Scale = Vector3.One * Mathf.Max(im.Size * (1f - t * t * t), 0.001f);
+            if (t < 1f) continue;
+            // The flash: her light's colour, bright, gone at once; and one ring of the water out from it.
+            var at = im.Node.Position;
+            var c = OctoShoots.Game.Fx.LightColour.Beam(LightHue.None, false);
+            _motes.Emit(at, Vector3.Zero, 0.18f, 0.9f, 0.1f, new Color(c.R * 2f, c.G * 2f, c.B * 2f, 1f), new Color(c.R, c.G, c.B, 0f), drag: 0f);
+            for (int s = 0; s < 14; s++)
+            {
+                var dir = new Vector3(Mathf.Cos(s * Mathf.Tau / 14f), _motes.RandRange(-0.2f, 0.3f), Mathf.Sin(s * Mathf.Tau / 14f));
+                _motes.Emit(at, dir * _motes.RandRange(2f, 3.4f), _motes.RandRange(0.2f, 0.32f), 0.07f, 0.01f, new Color(c.R * 1.5f, c.G * 1.5f, c.B * 1.5f, 0.9f), new Color(c.R, c.G, c.B, 0f), drag: 5f);
+            }
+            Swells?.AddRing(new Vector2(at.X, at.Z), 1.1f, 0.8f, 0.55f, snap: 3f);
+            im.Node.QueueFree();
+            _implosions.RemoveAt(k);
+        }
     }
 
     internal const int Lobes = 12;

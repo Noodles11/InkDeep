@@ -365,7 +365,7 @@ public partial class TopDownMain : Node3D
     /// Verification of murklings' sizes (--dbg-murks): a row of five budded across the longest open way from her, held
     /// there; her beam on the middle one for its first 2.5 s, then off (it grows back).
     /// </summary>
-    bool _dbgMurks;
+    bool _dbgMurks, _dbgTough;
     /// <summary>With --dbg-murks: the row budded worn down to 15% (freed quickly, for their echoes).</summary>
     bool _dbgWeak;
     readonly List<(Murkling M, System.Numerics.Vector2 At)> _dbgRow = new();
@@ -613,6 +613,9 @@ public partial class TopDownMain : Node3D
             else if (arg == "--dbg-paths") _autoFire = _dbgShadow = _dbgPaths = true;
             else if (arg == "--dbg-murks") _autoFire = _dbgMurks = true;
             else if (arg == "--dbg-weak") _dbgWeak = true;
+            // Verification (with --dbg-murks): the row hardy (25 times its meter), her beam on it and off by turns (2.5 s
+            // each), so its burning, its regrowing and its implosion all show.
+            else if (arg == "--dbg-tough") _dbgTough = true;
             else if (arg == "--use-active") _autoActive = true;
             else if (arg.StartsWith("--dbg-leaks=")) _dbgLeaks = int.Parse(Value("--dbg-leaks="));
             else if (arg.StartsWith("--dbg-leak-hits=")) _dbgLeakHits = int.Parse(Value("--dbg-leak-hits="));
@@ -4465,6 +4468,7 @@ public partial class TopDownMain : Node3D
                     var m = _world.DebugBud(spot, prime: false);
                     m.Bud = 0f;
                     if (_dbgWeak) m.Corruption.Value = m.Corruption.Max * 0.15f;
+                    if (_dbgTough) m.Corruption.Max = m.Corruption.Value = m.Corruption.Max * 25f;
                     _dbgRow.Add((m, spot));
                 }
             }
@@ -4477,7 +4481,7 @@ public partial class TopDownMain : Node3D
             }
             _world.Player.Velocity = System.Numerics.Vector2.Zero;
             input.Aim = _dbgRowWay;
-            input.Beam = _world.Time < ExperienceTuning.CalmSeconds + 0.2f + 2.5f;
+            input.Beam = _dbgTough ? (_world.Time - ExperienceTuning.CalmSeconds) % 5f < 2.5f : _world.Time < ExperienceTuning.CalmSeconds + 0.2f + 2.5f;
             return true;
         }
         if (_dbgShadow)

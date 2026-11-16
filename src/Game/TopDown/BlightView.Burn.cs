@@ -28,14 +28,7 @@ public partial class BlightView
     {
         (_meterWas, _meterNow) = (_meterNow, _meterWas);
         _meterNow.Clear();
-        for (int i = 0; i < _murks.Count && i < world.Murklings.Count; i++)
-        {
-            var m = world.Murklings[i];
-            if (!m.Alive) continue;
-            var from = world.LitFrom(m);
-            if (from is { } light) Sizzle(_murks[i].GlobalPosition, _murks[i].Scale.X, light, world.ColourOn(m), dt);
-            if (!m.Budding) Bleed(m, m.Corruption, _murks[i].GlobalPosition, _murks[i].Scale.X, from, dt);
-        }
+        // (A murkling sheds its ink into her light instead: BlightView.Murklings, Hole.)
         foreach (var (w, view) in _wardens)
         {
             if (!w.Alive) continue;

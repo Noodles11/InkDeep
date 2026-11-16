@@ -279,16 +279,32 @@ it `PlaneHeart`. She takes one only when corrupted at all; otherwise it waits.
   as she moves (at most every 6 ticks; at once when she jumps) and when a sealed wall opens or shuts. It heads for the
   farthest cell up to 14 steps along the way that it can reach in a straight line, so it rounds corners rather than
   hugging every step. (A pufferling only goes after her while it sees her.)
-- **Its body is liquid** (`BlightView.Murklings`, `murkling.gdshader`; lesser ones and primes alike): a drop of ink adrift
-  like mercury in no gravity. Twelve points round it each stand out of round or in on a spring back to round (its
-  surface tension), lightly damped so it rings, pulled toward their neighbours (a dent spreads and smooths), its
-  volume kept (what one takes in, the rest push out). The ink lags it: speeding up, its trailing side bulges and its
-  front flattens; stopping, it sloshes on; fast, it draws out along its way; still, the water stirs it gently. It is
-  painted as her light is: its ink brushed in flowing bands, a ragged dry-brushed violet stroke for its rim, a torn
-  silhouette, one soft dab of sheen.
+- **Its body is liquid** (`BlightView.Murklings`, `murkling.gdshader`; every kind, lesser ones and primes and Drippus
+  Prime's brood alike): a drop of ink adrift like mercury in no gravity. Twelve points round it each stand out of round
+  or in on a spring back to round (its surface tension), lightly damped so it rings, pulled toward their neighbours (a
+  dent spreads and smooths), its volume kept (what one takes in, the rest push out). The ink lags it: speeding up, its
+  trailing side bulges and its front flattens; stopping, it sloshes on; fast, it draws out along its way; still, the
+  water stirs it gently.
+- **It is a small black hole** (`murkling.gdshaderinc`'s `hole`; `murk_hole.gdshader`):
+  - *Its body* is lightless black: her light never lights its near side, nor leaves her outline on it (its size shows
+    its meter).
+  - *Its photon ring*: while her light is on it, a thin wavering line of light hugs its silhouette, brightest on the
+    side her light comes from, in her light's colour.
+  - *The water round it*, while her light is on it: bent in toward its edge (strongest just outside it, gone by 2.6
+    times its radius), shimmering as air over a hot road, two or three broken rings of ink whirling round it in her
+    plane, the nearer the faster.
+  - *Its core*: a dim ember; while her light burns it, a small hot heart in her light's exact colour (her pearls' hue),
+    as bright as her beam is drawn (`BeamView.BrightOf`), fading over about 0.4 s once she stops.
+  - *Burnt, it sheds its ink*: flecks of black peel off the side her light comes from (10 a second, and 120 more for each
+    whole meter she takes a second, at most 60), drift toward her light at about 1 m/s and burn away within about half
+    a second, flaring to embers of her light's colour. They hurt nothing.
+  - *Regrowing*, lit or unseen: rings of the water's shimmer are drawn in from 3 m to where it is, one every 0.6 s, each
+    over 0.9 s, for as long as it regrows.
+  - *Freed, it implodes*: its black collapses to a point over 0.25 s, the water drawn in with it; then one flash of her
+    light's colour, a spray of sparks and a quick ring of the water outward. Its core of light, its shells and its ember
+    are left as ever.
 - **Her hits dent it** (`BlightView.Struck`): the struck side dents deep (the deeper, the more of its meter the hit
-  took) and rebounds past round. Like every creature struck, it bursts her light back and its corruption out through
-  its far side (the hit burst, DESIGN-TOPDOWN.md).
+  took) and rebounds past round.
 - **Budding:** each living Blightroot's area buds one from dense ground (≥ 0.6), at least 5 m from her, every
   15 s / (1 + 0.6 × Menace), while the level holds ink enough for it. The bud takes 0.8 s. **It is made of ink:**
   over the bud it drinks 3.6 (about a 1.2 m disc of thick ink, the nearest first and further out where it is thin),
@@ -413,7 +429,7 @@ seen:
 - **drinking her unseen** (her glow out), it draws motes of her light off her toward it, so the thief is plain.
 Her light on it shows the creature itself, as ever. `--dbg-sense` holds two murklings past her glow with her beam dark.
 
-**Her light's outline** (a warm-white line round the silhouette) **stays** round the
+**Her light's outline** (a warm-white line round the silhouette; never on a murkling) **stays** round the
 creature for as long as its corruption is not full (`corruption_orb`'s `worn`, `BlightView.SyncOutlines`): thin after
 the first hit, thicker the less corruption it has left, up to about a fifth of its radius near empty, and a little
 brighter. A hit does not flash it (the shader's `hit` is left at 0 for now). Regrowing to full, it is gone; emptied,

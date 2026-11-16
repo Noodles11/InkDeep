@@ -9,6 +9,10 @@
 // the part of it her light reaches, its edge ragged; the rest of it is not drawn.
 // Also the Blightroot's painted parts (BlightView.Octopus): skin (rgb, a how much) is a kind's own colour under the ink
 // and in its rim (the Blightroot's blue; freed, the octopus's own healthy red), swell its head swelling on the pulse.
+// A murkling is drawn as a small black hole (hole: docs/CORRUPTION.md): a lightless black sphere, nothing of her light on
+// its near side; a thin photon ring hugging its silhouette, brightest toward her light (ring_from), in its colour
+// (ring_color) while her light is on it (ring_on); its core shining out through the black in her light's colour, as
+// bright as the beam striking it (core_lit: rgb, a how bright).
 
 uniform float lobes[12];
 uniform vec4 holes[6];
@@ -41,6 +45,11 @@ uniform float wave_seen = 0.0;
 // Her light's colours on it (PlaneColour.cs): the colour on it (rgb) and how strongly (a), and frost's chill (0..1).
 uniform vec4 colour_lit = vec4(0.0);
 uniform float chill = 0.0;
+uniform float hole = 0.0;
+uniform vec3 ring_from = vec3(0.0);
+uniform vec3 ring_color : source_color = vec3(1.0);
+uniform float ring_on = 0.0;
+uniform vec4 core_lit = vec4(0.0);
 /// The adventure's murklings: short blowfish spikes all over (a spiked one, from a blue tang); a short wiggling tadpole
 /// tail out behind it along swim (a tadpole one, from a clownfish).
 instance uniform float spikes = 0.0;
@@ -189,6 +198,30 @@ void fragment() {
 		SPECULAR = 0.0;
 		float depth = torn ? smoothstep(0.0, 0.35, into) : clamp(dot(-NORMAL, VIEW), 0.0, 1.0);
 		EMISSION = glow * (0.06 + 0.5 * ember * depth * depth) * flicker + rim_color * 0.05;
+	} else if (hole > 0.5) {
+		// A small black hole: no light of hers on its face at all (black, matte), only its photon ring and its core.
+		if (!FRONT_FACING) NORMAL = -NORMAL;
+		float facing = clamp(dot(NORMAL, VIEW), 0.0, 1.0);
+		vec3 n = (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz;
+		vec3 hw = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+		ALBEDO = vec3(0.0);
+		ROUGHNESS = 1.0;
+		SPECULAR = 0.0;
+		// The photon ring: a thin line of light round its silhouette, wavering, brightest on the side her light comes from.
+		vec2 to_light = ring_from.xz - hw.xz;
+		float toward = length(to_light) > 1e-3 ? dot(normalize(n.xz + vec2(1e-5)), normalize(to_light)) : 0.0;
+		float around = atan(n.z, n.x);
+		float thin = smoothstep(0.8, 0.94, 1.0 - facing) * (1.0 - smoothstep(0.985, 1.0, 1.0 - facing));
+		float waver = 0.75 + 0.25 * noise2(vec2(around * 7.0 + TIME * 3.0, seed));
+		EMISSION = ring_color * ring_on * thin * waver * (0.25 + 1.75 * smoothstep(-0.2, 1.0, toward)) * 2.2;
+		// Its core: a dim ember, or her light's own colour while it strikes it, shining out through the black.
+		// (Its core a small hot heart in its middle, about half its width; the rest of it black.)
+		float hot = smoothstep(0.84, 0.97, facing);
+		EMISSION += glow * hot * ember * flicker * 0.3;
+		EMISSION += core_lit.rgb * core_lit.a * (2.2 * hot * hot + 0.06 * pow(facing, 3.0));
+		// A torn hole's lip glows with the ember behind it.
+		EMISSION += glow * rim_h * (0.6 + 0.4 * flicker) * 0.8;
+		if (chill > 0.0) EMISSION += vec3(0.6, 0.85, 1.0) * 0.15 * chill * thin;
 	} else {
 		if (!FRONT_FACING) NORMAL = -NORMAL;
 		float facing = clamp(dot(NORMAL, VIEW), 0.0, 1.0);

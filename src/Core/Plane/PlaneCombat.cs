@@ -746,6 +746,9 @@ public sealed partial class PlaneWorld
     /// <summary>Her damage stat as a factor on a bubble's damage (1 with no pearls; Shark Tooth and Coral Crown raise it).</summary>
     float DamageScale => Run.Loadout.Stats.Damage / MathF.Max(Tuning.Damage, 0.01f) * TitheScale;
 
+    /// <summary>Her light's damage against a plain one's (her damage stat, her pearls' boosts): how bright her beam is drawn.</summary>
+    public float LightPower => DamageScale;
+
     /// <summary>Her stats against the tuning's own (1 with no pearls): how fast she throws, how fast and far her light flies.</summary>
     float FireScale => Run.Loadout.Stats.FireRate / MathF.Max(Tuning.FireRate, 0.01f);
     float ShotSpeedScale => Run.Loadout.Stats.ShotSpeed / MathF.Max(Tuning.ShotSpeed, 0.01f);
