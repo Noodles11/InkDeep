@@ -72,10 +72,9 @@ levels one after another: the layers are the depths.
 ## 3. Camera
 
 While the reef is calm the camera stands 55 m from her, about 36 × 54 m of ground, a tenth of a level
-(`CameraRig.Distance`). **In a fight it draws in** to 38 m (`FightZoom`; 47 m in a boss's arena, so the whole arena
-stays in view): as soon as a corrupted creature is within 12 m of her, seen or not, or she is hit (`PlaneWorld.Calm`),
-easing in over about half a second and back out slowly once it is calm again (`CameraRig.Tense`). So she is larger
-when it matters, and the camera drawing in is itself a warning of something near. The sun's shadows reach 90 m
+(`CameraRig.Distance`), and it holds there however many creatures are round her. **Only a boss's battle draws it in**,
+to 47 m (`BossZoom`, so the whole arena stays in view), easing in over about half a second and back out slowly once
+the battle is over (`CameraRig.Tense`). The sun's shadows reach 90 m
 (`SunLight`). The Sunlit Shallows take
 their dimmed look (`ReefLook.OpenShallows`) so the wider view never washes out.
 

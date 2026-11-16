@@ -406,7 +406,6 @@ seen:
   and as often as every 0.55 s as it closes on her;
 - **it is heard** once as it comes within her sensing, from where it is (a low gurgle, placed in the world), and again
   only after it has been out of her sensing for 4 s;
-- **the camera draws in** as it comes within 12 m (docs/DIVE.md §3);
 - **drinking her unseen** (her glow out), it draws motes of her light off her toward it, so the thief is plain.
 Her light on it shows the creature itself, as ever. `--dbg-sense` holds two murklings past her glow with her beam dark.
 
