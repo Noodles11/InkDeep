@@ -45,6 +45,22 @@ public partial class TopDownMain
     bool InDiveCave => _diveCave >= 0;
     /// <summary>In a secret room's labyrinth (a dive cave behind a secret mouth).</summary>
     bool InLabyrinth => InDiveCave && _map.Labyrinth;
+
+    /// <summary>A labyrinth's maze: the square round all its open water (map metres).</summary>
+    static Rect2 MazeArea(LevelMap map)
+    {
+        int x0 = map.Size, y0 = map.Size, x1 = 0, y1 = 0;
+        for (int y = 0; y <= map.Size; y++)
+        for (int x = 0; x <= map.Size; x++)
+        {
+            if (!map.IsOpen(new System.Numerics.Vector2(x, y))) continue;
+            x0 = Math.Min(x0, x);
+            y0 = Math.Min(y0, y);
+            x1 = Math.Max(x1, x);
+            y1 = Math.Max(y1, y);
+        }
+        return x1 < x0 ? new Rect2(0f, 0f, map.Size, map.Size) : new Rect2(x0, y0, x1 - x0, y1 - y0);
+    }
     /// <summary>Verification (--dbg-mazein=seconds): that long onto a reef with a secret mouth, its wall opens and she is taken into its labyrinth.</summary>
     float _dbgMazeIn;
     /// <summary>Verification (--dbg-havenin=seconds): that long onto a reef with a haven, she is taken into it.</summary>

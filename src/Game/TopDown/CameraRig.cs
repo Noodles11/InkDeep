@@ -279,13 +279,59 @@ public partial class CameraRig : Node3D
     }
 
     /// <summary>
+    /// A place shown whole (a secret labyrinth: docs/DIVE.md §6.1): the camera holds over its middle, as far off as it must
+    /// be for all of it to fit the screen (Fit), instead of following her. Null: it follows her.
+    /// </summary>
+    public (Vector3 Middle, float Distance)? Frame { get; set; }
+
+    /// <summary>
+    /// The camera's distance from the middle of <paramref name="area"/> (map metres, on the plane at <paramref name="y"/>)
+    /// at which the whole of it, and <paramref name="margin"/> metres round it, just fits the screen at its tilt and field
+    /// of view; and that middle.
+    /// </summary>
+    public (Vector3 Middle, float Distance) Fit(Rect2 area, float y, float margin = 2f)
+    {
+        area = area.Grow(margin);
+        var middle = new Vector3(area.GetCenter().X, y, area.GetCenter().Y);
+        var size = Camera.GetViewport()?.GetVisibleRect().Size ?? new Vector2(16f, 9f);
+        float aspect = size.Y > 0f ? size.X / size.Y : 16f / 9f;
+        float tanV = Mathf.Tan(Mathf.DegToRad(Fov) * 0.5f), tanH = tanV * aspect;
+        float tilt = Mathf.DegToRad(Tilt);
+        var basis = Basis.FromEuler(new Vector3(-tilt, 0f, 0f));
+        var corners = new[]
+        {
+            new Vector3(area.Position.X, y, area.Position.Y), new Vector3(area.End.X, y, area.Position.Y),
+            new Vector3(area.Position.X, y, area.End.Y), new Vector3(area.End.X, y, area.End.Y),
+        };
+        bool Fits(float d)
+        {
+            var eye = middle + new Vector3(0f, Mathf.Sin(tilt), Mathf.Cos(tilt)) * d;
+            foreach (var c in corners)
+            {
+                var v = basis.Inverse() * (c - eye);
+                float depth = -v.Z;
+                if (depth <= 0.1f || Mathf.Abs(v.X) > depth * tanH || Mathf.Abs(v.Y) > depth * tanV) return false;
+            }
+            return true;
+        }
+        float lo = 1f, hi = 400f;
+        for (int i = 0; i < 40; i++)
+        {
+            float m = (lo + hi) * 0.5f;
+            if (Fits(m)) hi = m;
+            else lo = m;
+        }
+        return (middle, hi);
+    }
+
+    /// <summary>
     /// Follow a point on the swim band; snap jumps straight there (level start, teleports). The camera centres look
     /// metres past it (the level-up frames her at the screen's left); her halo stays on the point itself.
     /// </summary>
     public void Track(Vector3 focus, float dt, bool snap = false, Vector3 look = default)
     {
         TickBlurs(dt);
-        var aim = focus + look;
+        var aim = Frame is { } held ? held.Middle : focus + look;
         if (snap || !_snapped)
         {
             _focus = aim;
@@ -297,7 +343,7 @@ public partial class CameraRig : Node3D
         }
         float tilt = Mathf.DegToRad(Tilt);
         // North is −Z: the camera sits south of the focus, looking north and down.
-        Vector3 offset = new Vector3(0f, Mathf.Sin(tilt), Mathf.Cos(tilt)) * _distance * Zoom * Close;
+        Vector3 offset = new Vector3(0f, Mathf.Sin(tilt), Mathf.Cos(tilt)) * (Frame is { } frame ? frame.Distance : _distance * Zoom * Close);
         _shakeTime += dt;
         _shake = Mathf.MoveToward(_shake, 0f, dt * 1.6f);
         Vector3 jolt = _shake > 0f ? new Vector3(Mathf.Sin(_shakeTime * 53f), Mathf.Sin(_shakeTime * 61f + 1f), Mathf.Sin(_shakeTime * 47f + 2f)) * _shake * _shake : Vector3.Zero;

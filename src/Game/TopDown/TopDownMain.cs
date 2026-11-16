@@ -1322,6 +1322,8 @@ public partial class TopDownMain : Node3D
         _level.Place(Vector3.Zero, _origin);
         _levelShape = shape;
         EnterLevel(shape.Map, keepRun, ms, arriveAt);
+        // In a secret labyrinth the camera rises just enough to show all of it (docs/DIVE.md §6.1).
+        _camera.Frame = InLabyrinth ? _camera.Fit(MazeArea(_map), LevelMap.SwimBand) : null;
         // (A reef layer's life and charge stones come with its cubes: those laid on it so far now.)
         if (_reef is not null) ShowLaidLife();
         // A verification start applies to the first level only (later levels begin at their start).

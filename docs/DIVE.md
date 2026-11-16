@@ -74,7 +74,8 @@ levels one after another: the layers are the depths.
 While the reef is calm the camera stands 55 m from her, about 36 × 54 m of ground, a tenth of a level
 (`CameraRig.Distance`), and it holds there however many creatures are round her. **Only a boss's battle draws it in**,
 to 47 m (`BossZoom`, so the whole arena stays in view), easing in over about half a second and back out slowly once
-the battle is over (`CameraRig.Tense`). The sun's shadows reach 90 m
+the battle is over (`CameraRig.Tense`). **In a secret labyrinth** it leaves her and holds over the maze's middle, risen
+just enough that the whole maze (and 2 m round it) fits the screen (`CameraRig.Frame`, `CameraRig.Fit`). The sun's shadows reach 90 m
 (`SunLight`). The Sunlit Shallows take
 their dimmed look (`ReefLook.OpenShallows`) so the wider view never washes out.
 
