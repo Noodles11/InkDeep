@@ -575,7 +575,7 @@ public partial class BlightView : Node3D
             float near = 1f - Mathf.Clamp((d - m.Radius) / SenseReach, 0f, 1f);
             body.Ripple = Mathf.Lerp(RippleFar, RippleNear, near);
             // (Seen as the game's moving water is: the water shoved out round it in a shimmer, like the air over a hot road.)
-            Swells?.AddRing(new Vector2(m.Position.X, m.Position.Y), 0.35f + 0.45f * near, (m.Radius * 1.5f + 0.9f) / 2.6f, 0.9f, snap: 3f);
+            // (Its wake shows it moving: WakeField. No ripple of its own.)
         }
         // Drinking her unseen: her light leaves her toward it.
         if (m.Clinging)

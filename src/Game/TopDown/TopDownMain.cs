@@ -352,6 +352,9 @@ public partial class TopDownMain : Node3D
     /// there; her beam on the middle one for its first 2.5 s, then off (it grows back).
     /// </summary>
     bool _dbgMurks, _dbgTough;
+
+    /// <summary>The wakes of everything that swims (WakeField).</summary>
+    readonly OctoShoots.Game.Fx.WakeField _wakes = new();
     /// <summary>With --dbg-murks: the row budded worn down to 15% (freed quickly, for their echoes).</summary>
     bool _dbgWeak;
     readonly List<(Murkling M, System.Numerics.Vector2 At)> _dbgRow = new();
@@ -1327,6 +1330,7 @@ public partial class TopDownMain : Node3D
         _level.Show(shape);
         _level.Place(Vector3.Zero, _origin);
         _levelShape = shape;
+        _wakes.Clear();
         EnterLevel(shape.Map, keepRun, ms, arriveAt);
         // In a secret labyrinth the camera rises just enough to show all of it (docs/DIVE.md §6.1).
         _camera.Frame = InLabyrinth ? _camera.Fit(MazeArea(_map), LevelMap.SwimBand) : null;
@@ -2930,6 +2934,11 @@ public partial class TopDownMain : Node3D
             ? new Vector3(dasher.Velocity.X, 0f, dasher.Velocity.Y).Normalized() * DashLead : Vector3.Zero;
         _dashLead = _dashLead.Lerp(dashTo, 1f - Mathf.Exp(-(dashTo == Vector3.Zero ? 2.2f : 9f) * dt));
         _camera.Track(Focus(alpha), dt, look: new Vector3(MenuShift() * framing, 0f, 0f) + _dashLead);
+        // The wakes of all that swims (not while the game is held: the water stills behind them).
+        if (!Paused)
+            using (Timed("wakes"))
+                _wakes.Step(_world, dt, _world.Player.Position);
+        _camera.SetWakes(_wakes);
         _dark.Sync(_world, _camera.Camera, _bell.GlobalPosition, dt);
         // A wall between the camera and her (a tunnel's roof, a wall in front) is cut open round her while it hides her,
         // the opening irising out quickly and closing gently (eased in the shader); one she only swims beside stays whole.

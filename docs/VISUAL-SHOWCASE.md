@@ -56,6 +56,14 @@ between).
 - **Coral gardens** (`LevelView.Gardens`): sea rods, staghorn, sea fans, elkhorn and brain corals (no sponges) packed
   in drifting patches on the walls' tops and ledges, and in a band along their feet at the edge of the open floor; like the seagrass and the coral heads, only half the spots are dressed (`LevelView.DecorShare`).
 
+- **Wakes** (`WakeField`, `topdown_post`'s `wake_map`): everything that swims (Clementine, every creature, the reef's
+  fish, her shells in flight, a boss) leaves a V of disturbed water behind it, as a motorboat does seen from above, drawn
+  as the game's moving water is: the picture bent and boiling along each arm, a faint patchy shimmer of light on it, no
+  lines. Each wake is its last 0.55 s of way: from each point of it an arm out to each side as far as the water has
+  spread (the Kelvin wake's 19.5°), fading as it ages; so the faster it goes, the longer the arms, and stopped, it leaves
+  nothing within a moment. Slower than 0.6 m/s it leaves none; it is strongest at 6 m/s. The 64 nearest her, in a map
+  64 m round her baked each frame. Lit or not: an unseen murkling's wake gives it away.
+
 - **Her beam as bright as it burns** (`BeamView.BrightOf`): her own beam is drawn by her light's damage against a plain
   one's (her damage stat, her pearls' boosts): twice the damage about 1.6× as bright, three times about 2×, between
   0.6× and 2.5×. Only the drawing: what it lights for the game is as ever.

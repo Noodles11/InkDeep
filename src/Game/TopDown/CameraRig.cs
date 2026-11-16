@@ -183,6 +183,16 @@ public partial class CameraRig : Node3D
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("current_count"), count);
     }
 
+    /// <summary>The wakes of everything that swims (WakeField), or none.</summary>
+    public void SetWakes(OctoShoots.Game.Fx.WakeField? wakes)
+    {
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("wake_on"), wakes?.Texture is null ? 0f : 1f);
+        if (wakes?.Texture is not { } map) return;
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("wake_map"), map);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("wake_origin"), wakes.Origin);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("wake_span"), OctoShoots.Game.Fx.WakeField.Span);
+    }
+
     /// <summary>The swells in the water round her (WaterSwells): where, how old and strong, and the way she was going.</summary>
     public void SetSwells(OctoShoots.Game.Fx.WaterSwells swells)
     {
