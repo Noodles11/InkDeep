@@ -111,8 +111,10 @@ What changes is the protagonist's skin:
 - **Jet start** inherited (DESIGN-2D §20): first stroke from rest is a 1.8×
   burst over 0.38 s; sharp turns (>110°) re-trigger it.
 - **Ink dash** inherited (DESIGN-2D §30): Space, ~3.4× speed, 0.32 s
-  untouchable, 0.85 s cooldown, leaves a slowing ink cloud. (Yes, a jellyfish
-  inks — the Leak changed her. The Sea-pedia entry says so.)
+  untouchable, 0.85 s cooldown, leaves a slowing ink cloud. Untouchable, she dashes
+  through any creature and any boss's body unharmed; should a dash end inside a
+  boss, she slides out of it, still unharmed (`PlaneWorld.DashesThrough`). (Yes,
+  a jellyfish inks — the Leak changed her. The Sea-pedia entry says so.)
 - **The fast swim:** holding the dash key on past its burst, she keeps swimming
   at 1.75× her cruise (`Tuning.SprintMultiplier`, `PlaneBody.Sprinting`) for as
   long as it is held, at no cost for now; letting go, she eases back to her

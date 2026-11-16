@@ -120,7 +120,7 @@ public class PlaneCurrentTests
         Assert.True(much.MaxHp > little.MaxHp);
         Assert.True(much.Damage > little.Damage);
         var (_, none) = AtTheBoss(0f);
-        Assert.Equal(none.Spec.Hp, none.MaxHp);
+        Assert.Equal(none.Spec.Hp * PlaneBossTuning.MeterShare, none.MaxHp);
         Assert.Equal(none.Spec.Damage, none.Damage);
     }
 

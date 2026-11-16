@@ -41,6 +41,8 @@ public sealed class PlaneBody
     public float JetTimer;
     public float DashTimer;
     public float DashInvulnerableTimer;
+    /// <summary>Her dash took her into a boss's body: she is let through it and slides out of it unharmed (PlaneWorld.DashesThrough).</summary>
+    public bool DashThrough;
     public float DashCooldownTimer;
     /// <summary>Swimming fast on from a dash while its key stays held (it ends as the key is let go).</summary>
     public bool Sprinting;

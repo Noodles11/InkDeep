@@ -47,7 +47,7 @@ the reef was never being called home. It was being kept.
 
 - **Her body** (THEME-BIBLE §5): a clear glass bell with four glowing gonads and a glowing rim, four oral arms and eight
   hair-thin tentacles. She swims in pulses, lurch then glide, and drifts and bobs when left alone.
-- **Moves** (DESIGN-TOPDOWN §2.2): free swimming on her plane; the **ink dash** (a burst, briefly untouchable, leaving a
+- **Moves** (DESIGN-TOPDOWN §2.2): free swimming on her plane; the **ink dash** (a burst, briefly untouchable, through any creature or boss unharmed, leaving a
   slowing ink cloud), and the **fast swim** while the dash is held. A dash reads fast: she leaves afterimages, copies of
   her bell every 0.55 m along her way in her light's colour, fading over 0.32 s (`BellView`, bell_ghost.gdshader), and
   the camera leads 2.4 m the way she dashes, easing back after.

@@ -208,6 +208,7 @@ does.
 | | Depth 1 | Depth 6 |
 |---|---|---|
 | Pearl meter (HP) | 800 | 1600 (eased by up to 30 % with the level cleansed) |
+| Meter fought with | 40 % of the above, its sacs' too (`PlaneBossTuning.MeterShare`): her hits plainly move it | |
 | Telegraph | ≥ 0.8 s | ≥ 0.35 s |
 | Window per cycle | ≥ 1.2 s and ≥ 30 % of the cycle | ≥ 1.0 s and ≥ 20 % |
 | Hit damage | 12 | 18 |

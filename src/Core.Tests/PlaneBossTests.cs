@@ -151,14 +151,14 @@ public class PlaneBossTests
         Assert.False(boss.Open);
         w.Shots.Add(BubbleAt(boss.Position));
         w.Step(default);
-        Assert.Equal(PlaneBossTuning.Hp, boss.Hp);
+        Assert.Equal(PlaneBossTuning.Hp * PlaneBossTuning.MeterShare, boss.Hp);
         Assert.Contains(w.Events, e => e.Type == PlaneEventType.ShotPopped);
 
         Assert.True(StepUntil(w, PlaneEventType.BossVolley) > 0);
         Assert.True(boss.Open);
         w.Shots.Add(BubbleAt(boss.Position));
         w.Step(default);
-        Assert.Equal(PlaneBossTuning.Hp - 10f, boss.Hp);
+        Assert.Equal(PlaneBossTuning.Hp * PlaneBossTuning.MeterShare - 10f, boss.Hp);
     }
 
     [Fact]
@@ -180,12 +180,37 @@ public class PlaneBossTests
     }
 
     [Fact]
+    public void HerDashGoesThroughItsBodyUnharmed()
+    {
+        var w = Landed();
+        var boss = w.Boss!;
+        Assert.True(StepUntil(w, PlaneEventType.BossVolley) > 0);
+        w.Shots.Clear();
+        var p = w.Player;
+        p.Position = p.PrevPosition = boss.Position + new System.Numerics.Vector2(0f, boss.Radius + w.Radius + 1f);
+        p.Velocity = System.Numerics.Vector2.Zero;
+        var up = new System.Numerics.Vector2(0f, -1f);
+        bool inside = false, touched = false;
+        w.Step(new PlaneInput { Dash = true, DashHeld = true, Move = up });
+        for (int i = 0; i < 90; i++)
+        {
+            if (System.Numerics.Vector2.Distance(p.Position, boss.Position) < boss.Radius) inside = true;
+            touched |= w.Events.Exists(e => e.Type == PlaneEventType.PlayerHit && e.Source == DamageSource.BossContact);
+            w.Step(new PlaneInput { Move = up, DashHeld = true });
+        }
+        Assert.True(inside, "her dash took her into its body");
+        Assert.False(touched, "its body never hurt her");
+        // Out of it again by now.
+        Assert.True(System.Numerics.Vector2.Distance(p.Position, boss.Position) >= boss.Radius + w.Radius - 0.05f);
+    }
+
+    [Fact]
     public void AtHalfHpSheStaggersIntoHerSecondPhase()
     {
         var w = Landed();
         var boss = w.Boss!;
         Assert.True(StepUntil(w, PlaneEventType.BossVolley) > 0);
-        boss.Hp = PlaneBossTuning.Hp * 0.5f + 5f;
+        boss.Hp = boss.MaxHp * 0.5f + 5f;
         w.Shots.Add(BubbleAt(boss.Position));
         w.Step(default);
         Assert.Contains(w.Events, e => e.Type == PlaneEventType.BossStagger);

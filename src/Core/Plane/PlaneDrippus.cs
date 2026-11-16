@@ -175,6 +175,8 @@ public sealed partial class PlaneWorld
         boss.BounceCool -= Dt;
         boss.Sprang += Dt;
         float skin = boss.Radius * DrippusTuning.Body;
+        // (Her dash goes through it unharmed: no bounce on her while she is in it.)
+        if (DashesThrough(boss.Position, skin + Radius)) return;
         var off = p.Position - boss.Position;
         float d = off.Length(), gap = d - skin - Radius;
         if (d > 1e-3f) boss.BounceDir = off / d;

@@ -15,6 +15,13 @@ public static class PlaneBossTuning
 {
     public const string Name = "Queen Clam";
     public const float Hp = 800f;
+    /// <summary>
+    /// The share of its spec's meter (and its sacs') a boss fights with: her light counts this much more against it, so
+    /// her hits plainly move its meter.
+    /// </summary>
+    public const float MeterShare = 0.4f;
+    /// <summary>How fast she slides out of a boss's body her dash ended in (m/s), unharmed.</summary>
+    public const float DashExit = 8f;
     /// <summary>Her shell, as a solid disc on the plane (5 m across).</summary>
     public const float BodyRadius = 2.5f;
     /// <summary>Touching a fighting boss: its damage ×ContactFactor, and a shove.</summary>
@@ -268,7 +275,7 @@ public sealed partial class PlaneWorld
     {
         if (!Map.HasBoss || Map.Rift) return;
         var spec = Options.Boss ?? BossRoster.For(Map.Seed, Map.Cycle, Math.Max(1, Map.Depth - LevelPlan.Tutorial));
-        Boss = new PlaneBoss { Spec = spec, Position = ArenaCenter, Hp = spec.Hp, MaxHp = spec.Hp, TelegraphLength = spec.Telegraph };
+        Boss = new PlaneBoss { Spec = spec, Position = ArenaCenter, Hp = spec.Hp * PlaneBossTuning.MeterShare, MaxHp = spec.Hp * PlaneBossTuning.MeterShare, TelegraphLength = spec.Telegraph };
         if (IsDrippus(Boss)) Boss.Mass = DrippusTuning.Mass;
         // It lies with its opening toward the screen (south, the camera's side), so the pearl shows.
         ExitOpen = false;
@@ -276,7 +283,7 @@ public sealed partial class PlaneWorld
         Boss.Facing = Vector2.UnitY;
         Boss.Heard = ArenaCenter;
         if (spec.Exposure == Exposure.CoaxOut)
-            foreach (var site in spec.Sites.Where(s => s.Sac)) Boss.Sacs.Add(new BossSac { Site = site, Hp = spec.SacHp });
+            foreach (var site in spec.Sites.Where(s => s.Sac)) Boss.Sacs.Add(new BossSac { Site = site, Hp = spec.SacHp * PlaneBossTuning.MeterShare });
         if (spec.Move == BossMove.Hide) PlaceStands(Boss);
         PlaceLamps(Boss);
     }
@@ -367,6 +374,8 @@ public sealed partial class PlaneWorld
         {
             Vector2 off = p.Position - boss.Position;
             float d = off.Length(), min = boss.Radius * (boss.Freed && !boss.Spec.Reference ? boss.Spec.TrueScale : 1f) + Radius;
+            // (Her dash goes through it unharmed.)
+            if (DashesThrough(boss.Position, min)) return;
             if (d < min)
             {
                 Vector2 n = d > 1e-3f ? off / d : boss.Facing;
@@ -379,6 +388,32 @@ public sealed partial class PlaneWorld
                     p.Velocity += n * PlaneBossTuning.ContactKnockback;
             }
         }
+    }
+
+    /// <summary>
+    /// Her dash goes through a body (a boss's: <paramref name="min"/> metres from its centre to hers) unharmed: while it
+    /// lasts she is let into it; should it end inside, she slides out of it at DashExit, still unharmed. True: leave her be
+    /// (no push, no hurt).
+    /// </summary>
+    bool DashesThrough(Vector2 centre, float min)
+    {
+        var p = Player;
+        var off = p.Position - centre;
+        float d = off.Length();
+        if (d >= min)
+        {
+            p.DashThrough = false;
+            return false;
+        }
+        if (p.DashInvulnerableTimer > 0f)
+        {
+            p.DashThrough = true;
+            return true;
+        }
+        if (!p.DashThrough) return false;
+        var n = d > 1e-3f ? off / d : SafeNormalize(p.Velocity.LengthSquared() > 1e-6f ? p.Velocity : p.Aim);
+        p.Position = centre + n * MathF.Min(min, d + PlaneBossTuning.DashExit * Dt);
+        return true;
     }
 
     void Land(PlaneBoss boss)
@@ -1156,7 +1191,7 @@ public sealed partial class PlaneWorld
                     if (boss.Spec.Exposure == Exposure.CoaxOut)
                     {
                         int regrow = Math.Max(1, boss.Sacs.Count - boss.Phase + 1);
-                        foreach (var sac in boss.Sacs.Take(regrow)) sac.Hp = boss.Spec.SacHp * 0.7f;
+                        foreach (var sac in boss.Sacs.Take(regrow)) sac.Hp = boss.Spec.SacHp * PlaneBossTuning.MeterShare * 0.7f;
                     }
                     Events.Add(new PlaneEvent(PlaneEventType.BossMutates, boss.Position, boss.Facing));
                     break;
