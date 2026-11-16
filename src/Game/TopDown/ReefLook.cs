@@ -5,7 +5,7 @@ namespace OctoShoots.Game.TopDown;
 
 /// <summary>
 /// How a depth looks (THEME-BIBLE §6.2 light budget, §6.3 palette, §7 the depths): its water, seabed and reef colours,
-/// its sun, how sharp its caustics and how strong its god rays, and its look's Menace (0 in the Shallows, about 0.6 at
+/// its sun, how sharp its caustics, and its look's Menace (0 in the Shallows, about 0.6 at
 /// most), which thickens the murk, darkens the vignette and drains the colour. No depth is much darker than the Coral
 /// Carnival: the dark grows with the descent, but every level stays readable. One look drives every reef shader through the
 /// reef_* shader globals, the environment and the sun, so the descent is felt everywhere at once.
@@ -30,9 +30,8 @@ public sealed record ReefLook
     public required float SunEnergy { get; init; }
     public required Color Ambient { get; init; }
     public required float AmbientEnergy { get; init; }
-    /// <summary>Caustic and god-ray strength (0 none).</summary>
+    /// <summary>Caustic strength (0 none).</summary>
     public required float Caustics { get; init; }
-    public required float Rays { get; init; }
     public required float Menace { get; init; }
     public required float Saturation { get; init; }
     public required float Vignette { get; init; }
@@ -68,7 +67,7 @@ public sealed record ReefLook
             Sand = L(a.Sand, b.Sand), Rock = L(a.Rock, b.Rock), Coral = L(a.Coral, b.Coral), Coral2 = L(a.Coral2, b.Coral2),
             Algae = L(a.Algae, b.Algae), Sponge = L(a.Sponge, b.Sponge), Butter = L(a.Butter, b.Butter),
             Sun = L(a.Sun, b.Sun), SunEnergy = F(a.SunEnergy, b.SunEnergy), Ambient = L(a.Ambient, b.Ambient), AmbientEnergy = F(a.AmbientEnergy, b.AmbientEnergy),
-            Caustics = F(a.Caustics, b.Caustics), Rays = F(a.Rays, b.Rays), Menace = F(a.Menace, b.Menace), Saturation = F(a.Saturation, b.Saturation),
+            Caustics = F(a.Caustics, b.Caustics), Menace = F(a.Menace, b.Menace), Saturation = F(a.Saturation, b.Saturation),
             Vignette = F(a.Vignette, b.Vignette), Fog = F(a.Fog, b.Fog), Contrast = F(a.Contrast, b.Contrast), Lantern = F(a.Lantern, b.Lantern),
             Dark = t < 0.5f ? a.Dark : b.Dark,
             FanA = L(a.FanA, b.FanA), FanB = L(a.FanB, b.FanB), SoftCoral = L(a.SoftCoral, b.SoftCoral), HardCoral = L(a.HardCoral, b.HardCoral), Grass = L(a.Grass, b.Grass),
@@ -128,7 +127,7 @@ public sealed record ReefLook
         Sand = C("#E3D2A0"), Rock = C("#C9C2AC"),
         Coral = C("#F089A8"), Coral2 = C("#B79BE0"), Algae = C("#A9C46B"), Sponge = C("#5EC7BC"), Butter = C("#F3DE8C"),
         Sun = C("#FFF8EC"), SunEnergy = 0.78f, Ambient = C("#3FA6C0"), AmbientEnergy = 0.13f,
-        Caustics = 1f, Rays = 1f, Menace = 0f, Saturation = 1.3f, Vignette = 0.36f, Fog = 0.3f, Contrast = 1.22f,
+        Caustics = 1f, Menace = 0f, Saturation = 1.3f, Vignette = 0.36f, Fog = 0.3f, Contrast = 1.22f,
         FanA = C("#B48CDC"), FanB = C("#F28BB0"), SoftCoral = C("#F6A5C0"), HardCoral = C("#F1DDA2"), Grass = C("#8FC85A"),
     };
 
@@ -141,7 +140,7 @@ public sealed record ReefLook
     {
         WaterShallow = C("#4AA3AE"), WaterDeep = C("#25839A"), Murk = C("#0F4D5E"),
         Sand = C("#BDAE84"), Rock = C("#A9A595"),
-        SunEnergy = 0.4f, AmbientEnergy = 0.1f, Caustics = 0.7f, Rays = 0.7f, Fog = 0.24f, Vignette = 0.42f, Contrast = 1.2f,
+        SunEnergy = 0.4f, AmbientEnergy = 0.1f, Caustics = 0.7f, Fog = 0.24f, Vignette = 0.42f, Contrast = 1.2f,
     };
 
     /// <summary>
@@ -156,7 +155,7 @@ public sealed record ReefLook
         WaterShallow = C("#3E90AA"), WaterDeep = C("#1F6E90"), Murk = C("#0C3A56"),
         Sand = C("#B0A27C"), Rock = C("#96948A"),
         Sun = C("#FFEACB"), SunEnergy = 0.4f, Ambient = C("#2E86AA"), AmbientEnergy = 0.1f,
-        Caustics = 0.8f, Rays = 0.6f, Menace = 0f, Saturation = 1.3f, Vignette = 0.42f, Fog = 0.2f, Contrast = 1.22f,
+        Caustics = 0.8f, Menace = 0f, Saturation = 1.3f, Vignette = 0.42f, Fog = 0.2f, Contrast = 1.22f,
         Lantern = 1.25f,
     };
 
@@ -166,7 +165,7 @@ public sealed record ReefLook
         WaterShallow = C("#8FBF6F"), WaterDeep = C("#2E7D5B"), Murk = C("#173F31"),
         Sand = C("#B9B07E"), Rock = C("#5C6E46"), Coral = C("#C88AA0"), Coral2 = C("#8C8FBF"), Algae = C("#7FA84A"),
         Sun = C("#E8D878"), SunEnergy = 0.95f, Ambient = C("#7FB88A"), AmbientEnergy = 0.7f,
-        Caustics = 0.6f, Rays = 0.75f, Menace = 0.15f, Saturation = 1f, Vignette = 0.4f, Fog = 0.45f, Lantern = 1.1f,
+        Caustics = 0.6f, Menace = 0.15f, Saturation = 1f, Vignette = 0.4f, Fog = 0.45f, Lantern = 1.1f,
     };
 
     public static readonly ReefLook Galleon = Shallows with
@@ -175,7 +174,7 @@ public sealed record ReefLook
         WaterShallow = C("#6B7A84"), WaterDeep = C("#4A5A66"), Murk = C("#1F272E"),
         Sand = C("#9C8C6A"), Rock = C("#7A5230"), Coral = C("#B07A6A"), Coral2 = C("#8A4B2E"), Algae = C("#6E7A4A"),
         Butter = C("#D9A441"), Sun = C("#F2C14E"), SunEnergy = 0.7f, Ambient = C("#6A7680"), AmbientEnergy = 0.5f,
-        Caustics = 0.3f, Rays = 0.5f, Menace = 0.35f, Saturation = 0.9f, Vignette = 0.5f, Fog = 0.55f, Lantern = 1.35f,
+        Caustics = 0.3f, Menace = 0.35f, Saturation = 0.9f, Vignette = 0.5f, Fog = 0.55f, Lantern = 1.35f,
     };
 
     public static readonly ReefLook Carnival = Shallows with
@@ -184,14 +183,13 @@ public sealed record ReefLook
         WaterShallow = C("#5A3E8A"), WaterDeep = C("#3A2A5E"), Murk = C("#1A1230"),
         Sand = C("#6E5A8A"), Rock = C("#4A3A6A"), Coral = C("#B44FD0"), Coral2 = C("#FF4FA3"), Sponge = C("#2FF3E0"), Butter = C("#9B5CFF"),
         Sun = C("#C9A8FF"), SunEnergy = 0.35f, Ambient = C("#5A4A8A"), AmbientEnergy = 0.45f,
-        Caustics = 0f, Rays = 0f, Menace = 0.5f, Saturation = 1.15f, Vignette = 0.6f, Fog = 0.6f, Lantern = 1.5f,
+        Caustics = 0f, Menace = 0.5f, Saturation = 1.15f, Vignette = 0.6f, Fog = 0.6f, Lantern = 1.5f,
     };
 
     /// <summary>
     /// The showcase reef (docs/VISUAL-SHOWCASE.md): painted as the reef was (look 0), in a cool grey water with only a
     /// breath of blue: slate-grey rock crusted with vivid coral (pink, violet, orange, a butter yellow) that shows its
-    /// colour where her light falls, pale grey sand that her light and the shafts from above pool on, teal turf; a few
-    /// god rays reaching down. Outside her light the reef keeps little colour (topdown_post's unlit_saturation).
+    /// colour where her light falls, pale grey sand that her light pools on, teal turf. Outside her light the reef keeps little colour (topdown_post's unlit_saturation).
     /// </summary>
     public static readonly ReefLook Showcase = Shallows with
     {
@@ -200,7 +198,7 @@ public sealed record ReefLook
         Sand = C("#8E9399"), Rock = C("#555C66"),
         Coral = C("#F0559F"), Coral2 = C("#9A5CF0"), Algae = C("#3BAE90"), Sponge = C("#F59A32"), Butter = C("#F6D24E"),
         Sun = C("#E4ECF4"), SunEnergy = 0.5f, Ambient = C("#4A525E"), AmbientEnergy = 0.22f,
-        Caustics = 0.7f, Rays = 0.6f, Menace = 0.3f, Saturation = 1.15f, Vignette = 0.7f, Fog = 0.22f, Contrast = 1.2f, Lantern = 1.4f,
+        Caustics = 0.7f, Menace = 0.3f, Saturation = 1.15f, Vignette = 0.7f, Fog = 0.22f, Contrast = 1.2f, Lantern = 1.4f,
         FanA = C("#A472F2"), FanB = C("#F26AB4"), SoftCoral = C("#FF86C6"), HardCoral = C("#FFB23E"), Grass = C("#3FCBA4"),
     };
 
@@ -209,7 +207,7 @@ public sealed record ReefLook
     {
         WaterShallow = C("#6C7884"), WaterDeep = C("#4C5865"), Murk = C("#1C232B"),
         Sand = C("#A8ADB2"), Rock = C("#6F7781"),
-        SunEnergy = 0.8f, AmbientEnergy = 0.3f, Caustics = 1f, Rays = 1f, Menace = 0f, Fog = 0.2f, Vignette = 0.45f, Lantern = 1f,
+        SunEnergy = 0.8f, AmbientEnergy = 0.3f, Caustics = 1f, Menace = 0f, Fog = 0.2f, Vignette = 0.45f, Lantern = 1f,
     };
 
     /// <summary>The Blue Hollow near the bottom: the water darker, the sun faint, her light carrying the reef.</summary>
@@ -217,7 +215,7 @@ public sealed record ReefLook
     {
         WaterShallow = C("#3B444F"), WaterDeep = C("#232A33"), Murk = C("#07090C"),
         Sand = C("#71767C"), Rock = C("#434951"),
-        SunEnergy = 0.3f, AmbientEnergy = 0.16f, Caustics = 0.35f, Rays = 0.3f, Menace = 0.5f, Fog = 0.3f, Vignette = 0.82f, Lantern = 1.75f,
+        SunEnergy = 0.3f, AmbientEnergy = 0.16f, Caustics = 0.35f, Menace = 0.5f, Fog = 0.3f, Vignette = 0.82f, Lantern = 1.75f,
     };
 
     /// <summary>
@@ -230,7 +228,7 @@ public sealed record ReefLook
         WaterShallow = C("#304878"), WaterDeep = C("#1F3460"), Murk = C("#0D1830"),
         Sand = C("#4E5A74"), Rock = C("#3A4866"), Coral = C("#4F7099"), Coral2 = C("#3E5C86"), Algae = C("#3A6070"), Sponge = C("#7FE7FF"),
         Sun = C("#7FA8D8"), SunEnergy = 0.32f, Ambient = C("#3A5080"), AmbientEnergy = 0.44f,
-        Caustics = 0f, Rays = 0f, Menace = 0.55f, Saturation = 0.85f, Vignette = 0.62f, Fog = 0.62f, Lantern = 1.85f,
+        Caustics = 0f, Menace = 0.55f, Saturation = 0.85f, Vignette = 0.62f, Fog = 0.62f, Lantern = 1.85f,
     };
 
     public static readonly ReefLook Abyss = Trench with
@@ -254,7 +252,7 @@ public sealed record ReefLook
         WaterShallow = C("#1C2340"), WaterDeep = C("#151A33"), Murk = C("#0D1124"),
         Rock = C("#3C4054"), Sand = C("#4C4F66"), Coral = C("#7A3A62"), Coral2 = C("#3E4C70"), Algae = C("#2E4A4C"), Sponge = C("#2A6A66"), Butter = C("#8A7440"),
         Sun = C("#000000"), SunEnergy = 0f, Ambient = C("#5A68A0"), AmbientEnergy = 0.6f,
-        Caustics = 0f, Rays = 0f, Menace = 0.6f, Saturation = 0.85f, Vignette = 0.35f, Fog = 0.35f, Lantern = 2f,
+        Caustics = 0f, Menace = 0.6f, Saturation = 0.85f, Vignette = 0.35f, Fog = 0.35f, Lantern = 2f,
         FanA = C("#4A3A6A"), FanB = C("#6A3A5A"), SoftCoral = C("#6A4A64"), HardCoral = C("#6E6450"), Grass = C("#2E4A3A"),
         Dark = true,
     };
@@ -265,7 +263,7 @@ public sealed record ReefLook
         WaterShallow = C("#F4F8FF"), WaterDeep = C("#DCE6F5"), Murk = C("#9AA8C0"),
         Sand = C("#3A7BFF"), Rock = C("#C8D0E0"), Coral = C("#FF6BCB"), Coral2 = C("#7CFC4D"), Algae = C("#7CFC4D"), Butter = C("#FF4D5E"),
         Sun = C("#F4F8FF"), SunEnergy = 1.4f, Ambient = C("#F4F8FF"), AmbientEnergy = 1.2f,
-        Caustics = 0f, Rays = 0f, Menace = 1f, Saturation = 1.2f, Vignette = 0.1f, Fog = 0.05f, Lantern = 0.6f,
+        Caustics = 0f, Menace = 1f, Saturation = 1.2f, Vignette = 0.1f, Fog = 0.05f, Lantern = 0.6f,
     };
 
     /// <summary>Sets the reef globals the shaders read (colours converted to linear).</summary>
@@ -288,7 +286,6 @@ public sealed record ReefLook
         V("reef_butter", Butter);
         V("reef_sun", Sun);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_caustics"), Caustics);
-        RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_rays"), Rays);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_menace"), Menace);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_saturation"), Saturation);
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_vignette"), Vignette);

@@ -897,15 +897,15 @@ glows in the water round her (§5.3).
 
 ### 5.1 Per-depth light budget (drives palette, mood, and difficulty readability)
 
-| Depth | Ambient | God rays | Player glow radius | Primary scenery light |
-|---|---|---|---|---|
-| 0 Shallows | High — sunlit turquoise | Strong, broad | Small (supplemental) | Sun + caustics |
-| 1 Kelp | Dappled green | Broken by canopy | Small | Light shafts |
-| 2 Galleon | Amber, dusty | Only through wreck holes | Medium | Lanternfish, loot glints |
-| 3 Carnival | Neon but flickering | None — "stage lights" | Medium | Corrupted neon, bounce pads |
-| 4 Trench | Dim cold blue, about as light as the Carnival | None | **Large — she is the lantern** | Bioluminescent flora specks |
-| 5 Abyss | Dim indigo, the darkest — a shade darker than the Carnival | None | **Large, bloom-heavy** | Neon outlines + distant glowing eyes |
-| 6 Tank | Flat fluorescent LED | None — *wrong* | Irrelevant — everything is lit | Harsh, shadowless, artificial |
+| Depth | Ambient | Player glow radius | Primary scenery light |
+|---|---|---|---|
+| 0 Shallows | High — sunlit turquoise | Small (supplemental) | Sun + caustics |
+| 1 Kelp | Dappled green | Small | Dappled sun |
+| 2 Galleon | Amber, dusty | Medium | Lanternfish, loot glints |
+| 3 Carnival | Neon but flickering | Medium | Corrupted neon, bounce pads |
+| 4 Trench | Dim cold blue, about as light as the Carnival | **Large — she is the lantern** | Bioluminescent flora specks |
+| 5 Abyss | Dim indigo, the darkest — a shade darker than the Carnival | **Large, bloom-heavy** | Neon outlines + distant glowing eyes |
+| 6 Tank | Flat fluorescent LED | Irrelevant — everything is lit | Harsh, shadowless, artificial |
 
 The darkest depth is only a little darker than the Coral Carnival: the descent darkens, but every level stays
 readable (`ReefLook`: the Trench's sun 0.32 and ambient 0.44, the Abyss's 0.26 and 0.4, against the Carnival's 0.35
@@ -914,9 +914,8 @@ and 0.45; their look's Menace at most 0.6).
 - A depth's look Menace (0 in the Shallows, at most 0.6) drives fog density, saturation falloff, the shade under
   overhead rock and how far the player glow carries (inherited "glow items feel precious" presentation rule). It is
   the look's own; the difficulty's Menace (§6.2) rises on regardless.
-- **Volumetric god rays** rake the floor at the sun's angle in lit depths;
-  inherited raymarch water pass, re-aimed: rays now cross the view instead of
-  the lens. Caustics play over upward faces and fade with depth (inherited).
+- **No god rays:** no shafts of sunlight are drawn through the water. Caustics play over upward faces and fade with
+  depth (inherited); the light springs' single beams (CORRUPTION) are the only shafts.
 - **Fog is also a fairness tool:** creature shots glow in their own color with
   short trails; telegraphs add rim-light flares — readability never drowns in
   mood (inherited §7.2 philosophy).
@@ -980,8 +979,7 @@ exactly and cheaply, and the water glows where light passes through it.
   bright haze or a mask.
 - **Where the sun reaches — the sun map** (`SunMap.cs`, sunlight.gdshaderinc `sun_lit`): for every point of the sea
   surface, the height where its ray of sunlight first meets the reef (terrain, a cave's roof, an arch or overhang),
-  cast once per level on a worker thread (a 200 × 200 map). The god rays are summed only where the sun reaches, so
-  light falls in beams past the walls and through the holes in arches; creatures, flora and marine snow lose their
+  cast once per level on a worker thread (a 200 × 200 map). Creatures, flora and marine snow lose their
   caustics in the reef's shade. Off during the dive (the sea surface moves), back when the next level's map is ready.
 - **Refraction**: her bell is a lens, gathering her light into bright caustic filaments that play over the floor below
   her (wider and softer the farther the floor). Her shots throw nothing on the floor below them: no spot, no shadow,

@@ -55,7 +55,7 @@ public partial class SettingsCard : PanelContainer
             _view.SunLight = (float)v;
             Save();
         };
-        box.AddChild(Row("Sunlight", "God rays, caustics and dappled light under the water (0 turns them off).", sun));
+        box.AddChild(Row("Sunlight", "Caustics and dappled light under the water (0 turns them off).", sun));
 
         var shadows = Toggle(_view.LightShadows, on =>
         {

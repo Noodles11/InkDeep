@@ -25,7 +25,7 @@ public sealed class ViewOptions
     /// to the window; the HUD stays sharp. Keeps big screens cool (0 = always native).
     /// </summary>
     [Tune("View", 0f, 2160f)] public int MaxRenderHeight = 1080;
-    /// <summary>Strength of sunlight under water: god rays, caustics and dappled light (0 turns them off).</summary>
+    /// <summary>Strength of sunlight under water: caustics and dappled light (0 turns them off).</summary>
     [Tune("Light", 0f, 2f)] public float SunLight = 1f;
     /// <summary>
     /// Her lantern and the reef's lights (springs, clam rooms, the Crack) cast shadows. Off is lighter on the GPU: light

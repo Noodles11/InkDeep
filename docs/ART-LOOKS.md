@@ -29,7 +29,7 @@ drawn out into a dash or a line; where its stretch on screen passes 1.25 it fade
   and nearer white too; her bubbles' halos stronger; the environment's glow stronger and wider (`ArtLook.Apply`), no
   ambient occlusion, a little more saturation, the vignette heavier for contrast.
 - **No caustics** (the `sun_caustic` global, 0 in this look, `ArtLook.ApplyGlobals`): the sea surface's moving
-  filaments of light fall on nothing, reef, flora, kelp or creature. The god rays stay.
+  filaments of light fall on nothing, reef, flora, kelp or creature.
 - **The paper:** a fine tooth and the faint unevenness of a dried wash over the whole sheet.
 - **Kept as they are**, drawn after the water pass over the drawing: Clementine, her light's shots, the magic and
   corruption particles, and the shimmer of hot water over a leak.

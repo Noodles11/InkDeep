@@ -3,9 +3,6 @@
 //   Below it the world blurs, more the deeper it lies; above it rock blurs into soft foreground silhouettes. The reef's
 //   colour is the same at every height, over the layer and under it, seen through one even water (turquoise in the
 //   Shallows, murk further down).
-//   God rays rake across the view: shafts of sunlight marched along each view ray through the water column, parallel
-//   to the sun, ending in the caustics they make below, cut off where the reef shades the water (SunMap). Never into
-//   the lens: the camera looks down.
 //   Her light glows in the water along every view ray, shadowed by the reef (light_field, DESIGN-TOPDOWN §5.3); her bell
 //   and her bubbles throw caustics on the floor.
 //   A faint refraction wobble, a grade (saturation, cool shadows, sunlit highlights) and a vignette tinted by the
@@ -23,7 +20,6 @@ global uniform vec3 reef_murk;
 // A cave's dark (ReefLook.Dark): never black, the outlines of what is there drawn faintly.
 global uniform float reef_dark;
 global uniform vec3 reef_sun;
-global uniform float reef_rays;
 global uniform float reef_caustics;
 global uniform float reef_menace;
 global uniform float reef_saturation;
@@ -146,7 +142,7 @@ global uniform vec3 her_warm;
 /// A big-merge kill: a white lift at the screen's edges only, 1 → 0 over 60 ms.
 uniform float edge_flash = 0.0;
 /// The faint refraction wobble (0 with reduced motion).
-/// The absolute position (xz) of the world's origin: the god rays never jump after a dive.
+/// The absolute position (xz) of the world's origin: the swells and caustics never jump after a dive.
 uniform vec2 world_origin = vec2(0.0);
 uniform float wobble = 1.0;
 /// Verification (--dbg-lightview): 1 shows where the sun reaches (yellow) and her light reaches (orange) on what is drawn.
@@ -521,25 +517,9 @@ void fragment() {
 	vec3 cam = CAMERA_POSITION_WORLD;
 	vec3 ray = normalize(world - cam);
 
-	// God rays: march the view ray through the water column, from the sea surface down to what it hits, summing the
-	// shaft density (parallel to the sun, drifting with the swell) where the sun reaches. Longer water paths gather more
-	// light; rock that shades the water leaves it dark, so the light falls in beams past the walls and through arches.
 	vec3 hit = open_deep ? cam + ray * 90.0 : world;
 	float t0 = ray.y < -1e-3 ? max((sea_surface_y - cam.y) / ray.y, 0.0) : 0.0;
 	float t1 = max(dot(hit - cam, ray), t0);
-	float span = t1 - t0;
-	float shafts = 0.0;
-	if (reef_rays > 0.0 && span > 0.1) {
-		float jitter = hash12(FRAGCOORD.xy + fract(TIME) * 61.0);
-		for (int i = 0; i < 10; i++) {
-			vec3 q = cam + ray * (t0 + span * (float(i) + jitter) / 10.0);
-			// Only where the sun reaches: rock, arches and cave roofs cut the shafts off (SunMap).
-			shafts += sun_shafts(q + vec3(world_origin.x, 0.0, world_origin.y), TIME) * sun_lit(q);
-		}
-		shafts /= 10.0;
-	}
-	float column = smoothstep(0.0, 26.0, span);
-	col += reef_sun * shafts * column * reef_rays * light_strength * 0.22 * (1.0 - 0.5 * smoothstep(0.0, 8.0, above));
 
 	// Her glow scatters in the water her light passes through, along this pixel's whole view ray (light_field): a soft
 	// glow round her.
