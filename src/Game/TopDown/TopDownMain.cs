@@ -437,6 +437,8 @@ public partial class TopDownMain : Node3D
         ViewOptions.Shadows = view.LightShadows && System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--dbg-noshadow") < 0;
         ReefLook.Brightness = Mathf.Clamp(view.Brightness, 0.6f, 1.8f);
         _perf = OS.GetCmdlineUserArgs().Contains("--dbg-perf");
+        // (Measured with vsync off: a window behind others is paced to a crawl, whatever the frame costs.)
+        if (_perf) DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
         Engine.MaxFps = _captureDir is null && !_perf ? view.MaxFps : 0;
         if (_captureDir is not null || _perf) RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
         BuildEnvironment();
@@ -1319,6 +1321,8 @@ public partial class TopDownMain : Node3D
         _origin = Vector2.Zero;
         _camera.SetWorldOrigin(_origin);
         _level.Show(shape);
+        // (On the cube reef its rock is cut flat at her plane everywhere: ReefStreamView.Rise.)
+        _level.SeeAll = InReef;
         _level.Place(Vector3.Zero, _origin);
         _levelShape = shape;
         EnterLevel(shape.Map, keepRun, ms, arriveAt);

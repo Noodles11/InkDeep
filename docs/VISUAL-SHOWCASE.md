@@ -54,7 +54,7 @@ between).
   fading out over 1.2 s after (`BlightView.Wave`, `murkling`'s `wave_seen`).
 
 - **Coral gardens** (`LevelView.Gardens`): sea rods, staghorn, sea fans, elkhorn and brain corals (no sponges) packed
-  in drifting patches on the walls' tops and ledges, and in a band along their feet at the edge of the open floor.
+  in drifting patches on the walls' tops and ledges, and in a band along their feet at the edge of the open floor; like the seagrass and the coral heads, only half the spots are dressed (`LevelView.DecorShare`).
 
 - **Her beam as a flashlight's, lit as light is** (`BeamView`, `BeamShadow`, `her_beam_volume.gdshader`): each frame
   a grid of 64 × 64 rays is cast in three dimensions from her bell over the whole of her round cone (±22°, a little

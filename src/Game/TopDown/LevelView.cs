@@ -400,12 +400,19 @@ public partial class LevelView : Node3D
         if (amount > 0f) SeeHeights(her);
         foreach (var m in _materials)
         {
+            m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_all"), SeeAll);
             m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_through"), KeptWhole(m) ? v with { W = 0f } : v);
             // (Cut at the swim plane's own height, never her bobbing: where the caps lie.)
             m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_through_y"), Position.Y + LevelMap.SwimBand);
         }
     }
     Vector4 _seeThrough;
+
+    /// <summary>The cube reef: its rock (and what stands on it) cut flat at her plane everywhere (level_frame's see_all).</summary>
+    public bool SeeAll { get; set; }
+
+    /// <summary>The share of the reef's dressing laid (the coral gardens, the seagrass, the coral heads): a spot keeps it by its own hash.</summary>
+    public const float DecorShare = 0.5f;
 
     /// <summary>
     /// The height (local metres) the cutout cuts at, and the caps lie at: CapOver over the swim plane (level_frame's
@@ -2008,6 +2015,8 @@ public partial class LevelView : Node3D
         for (float y = ys; y < ye; y += step)
         for (float x = xs; x < xe; x += step)
         {
+            // (Only a share of the spots dressed at all.)
+            if (Hash(x, y, 31) >= DecorShare) continue;
             var p = new System.Numerics.Vector2(x + Hash(x, y, 1) * step, y + Hash(x, y, 2) * step);
             if (map.InShaft(p, 3f)) continue;
             float h = map.HeightAt(p);
@@ -2069,6 +2078,8 @@ public partial class LevelView : Node3D
         for (float y = ys; y < ye; y += step)
         for (float x = xs; x < xe; x += step)
         {
+            // (Only a share of the spots dressed at all.)
+            if (Hash(x, y, 31) >= DecorShare) continue;
             var p = new System.Numerics.Vector2(x + Hash(x, y, 1) * step, y + Hash(x, y, 2) * step);
             float h = map.HeightAt(p);
             // The seabed of the shallows only: not the walls, not the deeps.
