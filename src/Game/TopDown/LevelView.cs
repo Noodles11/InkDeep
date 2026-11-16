@@ -400,16 +400,12 @@ public partial class LevelView : Node3D
         if (amount > 0f) SeeHeights(her);
         foreach (var m in _materials)
         {
-            m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_all"), SeeAll);
             m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_through"), KeptWhole(m) ? v with { W = 0f } : v);
             // (Cut at the swim plane's own height, never her bobbing: where the caps lie.)
             m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_through_y"), Position.Y + LevelMap.SwimBand);
         }
     }
     Vector4 _seeThrough;
-
-    /// <summary>The cube reef: its rock (and what stands on it) cut flat at her plane everywhere (level_frame's see_all).</summary>
-    public bool SeeAll { get; set; }
 
     /// <summary>The share of the reef's dressing laid (the coral gardens, the seagrass, the coral heads): a spot keeps it by its own hash.</summary>
     public const float DecorShare = 0.5f;

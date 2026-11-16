@@ -16,9 +16,6 @@ uniform vec2 level_origin = vec2(0.0);
 uniform vec4 portal = vec4(0.0);
 uniform vec4 see_through = vec4(0.0);
 uniform float see_through_y = 0.0;
-// The cube reef's rock cut flat everywhere (ReefStreamView, LevelView.SeeAll): all of it over see_through_y is cut, in
-// front of her and behind, whatever see_through says; the caps show its cut face, outlined.
-uniform bool see_all = false;
 // The map round her for the cutout (LevelView.SeeHeights; box: x, z of its corner, its span in metres, 0 for none):
 // see_heights its height (rock, roofs and lids), see_keep 1 where the cut takes the rock over it (the walls in front of
 // her, whole: LevelView.SeeKeep), 0 where it stays.
@@ -60,7 +57,6 @@ float lf_see_front(vec3 world, vec3 cam) {
 // Whether the cut takes what stands over a point (at any height over the cut): on the map round her, as it says (whole
 // walls, LevelView.SeeKeep); past it, what lies on the camera's side of her.
 bool lf_see_column(vec3 world, vec3 cam) {
-	if (see_all) return true;
 	if (see_through.w <= 0.0) return false;
 	if (see_heights_box.z > 0.0) {
 		vec2 uv = (world.xz - see_heights_box.xy) / see_heights_box.z;
@@ -77,18 +73,18 @@ float lf_see_dist(vec3 world, vec3 cam) {
 
 // lf_see_dist, and whether the point may be cut at all (in .y).
 vec2 lf_see_edge(vec3 world, vec3 cam) {
-	if (see_through.w <= 0.0 && !see_all) return vec2(1e3, 0.0);
+	if (see_through.w <= 0.0) return vec2(1e3, 0.0);
 	return vec2(lf_see_dist(world, cam), 1.0);
 }
 
 // True where something in front of her is cut away: its edge sharp.
 bool lf_see_cut(vec3 world, vec3 cam, vec2 frag) {
-	return (see_through.w > 0.0 || see_all) && lf_see_dist(world, cam) < 0.0;
+	return see_through.w > 0.0 && lf_see_dist(world, cam) < 0.0;
 }
 
 // The outline along the cut (0..1), on what is left at its edge.
 float lf_see_rim(vec3 world, vec3 cam) {
-	if (see_through.w <= 0.0 && !see_all) return 0.0;
+	if (see_through.w <= 0.0) return 0.0;
 	float e = lf_see_dist(world, cam);
 	return e >= 0.0 && e < 0.3 ? 1.0 : 0.0;
 }

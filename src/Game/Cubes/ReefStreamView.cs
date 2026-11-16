@@ -100,8 +100,6 @@ public partial class ReefStreamView : Node3D
         _here = new ShaderMaterial { Shader = shader };
         _below = new ShaderMaterial { Shader = shader };
         _above = new ShaderMaterial { Shader = shader };
-        // (Every layer's rock cut flat at its own plane: Place sets each one's height.)
-        foreach (var m in new[] { _here, _below, _above }) m.SetShaderParameter(SN.Of("see_all"), true);
         SetRise(1f, 0f, 0f);
         _murk = new MeshInstance3D
         {
@@ -125,11 +123,11 @@ public partial class ReefStreamView : Node3D
 
     /// <summary>The layer she is on (the one drawn at the swim plane), and the dive's lift.</summary>
     /// <summary>
-    /// How far her layer's walls rise above their own rock, metres. None: the reef's rock is cut flat at each layer's
-    /// plane everywhere (level_frame's see_all), its cut face the caps' dark, outlined, so nothing stands between the
-    /// camera and her or towers behind her.
+    /// How far her layer's walls rise above their own rock, metres: past the camera's own height (CameraRig.Distance at
+    /// its tilt, about 48 m), so no wall's top is ever seen: every wall runs on out past the screen's edge, one tall
+    /// structure, until the cutout takes it.
     /// </summary>
-    public const float Rise = 0f;
+    public const float Rise = 60f;
 
     /// <summary>
     /// The walls' rise on each layer drawn (0–1 of Rise): hers in full; the one she goes to growing as she nears it, the
@@ -260,9 +258,6 @@ public partial class ReefStreamView : Node3D
         _here.SetShaderParameter(SN.Of("level_offset"), new Vector3(0f, _lift, 0f));
         _below.SetShaderParameter(SN.Of("level_offset"), new Vector3(0f, _lift - LayerDrop, 0f));
         _above.SetShaderParameter(SN.Of("level_offset"), new Vector3(0f, _lift + LayerDrop, 0f));
-        _here.SetShaderParameter(SN.Of("see_through_y"), _lift + OctoShoots.Core.Gen.TopDown.LevelMap.SwimBand);
-        _below.SetShaderParameter(SN.Of("see_through_y"), _lift - LayerDrop + OctoShoots.Core.Gen.TopDown.LevelMap.SwimBand);
-        _above.SetShaderParameter(SN.Of("see_through_y"), _lift + LayerDrop + OctoShoots.Core.Gen.TopDown.LevelMap.SwimBand);
         var seen = new HashSet<CubeId>();
         foreach (var key in _shown.Keys)
             if (seen.Add(key.Cube)) Show(key.Cube);

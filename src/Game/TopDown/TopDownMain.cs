@@ -1321,8 +1321,6 @@ public partial class TopDownMain : Node3D
         _origin = Vector2.Zero;
         _camera.SetWorldOrigin(_origin);
         _level.Show(shape);
-        // (On the cube reef its rock is cut flat at her plane everywhere: ReefStreamView.Rise.)
-        _level.SeeAll = InReef;
         _level.Place(Vector3.Zero, _origin);
         _levelShape = shape;
         EnterLevel(shape.Map, keepRun, ms, arriveAt);

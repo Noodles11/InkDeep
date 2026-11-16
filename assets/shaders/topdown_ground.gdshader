@@ -161,7 +161,7 @@ void fragment() {
 	// The cut's edge on what is left of the rock: a sharp line along it.
 	float line_width = max(see_line_width, 2.0 * length(fwidth(world.xz)));
 	bool outline = false;
-	if (!IN_SHADOW_PASS && (see_through.w > 0.0 || see_all)) {
+	if (!IN_SHADOW_PASS && see_through.w > 0.0) {
 		// (A couple of pixels wide however steep the rock; measured on the cut's own distance, not where rock kept
 		// whole meets it.)
 		float edge = lf_see_height() - world.y;
