@@ -223,6 +223,16 @@ public partial class BeamView : Node3D
         mesh.SurfaceEnd();
     }
 
+    /// <summary>The burst inkseeds' stains (her_beam_volume's ink_stains): none of her beam shows within one.</summary>
+    public void SetStains(Vector4[] stains, int count)
+    {
+        foreach (var fan in _fans)
+        {
+            fan.VolumeMaterial.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ink_stains"), stains);
+            fan.VolumeMaterial.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ink_stain_count"), count);
+        }
+    }
+
     /// <summary>A fan for the next of her beams' rays, made as it is first needed.</summary>
     Fan FanAt(int i)
     {

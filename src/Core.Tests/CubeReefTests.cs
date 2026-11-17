@@ -141,6 +141,27 @@ public class CubeStockTests
 
     [Theory]
     [MemberData(nameof(CubeTerrainTests.Seeds), MemberType = typeof(CubeTerrainTests))]
+    public void A_claimed_cube_lays_its_inkseeds_alike_each_time_the_warm_up_layer_too(ulong seed)
+    {
+        var reef = new CubeReef(seed, 5, 4);
+        foreach (int z in new[] { 0, 2 })
+        {
+            var world = LayerWorld(reef, z);
+            foreach (var cube in reef.Space.CubesOf(z))
+            {
+                var entry = cube.Origin + new Vector2(2f, 2f);
+                var terrain = reef.Terrain(cube);
+                var a = CubeStock.Inkseeds(seed, cube, 3, world.Map.Menace, entry, terrain, world.Clear);
+                Assert.Equal(a, CubeStock.Inkseeds(seed, cube, 3, world.Map.Menace, entry, terrain, world.Clear));
+                Assert.InRange(a.Count, 1, InkseedTuning.Least + (int)System.MathF.Round(InkseedTuning.PerMenace * world.Map.Menace));
+                Assert.All(a, s => Assert.True(Vector2.Distance(s, entry) >= InkseedTuning.FromEntry));
+                Assert.All(terrain.Gates, g => Assert.All(a, s => Assert.True(Vector2.Distance(s, g.Mouth) >= InkseedTuning.FromWays)));
+            }
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(CubeTerrainTests.Seeds), MemberType = typeof(CubeTerrainTests))]
     public void Its_stock_lives_wakes_near_her_and_is_put_back_as_left(ulong seed)
     {
         var reef = new CubeReef(seed, 5, 4);

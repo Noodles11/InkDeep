@@ -230,7 +230,9 @@ public sealed partial class PlaneWorld
         float n = 0f;
         Vector2 from = default;
         float nearest = float.MaxValue;
-        if (!Defeated)
+        // (Within an inkseed's stain no light of hers reaches it: PlaneInkseeds.cs.)
+        bool dark = Defeated || Stains.Count > 0 && Stained(at);
+        if (!dark)
             foreach (var s in _lights)
             {
                 var to = new Vector3(at.X - s.Position.X, height, at.Y - s.Position.Y);
@@ -246,7 +248,7 @@ public sealed partial class PlaneWorld
             }
         bool beamed = false;
         var hue = LightHue.None;
-        if (!Defeated && beams)
+        if (!dark && beams)
             foreach (var (beam, worth) in HerBeams)
             {
                 // As much as her beam's light reaches it: more near her, none past a body in the way.
@@ -275,7 +277,7 @@ public sealed partial class PlaneWorld
                 }
             }
         // Her pools of light burn on what stands in them, in their colours (Linger).
-        if (!Defeated && beams && Pools.Count > 0)
+        if (!dark && beams && Pools.Count > 0)
         {
             float pooled = PoolsOn(at, radius, ref hue);
             if (pooled > 0f)
@@ -285,7 +287,7 @@ public sealed partial class PlaneWorld
             }
         }
         // Her fireflies burn a little, in her colours; her glow lends her colours to what is near her (PlaneFireflies.cs).
-        if (!Defeated && beams)
+        if (!dark && beams)
         {
             if (Fireflies.Count > 0)
             {
@@ -319,7 +321,7 @@ public sealed partial class PlaneWorld
         g.Charm = MathF.Max(0f, g.Charm - Dt);
         g.Crit = MathF.Max(0f, g.Crit - Dt);
         // Her colours on it (a charge stone lit in colour lends its colour to what is in its light).
-        if (!Defeated && ChargeStones.Count > 0) hue |= LentAt(at);
+        if (!dark && ChargeStones.Count > 0) hue |= LentAt(at);
         ApplyColour(g, hue, at);
         if (hue == LightHue.White && n > 0f) n *= ColourTuning.WhiteBurn;
         if (from == default && n > 0) from = at;

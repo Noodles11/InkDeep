@@ -193,6 +193,13 @@ public partial class CameraRig : Node3D
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("wake_span"), OctoShoots.Game.Fx.WakeField.Span);
     }
 
+    /// <summary>The burst inkseeds' stains of darkness (topdown_post's ink_stains): each world x, z, radius, strength.</summary>
+    public void SetStains(Vector4[] stains, int count)
+    {
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ink_stains"), stains);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ink_stain_count"), count);
+    }
+
     /// <summary>The swells in the water round her (WaterSwells): where, how old and strong, and the way she was going.</summary>
     public void SetSwells(OctoShoots.Game.Fx.WaterSwells swells)
     {

@@ -93,7 +93,8 @@ the reef was never being called home. It was being kept.
   of the Drowned Court (§7); so is every boss below layer 5. The reef goes 36 layers down; the Tank's finale is not
   placed in it yet.
 - **What a cube holds** (CUBE-WORLD-PLAN §9) is decided as she first swims into it: its murklings (never on the warm-up
-  layer, never in the cube she dives into), and now and then a mouth into a place of its own. The pause menu's chart
+  layer, never in the cube she dives into), its inkseeds (the warm-up layer too), and now and then a mouth into a place
+  of its own. The pause menu's chart
   is her layer: the cubes she has claimed and what they hold.
 - **Havens** (DIVE §4): small safe sub-levels behind mouths, two a layer at most, always bright, each with its shop and
   a pick of the services she has unlocked. Entering one heals her whole, banks everything she carries and saves the dive.
@@ -130,6 +131,9 @@ emptied, it is freed, leaving a core of light.
   them and budded out of the leak caves' ink: basic ones that cling and drink her light, throwers, shoals (a whole school at once, ringing her) and
   primes (which break into murklings). The deeper (the Menace), the bigger and the more of them. Their size is their
   corruption; they wear no ring.
+- **Inkseeds** (CORRUPTION): traps of ink in the reef's water, unseen but for their heartbeat. Her light wakes one and
+  it swells; her beam held on it 2 s frees it, else it bursts, throwing everything back, hurting her alone, and
+  leaving a stain of darkness no light shows through for 10 s, where murklings hide.
 - **Kept, switched off** (CORRUPTION; ADVENTURE §3–4): the war's creatures (Blightroots, Blotters, Thumpsquirts,
   Inkwardens, Lashjaws, their dens) and the fish that turn (spiked, tadpole and shoal murklings, Hearthguards).
 - **Planned** (proposals/DEEP-FISH-PROPOSAL.md): two fish of their own for each depth.

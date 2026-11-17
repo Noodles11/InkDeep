@@ -87,6 +87,8 @@ public sealed class CubeRecordSave
     public string Seen { get; set; } = "";
     public List<CubePlaceSave> Places { get; set; } = new();
     public List<CubeStockSave>? Left { get; set; }
+    /// <summary>Its inkseeds left (x, y by turns).</summary>
+    public List<float>? Seeds { get; set; }
 }
 
 public sealed class CubePlaceSave
@@ -120,6 +122,7 @@ public static class CubeRecordSaving
             Seen = Convert.ToBase64String(r.Seen.SelectMany(BitConverter.GetBytes).ToArray()),
             Places = r.Places.Select(p => new CubePlaceSave { Kind = p.Kind, AtX = p.Mouth.At.X, AtY = p.Mouth.At.Y, IntoX = p.Mouth.Into.X, IntoY = p.Mouth.Into.Y }).ToList(),
             Left = r.Left?.Select(l => new CubeStockSave { Spawn = l.Spawn, Seed = l.Seed, Prime = l.Prime, Shoal = l.Shoal, At = l.At.SelectMany(a => new[] { a.X, a.Y }).ToList() }).ToList(),
+            Seeds = r.Seeds?.SelectMany(a => new[] { a.X, a.Y }).ToList(),
         }).ToList(),
         Shut = records.Shut.Select(CubeDiveSave.EdgeKey).ToList(),
         Last = records.Last is { } last ? CubeDiveSave.EdgeKey(last) : null,
@@ -137,6 +140,7 @@ public static class CubeRecordSaving
             foreach (var p in c.Places) r.Places.Add((p.Kind, new Doorway(new Vector2(p.AtX, p.AtY), new Vector2(p.IntoX, p.IntoY))));
             r.Left = c.Left?.Select(l => new StockLeft(l.Spawn, l.Seed, l.Prime, l.Shoal,
                 Enumerable.Range(0, l.At.Count / 2).Select(k => new Vector2(l.At[2 * k], l.At[2 * k + 1])).ToArray())).ToList();
+            r.Seeds = c.Seeds is { } seeds ? Enumerable.Range(0, seeds.Count / 2).Select(k => new Vector2(seeds[2 * k], seeds[2 * k + 1])).ToList() : null;
             cubes.Add(r);
         }
         records.Restore(cubes, save.Shut.Select(CubeDiveSave.FromEdgeKey).OfType<EdgeId>(), save.Last is { } last ? CubeDiveSave.FromEdgeKey(last) : null);

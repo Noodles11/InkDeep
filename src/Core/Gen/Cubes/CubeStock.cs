@@ -54,4 +54,35 @@ public static class CubeStock
         }
         return spots;
     }
+
+    /// <summary>
+    /// Where a claimed cube's inkseeds lie (docs/CORRUPTION.md): InkseedTuning.Least + PerMenace × Menace of them, in its
+    /// open water, apart from each other, from where she came in and from its ways (its gates' mouths, its wells, its
+    /// sockets' passages); from the seed, the cube and the claim alone. The warm-up layer has them too.
+    /// </summary>
+    public static List<Vector2> Inkseeds(ulong seed, CubeId cube, int claim, float menace, Vector2 entry, CubeTerrain terrain, Func<Vector2, float, bool> clear)
+    {
+        var seeds = new List<Vector2>();
+        var rng = new Rng(ReefHash.Of(seed, ReefHash.Cube, cube.X, cube.Y, cube.Z, claim * 2 + (cube.OnEnd ? 1 : 0)) ^ 0x1A55EEDUL);
+        int want = InkseedTuning.Least + (int)MathF.Round(InkseedTuning.PerMenace * menace);
+        var ways = new List<Vector2>();
+        foreach (var (_, _, mouth) in terrain.Gates) ways.Add(mouth);
+        foreach (var w in terrain.Down) ways.Add(w.Center);
+        foreach (var w in terrain.Arrivals) ways.Add(w.Center);
+        foreach (var s in terrain.Sockets)
+        {
+            ways.Add(s.At);
+            ways.Add(s.At + s.Into * OctoShoots.Core.Gen.TopDown.Doorway.Depth);
+        }
+        for (int tries = 0; tries < want * CubeStockTuning.Tries && seeds.Count < want; tries++)
+        {
+            var at = cube.Origin + new Vector2(rng.Range(3f, cube.Size.X - 3f), rng.Range(3f, cube.Size.Y - 3f));
+            if (Vector2.Distance(at, entry) < InkseedTuning.FromEntry || !clear(at, InkseedTuning.Radius * 2.5f)) continue;
+            bool near = false;
+            foreach (var w in ways) near |= Vector2.Distance(w, at) < InkseedTuning.FromWays;
+            foreach (var s in seeds) near |= Vector2.Distance(s, at) < InkseedTuning.Spacing;
+            if (!near) seeds.Add(at);
+        }
+        return seeds;
+    }
 }

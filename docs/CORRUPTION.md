@@ -401,6 +401,46 @@ The reef's fish (DESIGN-TOPDOWN, Reef fish) are what the murklings corrupt.
   again, where it was, and it swims off away from her at an easy pace and is gone (once 22 m from her, or after 40 s
   wherever it is), never to be turned again. It leaves one shell where it was freed.
 
+## Inkseeds (`Inkseed`, `PlaneInkseeds.cs`)
+
+Traps of ink lying in the cube reef's water, unseen in the dark. Numbers are first guesses, tuned in play
+(`InkseedTuning`).
+
+- **What it is:** a dot of ink the size of a lesser murkling (radius 0.36 m), resting in her plane. It is not a
+  creature: it does not move by itself, attack or drink; it has no meter and leaves nothing.
+- **Seen only in her light** (`BlightView.Inkseeds`, `inkseed.gdshader`): while her glow, her beam or a shot's light
+  falls on it, it shows as a small black hole: lightless black, a thin wavering ring of her light round its silhouette,
+  the water bent and whirling round it (`murk_hole`), its core a dull ember.
+- **Its heartbeat:** within 14 m of her, lit or not, it beats: two quick rings of the water's shimmer out from it, one
+  beat every 1.6 s at 14 m quickening to every 0.35 s at 2 m. This is how she finds them in the dark.
+- **Woken:** the first time any light of hers falls on it (her glow, her beam, a shot's light), it wakes for good.
+  Awake, it swells to twice its size over 3 s, lit or not, **except while her beam is on it**: then it holds its size.
+  Its core glows a deepening red-violet as it swells, flickering faster, its ring brightening, its heartbeat quickening
+  to a flutter, and it shivers toward the end.
+- **Freed:** her beam held on it 2 s unbroken (taken off, the count starts again) frees it: it implodes as a freed
+  murkling does, with a soft chime, and is gone, leaving nothing.
+- **Bursting:** swollen to twice its size, it always goes off (with a deep thump, felt):
+  - *The stain:* a stain of darkness spreads from it to 4 m in a quarter of a second, its rim ragged as spilt ink, and
+    shrinks away over 10 s. No light of any kind shows or works within it: her glow, her beam passing through it, her
+    shots' light, a charge stone's. What lies in it is unlit: a murkling inside it cannot be seen or burned, nor does
+    her light find another seed there. Light outside it is untouched.
+  - *The ripple:* the strongest ring of shimmer the water shows, and a spray of black ink.
+  - *Knockback:* everything within 4 m is thrown straight away from it: her (9 m/s at its middle, easing toward its
+    reach, tumbling out of her control for up to 0.35 s) and every murkling, Blotter, Inkwarden and Thumpsquirt (their
+    knock), rock stopping them.
+  - *Damage:* to her alone, within its reach: 12 × (1 + Menace), whatever her dash; her Bubble Shield turns it away.
+    Creatures take none.
+- **Where they lie** (`CubeStock.Inkseeds`): as she claims a cube, 1 + 2 × the layer's Menace of them (so one on the
+  warm-up layer), from the seed, the cube and its claim alone, in its open water, 6 m apart, 12 m from where she came
+  in, and 6 m from its gates' mouths, its wells and its sockets' passages. None in a boss's arena or in the cube she
+  dives into. Leaving a layer keeps where its cubes' seeds still lie in their records (and the dive's save); coming
+  back puts them back.
+- **The water carries them:** her cube's drift and the wake current push a seed within 48 m of her as they push her,
+  and a geyser's spray too, rock stopping it.
+- **Verification:** `--dbg-seeds` lays three by her as she holds still: one her glow wakes and lets burst on her, one
+  her beam frees, one beyond; then a murkling waits in the stain, her beam on it, unseen.
+- Tests: `InkseedTests`, `CubeReefTests`.
+
 ## Corruption meters (`CorruptionMeter`)
 
 Fighting the corrupted is a matter of thresholds and illuminance. Every murkling and Blightroot has a corruption

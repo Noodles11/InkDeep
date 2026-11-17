@@ -351,7 +351,8 @@ public partial class TopDownMain : Node3D
     /// Verification of murklings' sizes (--dbg-murks): a row of five budded across the longest open way from her, held
     /// there; her beam on the middle one for its first 2.5 s, then off (it grows back).
     /// </summary>
-    bool _dbgMurks, _dbgTough;
+    bool _dbgMurks, _dbgTough, _dbgSeeds;
+    readonly Vector4[] _stains = new Vector4[8];
 
     /// <summary>The wakes of everything that swims (WakeField).</summary>
     readonly OctoShoots.Game.Fx.WakeField _wakes = new();
@@ -584,6 +585,9 @@ public partial class TopDownMain : Node3D
             else if (arg == "--dbg-paths") _autoFire = _dbgShadow = _dbgPaths = true;
             else if (arg == "--dbg-murks") _autoFire = _dbgMurks = true;
             else if (arg == "--dbg-weak") _dbgWeak = true;
+            // Verification: three inkseeds by her (one her glow wakes and lets burst, one her beam frees, one beyond),
+            // then a murkling hidden in the stain, her beam on it.
+            else if (arg == "--dbg-seeds") _autoFire = _dbgSeeds = true;
             // Verification (with --dbg-murks): the row hardy (25 times its meter), her beam on it and off by turns (2.5 s
             // each), so its burning, its regrowing and its implosion all show.
             else if (arg == "--dbg-tough") _dbgTough = true;
@@ -2867,6 +2871,15 @@ public partial class TopDownMain : Node3D
             // Where she is in the world (the level is drawn off its map's origin), so the post pass finds it.
             _swells.Watch(new Vector2(_bell.GlobalPosition.X, _bell.GlobalPosition.Z), new Vector2(pl.Velocity.X, pl.Velocity.Y), pl.DashTimer > 0f, dt);
             _camera.SetSwells(_swells);
+            // The burst inkseeds' stains: no light shows within them (the post pass, and her beam).
+            int stains = 0;
+            foreach (var st in _world.Stains)
+            {
+                if (stains >= _stains.Length) break;
+                _stains[stains++] = new Vector4(st.Position.X, st.Position.Y, st.Radius, 1f);
+            }
+            _camera.SetStains(_stains, stains);
+            _beam.SetStains(_stains, stains);
             _shoals.Step(new Vector2(_bell.GlobalPosition.X, _bell.GlobalPosition.Z), dt);
             _camera.SetDeepFish(_shoals);
         }
@@ -3428,6 +3441,18 @@ public partial class TopDownMain : Node3D
                 _sfx.PlayPitched("bell_ring", 0.75f, -8f);
                 Say("A Blightroot starves and bursts");
                 break;
+            case PlaneEventType.InkseedWoke:
+                // Woken: a small wet click, then its heart quickens.
+                _sfx.PlayPitched("pop", 1.7f, -12f);
+                break;
+            case PlaneEventType.InkseedFreed:
+                _sfx.PlayPitched("bell_ring", 1.7f, -9f);
+                break;
+            case PlaneEventType.InkseedBurst:
+                // A deep thump, felt.
+                _sfx.PlayPitched("bell_ring", 0.42f, -2f);
+                _haptics.Pulse(0.7f, 0.5f, 0.35f);
+                break;
             case PlaneEventType.MurklingBurst:
                 if (e.Direction.X > 0.5f)
                 {
@@ -3857,6 +3882,7 @@ public partial class TopDownMain : Node3D
         PlaneEventType.ThumpBurst => 0.6f,
         PlaneEventType.BossSacBurst => 0.6f,
         PlaneEventType.MurkShotBurst => 0.2f,
+        PlaneEventType.InkseedBurst => 0.75f,
         // The reef's: a geyser bursting.
         PlaneEventType.GeyserSpray => 0.45f,
         _ => null,
@@ -4128,11 +4154,65 @@ public partial class TopDownMain : Node3D
     TextureRect _padCross = null!;
     float _padCrossOut = 0.6f;
 
+    /// <summary>--dbg-seeds: the seeds laid, the one her beam frees, where the other burst, and the murkling hidden in its stain.</summary>
+    bool _dbgSeedsLaid;
+    Inkseed? _dbgSeedFreed;
+    System.Numerics.Vector2 _dbgBurst;
+    Murkling? _dbgHidden;
+
+    /// <summary>
+    /// Verification (--dbg-seeds): she holds still; three seeds by her, one near enough for her glow to wake it (it swells
+    /// and bursts on her), one her beam holds and frees, one beyond (its heartbeat only). Once the near one has burst, a
+    /// murkling waits in its stain, her beam on it.
+    /// </summary>
+    bool DebugSeeds(ref PlaneInput input)
+    {
+        var from = _world.Player.Position;
+        if (!_dbgSeedsLaid && _world.Time > 0.5f)
+        {
+            _dbgSeedsLaid = true;
+            float best = -1f;
+            for (int k = 0; k < 36; k++)
+            {
+                var w = new System.Numerics.Vector2(Mathf.Cos(k * Mathf.Tau / 36f), Mathf.Sin(k * Mathf.Tau / 36f));
+                float r = _world.LineReach(from, w, 16f, out _);
+                if (r > best) { best = r; _dbgRowWay = w; }
+            }
+            var across = new System.Numerics.Vector2(-_dbgRowWay.Y, _dbgRowWay.X);
+            _dbgBurst = from + _dbgRowWay * 3.2f + across * 1.8f;
+            _world.PlaceInkseed(default, _dbgBurst);
+            _world.PlaceInkseed(default, from + _dbgRowWay * 8f - across * 1.2f);
+            _dbgSeedFreed = _world.Inkseeds[^1];
+            _world.PlaceInkseed(default, from - _dbgRowWay * 9f);
+        }
+        _world.Player.Velocity = System.Numerics.Vector2.Zero;
+        if (!_dbgSeedsLaid) return true;
+        input.Beam = true;
+        if (_dbgSeedFreed is { } freed && _world.Inkseeds.Contains(freed)) input.Aim = freed.Position - from;
+        else if (_world.Stains.Count > 0)
+        {
+            if (_dbgHidden is null)
+            {
+                _dbgBurst = _world.Stains[0].Position;
+                _dbgHidden = _world.DebugBud(_dbgBurst + new System.Numerics.Vector2(0.4f, 0.3f), prime: false);
+                _dbgHidden.Bud = 0f;
+            }
+            _dbgHidden.Position = _dbgBurst + new System.Numerics.Vector2(0.4f, 0.3f);
+            _dbgHidden.Velocity = System.Numerics.Vector2.Zero;
+            _dbgHidden.ThrowTimer = 100f;
+            _dbgHidden.Windup = 0f;
+            input.Aim = _dbgHidden.Position - from;
+        }
+        else input.Beam = false;
+        return true;
+    }
+
     /// <summary>Verification: fire at the boss in her fight, else at the nearest mob.</summary>
     bool AutoFire(ref PlaneInput input)
     {
         if (!_autoFire) return false;
         var from = _world.Player.Position;
+        if (_dbgSeeds) return DebugSeeds(ref input);
         if (_dbgMurks)
         {
             if (_dbgRow.Count == 0)

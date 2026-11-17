@@ -549,7 +549,8 @@ level. It is the only game: there is no other mode left. A verification run is i
 2. **Creatures:** each cube she claims buds its stock (`CubeStock`): 3 + 4 × the layer's Menace of the roster's
    murklings, 9 m apart, none within 18 m of where she came in, at most one prime (from layer 2), from the seed, the
    cube and its claim alone; never on the warm-up layer or in the cube she dives into. Over 48 m from her they sleep.
-   Leaving a layer keeps what is left of each cube's stock in its record; coming back puts it back where it was.
+   Leaving a layer keeps what is left of each cube's stock in its record; coming back puts it back where it was. Each
+   claimed cube lays its inkseeds too (CORRUPTION, Inkseeds), the warm-up layer's as well, kept and put back alike.
 3. **The director and sockets** (§9): done.
 4. **The arena and the boss table** (§9.1): done.
 5. **Records and haven checkpoints** (§10): reaching a haven saves the dive there (`CubeDiveSave` in the dive's save);

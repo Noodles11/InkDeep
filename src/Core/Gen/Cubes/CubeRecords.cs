@@ -29,6 +29,8 @@ public sealed class CubeRecord
     /// not left it since claiming it. A cube she arrived in by a dive or a climb has none.
     /// </summary>
     public List<StockLeft>? Left { get; set; }
+    /// <summary>Its inkseeds still lying where they were as she last left the layer (null: as Left).</summary>
+    public List<Vector2>? Seeds { get; set; }
     /// <summary>The places granted it (CubeDirector), each opening its mouth in one of its sockets.</summary>
     public List<(OctoShoots.Core.Gen.TopDown.PoiKind Kind, OctoShoots.Core.Gen.TopDown.Doorway Mouth)> Places { get; } = new();
 

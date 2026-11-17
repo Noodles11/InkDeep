@@ -38,6 +38,42 @@ uniform sampler2D depth_tex : hint_depth_texture, filter_nearest;
 
 const int STEPS = 28;
 
+// The burst inkseeds' stains of darkness (PlaneInkseeds.cs): each (world x, z, its radius now, its strength); no light
+// shows within one. 1 deep inside one, 0 outside them all, its edge ragged as ink spreading.
+uniform vec4 ink_stains[8];
+uniform int ink_stain_count = 0;
+
+float ink_hash(vec2 p) {
+	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+	p3 += dot(p3, p3.yzx + 33.33);
+	return fract((p3.x + p3.y) * p3.z);
+}
+
+float ink_noise(vec2 p) {
+	vec2 i = floor(p), f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(ink_hash(i), ink_hash(i + vec2(1.0, 0.0)), f.x), mix(ink_hash(i + vec2(0.0, 1.0)), ink_hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+
+float ink_stained(vec2 p) {
+	float ink = 0.0;
+	for (int i = 0; i < ink_stain_count; i++) {
+		vec4 s = ink_stains[i];
+		if (s.z <= 0.01) continue;
+		vec2 d = p - s.xy;
+		float r = length(d);
+		// Its rim wanders as spilt ink does (noise round it, slowly creeping), feathered soft.
+		vec2 dir = d / max(r, 1e-3);
+		float ragged = 1.0 + 0.26 * (ink_noise(dir * 1.7 + s.xy * 0.37 + vec2(TIME * 0.12, 0.0)) - 0.5)
+			+ 0.12 * (ink_noise(dir * 4.3 - s.xy * 0.21 + vec2(0.0, TIME * 0.25)) - 0.5)
+			+ 0.05 * (ink_noise(d * 3.0 + vec2(TIME * 0.4)) - 0.5);
+		float edge = s.z * ragged;
+		float k = (1.0 - smoothstep(edge * 0.62, edge, r)) * 0.97 + (1.0 - smoothstep(edge, edge * 1.3, r)) * 0.03;
+		ink = max(ink, k * s.w);
+	}
+	return ink;
+}
+
 varying vec3 v_world;
 varying vec3 v_out;
 
@@ -145,4 +181,6 @@ void fragment() {
 	float dusk = black_sun * (1.0 - exp(-density * 2.5 * gloom));
 	ALBEDO = mix(mix(tint, vec3(1.0), clamp(sparkle * 0.6, 0.0, 1.0)), BLACK_SUN, dusk / max(haze + dusk, 1e-4));
 	ALPHA = clamp(strength * (haze + dusk + sparkle * 0.8), 0.0, 1.0);
+	// (None of it within an inkseed's stain.)
+	if (ink_stain_count > 0) ALPHA *= 1.0 - ink_stained(v_world.xz);
 }

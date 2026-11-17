@@ -338,7 +338,11 @@ public partial class TopDownMain
     /// <summary>Into a place behind a mouth from her layer: what is left of each claimed cube's stock kept (for a save made there).</summary>
     void LeavingForMouth()
     {
-        foreach (var record in Here.Claimed.Values) record.Left = _world.StockLeft(record.Cube);
+        foreach (var record in Here.Claimed.Values)
+        {
+            record.Left = _world.StockLeft(record.Cube);
+            record.Seeds = _world.InkseedsLeft(record.Cube);
+        }
     }
 
     /// <summary>
@@ -372,8 +376,11 @@ public partial class TopDownMain
         if (_map.Mouths.Count is var mouthsWere && OpenMouths(_map)) ShowReefMouths(mouthsWere);
         // Back on a layer: its claimed cubes' stock put back as she left it.
         foreach (var record in restored ? Enumerable.Empty<CubeRecord>() : Here.Claimed.Values)
+        {
             foreach (var left in record.Left ?? Enumerable.Empty<StockLeft>())
                 _world.PlaceStock(record.Cube, left.Spawn, left.Seed, left.Prime, left.At, left: true, shoal: left.Shoal);
+            foreach (var at in record.Seeds ?? Enumerable.Empty<System.Numerics.Vector2>()) _world.PlaceInkseed(record.Cube, at);
+        }
         // (Only her layer and the one above are ever needed again: §10.)
         foreach (int z in _layerMaps.Keys.Where(z => z < _layer - 1).ToList())
         {
@@ -547,6 +554,20 @@ public partial class TopDownMain
             var flow = _cubeCurrents.DriftAt(G(p.Position)) + CubeCurrents.WakeAt(G(p.Position), cube, _reef.Space, Here);
             if (flow != System.Numerics.Vector2.Zero) _world.Move(ref p.Position, ref flow, _world.Radius, report: false);
         }
+        // The seeds near her ride the currents as she does (her cube's drift, and the wake current anywhere).
+        if (_world.Inkseeds.Count > 0)
+        {
+            var mine = _reef.Made(cube) is not null && !InArena(p.Position, _layer) ? cube : (CubeId?)null;
+            foreach (var seed in _world.Inkseeds)
+            {
+                if (System.Numerics.Vector2.DistanceSquared(seed.Position, p.Position) > InkseedTuning.Still * InkseedTuning.Still) continue;
+                var at = G(seed.Position);
+                var its = CubeId.Of(at, _layer);
+                if (_reef.Made(its) is null || InArena(seed.Position, _layer)) continue;
+                var flow = (its == mine ? _cubeCurrents.DriftAt(at) : System.Numerics.Vector2.Zero) + CubeCurrents.WakeAt(at, its, _reef.Space, Here);
+                if (flow != System.Numerics.Vector2.Zero) _world.Move(ref seed.Position, ref flow, seed.Radius, report: false);
+            }
+        }
         var to = G(p.Position);
         var crossed = Here.Move(G(p.PrevPosition), ref to);
         if (crossed == Crossing.Held)
@@ -565,6 +586,11 @@ public partial class TopDownMain
             var spots = _reef.IsArena(claimed) ? new List<StockSpot>() : CubeStock.Spots(_reef.Space.Seed, claimed, Here.Claimed[claimed].Claim, _map.Menace, G(p.Position), (at, r) => _world.Clear(L(at), r));
             sp.Dispose();
             using (Timed("claim: stock")) foreach (var s in spots) _world.PlaceStock(claimed, s.Spawn, s.Seed, s.Prime, new[] { L(s.At) }, left: false);
+            // Its inkseeds (none in an arena).
+            if (!_reef.IsArena(claimed))
+                using (Timed("claim: seeds"))
+                    foreach (var at in CubeStock.Inkseeds(_reef.Space.Seed, claimed, Here.Claimed[claimed].Claim, _map.Menace, G(p.Position), _reef.Terrain(claimed), (at, r) => _world.Clear(L(at), r)))
+                        _world.PlaceInkseed(claimed, L(at));
             using (Timed("claim: grant")) if (!_reef.IsArena(claimed)) Grant(claimed);
             using (Timed("claim: mouths")) if (_map.Mouths.Count is var mouthsWere && OpenMouths(_map)) ShowReefMouths(mouthsWere);
             GD.Print($"Cube reef: {claimed} claimed ({Here.Claims} on layer {_layer}), {spots.Count} of its stock budded");
@@ -832,8 +858,12 @@ public partial class TopDownMain
         int from = _layer;
         // A boss freed stays freed: the layer, should she climb back to it, has none.
         if (_world.Boss?.Freed == true) _map.HasBoss = false;
-        // The layer left: what is left of each claimed cube's stock, kept for her return.
-        foreach (var record in Here.Claimed.Values) record.Left = _world.StockLeft(record.Cube);
+        // The layer left: what is left of each claimed cube's stock and seeds, kept for her return.
+        foreach (var record in Here.Claimed.Values)
+        {
+            record.Left = _world.StockLeft(record.Cube);
+            record.Seeds = _world.InkseedsLeft(record.Cube);
+        }
         // (Where she comes onto the layer, in the reef; and the frame she leaves.)
         var g = G(_layerFrom);
         var frameWas = Frame;

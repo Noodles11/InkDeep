@@ -92,6 +92,7 @@ public partial class BlightView : Node3D
         ClearLashjaws();
         ClearFlounders();
         ClearMurkBodies();
+        ClearInkseeds();
         _motes.Clear();
         _droplets.Clear();
         _peel.Clear();
@@ -112,6 +113,7 @@ public partial class BlightView : Node3D
         SyncWardens(world, dt, camera);
         SyncLashjaws(world, dt, camera);
         SyncFlounders(world, dt);
+        SyncInkseeds(world, dt);
         SyncBurns(world, dt);
         SyncKinLights(world);
         SyncOutlines(world);
@@ -165,13 +167,15 @@ public partial class BlightView : Node3D
             // Seen only where her light falls on it (her_reveal; each murkling's body has its own material).
             body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("hidden"), 1f);
             // Her beam shows it only if one reaches it (a body in the way shades it).
-            bool beamSees = world.BeamSees(m, m.Position, m.Radius);
+            // (Within an inkseed's stain no light shows it at all.)
+            bool stained = world.Stains.Count > 0 && world.Stained(m.Position);
+            bool beamSees = !stained && world.BeamSees(m, m.Position, m.Radius);
             body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("beam_seen"), beamSees ? 1f : 0f);
             // A lit charge stone's light shows it too, as much as it glows.
-            float chargeSees = world.ChargeStoneSees(m.Position, m.Radius);
+            float chargeSees = stained ? 0f : world.ChargeStoneSees(m.Position, m.Radius);
             body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("charge_seen"), chargeSees);
             // Light on its core shows all of it (eased in quickly, out a little slower).
-            bool core = world.CoreLit(m, m.Position);
+            bool core = !stained && world.CoreLit(m, m.Position);
             body.Core = Mathf.MoveToward(body.Core, core ? 1f : 0f, dt * (core ? 6f : 3f));
             body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("core_seen"), body.Core);
             // A sealed leak's wave of her light shows it as its front passes over it, fading out a moment after.
@@ -185,7 +189,7 @@ public partial class BlightView : Node3D
             var tint = OctoShoots.Game.Fx.LightColour.Of(body.ColourHue);
             body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("colour_lit"), new Color(tint.R, tint.G, tint.B, body.Colour));
             body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("chill"), world.ChillOf(m));
-            float auraReach = world.Aura.Shining ? world.Aura.Range * 0.9f + m.Radius : 0f;
+            float auraReach = world.Aura.Shining && !stained ? world.Aura.Range * 0.9f + m.Radius : 0f;
             body.Shown = !m.Budding && (body.Core > 0.3f || body.Waved > 0.15f || chargeSees > 0.3f
                 || System.Numerics.Vector2.Distance(m.Position, world.Aura.Position) < auraReach || beamSees);
             SenseUnseen(world, m, body, dt);
@@ -523,6 +527,9 @@ public partial class BlightView : Node3D
                 // one and a slower, closer one.
                 Swells?.AddRing(new Vector2(e.Position.X, e.Position.Y), 1.1f, 1.2f, 1.1f, snap: 3f);
                 Swells?.AddRing(new Vector2(e.Position.X, e.Position.Y), 0.7f, 0.6f, 1.6f, snap: 2.5f);
+                break;
+            case PlaneEventType.InkseedWoke or PlaneEventType.InkseedFreed or PlaneEventType.InkseedBurst:
+                InkseedEvent(e, at);
                 break;
             case PlaneEventType.MurklingBurst:
                 // Freed: it implodes (BlightView.Murklings: Implode; a prime's, Drippus Prime's brood's the same, Direction.Y
