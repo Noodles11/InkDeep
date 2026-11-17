@@ -221,7 +221,8 @@ public sealed partial class PlaneWorld
             float s = c.Glow * (1f - t * t * (3f - 2f * t));
             if (s > seen && LineOfSight(c.Position, at)) seen = s;
         }
-        return seen;
+        // (A lit stone lantern's pool shows what is in it alike.)
+        return Lanterns.Count > 0 ? MathF.Max(seen, LanternSees(at, radius)) : seen;
     }
 
     /// <summary>

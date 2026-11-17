@@ -173,6 +173,12 @@ A secret room is a sub-level too: a cube she claims opens one time in three, its
 (`LevelMap.MouthKinds` says which mouth leads where). No ink weeps from it. Behind it is a labyrinth
 (`TopDownGenerator.GenerateLabyrinth`), made from its own sub-seed.
 
+- **Found by its arrows** (`CubeStock.Cues`, `SecretCueView`, `secret_cue.gdshader`): its mouth shows no emblem until
+  she has been in (`CubeRecord.Visited`, kept in the dive's save). Round it, up to three arrows are carved into the
+  floor at the walls' feet, 7–26 m from it, each in sight of the water before it and pointing to it. They are wholly
+  unseen until her beam falls on them (not her glow); then the groove glows a pale moonlit blue, a shimmer running along
+  it toward the mouth. From the seed and the mouth alone.
+
 - **The maze** (`Maze`): a grid of cells (9 a side at the first depths, one more each depth down to 13), grown as a tree
   from its entrance (mostly from the newest cell, now and then any: long winding runs with side branches), so every cell
   is reached; then about one dead end in eight is opened into a neighbour, for a few loops. Its heart is the dead end

@@ -55,6 +55,88 @@ public static class CubeStock
         return spots;
     }
 
+    /// <summary>How many carved arrows point to a secret's mouth at most, how far from it, how far apart, how near a wall's foot.</summary>
+    public const int CueMost = 3;
+    public const float CueNear = 7f, CueFar = 26f, CueApart = 7f, CueWall = 1.7f;
+
+    /// <summary>
+    /// The arrows carved into the floor at the walls' feet round a secret's mouth (docs/DIVE.md §6.1), each pointing to
+    /// it, seen only in her beam: up to CueMost, CueNear to CueFar from it, apart, each in sight of the water before it.
+    /// <paramref name="height"/>: the floor's height at a point (rock above naught); <paramref name="sight"/>: whether one
+    /// point sees another. From the seed and the mouth alone. Each: where it lies and the way it points.
+    /// </summary>
+    public static List<(Vector2 At, Vector2 Way)> Cues(ulong seed, OctoShoots.Core.Gen.TopDown.Doorway mouth, Func<Vector2, float> height, Func<Vector2, Vector2, bool> sight)
+    {
+        var cues = new List<(Vector2, Vector2)>();
+        var before = mouth.At - mouth.Into * 2f;
+        var rng = new Rng(seed ^ ((ulong)(uint)(int)MathF.Round(mouth.At.X * 4f) << 32) ^ (uint)(int)MathF.Round(mouth.At.Y * 4f) ^ 0xC0E5UL);
+        for (int tries = 0; tries < 160 && cues.Count < CueMost; tries++)
+        {
+            float a = rng.Range(0f, MathF.Tau), r = rng.Range(CueNear, CueFar);
+            var at = before + new Vector2(MathF.Cos(a), MathF.Sin(a)) * r;
+            float h = height(at);
+            if (h > -0.5f || h < -6f) continue;
+            // (At a wall's foot: rock close by one way, open floor round it the others.)
+            int rock = 0;
+            for (int k = 0; k < 8; k++)
+            {
+                float b = k * MathF.Tau / 8f;
+                float hk = height(at + new Vector2(MathF.Cos(b), MathF.Sin(b)) * CueWall);
+                if (hk > 0.2f) rock++;
+                else if (hk < -6f) rock = 99;
+            }
+            if (rock is 0 or > 3) continue;
+            bool near = false;
+            foreach (var (c, _) in cues) near |= Vector2.Distance(c, at) < CueApart;
+            if (near || !sight(at, before)) continue;
+            cues.Add((at, Vector2.Normalize(before - at)));
+        }
+        return cues;
+    }
+
+    /// <summary>
+    /// Where a cube's stone lantern stands, if it has one (docs/LIGHT-AND-GRAPH.md §2.7): LanternTuning.Chance of cubes,
+    /// none in a boss's arena; on its open floor (shelf, not under a roof), clear of rock, inside the cube and away from
+    /// its ways (its gates' mouths, its wells, its sockets' passages, its spires). From the seed and the cube alone.
+    /// </summary>
+    public static Vector2? Lantern(ulong seed, CubeTerrain terrain)
+    {
+        var cube = terrain.Cube;
+        if (terrain.Arena) return null;
+        var rng = new Rng(ReefHash.Of(seed, ReefHash.Cube, cube.X, cube.Y, cube.Z, 0x7A + (cube.OnEnd ? 1 : 0)) ^ 0x70A0UL);
+        if (rng.NextFloat() >= LanternTuning.Chance) return null;
+        var ways = new List<Vector2>();
+        foreach (var (_, _, mouth) in terrain.Gates) ways.Add(mouth);
+        foreach (var w in terrain.Down) ways.Add(w.Center);
+        foreach (var w in terrain.Arrivals) ways.Add(w.Center);
+        foreach (var s in terrain.Sockets)
+        {
+            ways.Add(s.At);
+            ways.Add(s.At + s.Into * OctoShoots.Core.Gen.TopDown.Doorway.Depth);
+        }
+        bool Floor(Vector2 p)
+        {
+            int r = (int)MathF.Ceiling(LanternTuning.Clear);
+            int cx = (int)MathF.Round(p.X), cy = (int)MathF.Round(p.Y);
+            for (int y = cy - r; y <= cy + r; y++)
+            for (int x = cx - r; x <= cx + r; x++)
+            {
+                if ((x - p.X) * (x - p.X) + (y - p.Y) * (y - p.Y) > LanternTuning.Clear * LanternTuning.Clear) continue;
+                if (terrain.CellAt(x, y) != CubeCell.Shelf || terrain.CanopyAt(x, y) || terrain.HeightAt(x, y) > -0.5f) return false;
+            }
+            return true;
+        }
+        for (int tries = 0; tries < 60; tries++)
+        {
+            var at = cube.Origin + new Vector2(rng.Range(LanternTuning.Inside, cube.Size.X - LanternTuning.Inside), rng.Range(LanternTuning.Inside, cube.Size.Y - LanternTuning.Inside));
+            bool near = false;
+            foreach (var w in ways) near |= Vector2.Distance(w, at) < LanternTuning.FromWays;
+            foreach (var s in terrain.Spires) near |= Vector2.Distance(new Vector2(s.X, s.Y), at) < s.Z + LanternTuning.Clear + 1f;
+            if (!near && Floor(at)) return at;
+        }
+        return null;
+    }
+
     /// <summary>
     /// Where a claimed cube's inkseeds lie (docs/CORRUPTION.md): InkseedTuning.Least + PerMenace × Menace of them, in its
     /// open water, apart from each other, from where she came in and from its ways (its gates' mouths, its wells, its

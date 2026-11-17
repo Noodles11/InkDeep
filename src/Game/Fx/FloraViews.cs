@@ -28,6 +28,13 @@ public partial class FloraViews : Node3D
         [FloraKind.SeaRod] = new(0.07f, 1.0f, 0f, 0f, 0.5f, 0.85f, 0.06f, 0.15f, 45f),
         [FloraKind.TubeSponge] = new(0f, 0f, 0f, 0f, 0f, 0.8f, 0.08f, 0f, 50f),
         [FloraKind.BarrelSponge] = new(0f, 0f, 0f, 0f, 0f, 0.9f, 0.05f, 0f, 60f),
+        [FloraKind.Kelp] = new(0.12f, 0.7f, 0f, 0f, 0f, 0.7f, 0.06f, 0.55f, 55f),
+        [FloraKind.KelpTall] = new(0.05f, 0.5f, 0f, 0f, 0f, 0.7f, 0.06f, 0.55f, 85f),
+        [FloraKind.Wreck] = new(0f, 0f, 0f, 0f, 0f, 0.95f, 0.03f, 0f, 85f),
+        [FloraKind.Plank] = new(0f, 0f, 0f, 0f, 0f, 0.95f, 0.03f, 0f, 55f),
+        [FloraKind.Vent] = new(0f, 0f, 0f, 0f, 0f, 0.9f, 0.45f, 0f, 85f),
+        [FloraKind.WhaleFall] = new(0f, 0f, 0f, 0f, 0f, 0.8f, 0.06f, 0f, 85f),
+        [FloraKind.Vertebra] = new(0f, 0f, 0f, 0f, 0f, 0.8f, 0.06f, 0f, 55f),
     };
 
     readonly Dictionary<FloraKind, (Mesh Mesh, ShaderMaterial Material)> _species = new();

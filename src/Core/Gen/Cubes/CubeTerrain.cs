@@ -10,6 +10,13 @@ namespace OctoShoots.Core.Gen.Cubes;
 public enum CubeCell : byte { Rock, Shelf, Void }
 
 /// <summary>
+/// A cube's character (CUBE-WORLD-PLAN §4.2, kinds): the reef's caverns as they come (Plain); a great open hall carved
+/// in its middle (Hall); its open water stood with rock spires (Spires); its shelves falling away into the void far more
+/// than elsewhere (Drop). Only its own carving changes: its edges stay as its neighbours have them.
+/// </summary>
+public enum CubeKind : byte { Plain, Hall, Spires, Drop }
+
+/// <summary>
 /// One cube's reef (CUBE-WORLD-PLAN §3–§4): a heightfield on the 1 m grid of its two squares plus an Apron of its
 /// neighbours', each point rock, shelf or void, and the roofs over its water. Made by <see cref="Make"/> from the seed
 /// and its id alone.
@@ -47,6 +54,10 @@ public sealed class CubeTerrain
     public IReadOnlyList<Doorway> Sockets { get; init; } = Array.Empty<Doorway>();
     /// <summary>The layer's boss arena (its basin in its middle).</summary>
     public bool Arena { get; init; }
+    /// <summary>Its character (Plain, Hall, Spires, Drop).</summary>
+    public CubeKind Kind { get; init; }
+    /// <summary>Its spires, if it has them (global xy, radius z).</summary>
+    public IReadOnlyList<Vector3> Spires { get; init; } = Array.Empty<Vector3>();
     /// <summary>The rock over its sockets' passages (NaN elsewhere; null with none), as a level's Roof.</summary>
     public float[]? Roof { get; init; }
     public float RoofAt(int gx, int gy) => Roof is { } r && Has(gx, gy) ? r[Index(gx, gy)] : float.NaN;
@@ -155,6 +166,88 @@ public sealed class CubeTerrain
 
     /// <summary>A boss arena's basin (CUBE-WORLD-PLAN §9.1): its radius, and the width of the way cut to it from each gate.</summary>
     public const float ArenaRadius = 24f, ArenaWay = 5.6f;
+
+    /// <summary>How likely each kind is (the rest Plain).</summary>
+    public const float HallShare = 0.2f, SpiresShare = 0.2f, DropShare = 0.2f;
+    /// <summary>A hall's radius; spires' radii, the water kept round each and their lattice; how much more of a drop's water is void.</summary>
+    public const float HallMin = 13f, HallMax = 18f, SpireMin = 1.3f, SpireMax = 2.3f, SpireClear = 3.5f, SpireStep = 6f, DropMore = 0.3f;
+
+    /// <summary>A cube's kind, from the seed and the cube alone (a boss's arena is always Plain).</summary>
+    public static CubeKind KindOf(ulong seed, CubeId c, bool arena = false)
+    {
+        if (arena) return CubeKind.Plain;
+        float r = (ReefHash.Of(seed, ReefHash.Cube, c.X, c.Y, c.Z, 0x4B1D + (c.OnEnd ? 1 : 0)) >> 40) / (float)(1UL << 24);
+        return r < HallShare ? CubeKind.Hall
+            : r < HallShare + SpiresShare ? CubeKind.Spires
+            : r < HallShare + SpiresShare + DropShare ? CubeKind.Drop
+            : CubeKind.Plain;
+    }
+
+    /// <summary>
+    /// A hall: a great wobbling basin of open water in the cube's middle (local metres), joined to its nearest water by
+    /// a wide way, so it is never cut off.
+    /// </summary>
+    static void CarveHall(bool[] water, int ow, int oh, Vector2 size, Vector2 origin, Rng rng, uint seed)
+    {
+        float r = rng.Range(HallMin, HallMax);
+        var at = size * 0.5f + new Vector2(rng.Range(-1f, 1f) * MathF.Max(0f, size.X * 0.5f - r - 16f), rng.Range(-1f, 1f) * MathF.Max(0f, size.Y * 0.5f - r - 16f));
+        // (The nearest water outside it, before it is carved, and a way to it.)
+        var best = at;
+        float bestD = float.MaxValue;
+        for (int v = 0; v < oh; v += 2)
+        for (int u = 0; u < ow; u += 2)
+        {
+            if (!water[v * ow + u]) continue;
+            float d = Vector2.Distance(new Vector2(u, v), at);
+            if (d > r * 0.8f && d < bestD)
+            {
+                bestD = d;
+                best = new Vector2(u, v);
+            }
+        }
+        Stamp(at, r * 1.35f, (x, y) =>
+        {
+            float wob = 1f + 0.22f * TerrainNoise.Fbm((origin.X + x) * 0.08f, (origin.Y + y) * 0.08f, seed + 17u, 2);
+            return Vector2.Distance(new Vector2(x, y), at) < r * wob;
+        }, water, ow, oh);
+        if (bestD < float.MaxValue) StampLine(new[] { at, best }, 6f, (x, y, d) => d < 2.6f, water, ow, oh);
+    }
+
+    /// <summary>
+    /// Spires: rock pillars stood in the cube's wider open water on a jittered lattice, each with SpireClear of water all
+    /// round it (so no way is ever shut), far from its gates' mouths and wells (local metres). Returns them (local xy, radius z).
+    /// </summary>
+    static List<Vector3> StandSpires(bool[] water, int ow, int oh, List<Vector2> nodes, Rng rng)
+    {
+        var spires = new List<Vector3>();
+        var toDry = Chamfer(water, ow, oh, false);
+        for (float y = SpireStep; y < oh - SpireStep; y += SpireStep)
+        for (float x = SpireStep; x < ow - SpireStep; x += SpireStep)
+        {
+            var p = new Vector2(x + rng.Range(-0.4f, 0.4f) * SpireStep, y + rng.Range(-0.4f, 0.4f) * SpireStep);
+            float r = rng.Range(SpireMin, SpireMax);
+            // (Not every spot: a forest, not a grid.)
+            bool skip = rng.NextFloat() < 0.35f;
+            int u = (int)MathF.Round(p.X), v = (int)MathF.Round(p.Y);
+            if (skip || u < 0 || v < 0 || u >= ow || v >= oh || toDry[v * ow + u] < r + SpireClear + 2.5f) continue;
+            if (p.X < 14f || p.Y < 14f || p.X > ow - 15f || p.Y > oh - 15f) continue;
+            bool clear = true;
+            foreach (var n in nodes) if (Vector2.Distance(n, p) < r + 9f) clear = false;
+            foreach (var s in spires) if (Vector2.Distance(new Vector2(s.X, s.Y), p) < r + s.Z + SpireClear + 1f) clear = false;
+            if (clear) spires.Add(new Vector3(p.X, p.Y, r));
+        }
+        return spires;
+    }
+
+    /// <summary>A disc of the grid set false.</summary>
+    static void Clear(bool[] into, int ow, int oh, Vector2 at, float radius)
+    {
+        int x0 = Math.Max(0, (int)(at.X - radius - 1f)), x1 = Math.Min(ow - 1, (int)MathF.Ceiling(at.X + radius + 1f));
+        int y0 = Math.Max(0, (int)(at.Y - radius - 1f)), y1 = Math.Min(oh - 1, (int)MathF.Ceiling(at.Y + radius + 1f));
+        for (int y = y0; y <= y1; y++)
+        for (int x = x0; x <= x1; x++)
+            if (Vector2.Distance(new Vector2(x, y), at) < radius) into[y * ow + x] = false;
+    }
 
     /// <param name="arena">The layer's boss arena: a basin opened in its middle, a way cut to it from every gate, no sockets.</param>
     public static CubeTerrain Make(CubeSpace space, CubeId c, bool arena = false)
@@ -303,6 +396,16 @@ public sealed class CubeTerrain
         Join(water, bore, blocked, nodes, ow, oh, rng, tunnelSeed, origin);
         Merge();
         Bays(water, roofOwn, origin, space.NoiseSeed(NoiseBays), ow, oh);
+        // Its kind: a hall carved, or spires stood (from a rng of its own, so the rest of its plan is as it was).
+        var cubeKind = KindOf(space.Seed, c, arena);
+        var kindRng = ReefHash.Rng(space.Seed, ReefHash.Cube, c.X, c.Y, c.Z, 0x4B1E + (c.OnEnd ? 1 : 0));
+        if (cubeKind == CubeKind.Hall) CarveHall(water, ow, oh, c.Size, origin, kindRng, chamberSeed);
+        var spires = cubeKind == CubeKind.Spires ? StandSpires(water, ow, oh, nodes, kindRng) : new List<Vector3>();
+        // (A drop falls away across one of its two squares, the far one or the near, its other kept as it was.)
+        bool dropFar = kindRng.NextFloat() < 0.5f;
+        bool across = c.Wide == 2;
+        // (Over a spire and round it nothing is roofed.)
+        foreach (var s in spires) Clear(roofOwn, ow, oh, new Vector2(s.X, s.Y), s.Z + 2f);
         // A boss arena's basin and the ways to it from its gates, carved as its own water is.
         if (arena)
         {
@@ -366,7 +469,11 @@ public sealed class CubeTerrain
             foreach (var e in edges) near = MathF.Min(near, MathF.Abs(e.Id.Across(p)));
             float line = MathF.Min(wall, throat);
             float carved = MathF.Min(MathF.Max(wall, own[k]), throat);
-            float s = field[k] = Lerp(line, carved, Smooth(Apron, Apron + BlendWidth, near));
+            float s = Lerp(line, carved, Smooth(Apron, Apron + BlendWidth, near));
+            // (A spire's rock laid on the field itself, so the blur never wears it away: its face round, its foot sloping.)
+            foreach (var sp in spires)
+                s = MathF.Max(s, sp.Z - Vector2.Distance(new Vector2(u, v), new Vector2(sp.X, sp.Y)));
+            field[k] = s;
             var shared = throat < 0f ? true : wall > 0f ? false : (bool?)null;
             bool ownPoint = u >= 0 && v >= 0 && u <= w && v <= h;
             bool wet = s <= 0f;
@@ -398,7 +505,14 @@ public sealed class CubeTerrain
             // Void only where the shelf noise opens it over the layer below's caverns (CUBE-WORLD-PLAN §4.3), so what she
             // sees down through it is that layer's open water.
             float shelfNoise = TerrainNoise.Fbm(p.X * 0.035f, p.Y * 0.035f, shelfSeed, 2);
-            float open = MathF.Min(ShelfCut + VoidMore - shelfNoise, under[k] - CavernCut + 0.02f);
+            // (A drop's void more, blended in from its edges as its own carving is.)
+            float more = 0f;
+            if (cubeKind == CubeKind.Drop)
+            {
+                float along = (across ? u : v) - (across ? w : h) * 0.5f;
+                more = DropMore * Smooth(Apron, Apron + BlendWidth, near) * Smooth(-4f, 10f, dropFar ? along : -along);
+            }
+            float open = MathF.Min(ShelfCut + VoidMore + more - shelfNoise, under[k] - CavernCut + 0.02f);
             if (inWell) cell[k] = CubeCell.Void;
             else if (canopy[k]) cell[k] = CubeCell.Shelf;
             else cell[k] = open > 0f ? CubeCell.Void : CubeCell.Shelf;
@@ -442,6 +556,8 @@ public sealed class CubeTerrain
             Cube = c,
             Sockets = sockets,
             Arena = arena,
+            Kind = cubeKind,
+            Spires = spires.ConvertAll(s => new Vector3(s.X + origin.X, s.Y + origin.Y, s.Z)),
             Roof = roof,
             Stride = nw,
             Rows = nh,

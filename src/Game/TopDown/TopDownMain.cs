@@ -353,9 +353,17 @@ public partial class TopDownMain : Node3D
     /// </summary>
     bool _dbgMurks, _dbgTough, _dbgSeeds;
     readonly Vector4[] _stains = new Vector4[8];
+    /// <summary>The lit stone lanterns' pools sent to the post pass (the nearest her).</summary>
+    readonly Vector4[] _lanternPools = new Vector4[8];
+    /// <summary>The stone lanterns (LanternView).</summary>
+    LanternView _lanternView = null!;
+    /// <summary>The arrows carved round the secrets' mouths (SecretCueView).</summary>
+    SecretCueView _cueView = null!;
 
     /// <summary>The wakes of everything that swims (WakeField).</summary>
     readonly OctoShoots.Game.Fx.WakeField _wakes = new();
+    /// <summary>Where her light has lately fallen (LightMemory), for the reef's fluorescent life.</summary>
+    readonly OctoShoots.Game.Fx.LightMemory _lightMemory = new();
     /// <summary>With --dbg-murks: the row budded worn down to 15% (freed quickly, for their echoes).</summary>
     bool _dbgWeak;
     readonly List<(Murkling M, System.Numerics.Vector2 At)> _dbgRow = new();
@@ -505,6 +513,10 @@ public partial class TopDownMain : Node3D
         AddChild(_adventure);
         _springs = new SpringView();
         AddChild(_springs);
+        _lanternView = new LanternView();
+        AddChild(_lanternView);
+        _cueView = new SecretCueView();
+        AddChild(_cueView);
         _portals = new PortalView();
         AddChild(_portals);
         _mirrorView = new MirrorView();
@@ -588,6 +600,13 @@ public partial class TopDownMain : Node3D
             // Verification: three inkseeds by her (one her glow wakes and lets burst, one her beam frees, one beyond),
             // then a murkling hidden in the stain, her beam on it.
             else if (arg == "--dbg-seeds") _autoFire = _dbgSeeds = true;
+            else if (arg == "--dbg-reveal") _autoFire = _dbgReveal = true;
+            else if (arg.StartsWith("--dbg-reveal=") && int.TryParse(Value("--dbg-reveal="), out int revealOn))
+            {
+                _autoFire = _dbgReveal = true;
+                _dbgRevealLayer = revealOn;
+            }
+            else if (arg.StartsWith("--dive-cooldown=") && float.TryParse(Value("--dive-cooldown="), NumberStyles.Float, CultureInfo.InvariantCulture, out float cool)) _diveCooldown = cool;
             // Verification (with --dbg-murks): the row hardy (25 times its meter), her beam on it and off by turns (2.5 s
             // each), so its burning, its regrowing and its implosion all show.
             else if (arg == "--dbg-tough") _dbgTough = true;
@@ -1335,6 +1354,7 @@ public partial class TopDownMain : Node3D
         _level.Place(Vector3.Zero, _origin);
         _levelShape = shape;
         _wakes.Clear();
+        _lightMemory.Clear();
         EnterLevel(shape.Map, keepRun, ms, arriveAt);
         // In a secret labyrinth the camera rises just enough to show all of it (docs/DIVE.md §6.1).
         _camera.Frame = InLabyrinth ? _camera.Fit(MazeArea(_map), LevelMap.SwimBand) : null;
@@ -1970,6 +1990,7 @@ public partial class TopDownMain : Node3D
         _lastHp = hp;
         _vapour.Tick(dt, _camera.Camera);
         _blight.Sync(_world, dt, _camera.Camera);
+        _lanternView.Sync(_world, _elapsed);
         _bars.Visible = _hudRoot.Visible;
         _bars.Sync(_world, _camera.Camera, _blight);
         _ash.Sync(_world, dt, _camera.Camera);
@@ -2880,6 +2901,19 @@ public partial class TopDownMain : Node3D
             }
             _camera.SetStains(_stains, stains);
             _beam.SetStains(_stains, stains);
+            // The lanterns' pools: the lit ones nearest her, and one being kindled as it catches.
+            int pools = 0;
+            if (_world.Lanterns.Count > 0)
+            {
+                var herAt = _world.Player.Position;
+                foreach (var l in _world.Lanterns.OrderBy(l => System.Numerics.Vector2.DistanceSquared(l.Position, herAt)))
+                {
+                    if (pools >= _lanternPools.Length) break;
+                    float k = l.Lit ? 1f : Mathf.Clamp(l.Held / LanternTuning.Kindle, 0f, 1f) * 0.45f;
+                    if (k > 0.01f) _lanternPools[pools++] = new Vector4(l.Position.X, l.Position.Y, LanternTuning.Reach * (l.Lit ? 1f : 0.5f), k);
+                }
+            }
+            _camera.SetLanternPools(_lanternPools, pools);
             _shoals.Step(new Vector2(_bell.GlobalPosition.X, _bell.GlobalPosition.Z), dt);
             _camera.SetDeepFish(_shoals);
         }
@@ -2952,6 +2986,17 @@ public partial class TopDownMain : Node3D
             using (Timed("wakes"))
                 _wakes.Step(_world, dt, _world.Player.Position);
         _camera.SetWakes(_wakes);
+        // Where her light has lately fallen (not while the game is held).
+        if (!Paused && _showcase)
+            using (Timed("light memory"))
+            {
+                var aura = _world.Aura;
+                var beam = _world.Beam;
+                _lightMemory.Step(_world, dt, _world.Player.Position, aura.Position, aura.Shining && !_dying ? aura.Range * 1.6f : 0f,
+                    beam.Position, _world.BeamAim, beam.Shining ? System.Numerics.Vector2.Distance(beam.Position, _world.BeamEnd) + 1.5f : 0f,
+                    Mathf.Max(_world.BeamSpread, beam.HalfAngle), _beamShown);
+            }
+        _camera.SetLightMemory(_showcase ? _lightMemory : null);
         _dark.Sync(_world, _camera.Camera, _bell.GlobalPosition, dt);
         // A wall between the camera and her (a tunnel's roof, a wall in front) is cut open round her while it hides her,
         // the opening irising out quickly and closing gently (eased in the shader); one she only swims beside stays whole.
@@ -3440,6 +3485,13 @@ public partial class TopDownMain : Node3D
                 _camera.Shake(0.35f);
                 _sfx.PlayPitched("bell_ring", 0.75f, -8f);
                 Say("A Blightroot starves and bursts");
+                break;
+            case PlaneEventType.LanternLit:
+                // A stone lantern caught: a warm chime and a ring of light out over the water; kept lit for the dive.
+                _sfx.PlayPitched("bell_ring", 1.25f, -5f);
+                _swells.AddRing(new Vector2(e.Position.X, e.Position.Y), 1.4f, 9f);
+                _haptics.Pulse(0.25f, 0.2f, 0.15f);
+                if (InReef) KeepLanterns();
                 break;
             case PlaneEventType.InkseedWoke:
                 // Woken: a small wet click, then its heart quickens.
@@ -4207,12 +4259,89 @@ public partial class TopDownMain : Node3D
         return true;
     }
 
+    /// <summary>--dbg-reveal: the lantern laid by her, and when.</summary>
+    bool _dbgReveal;
+    StoneLantern? _dbgLantern;
+    float _dbgSweepFrom, _dbgRevealFrom = -1f;
+    /// <summary>--dbg-reveal=N: the layer it is done on (the autopilot dives till it is there).</summary>
+    int _dbgRevealLayer;
+    /// <summary>Verification (--dive-cooldown=seconds): the wait between changes of layer.</summary>
+    float _diveCooldown = OctoShoots.Core.Gen.Cubes.CubeDiving.Cooldown;
+
+    /// <summary>
+    /// Verification (--dbg-reveal): she holds still; a stone lantern stands in her widest open way, 6 m off, and her beam
+    /// lights it; then her beam sweeps slowly round her, its light leaving the reef's fluorescent life glowing on behind
+    /// it, and two carved arrows laid in its sweep show as it passes.
+    /// </summary>
+    bool DebugReveal(ref PlaneInput input)
+    {
+        if (InReef && _layer < _dbgRevealLayer)
+        {
+            // (Down to it: set where she may dive, nearest her, once the wait between changes is over.)
+            if (_layerMove == LayerMove.None && _down != OctoShoots.Core.Gen.Cubes.LayerBlock.None && _cubeDiving.CooldownLeft <= 0f && Engine.GetFramesDrawn() % 20 == 0)
+            {
+                var here = _world.Player.Position;
+                for (float r = 2f; r < 60f; r += 2f)
+                {
+                    bool found = false;
+                    for (int k = 0; k < 24 && !found; k++)
+                    {
+                        var at = here + new System.Numerics.Vector2(Mathf.Cos(k * Mathf.Tau / 24f), Mathf.Sin(k * Mathf.Tau / 24f)) * r;
+                        if (_cubeDiving.CanDive(G(at), _world.Radius, _reef!.Made) != OctoShoots.Core.Gen.Cubes.LayerBlock.None || !_layerMaps.ContainsKey(_layer + 1)) continue;
+                        _world.Player.Position = _world.Player.PrevPosition = at;
+                        found = true;
+                    }
+                    if (found) break;
+                }
+            }
+            input.Dive = _down == OctoShoots.Core.Gen.Cubes.LayerBlock.None;
+            return false;
+        }
+        _autoDive = false;
+        _route.Clear();
+        input.Move = System.Numerics.Vector2.Zero;
+        input.Dive = false;
+        var from = _world.Player.Position;
+        _world.Player.Velocity = System.Numerics.Vector2.Zero;
+        if (_dbgLantern is not null && !_world.Lanterns.Contains(_dbgLantern)) _dbgLantern = null;
+        if (_dbgLantern is null)
+        {
+            if (_dbgRevealFrom < 0f) _dbgRevealFrom = _elapsed;
+            if (_elapsed - _dbgRevealFrom < 1f || _layerMove != LayerMove.None) return true;
+            float best = -1f;
+            for (int k = 0; k < 36; k++)
+            {
+                var w = new System.Numerics.Vector2(Mathf.Cos(k * Mathf.Tau / 36f), Mathf.Sin(k * Mathf.Tau / 36f));
+                float r = _world.LineReach(from, w, 16f, out _);
+                if (r > best) { best = r; _dbgRowWay = w; }
+            }
+            _dbgLantern = _world.PlaceLantern(default, from + _dbgRowWay * 6f, null);
+            GD.Print($"--dbg-reveal: lantern laid on layer {_layer} at frame {Engine.GetFramesDrawn()}");
+            var across = new System.Numerics.Vector2(-_dbgRowWay.Y, _dbgRowWay.X);
+            var cueAt = new[] { from + across * 5f, from - _dbgRowWay * 5f };
+            _cueView.Show(cueAt.Select(c => (c, System.Numerics.Vector2.Normalize(from - c))).ToList(), _map.HeightAt);
+            return true;
+        }
+        input.Beam = true;
+        if (!_dbgLantern.Lit)
+        {
+            input.Aim = _dbgLantern.Position - from;
+            _dbgSweepFrom = _world.Time;
+            return true;
+        }
+        // (Round her, a turn in 10 s.)
+        float a = Mathf.Atan2(_dbgRowWay.Y, _dbgRowWay.X) + (_world.Time - _dbgSweepFrom) * Mathf.Tau / 10f;
+        input.Aim = new System.Numerics.Vector2(Mathf.Cos(a), Mathf.Sin(a));
+        return true;
+    }
+
     /// <summary>Verification: fire at the boss in her fight, else at the nearest mob.</summary>
     bool AutoFire(ref PlaneInput input)
     {
         if (!_autoFire) return false;
         var from = _world.Player.Position;
         if (_dbgSeeds) return DebugSeeds(ref input);
+        if (_dbgReveal) return DebugReveal(ref input);
         if (_dbgMurks)
         {
             if (_dbgRow.Count == 0)

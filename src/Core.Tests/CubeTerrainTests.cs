@@ -398,3 +398,65 @@ public class CubeTimingTests
         Assert.True(best < 0.1, $"{best * 1000:F1} µs a frame");
     }
 }
+
+/// <summary>A cube's kind (CubeTerrain.KindOf): halls, spires and drops, each as its rules say.</summary>
+public class CubeKindTests
+{
+    [Fact]
+    public void Every_kind_comes_up_and_always_the_same_for_the_same_cube()
+    {
+        var space = new CubeSpace(42UL, 6, 3);
+        var seen = new HashSet<CubeKind>();
+        foreach (var c in Enumerable.Range(0, 3).SelectMany(space.CubesOf))
+        {
+            var kind = CubeTerrain.KindOf(space.Seed, c);
+            Assert.Equal(kind, CubeTerrain.KindOf(space.Seed, c));
+            seen.Add(kind);
+        }
+        Assert.Equal(4, seen.Count);
+        Assert.All(Enumerable.Range(0, 3).SelectMany(space.CubesOf), c => Assert.Equal(CubeKind.Plain, CubeTerrain.KindOf(space.Seed, c, arena: true)));
+    }
+
+    [Theory]
+    [MemberData(nameof(CubeTerrainTests.Seeds), MemberType = typeof(CubeTerrainTests))]
+    public void Spires_stand_in_open_water_with_water_all_round_them(ulong seed)
+    {
+        var space = new CubeSpace(seed, CubeTerrainTests.F, CubeTerrainTests.L);
+        int spires = 0;
+        foreach (var c in CubeTerrainTests.Block(space).Where(c => CubeTerrain.KindOf(seed, c) == CubeKind.Spires))
+        {
+            var t = CubeTerrain.Make(space, c);
+            Assert.Equal(CubeKind.Spires, t.Kind);
+            foreach (var s in t.Spires)
+            {
+                spires++;
+                // Its middle rock; a ring round it, past its rock, water all the way round.
+                Assert.Equal(CubeCell.Rock, t.CellAt((int)MathF.Round(s.X), (int)MathF.Round(s.Y)));
+                for (int k = 0; k < 24; k++)
+                {
+                    float a = k * MathF.Tau / 24f;
+                    var p = new Vector2(s.X, s.Y) + new Vector2(MathF.Cos(a), MathF.Sin(a)) * (s.Z + CubeTerrain.SpireClear - 0.5f);
+                    Assert.NotEqual(CubeCell.Rock, t.CellAt((int)MathF.Round(p.X), (int)MathF.Round(p.Y)));
+                }
+            }
+        }
+        Assert.True(spires > 0 || CubeTerrainTests.Block(space).All(c => CubeTerrain.KindOf(seed, c) != CubeKind.Spires));
+    }
+
+    [Fact]
+    public void A_drop_has_more_void_than_it_would_as_plain_water()
+    {
+        // (The same cube's void counted with and without its drop: summed over many drops.)
+        var space = new CubeSpace(7UL, 6, 3);
+        int drops = 0;
+        long more = 0;
+        foreach (var c in Enumerable.Range(0, 2).SelectMany(space.CubesOf).Where(c => CubeTerrain.KindOf(space.Seed, c) == CubeKind.Drop).Take(4))
+        {
+            drops++;
+            var t = CubeTerrain.Make(space, c);
+            more += t.Cells.Count(k => k == CubeCell.Void);
+        }
+        Assert.True(drops > 0);
+        Assert.True(more > 0);
+    }
+}

@@ -94,7 +94,12 @@ the reef was never being called home. It was being kept.
   placed in it yet.
 - **What a cube holds** (CUBE-WORLD-PLAN §9) is decided as she first swims into it: its murklings (never on the warm-up
   layer, never in the cube she dives into), its inkseeds (the warm-up layer too), and now and then a mouth into a place
-  of its own. The pause menu's chart
+  of its own.
+- **Its character** (CUBE-WORLD-PLAN §4.2, kinds): plain caverns, a great open hall, a forest of rock spires, or a drop
+  where half of it falls away into the void.
+- **Its scenery** is its layer's (VISUAL-SHOWCASE): kelp, wrecks, packed sponges, vent chimneys, whale falls. About one
+  cube in two has a stone lantern; her beam lights it for good, leaving a pool of light and a gentle healing
+  (LIGHT-AND-GRAPH §2.7). The pause menu's chart
   is her layer: the cubes she has claimed and what they hold.
 - **Havens** (DIVE §4): small safe sub-levels behind mouths, two a layer at most, always bright, each with its shop and
   a pick of the services she has unlocked. Entering one heals her whole, banks everything she carries and saves the dive.
@@ -119,6 +124,10 @@ the reef was never being called home. It was being kept.
 - **Its life**: healthy reef fish (clownfish in anemones, blue tangs, schools of chromis, pufferfish, flounders) going
   about their day; the ink never turns them; currents and geysers; the reef director that keeps the reef acting when she is not
   there.
+- **Secrets are found, not shown**: a secret's mouth shows no emblem till she has been in. Arrows carved in the floor
+  round it, seen only in her beam, point the way (DIVE §6.1).
+- **The reef answers her light**: drifts of fluorescent life glow on for a few seconds where her light has passed, a
+  fading trail of colour in the grey (VISUAL-SHOWCASE).
 - **Where she is shown**: no minimap; emblems mark the places round her (locked on each entrance once it is on the screen, waiting at the screen's edge till then); there is no
   map under Tab; the pause menu's chart shows her layer's claimed cubes.
 

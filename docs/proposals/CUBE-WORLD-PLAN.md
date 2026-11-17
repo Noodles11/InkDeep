@@ -145,6 +145,16 @@ over its two squares.
 **Generation never retries.** Today's generate-validate-retry cannot run while she swims. The construction above is
 valid by design; `LevelValidator`'s checks move into the test suite, run over thousands of seeds and coordinates.
 
+**Kinds of cube** (`CubeKind`, `CubeTerrain.KindOf`). Each cube has a character, from the seed and the cube alone.
+Only its own carving changes; its edges stay as its neighbours have them. A boss's arena is always Plain.
+
+| Kind | Share | What it is |
+|---|---|---|
+| Plain | 40% | The reef's caverns as they come. |
+| Hall | 20% | A great wobbling basin of open water, 13–18 m across, carved in its middle and joined to its nearest water by a wide way. |
+| Spires | 20% | Rock pillars, 1.3–2.3 m in radius, stood on a jittered lattice in its wider open water, each with 3.5 m of water all round it, none near its gates' mouths or wells. Laid on the face's field itself, so the blur never wears them away. |
+| Drop | 20% | One of its two squares falls away into the void far more than elsewhere: a cliff over the layer below. The other square keeps its floor, so it still has room for its sockets. |
+
 ### 4.3 One reef down the layers: the strata
 
 A layer is not made alone: its depth fields are **stacked noise maps**, one every 5 layers *(tune)*, each layer a

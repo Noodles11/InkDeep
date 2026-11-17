@@ -23,7 +23,7 @@ public partial class ChartView : Control
     /// the cubes next to her claimed ones a faint outline; the edges the wake current holds red; she a gold dot.
     /// </summary>
     public sealed record ReefChart(Rect2 Area, int Layer, int Deepest, IReadOnlyList<(OctoShoots.Core.Gen.Cubes.CubeId Cube, bool Claimed, bool Arena, IReadOnlyList<PoiKind> Places)> Cubes,
-        IReadOnlyList<OctoShoots.Core.Gen.Cubes.EdgeId> Shut, System.Numerics.Vector2 Her);
+        IReadOnlyList<OctoShoots.Core.Gen.Cubes.EdgeId> Shut, System.Numerics.Vector2 Her, IReadOnlyList<(System.Numerics.Vector2 At, bool Lit)> Lanterns);
 
     ReefChart? _reef;
 
@@ -63,6 +63,16 @@ public partial class ChartView : Control
         }
         foreach (var e in chart.Shut)
             DrawLine(At(e.Point(0f, 0f)), At(e.Point(OctoShoots.Core.Gen.Cubes.CubeTuning.Side, 0f)), new Color(0.95f, 0.35f, 0.3f, 0.9f), 3f, true);
+        // Her stone lanterns: lit ones a warm flame, the others grey stone.
+        foreach (var (at, lit) in chart.Lanterns)
+        {
+            if (lit)
+            {
+                DrawCircle(At(at), 7f, new Color(1f, 0.6f, 0.2f, 0.25f));
+                DrawCircle(At(at), 3.5f, new Color(1f, 0.7f, 0.3f));
+            }
+            else DrawCircle(At(at), 3f, new Color(0.62f, 0.6f, 0.56f, 0.8f));
+        }
         DrawCircle(At(chart.Her), 6f, Gold);
         DrawArc(At(chart.Her), 9f, 0f, Mathf.Tau, 24, new Color(Gold, 0.4f), 1.5f, true);
         float y = CustomMinimumSize.Y - 40f, x = 4f;

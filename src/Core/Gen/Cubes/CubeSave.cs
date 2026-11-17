@@ -89,6 +89,10 @@ public sealed class CubeRecordSave
     public List<CubeStockSave>? Left { get; set; }
     /// <summary>Its inkseeds left (x, y by turns).</summary>
     public List<float>? Seeds { get; set; }
+    /// <summary>Its stone lantern lit, and its store left (null: unlit).</summary>
+    public float? Lantern { get; set; }
+    /// <summary>Which of its places she has been into (their indices).</summary>
+    public List<int>? Visited { get; set; }
 }
 
 public sealed class CubePlaceSave
@@ -123,6 +127,8 @@ public static class CubeRecordSaving
             Places = r.Places.Select(p => new CubePlaceSave { Kind = p.Kind, AtX = p.Mouth.At.X, AtY = p.Mouth.At.Y, IntoX = p.Mouth.Into.X, IntoY = p.Mouth.Into.Y }).ToList(),
             Left = r.Left?.Select(l => new CubeStockSave { Spawn = l.Spawn, Seed = l.Seed, Prime = l.Prime, Shoal = l.Shoal, At = l.At.SelectMany(a => new[] { a.X, a.Y }).ToList() }).ToList(),
             Seeds = r.Seeds?.SelectMany(a => new[] { a.X, a.Y }).ToList(),
+            Lantern = r.Lantern,
+            Visited = r.Visited.Count > 0 ? r.Visited.OrderBy(v => v).ToList() : null,
         }).ToList(),
         Shut = records.Shut.Select(CubeDiveSave.EdgeKey).ToList(),
         Last = records.Last is { } last ? CubeDiveSave.EdgeKey(last) : null,
@@ -140,6 +146,8 @@ public static class CubeRecordSaving
             foreach (var p in c.Places) r.Places.Add((p.Kind, new Doorway(new Vector2(p.AtX, p.AtY), new Vector2(p.IntoX, p.IntoY))));
             r.Left = c.Left?.Select(l => new StockLeft(l.Spawn, l.Seed, l.Prime, l.Shoal,
                 Enumerable.Range(0, l.At.Count / 2).Select(k => new Vector2(l.At[2 * k], l.At[2 * k + 1])).ToArray())).ToList();
+            r.Lantern = c.Lantern;
+            foreach (int v in c.Visited ?? new List<int>()) r.Visited.Add(v);
             r.Seeds = c.Seeds is { } seeds ? Enumerable.Range(0, seeds.Count / 2).Select(k => new Vector2(seeds[2 * k], seeds[2 * k + 1])).ToList() : null;
             cubes.Add(r);
         }

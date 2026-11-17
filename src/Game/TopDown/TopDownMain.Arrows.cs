@@ -50,6 +50,8 @@ public partial class TopDownMain
             if (!_world.ShutMouths.Contains(i))
             {
                 var kind = i < _map.MouthKinds.Count ? _map.MouthKinds[i] : PoiKind.LeakCave;
+                // (A secret's mouth shows no emblem till she has been in: its carved arrows lead her to it.)
+                if (kind == PoiKind.Secret && !MouthVisited(i)) continue;
                 yield return (_map.Mouths[i].At, MouthColour(kind), Sign(kind), MouthReach);
             }
         if (_map.Way is { } way) yield return (way.At, WayOut, "^", MouthReach);

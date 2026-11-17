@@ -145,6 +145,15 @@ uniform int blur_count = 0;
 // shows within one. 1 deep inside one, 0 outside them all, its edge ragged as ink spreading.
 uniform vec4 ink_stains[8];
 uniform int ink_stain_count = 0;
+// Where her light has lately fallen (LightMemory: 0..1, fading over 5 s), so the reef's fluorescent life glows on after it.
+uniform sampler2D glow_memory : filter_linear, repeat_disable;
+uniform vec2 glow_origin = vec2(0.0);
+uniform float glow_span = 64.0;
+uniform float glow_on = 0.0;
+uniform float fluor_strength = 0.75;
+// The lit stone lanterns' pools of light (PlaneLanterns; xz, reach, strength): the reef shows round each in its colours, warmed.
+uniform vec4 lantern_pools[8];
+uniform int lantern_count = 0;
 
 float ink_hash(vec2 p) {
 	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -624,9 +633,20 @@ void fragment() {
 	// (Gently: lifted hard, the room and its pearl wash out and the pearl's pattern is lost.)
 	col = col * (1.0 + clam * 0.45) + clam * 0.1;
 
+	// The lit stone lanterns: each a pool of warm light on the reef round it, the reef showing there as in her light.
+	float lantern_lit = 0.0;
+	for (int i = 0; i < lantern_count; i++) {
+		vec4 lp = lantern_pools[i];
+		float ld = distance(on_layer.xz, lp.xy);
+		lantern_lit = max(lantern_lit, (1.0 - smoothstep(lp.z * 0.5, lp.z, ld)) * lp.w);
+	}
+	col = col * (1.0 + vec3(1.0, 0.62, 0.3) * lantern_lit * 0.35) + vec3(1.0, 0.6, 0.25) * lantern_lit * lantern_lit * 0.02;
+	// (How coloured the reef is here before it is drained: its corals and gardens are, its chalk little.)
+	float raw_hi = max(col.r, max(col.g, col.b)), raw_lo = min(col.r, min(col.g, col.b));
+	float raw_chroma = (raw_hi - raw_lo) / max(raw_hi, 0.02);
 	// Grade: the depth's saturation; shadows cooled toward the water, highlights a touch of sun. Outside her light (her
 	// glow and her beam, and what the sealed leaks have woken) the reef keeps little of its colour and some of its light.
-	float shown = open_deep ? 0.0 : max(max(lit, reef_show(world, CAMERA_POSITION_WORLD)), pearl_shown * 0.9);
+	float shown = open_deep ? 0.0 : max(max(lit, reef_show(world, CAMERA_POSITION_WORLD)), max(pearl_shown * 0.9, lantern_lit));
 	col *= mix(unlit_dim, 1.0, shown);
 	float luma = dot(col, vec3(0.299, 0.587, 0.114));
 	// (Its values drawn together where she does not light it: darks lifted a little, lights held down.)
@@ -665,6 +685,29 @@ void fragment() {
 		float tooth = hash12(floor(FRAGCOORD.xy * 0.5));
 		float wash = value_noise(FRAGCOORD.xy * 0.006) * 0.6 + value_noise(FRAGCOORD.xy * 0.02 + 9.0) * 0.4;
 		col *= 0.955 + 0.05 * tooth + 0.06 * (wash - 0.5);
+	}
+	// The reef answers her light (docs/VISUAL-SHOWCASE.md): its corals and gardens, and drifts of fluorescent life on
+	// its rock and sand, glow on in colours of their own (green, orange, magenta, cyan) where her light has lately
+	// fallen, fading over five seconds once it has gone on, a trail of colour behind her in the grey. Faint while her
+	// light is on them (they show their own colours then), only dotted, never as bright as she is.
+	if (glow_on > 0.0 && !open_deep) {
+		vec3 seen_at = rs_seen(world, CAMERA_POSITION_WORLD);
+		vec2 gq = (seen_at.xz - glow_origin) / glow_span;
+		float mem = (gq.x > 0.0 && gq.y > 0.0 && gq.x < 1.0 && gq.y < 1.0) ? texture(glow_memory, gq).r : 0.0;
+		if (mem > 0.004) {
+			vec2 fq = world.xz + vec2(world.y * 0.37, -world.y * 0.23);
+			float drift = smoothstep(0.52, 0.68, value_noise(fq * 0.42 + 3.1) * 0.7 + value_noise(fq * 1.3 + 8.0) * 0.3);
+			// (Its corals and gardens a little more than bare rock and sand.)
+			float life = drift * (0.75 + 0.25 * smoothstep(0.3, 0.6, raw_chroma));
+			float dots = smoothstep(0.4, 0.8, value_noise(fq * 5.5 + 1.7)) * 0.8 + smoothstep(0.55, 0.9, value_noise(fq * 13.0 + 4.2)) * 0.6;
+			float hn = value_noise(fq * 0.07 + 11.0) * 4.0;
+			vec3 hue = hn < 1.0 ? mix(vec3(0.2, 1.0, 0.45), vec3(1.0, 0.5, 0.1), smoothstep(0.6, 1.0, hn))
+				: hn < 2.0 ? mix(vec3(1.0, 0.5, 0.1), vec3(1.0, 0.2, 0.7), smoothstep(1.6, 2.0, hn))
+				: hn < 3.0 ? mix(vec3(1.0, 0.2, 0.7), vec3(0.2, 0.85, 1.0), smoothstep(2.6, 3.0, hn))
+				: mix(vec3(0.2, 0.85, 1.0), vec3(0.2, 1.0, 0.45), smoothstep(3.6, 4.0, hn));
+			float after = smoothstep(0.0, 0.6, mem) * (1.0 - 0.7 * shown);
+			col += hue * life * dots * after * fluor_strength * (0.6 + 0.6 * reef_menace);
+		}
 	}
 	// The inkseeds' stains: no light shows within one, only the deepest ink.
 	if (ink_stain_count > 0 && !open_deep) col = mix(col, vec3(0.005, 0.003, 0.01), ink_stained(world.xz));

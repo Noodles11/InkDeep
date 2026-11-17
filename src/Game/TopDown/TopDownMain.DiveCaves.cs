@@ -235,7 +235,11 @@ public partial class TopDownMain
         Task<LevelShape> shape;
         if (way.Into)
         {
-            if (InReef) LeavingForMouth();
+            if (InReef)
+            {
+                LeavingForMouth();
+                VisitMouth(way.Mouth);
+            }
             _levelState = Moment(levelOnly: true);
             _levelLuck = _map.Luck;
             _reefShape = _levelShape;

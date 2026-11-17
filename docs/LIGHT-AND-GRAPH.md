@@ -142,6 +142,29 @@ lights what is round it in its colour.
   stone, softer at its sides and toward its end (`BeamView`). Where her own beam's axis lands, a light of that colour
   falls on the rock.
 
+### 2.7 Stone lanterns
+
+A stone lantern (tōrō) stands on the open floor of about one cube in two (`PlaneLanterns.cs`, `LanternTuning`;
+`CubeStock.Lantern` places it, `LanternView` draws it). None stands in a boss's arena.
+- **Placement:** on shelf, not under a roof, 2.5 m clear of rock, 9 m from the cube's ways and spires. From the seed and
+  the cube alone.
+- **Unlit** it is grey stone, drained like all the reef: a broad foot, a post, the fire box and its windows, a wide
+  six-sided roof with moss on it. It is drawn 1.6 times larger than life so it reads from above.
+- **Lighting it:** her beam held on it for 1.5 s lights it for good. Taken off, the count cools back at half that pace.
+  A flame grows in its fire box as she holds the beam, and when it catches there is a warm chime and a ring of light
+  out over the water.
+- **Lit, it keeps:**
+  - a flickering flame;
+  - a pool of warm light 6 m round it (`topdown_post`'s `lantern_pools`), where the reef shows in its colours as in her
+    light, and where the creatures are seen as in a charge stone's light (`LanternSees`, through `ChargeStoneSees`);
+  - a gentle healing for her within 3 m: 6% of her health a second, out of a store of half her health.
+- **Kept for the dive:** the cube's record keeps it lit with what is left of its store (`CubeRecord.Lantern`, and the
+  dive's save). The pause menu's chart shows her claimed cubes' lanterns: lit ones as a warm flame, unlit ones as grey
+  stone.
+- **Verification:** `--dbg-reveal` (or `--dbg-reveal=N`, diving down to layer N first; `--dive-cooldown=seconds`
+  shortens the wait between layers) stands one by her, lights it with her beam, then sweeps her beam round her over two
+  carved arrows.
+
 ## 3. Murklings
 
 ### 3.1 The basic murkling

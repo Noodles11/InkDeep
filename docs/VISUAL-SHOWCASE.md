@@ -53,6 +53,24 @@ between).
   The wave shows the hidden murklings it passes over as its front touches them (within 1.5 m of it), all of each,
   fading out over 1.2 s after (`BlightView.Wave`, `murkling`'s `wave_seen`).
 
+- **Each layer's scenery** (`LevelView.Gardens`, `LevelView.Landmarks`, `FloraMeshes`; `--dbg-theme=N` dresses every
+  map as layer N's):
+  - *Sunlit Shallows:* the coral gardens below.
+  - *Kelp Jungle:* giant kelp at the walls' feet, and forests of it grown up out of the void from the floor far below.
+  - *Sunken Galleon:* broken planks among the gardens, and now and then a wreck's hull in the sand: keel, ribs, a strake
+    of planking, a fallen mast.
+  - *Coral Carnival:* gardens packed denser, with tube and barrel sponges.
+  - *Twilight Trench:* sea fans and sea rods, and clusters of vent chimneys, their lips rimmed with an ember of mineral.
+  - *The Abyss:* few living things, lone vertebrae, and now and then a whale fall: a spine, ribs arching over the sand,
+    its skull.
+  The landmarks (wrecks, vents, whale falls) stand on a coarse lattice in the open floor, clear of the walls.
+- **The reef answers her light** (`LightMemory`, `topdown_post`'s `glow_memory`):
+  - A map round her (64 m, half-metre cells) keeps where her glow and her beam have lately fallen, cut off by rock and
+    by inkseed stains. It fades over 5 s once her light has gone on.
+  - Where it holds, drifts of fluorescent life on the reef glow in colours of their own: green, orange, magenta and
+    cyan. They are dotted like polyps, a little stronger on corals and gardens, and stronger the deeper the layer.
+  - So she leaves a fading trail of colour behind her in the grey. While her light is still on a spot the glow is faint
+    there, so the reef's own colours show.
 - **Coral gardens** (`LevelView.Gardens`): sea rods, staghorn, sea fans, elkhorn and brain corals (no sponges) packed
   in drifting patches on the walls' tops and ledges, and in a band along their feet at the edge of the open floor; like the seagrass and the coral heads, only half the spots are dressed (`LevelView.DecorShare`).
 

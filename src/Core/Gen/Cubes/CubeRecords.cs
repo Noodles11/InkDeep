@@ -31,6 +31,10 @@ public sealed class CubeRecord
     public List<StockLeft>? Left { get; set; }
     /// <summary>Its inkseeds still lying where they were as she last left the layer (null: as Left).</summary>
     public List<Vector2>? Seeds { get; set; }
+    /// <summary>Its stone lantern lit, and what is left of its store to heal her with (null: unlit, or none).</summary>
+    public float? Lantern { get; set; }
+    /// <summary>Which of its places (by their index in Places) she has been into.</summary>
+    public HashSet<int> Visited { get; } = new();
     /// <summary>The places granted it (CubeDirector), each opening its mouth in one of its sockets.</summary>
     public List<(OctoShoots.Core.Gen.TopDown.PoiKind Kind, OctoShoots.Core.Gen.TopDown.Doorway Mouth)> Places { get; } = new();
 

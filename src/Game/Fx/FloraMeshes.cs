@@ -25,6 +25,20 @@ public enum FloraKind
     TubeSponge,
     /// <summary>Giant barrel sponge (Xestospongia muta): a ridged red-brown barrel on the deeper slope.</summary>
     BarrelSponge,
+    /// <summary>Giant kelp (Macrocystis): an amber stipe hung with blades and their floats, at the walls' feet (the Kelp Jungle).</summary>
+    Kelp,
+    /// <summary>Giant kelp grown up out of the void from the layer below's floor: the same, drawn to be stretched tall.</summary>
+    KelpTall,
+    /// <summary>A wreck's hull in the sand: a keel, pairs of curved ribs (some broken), a strake of planking, a fallen mast (the Sunken Galleon).</summary>
+    Wreck,
+    /// <summary>A broken plank lying on the sand.</summary>
+    Plank,
+    /// <summary>A vent's chimneys: rough dark stacks, their lips rimmed with an ember of mineral (the Twilight Trench).</summary>
+    Vent,
+    /// <summary>A whale fall: a spine, its ribs arching over the sand, its skull (the Abyss).</summary>
+    WhaleFall,
+    /// <summary>A lone vertebra in the sand.</summary>
+    Vertebra,
 }
 
 /// <summary>
@@ -43,8 +57,192 @@ public static class FloraMeshes
         FloraKind.SeaFan => SeaFan(),
         FloraKind.SeaRod => SeaRod(),
         FloraKind.TubeSponge => TubeSponge(),
+        FloraKind.Kelp => Kelp(1f),
+        FloraKind.KelpTall => Kelp(4f),
+        FloraKind.Wreck => Wreck(),
+        FloraKind.Plank => Plank(),
+        FloraKind.Vent => Vent(),
+        FloraKind.WhaleFall => WhaleFall(),
+        FloraKind.Vertebra => Vertebra(),
         _ => BarrelSponge(),
     };
+
+    /// <summary>
+    /// Giant kelp, a unit tall: a wavering stipe, blades on alternate sides with a float at each blade's foot, a tuft at
+    /// its top. <paramref name="stretch"/>: how much taller than wide it is drawn (its blades kept their shape under it).
+    /// </summary>
+    static ArrayMesh Kelp(float stretch)
+    {
+        var b = new MeshBuilder();
+        var rng = new Random(stretch > 1f ? 41 : 29);
+        var stipe = new Color(0.36f, 0.3f, 0.1f);
+        var blade = new Color(0.66f, 0.52f, 0.16f);
+        const int n = 10;
+        var path = new Vector3[n + 1];
+        for (int i = 0; i <= n; i++)
+        {
+            float t = i / (float)n;
+            path[i] = new Vector3(0.03f * Mathf.Sin(t * 7f), t, 0.03f * Mathf.Cos(t * 5f));
+        }
+        b.Tube(path, s => 0.012f, 5, s => C(stipe.R, stipe.G, stipe.B, s / (float)n));
+        int blades = stretch > 1f ? 16 : 9;
+        for (int k = 0; k < blades; k++)
+        {
+            float t = 0.2f + 0.8f * k / (blades - 1f);
+            float a = k * 2.4f + (float)rng.NextDouble() * 0.6f;
+            var out1 = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+            var at = new Vector3(0.03f * Mathf.Sin(t * 7f), t, 0.03f * Mathf.Cos(t * 5f));
+            float length = 0.22f + 0.12f * (float)rng.NextDouble();
+            var bp = new Vector3[5];
+            for (int s = 0; s < bp.Length; s++)
+            {
+                float u = s / 4f;
+                bp[s] = at + out1 * length * u + Vector3.Up * (0.06f * u - 0.04f * u * u) / stretch;
+            }
+            Blade(b, bp, s => 0.07f * Mathf.Sin(Mathf.Pi * (0.15f + 0.85f * s / 4f)), Vector3.Up, s => C(blade.R, blade.G, blade.B, t));
+            b.Ellipsoid(at + out1 * 0.02f, new Vector3(0.018f, 0.018f / stretch, 0.018f), C(0.78f, 0.62f, 0.2f, t), 5);
+        }
+        return b.Build();
+    }
+
+    /// <summary>A box from its middle, half-sizes along its own axes (x along, y up, z across), turned by <paramref name="basis"/>.</summary>
+    static void Box(MeshBuilder b, Vector3 middle, Vector3 half, Basis basis, Color color)
+    {
+        Vector3 P(float x, float y, float z) => middle + basis * new Vector3(x * half.X, y * half.Y, z * half.Z);
+        void Face(Vector3 n, Vector3 a, Vector3 bb, Vector3 c, Vector3 d)
+        {
+            var nn = (basis * n).Normalized();
+            b.Quad(b.Add(a, nn, color), b.Add(bb, nn, color), b.Add(c, nn, color), b.Add(d, nn, color));
+        }
+        Face(Vector3.Up, P(-1, 1, -1), P(1, 1, -1), P(1, 1, 1), P(-1, 1, 1));
+        Face(Vector3.Down, P(-1, -1, 1), P(1, -1, 1), P(1, -1, -1), P(-1, -1, -1));
+        Face(Vector3.Right, P(1, -1, -1), P(1, -1, 1), P(1, 1, 1), P(1, 1, -1));
+        Face(Vector3.Left, P(-1, -1, 1), P(-1, -1, -1), P(-1, 1, -1), P(-1, 1, 1));
+        Face(Vector3.Back, P(-1, -1, 1), P(-1, 1, 1), P(1, 1, 1), P(1, -1, 1));
+        Face(Vector3.Forward, P(1, -1, -1), P(1, 1, -1), P(-1, 1, -1), P(-1, -1, -1));
+    }
+
+    static readonly Color Wood = new(0.34f, 0.24f, 0.15f), WoodPale = new(0.5f, 0.42f, 0.3f), Verdigris = new(0.3f, 0.42f, 0.36f);
+
+    /// <summary>A wreck's hull half sunk in the sand, about 4 m long and a metre high.</summary>
+    static ArrayMesh Wreck()
+    {
+        var b = new MeshBuilder();
+        var rng = new Random(57);
+        b.Tube(new[] { new Vector3(-2.1f, 0.06f, 0f), new Vector3(0f, 0.1f, 0f), new Vector3(2.2f, 0.12f, 0f), new Vector3(2.5f, 0.45f, 0f) }, s => 0.09f, 4, s => Wood);
+        for (int r = 0; r < 7; r++)
+        {
+            float x = -1.7f + r * 0.55f;
+            for (int side = -1; side <= 1; side += 2)
+            {
+                // (Some broken short.)
+                float reach = rng.NextDouble() < 0.3 ? 0.4f + 0.4f * (float)rng.NextDouble() : 1f;
+                var path = new Vector3[6];
+                for (int s = 0; s < path.Length; s++)
+                {
+                    float t = s / 5f * reach;
+                    float narrow = 1f - 0.35f * Mathf.Abs(x) / 2f;
+                    path[s] = new Vector3(x, 0.08f + 0.95f * t, side * (0.15f + 0.8f * Mathf.Sqrt(t)) * narrow);
+                }
+                var c = Wood.Lerp(Verdigris, (float)rng.NextDouble() * 0.35f);
+                b.Tube(path, s => 0.05f - 0.004f * s, 4, s => c);
+            }
+        }
+        // A strake of planking still on the ribs along one side, and a few loose.
+        for (int k = 0; k < 3; k++)
+        {
+            float y = 0.3f + 0.22f * k;
+            float z = 0.15f + 0.8f * Mathf.Sqrt((y - 0.08f) / 0.95f);
+            float len = 1.4f + 0.5f * (float)rng.NextDouble();
+            var basis = new Basis(Vector3.Right, -0.5f - 0.3f * k);
+            Box(b, new Vector3(-0.6f + 0.3f * k, y, z * 0.9f), new Vector3(len * 0.5f, 0.02f, 0.09f), basis, WoodPale.Lerp(Wood, 0.4f * k));
+        }
+        // The mast, fallen across the sand.
+        b.Tube(new[] { new Vector3(0.4f, 0.12f, -0.3f), new Vector3(2.2f, 0.1f, -1.3f), new Vector3(3.8f, 0.08f, -2.2f) }, s => 0.08f - 0.01f * s, 6, s => Wood.Lerp(WoodPale, 0.3f));
+        return b.Build();
+    }
+
+    /// <summary>A broken plank, a metre and a little long.</summary>
+    static ArrayMesh Plank()
+    {
+        var b = new MeshBuilder();
+        Box(b, new Vector3(0f, 0.03f, 0f), new Vector3(0.6f, 0.025f, 0.09f), new Basis(Vector3.Forward, 0.05f), WoodPale);
+        Box(b, new Vector3(0.75f, 0.03f, 0.04f), new Vector3(0.18f, 0.02f, 0.05f), new Basis(Vector3.Up, 0.5f), Wood);
+        return b.Build();
+    }
+
+    /// <summary>A vent's chimneys: three rough dark stacks, each rimmed at its lip with an ember of mineral.</summary>
+    static ArrayMesh Vent()
+    {
+        var b = new MeshBuilder();
+        var rng = new Random(71);
+        var rock = new Color(0.17f, 0.15f, 0.14f);
+        var ochre = new Color(0.55f, 0.38f, 0.16f);
+        var ember = new Color(1f, 0.42f, 0.08f);
+        for (int k = 0; k < 3; k++)
+        {
+            float a = k * 2.1f;
+            var foot = k == 0 ? Vector3.Zero : new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * (0.35f + 0.1f * k);
+            float height = k == 0 ? 1f : 0.45f + 0.2f * (float)rng.NextDouble();
+            float r0 = k == 0 ? 0.24f : 0.14f;
+            const int n = 7;
+            var path = new Vector3[n + 1];
+            for (int s = 0; s <= n; s++)
+            {
+                float t = s / (float)n;
+                path[s] = foot + new Vector3(0.04f * Mathf.Sin(t * 5f + k), height * t, 0.04f * Mathf.Cos(t * 4f + k));
+            }
+            b.Tube(path, s => r0 * (1f - 0.45f * s / n) * (1f + 0.15f * Mathf.Sin(s * 2.7f + k)), 7, s => s % 3 == 1 ? ochre : rock);
+            // (Its lip, a ring of ember, and the dark of its throat.)
+            b.Disc(path[n] + Vector3.Up * 0.005f, Vector3.Up, r0 * 0.55f, ember, 10);
+            b.Disc(path[n] + Vector3.Up * 0.01f, Vector3.Up, r0 * 0.3f, new Color(0.05f, 0.03f, 0.02f), 8);
+        }
+        return b.Build();
+    }
+
+    static readonly Color Bone = new(0.86f, 0.83f, 0.74f), BoneDark = new(0.62f, 0.58f, 0.5f);
+
+    /// <summary>A whale fall, about 5 m long: a spine of vertebrae, ribs arching over the sand, a skull at its head.</summary>
+    static ArrayMesh WhaleFall()
+    {
+        var b = new MeshBuilder();
+        var rng = new Random(83);
+        for (int v = 0; v < 12; v++)
+        {
+            float x = -2.4f + v * 0.36f;
+            b.Ellipsoid(new Vector3(x, 0.12f, 0f), new Vector3(0.12f, 0.12f, 0.16f), Bone.Lerp(BoneDark, (float)rng.NextDouble() * 0.4f), 6);
+            b.Cone(new Vector3(x, 0.2f, 0f), new Vector3(x - 0.05f, 0.42f, 0f), 0.04f, Bone, BoneDark, 4);
+        }
+        for (int r = 0; r < 6; r++)
+        {
+            float x = -1.6f + r * 0.42f;
+            for (int side = -1; side <= 1; side += 2)
+            {
+                if (rng.NextDouble() < 0.2) continue;
+                var path = new Vector3[7];
+                for (int s = 0; s < path.Length; s++)
+                {
+                    float t = s / 6f;
+                    path[s] = new Vector3(x + 0.1f * t, 0.14f + 0.65f * Mathf.Sin(t * Mathf.Pi * 0.85f), side * (0.1f + 1.15f * t));
+                }
+                b.Tube(path, s => 0.045f - 0.004f * s, 5, s => Bone.Lerp(BoneDark, s / 8f));
+            }
+        }
+        b.Ellipsoid(new Vector3(2.35f, 0.2f, 0f), new Vector3(0.7f, 0.24f, 0.42f), Bone, 10);
+        b.Ellipsoid(new Vector3(3.15f, 0.12f, 0f), new Vector3(0.5f, 0.1f, 0.22f), BoneDark, 8);
+        return b.Build();
+    }
+
+    /// <summary>A lone vertebra, its spines up.</summary>
+    static ArrayMesh Vertebra()
+    {
+        var b = new MeshBuilder();
+        b.Ellipsoid(new Vector3(0f, 0.08f, 0f), new Vector3(0.14f, 0.09f, 0.14f), Bone, 8);
+        b.Cone(new Vector3(0f, 0.14f, 0f), new Vector3(0f, 0.4f, 0.04f), 0.04f, Bone, BoneDark, 4);
+        b.Cone(new Vector3(0.1f, 0.08f, 0f), new Vector3(0.35f, 0.1f, 0f), 0.035f, Bone, BoneDark, 4);
+        b.Cone(new Vector3(-0.1f, 0.08f, 0f), new Vector3(-0.35f, 0.1f, 0f), 0.035f, Bone, BoneDark, 4);
+        return b.Build();
+    }
 
     static Color C(float r, float g, float b, float a = 0f) => new(r, g, b, a);
 

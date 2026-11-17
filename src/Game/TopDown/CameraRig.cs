@@ -193,6 +193,23 @@ public partial class CameraRig : Node3D
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("wake_span"), OctoShoots.Game.Fx.WakeField.Span);
     }
 
+    /// <summary>The lit stone lanterns' pools of light (topdown_post's lantern_pools): each world x, z, reach, strength.</summary>
+    public void SetLanternPools(Vector4[] pools, int count)
+    {
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("lantern_pools"), pools);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("lantern_count"), count);
+    }
+
+    /// <summary>Where her light has lately fallen (LightMemory), for the reef's fluorescent life to glow on after it; or none.</summary>
+    public void SetLightMemory(OctoShoots.Game.Fx.LightMemory? memory)
+    {
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("glow_on"), memory?.Texture is null ? 0f : 1f);
+        if (memory?.Texture is not { } map) return;
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("glow_memory"), map);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("glow_origin"), memory.Origin);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("glow_span"), OctoShoots.Game.Fx.LightMemory.Span);
+    }
+
     /// <summary>The burst inkseeds' stains of darkness (topdown_post's ink_stains): each world x, z, radius, strength.</summary>
     public void SetStains(Vector4[] stains, int count)
     {

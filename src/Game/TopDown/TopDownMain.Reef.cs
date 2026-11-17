@@ -208,7 +208,7 @@ public partial class TopDownMain
         _cubeWorker = new TaskCubeWorker(_reef.Space, BuildCube, _reef.Terrain);
         _stream = new ReefStream(_reef.Space, _cubeWorker);
         _cubeWorker.Stream = _stream;
-        _cubeDiving = new CubeDiving(_reef.Space.Layers);
+        _cubeDiving = new CubeDiving(_reef.Space.Layers, _diveCooldown);
         _director = new CubeDirector(_seed.Value);
         _reefView = new ReefStreamView();
         AddChild(_reefView);
@@ -343,6 +343,13 @@ public partial class TopDownMain
             record.Left = _world.StockLeft(record.Cube);
             record.Seeds = _world.InkseedsLeft(record.Cube);
         }
+        KeepLanterns();
+    }
+
+    /// <summary>Her layer's lit lanterns kept in their cubes' records (once lit, a lantern stays lit for the dive).</summary>
+    void KeepLanterns()
+    {
+        foreach (var record in Here.Claimed.Values) record.Lantern = _world.LanternLeft(record.Cube) ?? record.Lantern;
     }
 
     /// <summary>
@@ -389,6 +396,7 @@ public partial class TopDownMain
         }
         // (Centred where she came onto this one: CubeReef.Layer.)
         StartMaking(_layer + 1, G(_world.Player.Position));
+        ShowCues();
     }
 
     void StartMaking(int z, System.Numerics.Vector2 centre)
@@ -495,6 +503,9 @@ public partial class TopDownMain
         int had = _world.ChargeStones.Count;
         using var _ = Timed("laid: all");
         using (Timed("laid: stones")) _world.PlaceChargeStonesIn(L(cube.Origin), L(cube.Origin + cube.Size), ReefHash.Of(_reef!.Space.Seed, ReefHash.Cube, cube.X, cube.Y, cube.Z, cube.OnEnd ? 1 : 0), CubeChargeStones);
+        // Its stone lantern, if it has one: lit if she lit it before (its record), else plain stone.
+        if (!_world.Lanterns.Any(l => l.Cube == cube) && CubeStock.Lantern(_reef.Space.Seed, _reef.Terrain(cube)) is { } lantern)
+            _world.PlaceLantern(cube, L(lantern), Here.Claimed.TryGetValue(cube, out var kept) ? kept.Lantern : null);
         // (Verification, --dbg-charge: lit as they come.)
         if (_dbgChargeStones)
             for (int i = had; i < _world.ChargeStones.Count; i++) _world.ChargeStones[i].Charge = ChargeStoneTuning.GlowSeconds;
@@ -864,6 +875,7 @@ public partial class TopDownMain
             record.Left = _world.StockLeft(record.Cube);
             record.Seeds = _world.InkseedsLeft(record.Cube);
         }
+        KeepLanterns();
         // (Where she comes onto the layer, in the reef; and the frame she leaves.)
         var g = G(_layerFrom);
         var frameWas = Frame;
@@ -967,7 +979,17 @@ public partial class TopDownMain
             hi = System.Numerics.Vector2.Max(hi, cube.Origin + cube.Size);
         }
         var area = new Rect2(lo.X - CubeTuning.Side, lo.Y - CubeTuning.Side, hi.X - lo.X + 2f * CubeTuning.Side, hi.Y - lo.Y + 2f * CubeTuning.Side);
-        return new ChartView.ReefChart(area, _layer, _cubeDiving.Deepest, cubes, Here.Shut.ToList(), her);
+        // (Its lanterns: those in the cubes she has claimed, lit or not; from the records while she is behind a mouth.)
+        var lanterns = new List<(System.Numerics.Vector2, bool)>();
+        if (InReef)
+        {
+            foreach (var l in _world.Lanterns)
+                if (claimed.ContainsKey(l.Cube)) lanterns.Add((G(l.Position), l.Lit));
+        }
+        else
+            foreach (var (cube, record) in claimed)
+                if (CubeStock.Lantern(space.Seed, _reef.Terrain(cube)) is { } at) lanterns.Add((at, record.Lantern is not null));
+        return new ChartView.ReefChart(area, _layer, _cubeDiving.Deepest, cubes, Here.Shut.ToList(), her, lanterns);
     }
 
     /// <summary>A cube claimed: the places the director grants it, each in one of its sockets (CUBE-WORLD-PLAN §9).</summary>
@@ -1004,6 +1026,38 @@ public partial class TopDownMain
     {
         _level.AddMouths(_map, from);
         ShowMouths();
+        ShowCues();
+    }
+
+    /// <summary>Her layer's mouth (by its index on the map) and the claimed cube's record and place it is, if any.</summary>
+    (CubeRecord Record, int Place)? PlaceOfMouth(int mouth)
+    {
+        if (_reef is null || !_layerMaps.TryGetValue(_layer, out var map) || mouth < 0 || mouth >= map.Mouths.Count) return null;
+        var at = map.Mouths[mouth].At + map.ReefOrigin;
+        foreach (var record in Here.Claimed.Values)
+            for (int i = 0; i < record.Places.Count; i++)
+                if (System.Numerics.Vector2.DistanceSquared(record.Places[i].Mouth.At, at) < 0.01f) return (record, i);
+        return null;
+    }
+
+    /// <summary>Whether she has been in through this mouth of her layer.</summary>
+    bool MouthVisited(int mouth) => PlaceOfMouth(mouth) is { } p && p.Record.Visited.Contains(p.Place);
+
+    /// <summary>Into a place through this mouth: kept as visited (a secret's emblem shows from then on).</summary>
+    void VisitMouth(int mouth)
+    {
+        if (PlaceOfMouth(mouth) is { } p) p.Record.Visited.Add(p.Place);
+    }
+
+    /// <summary>The arrows carved round her layer's secrets' mouths (CubeStock.Cues), shown in her beam (SecretCueView).</summary>
+    void ShowCues()
+    {
+        var cues = new List<(System.Numerics.Vector2, System.Numerics.Vector2)>();
+        if (InReef && _reef is not null)
+            for (int i = 0; i < _map.Mouths.Count; i++)
+                if (i < _map.MouthKinds.Count && _map.MouthKinds[i] == PoiKind.Secret && !_world.ShutMouths.Contains(i))
+                    cues.AddRange(CubeStock.Cues(_reef.Space.Seed, _map.Mouths[i], _map.HeightAt, _world.LineOfSight));
+        _cueView.Show(cues, _map.HeightAt);
     }
 
     /// <summary>How wide the window round her is that the reef's currents are shown in (metres).</summary>

@@ -2015,15 +2015,36 @@ public partial class LevelView : Node3D
             h ^= h >> 15;
             return (h & 0xFFFFFF) / 16777216f;
         }
-        FloraKind[] top = { FloraKind.SeaRod, FloraKind.Staghorn, FloraKind.SeaFan, FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Elkhorn };
-        FloraKind[] foot = { FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Staghorn };
+        // Each layer's own (docs/VISUAL-SHOWCASE.md, "Each layer's scenery"): the shallows' gardens; kelp in the Kelp
+        // Jungle; planks among the Galleon's; the Carnival's packed with sponges; sea fans and vents in the Trench; few
+        // living things and bones in the Abyss.
+        int theme = Theme(map);
+        FloraKind[] top = theme switch
+        {
+            1 => new[] { FloraKind.SeaRod, FloraKind.BrainCoral, FloraKind.SeaFan },
+            3 => new[] { FloraKind.TubeSponge, FloraKind.SeaFan, FloraKind.Staghorn, FloraKind.BrainCoral, FloraKind.TubeSponge, FloraKind.SeaRod, FloraKind.Elkhorn },
+            4 => new[] { FloraKind.SeaFan, FloraKind.SeaRod, FloraKind.SeaFan },
+            >= 5 => new[] { FloraKind.BarrelSponge, FloraKind.SeaFan },
+            _ => new[] { FloraKind.SeaRod, FloraKind.Staghorn, FloraKind.SeaFan, FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Elkhorn },
+        };
+        FloraKind[] foot = theme switch
+        {
+            1 => new[] { FloraKind.Kelp, FloraKind.Kelp, FloraKind.Kelp, FloraKind.SeaRod },
+            2 => new[] { FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Plank, FloraKind.Staghorn },
+            3 => new[] { FloraKind.BrainCoral, FloraKind.TubeSponge, FloraKind.SeaRod, FloraKind.BarrelSponge, FloraKind.Staghorn },
+            4 => new[] { FloraKind.SeaFan, FloraKind.SeaRod, FloraKind.BrainCoral },
+            >= 5 => new[] { FloraKind.Vertebra, FloraKind.BarrelSponge, FloraKind.Vertebra },
+            _ => new[] { FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Staghorn },
+        };
+        float share = theme switch { 3 => 1.4f, >= 5 => 0.35f, _ => 1f };
+        Landmarks(map, items, area, seed, theme);
         const float step = 1.05f;
         var (ys, ye, xs, xe) = Span(map, step, area);
         for (float y = ys; y < ye; y += step)
         for (float x = xs; x < xe; x += step)
         {
             // (Only a share of the spots dressed at all.)
-            if (Hash(x, y, 31) >= DecorShare) continue;
+            if (Hash(x, y, 31) >= DecorShare * share) continue;
             var p = new System.Numerics.Vector2(x + Hash(x, y, 1) * step, y + Hash(x, y, 2) * step);
             if (map.InShaft(p, 3f)) continue;
             float h = map.HeightAt(p);
@@ -2058,6 +2079,76 @@ public partial class LevelView : Node3D
             var basis = new Basis(Vector3.Up, Hash(x, y, 6) * Mathf.Tau).Scaled(Vector3.One * scale);
             var tint = new Color(Hash(x, y, 7) < 0.5f ? 1f : 0f, 0.9f + 0.25f * Hash(x, y, 8), 1f, Hash(x, y, 9));
             items.Add(new FloraItem(kind, new Transform3D(basis, at), tint));
+        }
+    }
+
+    /// <summary>Which layer's scenery a map wears (0 the shallows' … 5 the Abyss's): the layer of the cube reef it is, or its places' layer.</summary>
+    static int Theme(LevelMap map) => DbgTheme >= 0 ? DbgTheme : Math.Clamp(OctoShoots.Core.Gen.Cubes.CubeReef.LayerOf(map.Id), 0, 5);
+
+    /// <summary>Verification (--dbg-theme=N): every map dressed as layer N's.</summary>
+    static readonly int DbgTheme = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--dbg-theme=")) is { } t && int.TryParse(t["--dbg-theme=".Length..], out int n) ? n : -1;
+
+    /// <summary>
+    /// Each layer's landmarks on its open floor, one now and then on a coarse lattice (so cube by cube they come out as the
+    /// whole would): a wreck's hull on the Galleon, a vent's chimneys in the Trench, a whale fall in the Abyss; and in
+    /// the Kelp Jungle a forest of giant kelp grown up out of the void from the floor far below.
+    /// </summary>
+    static void Landmarks(LevelMap map, List<FloraItem> items, Rect2? area, uint seed, int theme)
+    {
+        float Hash(float x, float y, int k)
+        {
+            uint h = unchecked((uint)((int)(x * 10f) * 73856093) ^ (uint)((int)(y * 10f) * 19349663) ^ (uint)(k * 83492791) ^ seed ^ 0x51A7u);
+            h ^= h >> 13;
+            h = unchecked(h * 0x5bd1e995u);
+            h ^= h >> 15;
+            return (h & 0xFFFFFF) / 16777216f;
+        }
+        bool Open(System.Numerics.Vector2 p, float reach)
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                float a = i * Mathf.Tau / 10f;
+                float h = map.HeightAt(p + new System.Numerics.Vector2(Mathf.Cos(a), Mathf.Sin(a)) * reach);
+                if (h > -0.4f || h < -6f) return false;
+            }
+            return true;
+        }
+        if (theme == 1)
+        {
+            // The kelp forest over the void: in drifting patches, rooted on the floor below, reaching up near her plane.
+            const float kstep = 2.6f;
+            var (ky0, ky1, kx0, kx1) = Span(map, kstep, area);
+            for (float y = ky0; y < ky1; y += kstep)
+            for (float x = kx0; x < kx1; x += kstep)
+            {
+                var p = new System.Numerics.Vector2(x + Hash(x, y, 1) * kstep, y + Hash(x, y, 2) * kstep);
+                float h = map.HeightAt(p);
+                if (h > -6f || map.InShaft(p, 3f)) continue;
+                float patch = TerrainNoise.Fbm(p.X * 0.05f, p.Y * 0.05f, seed + 5u, 2);
+                if (Hash(x, y, 3) > 0.7f * Mathf.SmoothStep(-0.1f, 0.25f, patch)) continue;
+                float tall = -h + 1.1f - 0.6f - 0.8f * Hash(x, y, 4);
+                float wide = 1.6f + 0.6f * Hash(x, y, 5);
+                var basis = new Basis(Vector3.Up, Hash(x, y, 6) * Mathf.Tau).Scaled(new Vector3(wide, tall, wide));
+                items.Add(new FloraItem(FloraKind.KelpTall, new Transform3D(basis, new Vector3(p.X, h - 1.1f, p.Y)), new Color(0f, 0.85f + 0.3f * Hash(x, y, 7), 1f, Hash(x, y, 8))));
+            }
+            return;
+        }
+        FloraKind? kind = theme switch { 2 => FloraKind.Wreck, 4 => FloraKind.Vent, >= 5 => FloraKind.WhaleFall, _ => null };
+        if (kind is not { } k) return;
+        const float step = 22f;
+        float chance = theme == 4 ? 0.45f : 0.3f;
+        float reach = theme == 4 ? 1.6f : 3.4f;
+        var (y0, y1, x0, x1) = Span(map, step, area);
+        for (float y = y0; y < y1; y += step)
+        for (float x = x0; x < x1; x += step)
+        {
+            if (Hash(x, y, 11) >= chance) continue;
+            var p = new System.Numerics.Vector2(x + (0.2f + 0.6f * Hash(x, y, 12)) * step, y + (0.2f + 0.6f * Hash(x, y, 13)) * step);
+            if (map.InShaft(p, 6f) || !Open(p, reach)) continue;
+            float h = map.HeightAt(p);
+            float scale = theme == 4 ? 1.1f + 0.5f * Hash(x, y, 14) : 1f + 0.15f * Hash(x, y, 14);
+            var basis = new Basis(Vector3.Up, Hash(x, y, 15) * Mathf.Tau).Scaled(Vector3.One * scale);
+            items.Add(new FloraItem(k, new Transform3D(basis, new Vector3(p.X, h - 0.12f, p.Y)), new Color(0f, 0.9f + 0.2f * Hash(x, y, 16), 1f, Hash(x, y, 17))));
         }
     }
 
