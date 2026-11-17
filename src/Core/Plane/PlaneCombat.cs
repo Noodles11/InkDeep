@@ -171,6 +171,8 @@ public sealed class PlaneShot
     public bool FromPlayer;
     /// <summary>A light bubble (LightBubbleTuning): flies straight on at its speed, pops on the first rock or creature.</summary>
     public bool Straight;
+    /// <summary>A light bubble in her beam's light now (else it strikes for LightBubbleTuning.DarkShare).</summary>
+    public bool Lit;
 
     // Her shots, shaped by her pearls (ShotSpec).
     public float Damage = PufferlingTuning.NeedleDamage;
@@ -836,6 +838,7 @@ public sealed partial class PlaneWorld
             Life = reach / MathF.Max(speed, 0.1f),
             FromPlayer = true,
             Straight = true,
+            Lit = InHerBeam(new PlaneShot { Position = at, Radius = radius }),
             Damage = LightBubbleTuning.Damage * DamageScale * (Molten ? CrabTuning.Molten : 1f),
             Radius = radius,
             BaseRadius = radius,
@@ -953,6 +956,8 @@ public sealed partial class PlaneWorld
     float HitDamage(PlaneShot shot)
     {
         float damage = shot.Damage * GrowFactor(shot);
+        // (A light bubble out of her beam's light strikes the weaker.)
+        if (shot.Straight && !shot.Lit) damage *= LightBubbleTuning.DarkShare;
         var spec = Run.Loadout.Shot;
         if (spec.CritChance > 0f && _bubbleRng.NextFloat() < spec.CritChance) damage *= spec.CritMult;
         return damage;
@@ -1071,6 +1076,7 @@ public sealed partial class PlaneWorld
         // A light bubble: straight on at its speed; rock pops it (it neither bounces nor passes through).
         if (shot.Straight)
         {
+            shot.Lit = InHerBeam(shot);
             Vector2 to = FirstBlocked(shot.Line, shot.Line + shot.Velocity * Dt, shot.Radius);
             if (!Map.IsOpen(to) || _rocks.Any(r => r.Contains(to)))
             {

@@ -59,8 +59,9 @@ the reef was never being called home. It was being kept.
     real light: rock, the seabed and every creature's body stop it and cast shadows (VISUAL-SHOWCASE). Her beam's pearls
     still change it;
   - her **beam put out**, she is hidden from the Leak's creatures and sees almost nothing;
-  - her **attack is her light bubbles** (LIGHT-AND-GRAPH §2.3): clear spheres of white light, the water burning round
-    them, thrown along her aim while fire is held (RT, the left mouse button). New pearls will change them.
+  - her **attack is her light bubbles** (LIGHT-AND-GRAPH §2.3): small clear spheres of her light, the water burning
+    round them, thrown along her aim while fire is held (RT, the left mouse button). Out of her beam they strike for
+    half. Each pushes what it strikes back, the harder the less health it has left. New pearls will change them.
 - **Her life is her light.** What hurts her corrupts her; her corruption meter is the gauge on the HUD. Murklings drink her light. It comes back from cores (the light freed creatures leave), light orbs, light
   springs, healing pearls, havens and a sealed leak cave. Full of corruption, she dims and the dive ends (DIVE §2).
 - **Her active pearl** is used with its own button and recharges; she carries one at a time.

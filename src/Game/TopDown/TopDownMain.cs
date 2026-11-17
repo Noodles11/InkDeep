@@ -603,6 +603,7 @@ public partial class TopDownMain : Node3D
             // then a murkling hidden in the stain, her beam on it.
             else if (arg == "--dbg-seeds") _autoFire = _dbgSeeds = true;
             else if (arg == "--dbg-reveal") _autoFire = _dbgReveal = true;
+            else if (arg == "--dbg-bubbles") _autoFire = _dbgBubbles = true;
             else if (arg.StartsWith("--dbg-reveal=") && int.TryParse(Value("--dbg-reveal="), out int revealOn))
             {
                 _autoFire = _dbgReveal = true;
@@ -3507,6 +3508,11 @@ public partial class TopDownMain : Node3D
             case PlaneEventType.InkseedFreed:
                 _sfx.PlayPitched("bell_ring", 1.7f, -9f);
                 break;
+            case PlaneEventType.BubbleKnock:
+                // Thrown back by a light bubble: a wave of hot water out from where it is struck, as strong as the push
+                // (its wake shows as it slides back).
+                _swells.AddRing(new Vector2(e.Position.X, e.Position.Y), Mathf.Clamp(e.Size / 6f, 0.3f, 1.6f), 0.5f + 0.12f * e.Size, 0.45f, 3f);
+                break;
             case PlaneEventType.InkseedBurst:
                 // A deep thump, felt.
                 _sfx.PlayPitched("bell_ring", 0.42f, -2f);
@@ -4266,6 +4272,8 @@ public partial class TopDownMain : Node3D
         return true;
     }
 
+    /// <summary>--dbg-bubbles: murklings budded before her for her light bubbles.</summary>
+    bool _dbgBubbles, _dbgBubblesLaid;
     /// <summary>--dbg-reveal: the lantern laid by her, and when.</summary>
     bool _dbgReveal;
     StoneLantern? _dbgLantern;
@@ -4349,6 +4357,21 @@ public partial class TopDownMain : Node3D
         var from = _world.Player.Position;
         if (_dbgSeeds) return DebugSeeds(ref input);
         if (_dbgReveal) return DebugReveal(ref input);
+        if (_dbgBubbles && !_dbgBubblesLaid && _world.Time > 0.5f)
+        {
+            // (Verification, --dbg-bubbles: three murklings budded in her widest open way, 6–9 m off, for her bubbles.)
+            _dbgBubblesLaid = true;
+            float best = -1f;
+            var way = System.Numerics.Vector2.UnitX;
+            for (int k = 0; k < 36; k++)
+            {
+                var w = new System.Numerics.Vector2(Mathf.Cos(k * Mathf.Tau / 36f), Mathf.Sin(k * Mathf.Tau / 36f));
+                float r = _world.LineReach(from, w, 16f, out _);
+                if (r > best) { best = r; way = w; }
+            }
+            var across = new System.Numerics.Vector2(-way.Y, way.X);
+            for (int k = 0; k < 3; k++) _world.DebugBud(from + way * (6f + 1.5f * k) + across * (k - 1) * 1.2f, prime: false).Bud = 0f;
+        }
         if (_dbgMurks)
         {
             if (_dbgRow.Count == 0)

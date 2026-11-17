@@ -86,8 +86,8 @@ public partial class CombatView : Node3D
     /// <summary>Her light bubbles (LightBubbleTuning): the clear sphere of white light, and the burning water round each.</summary>
     ShaderMaterial _lightBubble = null!, _lightHaze = null!;
     readonly List<MeshInstance3D> _hazes = new();
-    /// <summary>How far round a light bubble its water burns (× its radius), and its light's colour (white, for now).</summary>
-    const float HazeReach = 3.2f;
+    /// <summary>How far round a light bubble its water burns (× its radius: a narrow ring), and how faint its light is out of her beam.</summary>
+    const float HazeReach = 4f, DarkLight = 0.4f;
     static Color BubbleLight => HerColor.Light.Lerp(Colors.White, 0.35f);
     /// <summary>Her bubbles as last drawn: where each was and how many it held (pops and kills look the bubble up).</summary>
     Dictionary<PlaneShot, (System.Numerics.Vector2 At, int Bubbles)> _seen = new(), _seenNext = new();
@@ -1024,6 +1024,9 @@ void fragment() {
                 _shots[i].MaterialOverride = _lightBubble;
                 _shots[i].SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("seed"), lseed);
                 _shots[i].SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("light_color"), BubbleLight);
+                // (Out of her beam's light, its inner light fainter: it strikes the weaker.)
+                float inner = shot.Lit ? 1f : DarkLight;
+                _shots[i].SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("inner"), inner);
                 var haze = _hazes[i];
                 haze.Visible = true;
                 haze.Position = _shots[i].Position;
@@ -1034,14 +1037,14 @@ void fragment() {
                 lhalo.Visible = true;
                 lhalo.Position = _shots[i].Position;
                 lhalo.Scale = Vector3.One * HaloRadius * shot.Radius / LightBubbleRadius;
-                lhalo.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("strength"), HaloMax * 0.8f);
+                lhalo.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("strength"), HaloMax * 0.8f * inner);
                 lhalo.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("color"), BubbleLight);
-                _candidates.Add((shot.Position, GroundStrength, GroundRadius * shot.Radius / LightBubbleRadius));
+                _candidates.Add((shot.Position, GroundStrength * inner, GroundRadius * shot.Radius / LightBubbleRadius));
                 var llamp = _lamps[i];
                 llamp.Visible = true;
                 llamp.Position = _shots[i].Position + Vector3.Up * LampAbove;
                 llamp.OmniRange = LampReach;
-                llamp.LightEnergy = LampEnergy;
+                llamp.LightEnergy = LampEnergy * inner;
                 llamp.LightColor = BubbleLight;
                 continue;
             }

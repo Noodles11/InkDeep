@@ -80,28 +80,52 @@ public class LightBubbleTests
         Assert.False(shot.Pierce);
     }
 
-    [Fact]
-    public void A_light_bubble_strikes_a_murkling_for_its_damage_and_pops()
+    /// <summary>One bubble thrown at a murkling 6 m off: what it took off it, and the push it gave (her beam lit or out).</summary>
+    static (float Dealt, float Push, PlaneWorld W) StrikeOne(bool beam, float meterLeft = -1f)
     {
         var w = World();
         var (at, way) = Open(w, 12f);
         var spot = at + way * 6f;
         var m = w.DebugBud(spot, prime: false);
         m.Bud = 0f;
-        // (Her beam out, so only the bubble harms it.)
+        // (Her beam out first, so the bubble alone harms it; lit again for a lit throw, its little burn taken off.)
         Hold(w, at, new PlaneInput { Aim = way, ToggleGlow = true });
+        if (meterLeft > 0f) m.Corruption.Value = meterLeft;
+        if (beam) Hold(w, at, new PlaneInput { Aim = way, ToggleGlow = true });
         float meter = m.Corruption.Value;
+        float burned = 0f;
         Hold(w, at, new PlaneInput { Aim = way, Fire = true });
-        bool hit = false;
-        for (int i = 0; i < 40 && !hit; i++)
+        float push = 0f;
+        for (int i = 0; i < 40 && push == 0f; i++)
         {
+            float was = m.Corruption.Value;
             Hold(w, at, new PlaneInput { Aim = way });
+            var knock = w.Events.FirstOrDefault(e => e.Type == PlaneEventType.BubbleKnock);
+            if (knock.Type == PlaneEventType.BubbleKnock) push = knock.Size;
+            else burned += was - m.Corruption.Value;
             m.Position = spot;
-            hit = m.Corruption.Value < meter;
         }
-        Assert.True(hit);
-        Assert.Equal(meter - LightBubbleTuning.Damage, m.Corruption.Value, 2);
+        Assert.True(push > 0f, "no bubble struck it");
         Assert.DoesNotContain(w.Shots, s => s.FromPlayer && s.Life > 0f);
+        return (meter - burned - m.Corruption.Value, push, w);
+    }
+
+    [Fact]
+    public void A_light_bubble_in_her_beam_strikes_for_its_damage_out_of_it_for_half_and_pops()
+    {
+        var (lit, _, _) = StrikeOne(beam: true);
+        var (dark, _, _) = StrikeOne(beam: false);
+        // (Her beam's own little burn on the frame it strikes rides along.)
+        Assert.InRange(lit, LightBubbleTuning.Damage, LightBubbleTuning.Damage + 0.3f);
+        Assert.Equal(LightBubbleTuning.Damage * LightBubbleTuning.DarkShare, dark, 2);
+    }
+
+    [Fact]
+    public void A_light_bubble_pushes_back_the_harder_the_less_health_is_left()
+    {
+        var (_, fresh, _) = StrikeOne(beam: false);
+        var (_, spent, _) = StrikeOne(beam: false, meterLeft: 4f);
+        Assert.True(spent > fresh * 2f, $"spent {spent} vs fresh {fresh}");
     }
 
     [Fact]

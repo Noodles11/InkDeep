@@ -70,17 +70,26 @@ input is held, her shots as her pearls shape them.
 
 Her attack (`LightBubbleTuning`, `PlaneCombat.ThrowLightBubble`; drawn by `CombatView`, `light_bubble.gdshader`,
 `light_bubble_haze.gdshader`).
-- **What one is:** a clear sphere filled with white light, the size of a lesser murkling (0.36 m radius). Round it the
-  water burns: the picture behind it shimmers and bends as air over a hot road. Its glow lies on the water and its
-  light on the reef.
+- **What one is:** a clear sphere filled with her light, a third of a lesser murkling's size (0.12 m radius), its heart
+  whiter. In a narrow ring round it the water burns: the picture behind it shimmers and bends as air over a hot road.
+  Its glow lies on the water and its light on the reef.
+- **In her beam or out of it:** she may throw them with her beam out. One out of her beam's light (`PlaneShot.Lit`,
+  read each step) strikes for half (`DarkShare`), its inner light, glow and light on the reef fainter.
 - **How she throws them:** 4 a second along her aim while fire is held.
 - **How they fly:** straight on at 20 m/s for 18 m, then pop on their own. They neither pierce nor bounce: the first
   rock or creature they meet pops them.
 - **What they do:** each strikes for 5 off a creature's corruption (a murkling holds 36). They do not burn or dazzle
   what is near them as they pass, and they strike seals with their light as shots do.
+- **The push** (`PlaneWorld.ShotShove`): what one strikes is pushed back along its flight, at 8 m/s ×
+  √(the damage dealt ÷ the health it has left ÷ its mass), held within 0.15–1.3 of that. Its mass is (its radius ÷ a
+  lesser murkling's)². So a fresh creature is nudged, one nearly freed is thrown back, and a big one less than a small.
+  The push eases off as a knock does, rock stopping it. Murklings, Blotters, Inkwardens and Thumpsquirts are pushed.
+- **The push seen:** a wave of hot water rings out from where it is struck, as strong as the push (`BubbleKnock`, the
+  water's swells), and the creature's wake shows as it slides back.
 - **Stats:** each number is scaled by her stats (shot speed, shot size, damage, fire rate, range), for the pearls that
   will alter them. The beam's pearls change only her beam.
-- **Verification:** `--fire` throws them straight ahead (at the nearest creature, if any).
+- **Verification:** `--fire` throws them straight ahead (at the nearest creature, if any); `--dbg-bubbles` buds three
+  murklings in her way and throws at them.
 
 ### What the beam does
 

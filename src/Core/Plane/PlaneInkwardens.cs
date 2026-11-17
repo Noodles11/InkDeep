@@ -238,7 +238,7 @@ public sealed partial class PlaneWorld
                 float light = HitDamage(shot);
                 bool emptied = w.Corruption.Hit(light);
                 Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, w.Position, SafeNormalize(shot.Velocity), light));
-                Shove(ref w.Knock, shot.Velocity, WardenTuning.Radius);
+                ShotShove(shot, ref w.Knock, w.Position, WardenTuning.Radius, light, w.Corruption.Value);
                 if (emptied) FreeWarden(w);
                 if (shot.Pierce) shot.Struck = w;
                 else

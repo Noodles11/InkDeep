@@ -209,7 +209,7 @@ public sealed partial class PlaneWorld
                 float dealt = Ward(t, t.Position, light);
                 bool emptied = dealt > 0f && t.Corruption.Hit(dealt);
                 Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, t.Position, SafeNormalize(shot.Velocity), dealt));
-                Shove(ref t.Knock, shot.Velocity, ThumpTuning.Radius);
+                ShotShove(shot, ref t.Knock, t.Position, ThumpTuning.Radius, dealt, t.Corruption.Value);
                 if (emptied) BurstThump(t);
                 if (shot.Pierce) shot.Struck = t;
                 else

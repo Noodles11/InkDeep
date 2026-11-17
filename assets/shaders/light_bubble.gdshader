@@ -6,6 +6,8 @@ render_mode unshaded, blend_add, depth_draw_never, cull_back, shadows_disabled, 
 
 instance uniform float seed = 0.0;
 instance uniform vec3 light_color = vec3(1.0);
+// How bright the light in it is: full in her beam's light, fainter out of it.
+instance uniform float inner = 1.0;
 
 void fragment() {
 	float facing = clamp(dot(NORMAL, VIEW), 0.0, 1.0);
@@ -16,6 +18,6 @@ void fragment() {
 	float heart = pow(facing, 2.5);
 	float shimmer = 0.9 + 0.1 * sin(TIME * 13.0 + seed * 7.0);
 	// (Its heart whiter than its rim: the light in it at its hottest.)
-	ALBEDO = light_color * rim * 1.1 + mix(light_color, vec3(1.0), 0.55) * heart * 0.85 * shimmer;
+	ALBEDO = light_color * rim * 1.1 * (0.6 + 0.4 * inner) + mix(light_color, vec3(1.0), 0.55 * inner) * heart * 0.85 * shimmer * inner;
 	ALPHA = 1.0;
 }

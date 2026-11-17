@@ -34,12 +34,12 @@ void fragment() {
 	vec2 q = UV * 2.0 - 1.0;
 	float d = length(q);
 	if (d > 1.0) discard;
-	// Strongest in a ring just round the bubble, fading to nothing at the rim.
-	float k = smoothstep(1.0, 0.45, d) * smoothstep(0.12, 0.35, d) * strength;
+	// Strongest in a narrow ring hugging the bubble, fading to nothing at the rim.
+	float k = smoothstep(1.0, 0.5, d) * smoothstep(0.2, 0.32, d) * strength;
 	// The churn: two layers of noise rising and swirling.
 	vec2 n = vec2(h_noise(q * 3.5 + vec2(seed, TIME * 2.2)), h_noise(q * 3.5 + vec2(TIME * 1.7, seed + 5.0))) - 0.5;
 	n += (vec2(h_noise(q * 8.0 - vec2(TIME * 3.1, seed)), h_noise(q * 8.0 + vec2(seed, -TIME * 2.6))) - 0.5) * 0.5;
-	vec2 bent = SCREEN_UV + n * k * 0.012;
+	vec2 bent = SCREEN_UV + n * k * 0.008;
 	vec3 behind = textureLod(screen_tex, bent, 0.0).rgb;
 	// (A breath of warmth in the bent water, as heat shows.)
 	ALBEDO = behind * (1.0 + 0.08 * k);
