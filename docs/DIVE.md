@@ -173,6 +173,21 @@ A secret room is a sub-level too: a cube she claims opens one time in three, its
 (`LevelMap.MouthKinds` says which mouth leads where). No ink weeps from it. Behind it is a labyrinth
 (`TopDownGenerator.GenerateLabyrinth`), made from its own sub-seed.
 
+- **Sealed by a cracked wall** (`PlaneCrackSeals.cs`, `CrackSealView`):
+  - *Where:* a secret's way in is only ever placed behind a wall the camera faces, its passage running north into the
+    rock, so its seal is seen (`TopDownMain.Grant`: secrets are placed first; with no such socket left, the cube has no
+    secret).
+  - *What it is:* a continuous wall of the reef's rock across its passage just inside the mouth, drawn with her layer's
+    own ground so it stands, rises and is cut as the walls do. A jagged vertical crack runs down its middle, glowing
+    faintly from inside, its light breathing slowly.
+  - *What it hides:* its passage behind it is filled as rock, with a cap at the cut's height, so nothing behind it
+    shows, even where the walls are cut away round her. It stops her, the creatures and her shots.
+  - *Breaking it:* only her dash driven into its crack (within 0.75 m of its middle, heading in) gets through. It
+    crumbles into chunks that tumble out and sink into the sand, with a deep crack and a rumble, felt ("A hidden way
+    opens").
+  - *For good:* the cube's record keeps it open (`CubeRecord.Opened`, in the dive's save); one she has been through is
+    never sealed again.
+  - *Verification:* `--dbg-crack` seals the nearest camera-facing socket by her and dashes her into it.
 - **Found by its arrows** (`CubeStock.Cues`, `SecretCueView`, `secret_cue.gdshader`): its mouth shows no emblem until
   she has been in (`CubeRecord.Visited`, kept in the dive's save). Round it, up to three arrows are carved into the
   floor at the walls' feet, 7–26 m from it, each in sight of the water before it and pointing to it. They are wholly

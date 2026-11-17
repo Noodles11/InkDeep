@@ -93,6 +93,8 @@ public sealed class CubeRecordSave
     public float? Lantern { get; set; }
     /// <summary>Which of its places she has been into (their indices).</summary>
     public List<int>? Visited { get; set; }
+    /// <summary>Which of its places' cracked seals she has broken (their indices).</summary>
+    public List<int>? Opened { get; set; }
 }
 
 public sealed class CubePlaceSave
@@ -129,6 +131,7 @@ public static class CubeRecordSaving
             Seeds = r.Seeds?.SelectMany(a => new[] { a.X, a.Y }).ToList(),
             Lantern = r.Lantern,
             Visited = r.Visited.Count > 0 ? r.Visited.OrderBy(v => v).ToList() : null,
+            Opened = r.Opened.Count > 0 ? r.Opened.OrderBy(v => v).ToList() : null,
         }).ToList(),
         Shut = records.Shut.Select(CubeDiveSave.EdgeKey).ToList(),
         Last = records.Last is { } last ? CubeDiveSave.EdgeKey(last) : null,
@@ -148,6 +151,7 @@ public static class CubeRecordSaving
                 Enumerable.Range(0, l.At.Count / 2).Select(k => new Vector2(l.At[2 * k], l.At[2 * k + 1])).ToArray())).ToList();
             r.Lantern = c.Lantern;
             foreach (int v in c.Visited ?? new List<int>()) r.Visited.Add(v);
+            foreach (int v in c.Opened ?? new List<int>()) r.Opened.Add(v);
             r.Seeds = c.Seeds is { } seeds ? Enumerable.Range(0, seeds.Count / 2).Select(k => new Vector2(seeds[2 * k], seeds[2 * k + 1])).ToList() : null;
             cubes.Add(r);
         }

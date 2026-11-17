@@ -361,6 +361,8 @@ public partial class TopDownMain : Node3D
     LanternView _lanternView = null!;
     /// <summary>The arrows carved round the secrets' mouths (SecretCueView).</summary>
     SecretCueView _cueView = null!;
+    /// <summary>The secrets' cracked seals (CrackSealView).</summary>
+    CrackSealView _crackView = null!;
 
     /// <summary>The wakes of everything that swims (WakeField).</summary>
     readonly OctoShoots.Game.Fx.WakeField _wakes = new();
@@ -519,6 +521,8 @@ public partial class TopDownMain : Node3D
         AddChild(_lanternView);
         _cueView = new SecretCueView();
         AddChild(_cueView);
+        _crackView = new CrackSealView();
+        AddChild(_crackView);
         _portals = new PortalView();
         AddChild(_portals);
         _mirrorView = new MirrorView();
@@ -604,6 +608,7 @@ public partial class TopDownMain : Node3D
             else if (arg == "--dbg-seeds") _autoFire = _dbgSeeds = true;
             else if (arg == "--dbg-reveal") _autoFire = _dbgReveal = true;
             else if (arg == "--dbg-bubbles") _autoFire = _dbgBubbles = true;
+            else if (arg == "--dbg-crack") _autoFire = _dbgCrack = true;
             else if (arg.StartsWith("--dbg-reveal=") && int.TryParse(Value("--dbg-reveal="), out int revealOn))
             {
                 _autoFire = _dbgReveal = true;
@@ -1998,6 +2003,8 @@ public partial class TopDownMain : Node3D
         _vapour.Tick(dt, _camera.Camera);
         _blight.Sync(_world, dt, _camera.Camera);
         _lanternView.Sync(_world, _elapsed);
+        if (InReef) _crackView.Ground = _reefView.Here;
+        _crackView.Sync(_world, _elapsed, dt);
         _bars.Visible = _hudRoot.Visible;
         _bars.Sync(_world, _camera.Camera, _blight);
         _ash.Sync(_world, dt, _camera.Camera);
@@ -3508,6 +3515,17 @@ public partial class TopDownMain : Node3D
             case PlaneEventType.InkseedFreed:
                 _sfx.PlayPitched("bell_ring", 1.7f, -9f);
                 break;
+            case PlaneEventType.CrackSealCrumbled:
+                // Her dash breaks the cracked seal: it crumbles with a deep crack and a rumble, felt, and the way is open
+                // for good.
+                _sfx.PlayPitched("bell_ring", 0.38f, -3f);
+                _sfx.PlayPitched("pop", 0.3f, -4f);
+                _camera.Shake(0.45f);
+                _haptics.Pulse(0.8f, 0.6f, 0.4f);
+                _swells.AddRing(new Vector2(e.Position.X, e.Position.Y), 1.4f, 1.6f);
+                Say("A hidden way opens");
+                if (InReef) SealCrumbled(e.Position);
+                break;
             case PlaneEventType.BubbleKnock:
                 // Thrown back by a light bubble: a wave of hot water out from where it is struck, as strong as the push
                 // (its wake shows as it slides back).
@@ -4272,6 +4290,55 @@ public partial class TopDownMain : Node3D
         return true;
     }
 
+    /// <summary>--dbg-crack: the seal laid by her, and when she was set before it.</summary>
+    bool _dbgCrack;
+    CrackSeal? _dbgCrackSeal;
+    float _dbgCrackAt;
+    bool _dbgCrackDashed;
+
+    /// <summary>
+    /// Verification (--dbg-crack): the nearest socket of her layer facing the camera sealed with a cracked wall; she is set
+    /// 5 m before it, holds still 3 s, then dashes into its crack.
+    /// </summary>
+    bool DebugCrack(ref PlaneInput input)
+    {
+        if (!InReef || _reef is null || _world.Time < 1f) return true;
+        if (_dbgCrackSeal is null || !_world.CrackSeals.Contains(_dbgCrackSeal))
+        {
+            var her = G(_world.Player.Position);
+            Doorway? best = null;
+            foreach (var cube in _reef.LaidOn(_layer))
+                foreach (var s in _reef.Terrain(cube).Sockets)
+                    if (FacesCamera(s) && (best is null || System.Numerics.Vector2.Distance(s.At, her) < System.Numerics.Vector2.Distance(best.Value.At, her))) best = s;
+            if (best is not { } socket) return true;
+            var mouth = socket with { At = L(socket.At) };
+            _dbgCrackSeal = _world.PlaceCrackSeal(mouth);
+            var into = System.Numerics.Vector2.Normalize(mouth.Into);
+            _world.Player.Position = _world.Player.PrevPosition = mouth.At - into * 5f;
+            _dbgCrackAt = _world.Time;
+            GD.Print($"--dbg-crack: a seal at {mouth.At}, her before it");
+        }
+        var to = System.Numerics.Vector2.Normalize(_dbgCrackSeal.Mouth.Into);
+        input.Aim = to;
+        if (_world.Time - _dbgCrackAt < 3f)
+        {
+            _world.Player.Position = _world.Player.PrevPosition = _dbgCrackSeal.Mouth.At - to * 5f;
+            _world.Player.Velocity = System.Numerics.Vector2.Zero;
+            return true;
+        }
+        // (Up to it, then the dash from a metre and a half off its face.)
+        input.Move = to;
+        float off = System.Numerics.Vector2.Dot(_dbgCrackSeal.Rock.Center - _world.Player.Position, to);
+        if (off < 2.2f && !_dbgCrackDashed)
+        {
+            _dbgCrackDashed = true;
+            input.Dash = true;
+            GD.Print($"--dbg-crack: she dashes at frame {Engine.GetFramesDrawn()}");
+        }
+        input.DashHeld = _dbgCrackDashed;
+        return true;
+    }
+
     /// <summary>--dbg-bubbles: murklings budded before her for her light bubbles.</summary>
     bool _dbgBubbles, _dbgBubblesLaid;
     /// <summary>--dbg-reveal: the lantern laid by her, and when.</summary>
@@ -4357,6 +4424,7 @@ public partial class TopDownMain : Node3D
         var from = _world.Player.Position;
         if (_dbgSeeds) return DebugSeeds(ref input);
         if (_dbgReveal) return DebugReveal(ref input);
+        if (_dbgCrack) return DebugCrack(ref input);
         if (_dbgBubbles && !_dbgBubblesLaid && _world.Time > 0.5f)
         {
             // (Verification, --dbg-bubbles: three murklings budded in her widest open way, 6–9 m off, for her bubbles.)

@@ -129,8 +129,10 @@ the reef was never being called home. It was being kept.
 - **Its life**: healthy reef fish (clownfish in anemones, blue tangs, schools of chromis, pufferfish, flounders) going
   about their day; the ink never turns them; currents and geysers; the reef director that keeps the reef acting when she is not
   there.
-- **Secrets are found, not shown**: a secret's mouth shows no emblem till she has been in. Arrows carved in the floor
-  round it, seen only in her beam, point the way (DIVE §6.1).
+- **Secrets are found, not shown**: a secret's mouth, always in a wall facing the camera, is sealed by a wall of rock
+  with a faintly glowing crack down its middle. Nothing behind it shows; only her dash into the crack breaks it, for
+  good. It shows no emblem till she has been in. Arrows carved in the floor round it, seen only in her beam, point the
+  way (DIVE §6.1).
 - **The reef answers her light**: drifts of fluorescent life glow on for a few seconds where her light has passed, a
   fading trail of colour in the grey (VISUAL-SHOWCASE).
 - **Where she is shown**: no minimap; emblems mark the places round her (locked on each entrance once it is on the screen, waiting at the screen's edge till then); there is no

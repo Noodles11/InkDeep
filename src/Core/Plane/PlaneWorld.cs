@@ -130,7 +130,7 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     /// <summary>A bubble vault pops (Size: its prize, a VaultPrize); its prank's blow knocks her back (Direction: the way).</summary>
     VaultPopped, VaultPrank,
     /// <summary>An inkseed (PlaneInkseeds.cs) woken by her light, freed by her beam, or bursting (Size: its radius; a burst's, its reach).</summary>
-    InkseedWoke, InkseedFreed, InkseedBurst, LanternLit, BubbleKnock }
+    InkseedWoke, InkseedFreed, InkseedBurst, LanternLit, BubbleKnock, CrackSealCrumbled }
 
 /// <summary>What hurt Clementine (the killing blow names what ended a run; saved by number, so Gloomvine stays though nothing deals it now).</summary>
 public enum DamageSource { None, PufferNeedle, PufferSpines, BossPearl, RoyalPearl, BossSnap, BossContact, Murkling, MurkShot, Gloomvine, Blightroot, Blotter, Thumpsquirt, Lashjaw, Curse, Hearthguard, Leak, LeakWater, Inkseed }
@@ -301,6 +301,7 @@ public sealed partial class PlaneWorld : IBodyBlocker
 
         StepReef(); DbgMark("StepReef");
         StepSeals(); DbgMark("StepSeals");
+        StepCrackSeals(); DbgMark("StepCrackSeals");
 
         foreach (var c in Clouds) c.Life -= Dt;
         Clouds.RemoveAll(c => c.Life <= 0f);

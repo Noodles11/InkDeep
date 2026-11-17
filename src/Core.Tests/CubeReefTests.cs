@@ -358,6 +358,7 @@ public class CubeSaveTests
         first.Left = new() { new StockLeft(3, 12.5f, false, true, new[] { new Vector2(75f, 76f), new Vector2(77f, 78f) }) };
         first.Lantern = 42.5f;
         first.Visited.Add(0);
+        first.Opened.Add(0);
         var director = new CubeDirector(9);
         director.Claim(2, 1, 0);
         director.LeftLayer(2, freed: false);
@@ -380,6 +381,7 @@ public class CubeSaveTests
             Assert.Equal(r.Left?.Count, b.Left?.Count);
             Assert.Equal(r.Lantern, b.Lantern);
             Assert.Equal(r.Visited, b.Visited);
+            Assert.Equal(r.Opened, b.Opened);
         }
         Assert.Equal(first.Left![0].At, again.Claimed[first.Cube].Left![0].At);
         var d2 = new CubeDirector(9);

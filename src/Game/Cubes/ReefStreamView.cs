@@ -20,6 +20,9 @@ public partial class ReefStreamView : Node3D
     public const double UploadBudget = 1.5;
 
     ShaderMaterial _here = null!, _below = null!, _above = null!;
+
+    /// <summary>Her layer's ground material (what stands as her layer's rock, a cracked seal's slab, is drawn with it: risen, cut and shaded alike).</summary>
+    public ShaderMaterial Here => _here;
     bool _showAbove;
     readonly Dictionary<(CubeId Cube, CubeWork Work), List<MeshInstance3D>> _shown = new();
     readonly LinkedList<(CubeId Cube, CubeWork Work, ArrayMesh Mesh)> _pending = new();

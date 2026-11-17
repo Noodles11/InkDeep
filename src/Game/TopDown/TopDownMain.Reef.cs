@@ -998,7 +998,17 @@ public partial class TopDownMain
         var record = Here.Claimed[cube];
         var sockets = _reef!.Terrain(cube).Sockets;
         var granted = _director.Claim(cube.Z, record.Claim, sockets.Count);
-        for (int i = 0; i < granted.Count; i++) record.Places.Add((granted[i], sockets[i]));
+        // A secret only behind a wall the camera faces (its passage running north into the rock): its cracked seal must
+        // be seen. Secrets placed first; a secret with no such socket left is not placed.
+        var free = sockets.ToList();
+        foreach (var kind in granted.OrderBy(k => k == PoiKind.Secret ? 0 : 1))
+        {
+            int pick = kind == PoiKind.Secret ? free.FindIndex(FacesCamera) : free.FindIndex(s => !FacesCamera(s));
+            if (pick < 0 && kind != PoiKind.Secret) pick = free.Count > 0 ? 0 : -1;
+            if (pick < 0) continue;
+            record.Places.Add((kind, free[pick]));
+            free.RemoveAt(pick);
+        }
         if (granted.Count > 0) GD.Print($"Cube reef: {cube} (claim {record.Claim}) opens {string.Join(", ", granted)}");
     }
 
@@ -1040,6 +1050,31 @@ public partial class TopDownMain
         return null;
     }
 
+    /// <summary>Whether a mouth's wall faces the camera (which sits south, looking north): its passage runs north into the rock.</summary>
+    static bool FacesCamera(Doorway mouth) => mouth.Into.Y <= -0.5f * mouth.Into.Length();
+
+    /// <summary>Her layer's secrets' mouths sealed with a cracked wall, but those whose seal she has broken (or been through).</summary>
+    void SealSecrets()
+    {
+        if (!InReef || _reef is null) return;
+        for (int i = 0; i < _map.Mouths.Count; i++)
+        {
+            if (i >= _map.MouthKinds.Count || _map.MouthKinds[i] != PoiKind.Secret || _world.ShutMouths.Contains(i)) continue;
+            var mouth = _map.Mouths[i];
+            if (_world.CrackSeals.Any(s => s.Mouth == mouth)) continue;
+            if (PlaceOfMouth(i) is { } p && (p.Record.Opened.Contains(p.Place) || p.Record.Visited.Contains(p.Place))) continue;
+            _world.PlaceCrackSeal(mouth);
+        }
+    }
+
+    /// <summary>A cracked seal crumbled: its place kept open for good.</summary>
+    void SealCrumbled(System.Numerics.Vector2 at)
+    {
+        if (_world.CrackSeals.FirstOrDefault(s => s.Open && System.Numerics.Vector2.DistanceSquared(s.Rock.Center, at) < 0.01f) is not { } seal) return;
+        int i = _map.Mouths.IndexOf(seal.Mouth);
+        if (PlaceOfMouth(i) is { } p) p.Record.Opened.Add(p.Place);
+    }
+
     /// <summary>Whether she has been in through this mouth of her layer.</summary>
     bool MouthVisited(int mouth) => PlaceOfMouth(mouth) is { } p && p.Record.Visited.Contains(p.Place);
 
@@ -1052,6 +1087,7 @@ public partial class TopDownMain
     /// <summary>The arrows carved round her layer's secrets' mouths (CubeStock.Cues), shown in her beam (SecretCueView).</summary>
     void ShowCues()
     {
+        SealSecrets();
         var cues = new List<(System.Numerics.Vector2, System.Numerics.Vector2)>();
         if (InReef && _reef is not null)
             for (int i = 0; i < _map.Mouths.Count; i++)

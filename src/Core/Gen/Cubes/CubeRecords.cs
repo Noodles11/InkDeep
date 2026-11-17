@@ -35,6 +35,8 @@ public sealed class CubeRecord
     public float? Lantern { get; set; }
     /// <summary>Which of its places (by their index in Places) she has been into.</summary>
     public HashSet<int> Visited { get; } = new();
+    /// <summary>Which of its places' cracked seals she has broken (by their index in Places): open for good.</summary>
+    public HashSet<int> Opened { get; } = new();
     /// <summary>The places granted it (CubeDirector), each opening its mouth in one of its sockets.</summary>
     public List<(OctoShoots.Core.Gen.TopDown.PoiKind Kind, OctoShoots.Core.Gen.TopDown.Doorway Mouth)> Places { get; } = new();
 
