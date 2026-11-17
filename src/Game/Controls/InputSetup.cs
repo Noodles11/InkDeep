@@ -59,9 +59,9 @@ public static class InputSetup
 		new(AimDown, "Aim down", "key:Down", "axis:RightY:+"),
 		new(AimLeft, "Aim left", "key:Left", "axis:RightX:-"),
 		new(AimRight, "Aim right", "key:Right", "axis:RightX:+"),
-		new(Beam, "Shine the beam (hold)", "mouse:Left", "axis:TriggerRight:+"),
+		new(Beam, "Throw light bubbles (hold)", "mouse:Left", "axis:TriggerRight:+"),
 		new(Dash, "Dash", "key:Space", "axis:TriggerLeft:+"),
-		new(Glow, "Glow on / off (dark, beam off: unseen)", "key:Ctrl", "button:RightShoulder"),
+		new(Glow, "Beam on / off (beam off: unseen)", "key:Ctrl", "button:RightShoulder"),
 		// (The arrows ↓ and ↑, or the D-pad's: the keys kept, as the arrows also aim.)
 		new(Dive, "Dive to the layer below", "key:Down", "button:DpadDown", KeyLocked: true),
 		new(Climb, "Climb to the layer above", "key:Up", "button:DpadUp", KeyLocked: true),

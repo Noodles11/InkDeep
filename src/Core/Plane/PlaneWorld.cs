@@ -309,10 +309,14 @@ public sealed partial class PlaneWorld : IBodyBlocker
         StepCombat(input); DbgMark("StepCombat");
         if (input.ToggleGlow && !Defeated)
         {
-            GlowOff = !GlowOff;
-            Events.Add(new PlaneEvent(PlaneEventType.GlowToggled, Player.Position, Vector2.Zero, GlowOff ? 0f : 1f));
+            // (Her beam her lamp: the glow's button lights her beam, or puts it out.)
+            if (BeamLamp) BeamLit = !BeamLit;
+            else GlowOff = !GlowOff;
+            Events.Add(new PlaneEvent(PlaneEventType.GlowToggled, Player.Position, Vector2.Zero, (BeamLamp ? BeamLit : !GlowOff) ? 1f : 0f));
         }
-        SyncLights(input); DbgMark("SyncLights");
+        var lamp = input;
+        if (BeamLamp) lamp.Beam = BeamLit;
+        SyncLights(lamp); DbgMark("SyncLights");
         StepHerLight(); DbgMark("StepHerLight");
         StepInkseeds(); DbgMark("StepInkseeds");
         StepLanterns(); DbgMark("StepLanterns");

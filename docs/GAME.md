@@ -52,15 +52,19 @@ the reef was never being called home. It was being kept.
   her bell every 0.55 m along her way in her light's colour, fading over 0.32 s (`BellView`, bell_ghost.gdshader), and
   the camera leads 2.4 m the way she dashes, easing back after.
 - **Her light** (LIGHT-AND-GRAPH §2):
-  - her **aura**, always on round her: it shows the corrupted near her and seals a leak she stays close to;
-  - her **beam**, a flashlight cone along her aim while the beam is held: it burns the corrupted, dazzles them, seals
+  - she has **no glow** round her;
+  - her **beam is her lamp**: a flashlight cone along her aim, lit from the start and put out or lit again with its
+    button (the glow's old one, its click kept). It shows the corrupted, dazzles them, burns them only a little, seals
     leaks, opens seals, clears ink and ash, charges stones and opens bosses, by how much of its light reaches. It is a
-    real light: rock, the seabed and every creature's body stop it and cast shadows (VISUAL-SHOWCASE);
-  - her **glow can be put out**: dark, she is hidden from the Leak's creatures and sees almost nothing.
+    real light: rock, the seabed and every creature's body stop it and cast shadows (VISUAL-SHOWCASE). Her beam's pearls
+    still change it;
+  - her **beam put out**, she is hidden from the Leak's creatures and sees almost nothing;
+  - her **attack is her light bubbles** (LIGHT-AND-GRAPH §2.3): clear spheres of white light, the water burning round
+    them, thrown along her aim while fire is held (RT, the left mouse button). New pearls will change them.
 - **Her life is her light.** What hurts her corrupts her; her corruption meter is the gauge on the HUD. Murklings drink her light. It comes back from cores (the light freed creatures leave), light orbs, light
   springs, healing pearls, havens and a sealed leak cave. Full of corruption, she dims and the dive ends (DIVE §2).
 - **Her active pearl** is used with its own button and recharges; she carries one at a time.
-- **Controls:** move, aim, beam, glow, dash, dive, active pearl, review pearls, pause. Every one can be rebound, on the
+- **Controls:** move, aim, throw light bubbles, beam on/off, dash, dive, active pearl, review pearls, pause. Every one can be rebound, on the
   keyboard and mouse and on a controller (`InputSetup`). Twin-stick aim on a controller.
 
 ## 4. The dive

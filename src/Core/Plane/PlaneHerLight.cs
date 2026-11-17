@@ -25,6 +25,11 @@ public static class HerLightTuning
     /// with that many shots' light a second. Along its axis it clears the ink dots within BeamDots metres.
     /// </summary>
     public const int BeamShots = 6;
+    /// <summary>
+    /// Her beam her lamp (BeamLamp): it burns the corrupted at only this share of BeamShots (her light bubbles do the
+    /// harm now); it strikes seals and lights all else as before.
+    /// </summary>
+    public const float LampBurn = 0.15f;
     public const float BeamDots = 0.5f;
     public const float Dazzle = 0.8f, Rearm = 2f;
     /// <summary>Her light's reach on a cave's walls (× √ her glow stat): the ash within it, in sight of her, clears (AshTuning).</summary>
@@ -122,8 +127,9 @@ public sealed partial class PlaneWorld
             _glare.Clear();
             return;
         }
+        // (A light bubble does its harm by striking, not by burning round it: LightBubbleTuning.)
         foreach (var s in Shots)
-            if (s.FromPlayer && !s.BossPearl && s.Life > 0f) _lights.Add(s);
+            if (s.FromPlayer && !s.BossPearl && !s.Straight && s.Life > 0f) _lights.Add(s);
         // (Molten Carapace: under half health her light burns the hotter, and runs on through bodies: GatherBodies.)
         float burn = HerLightTuning.Burn * DamageScale * (Molten ? CrabTuning.Molten : 1f) * Dt;
         for (int i = 0; i < Murklings.Count; i++)
@@ -259,12 +265,12 @@ public sealed partial class PlaneWorld
                     float shade = ShadeLight(beam, at, height, radius, kin);
                     if (shade > 0f)
                     {
-                        n += worth * shade;
+                        n += worth * shade * (BeamLamp ? HerLightTuning.LampBurn : 1f);
                         if (from == default) from = beam.Position;
                     }
                     continue;
                 }
-                n += worth * light;
+                n += worth * light * (BeamLamp ? HerLightTuning.LampBurn : 1f);
                 // In the colour her pearls give that ray, and the prism stones it passed through (mixed on it with the others').
                 hue |= RayHue(beam) | HueAlong(beam.Position, at);
                 beamed = true;
@@ -312,7 +318,7 @@ public sealed partial class PlaneWorld
         }
         else g.BeamTime = 0f;
         // Electric Eel Tail: burned by an arc off what her beam burns, at half the beam's rate.
-        if (!beamed && _arced.Contains(kin)) n += HerLightTuning.BeamShots / 2f * BeamTick;
+        if (!beamed && _arced.Contains(kin)) n += HerLightTuning.BeamShots / 2f * BeamTick * (BeamLamp ? HerLightTuning.LampBurn : 1f);
         // Fire Coral, Sea Nettle: it burns on a while out of her light.
         if (n == 0 && g.Afterglow > 0f && !Defeated) n = 1;
         if (n > 0f && g.Crit > 0f) n *= MathF.Max(Run.Loadout.Shot.CritMult, 1f);

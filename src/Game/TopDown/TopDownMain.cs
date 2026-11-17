@@ -355,6 +355,8 @@ public partial class TopDownMain : Node3D
     readonly Vector4[] _stains = new Vector4[8];
     /// <summary>The lit stone lanterns' pools sent to the post pass (the nearest her).</summary>
     readonly Vector4[] _lanternPools = new Vector4[8];
+    /// <summary>Her beam lit (PlaneWorld.BeamLit), carried from place to place.</summary>
+    bool _beamLit = true;
     /// <summary>The stone lanterns (LanternView).</summary>
     LanternView _lanternView = null!;
     /// <summary>The arrows carved round the secrets' mouths (SecretCueView).</summary>
@@ -1586,6 +1588,10 @@ public partial class TopDownMain : Node3D
         // Waking in a haven (Lantern Bay): she is healed whole.
         if (map.InHaven(arriveAt ?? map.Start.Position)) _run.Hp = _run.MaxHp;
         _world = new PlaneWorld(_map, _tuning, _run, InDiveCave ? DiveCaveOptions(_map) : InReef ? ReefOptions() : DebugBoss() ?? DiveBoss());
+        // Her beam her lamp (docs/LIGHT-AND-GRAPH.md §2.2): no glow; the glow's button lights her beam; fire throws light
+        // bubbles. Lit or not as she left it in the place before.
+        _world.BeamLamp = true;
+        _world.BeamLit = _beamLit;
         if (InReef) EnteredLayer(restored: moment is not null);
         ShowMouths();
         if (_captureDir is not null)
@@ -3429,7 +3435,8 @@ public partial class TopDownMain : Node3D
             case PlaneEventType.GlowToggled:
                 // A lamp's pull-chain, under water: a touch lower as it goes out.
                 _sfx.PlayPitched("lamp_switch", e.Size > 0f ? 1.05f : 0.92f, -4f);
-                Say(e.Size > 0f ? "Glow on" : "Glow off · unseen while your beam is dark");
+                _beamLit = e.Size > 0f;
+                Say(e.Size > 0f ? "Beam on" : "Beam off · unseen while your beam is dark");
                 break;
             case PlaneEventType.LeakSealed:
                 ShowcaseLeakSealed(e.Position);
@@ -4029,20 +4036,20 @@ public partial class TopDownMain : Node3D
             else if (stick.LengthSquared() > 0.04f) _padAim = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(stick.X, stick.Y));
             else if (_padAim.LengthSquared() > 1e-6f) _padAim = System.Numerics.Vector2.Normalize(_padAim);
             input.Aim = _padAim.LengthSquared() > 1e-6f ? System.Numerics.Vector2.Normalize(_padAim) : _world.Player.Aim;
-            input.Beam = shine && !_fireBlocked;
+            input.Fire = shine && !_fireBlocked;
         }
         else if (aim.LengthSquared() > 0f)
         {
-            // The aim keys (the arrows) aim and shine her beam at once.
+            // The aim keys (the arrows) aim and throw her light bubbles at once.
             input.Aim = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(aim.X, aim.Y));
-            input.Beam = true;
+            input.Fire = true;
         }
         else
         {
-            // The mouse: her beam toward the pointer while its button is held.
+            // The mouse: her beam toward the pointer; light bubbles thrown that way while its button is held.
             var to = MouseOnBand() - _world.Player.Position;
             input.Aim = to.LengthSquared() > 1e-4f ? System.Numerics.Vector2.Normalize(to) : default;
-            input.Beam = shine && !_fireBlocked;
+            input.Fire = shine && !_fireBlocked;
         }
         return input;
     }

@@ -169,6 +169,8 @@ public sealed class PlaneShot
     public Vector2 Velocity;
     public float Life;
     public bool FromPlayer;
+    /// <summary>A light bubble (LightBubbleTuning): flies straight on at its speed, pops on the first rock or creature.</summary>
+    public bool Straight;
 
     // Her shots, shaped by her pearls (ShotSpec).
     public float Damage = PufferlingTuning.NeedleDamage;
@@ -361,8 +363,19 @@ public sealed partial class PlaneWorld
         // Clementine's shots, toward her aim while fire is held, shaped by her pearls. Firefly Squid pours them out as
         // one continuous surge instead (PlaneSurge.cs).
         bool aimed = p.Aim.LengthSquared() > 0.5f;
-        // (In the game her shots are off: her beam is her one attack. PlaneOptions.Shots.)
         bool fire = input.Fire && Options.Shots;
+        // With her beam her lamp (BeamLamp), she throws light bubbles: LightBubbleTuning.Rate a second while fire is held.
+        if (BeamLamp)
+        {
+            if (fire && aimed && p.ShotTimer <= 0f && !Defeated)
+            {
+                p.ShotTimer = 1f / (LightBubbleTuning.Rate * FireScale);
+                ThrowLightBubble(p.Aim);
+                Events.Add(new PlaneEvent(PlaneEventType.Shot, p.Position, p.Aim, 1f));
+            }
+            p.WasFiring = fire;
+            fire = false;
+        }
         // String of Pearls (Sardine Run + Pearl Diver): no holding to charge — the stream fires as Sardine Run's does,
         // and each shot is a pearl charged as far as the stream has spun up.
         bool pearlStream = Run.Loadout.Has("string_of_pearls");
@@ -801,6 +814,37 @@ public sealed partial class PlaneWorld
         return count;
     }
 
+    /// <summary>
+    /// A light bubble along her aim (LightBubbleTuning): its speed, size, damage and reach each her stats' share of the
+    /// tuning's (ShotSpeed, ShotSize, Damage, Range), white, flying straight, piercing and bouncing off nothing.
+    /// </summary>
+    void ThrowLightBubble(Vector2 aim)
+    {
+        var p = Player;
+        float speed = LightBubbleTuning.Speed * ShotSpeedScale;
+        float radius = LightBubbleTuning.Radius * Run.Loadout.Stats[Stat.ShotSize];
+        float reach = LightBubbleTuning.Range * RangeScale;
+        var at = p.Position + aim * (Radius * 0.6f);
+        _volleys++;
+        var shot = new PlaneShot
+        {
+            Position = at,
+            Line = at,
+            Velocity = aim * speed,
+            Speed0 = speed,
+            Range = reach,
+            Life = reach / MathF.Max(speed, 0.1f),
+            FromPlayer = true,
+            Straight = true,
+            Damage = LightBubbleTuning.Damage * DamageScale * (Molten ? CrabTuning.Molten : 1f),
+            Radius = radius,
+            BaseRadius = radius,
+            Volley = _volleys,
+        };
+        Shots.Add(shot);
+        LastVolleyDamage = shot.Damage;
+    }
+
     /// <summary>How long a shot floats before it pops (her bubble hover stat's share; Bubble Coral's lingers longer).</summary>
     float Hover(bool lingers) => (lingers
         ? _bubbleRng.Range(PlaneCombatTuning.BubbleHoverMin, PlaneCombatTuning.BubbleHoverMax)
@@ -826,11 +870,11 @@ public sealed partial class PlaneWorld
         for (int i = 0; i < Shots.Count; i++)
         {
             var a = Shots[i];
-            if (!a.FromPlayer || a.Life <= 0f) continue;
+            if (!a.FromPlayer || a.Straight || a.Life <= 0f) continue;
             for (int j = i + 1; j < Shots.Count; j++)
             {
                 var b = Shots[j];
-                if (!b.FromPlayer || b.Life <= 0f || a.Volley == b.Volley) continue;
+                if (!b.FromPlayer || b.Straight || b.Life <= 0f || a.Volley == b.Volley) continue;
                 if (Vector2.Distance(a.Position, b.Position) > a.Radius + b.Radius) continue;
                 var (keep, gone) = a.Velocity.LengthSquared() >= b.Velocity.LengthSquared() ? (a, b) : (b, a);
                 float wk = keep.Bubbles, wg = gone.Bubbles, w = wk + wg;
@@ -869,11 +913,11 @@ public sealed partial class PlaneWorld
         for (int i = 0; i < Shots.Count; i++)
         {
             var a = Shots[i];
-            if (!a.FromPlayer || a.Life <= 0f) continue;
+            if (!a.FromPlayer || a.Straight || a.Life <= 0f) continue;
             for (int j = i + 1; j < Shots.Count; j++)
             {
                 var b = Shots[j];
-                if (!b.FromPlayer || b.Life <= 0f || a.Volley == b.Volley) continue;
+                if (!b.FromPlayer || b.Straight || b.Life <= 0f || a.Volley == b.Volley) continue;
                 Vector2 off = b.Position - a.Position;
                 float dist = off.Length(), reach = a.Radius + b.Radius;
                 if (dist >= reach) continue;
@@ -1022,6 +1066,24 @@ public sealed partial class PlaneWorld
         if (shot.Life <= 0f)
         {
             Pop(shot);
+            return;
+        }
+        // A light bubble: straight on at its speed; rock pops it (it neither bounces nor passes through).
+        if (shot.Straight)
+        {
+            Vector2 to = FirstBlocked(shot.Line, shot.Line + shot.Velocity * Dt, shot.Radius);
+            if (!Map.IsOpen(to) || _rocks.Any(r => r.Contains(to)))
+            {
+                if (!shot.SealStruck && _rocks.Any(r => r.Contains(to)))
+                {
+                    shot.SealStruck = true;
+                    StrikeSeal(to, ShotLight(shot));
+                }
+                Pop(shot, SafeNormalize(shot.Velocity));
+                return;
+            }
+            shot.Traveled += Vector2.Distance(shot.Line, to);
+            shot.Line = shot.Position = to;
             return;
         }
         // It eases out (a boomerang flies out and back at its speed instead): steady slowing while fast, the water's drag

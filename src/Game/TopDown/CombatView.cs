@@ -47,6 +47,8 @@ public partial class CombatView : Node3D
     const float BaseLight = 0.32f, MergeGain = 1.35f, MaxLight = 1f;
     /// <summary>The glow round a bubble: a fixed 0.8 m disc whose strength grows with merging, ≤ 0.4 of her halo.</summary>
     const float HaloRadius = 0.8f, HaloMin = 0.16f, HaloMax = 0.4f;
+    /// <summary>A plain light bubble's radius, that its glow and its light are drawn to.</summary>
+    const float LightBubbleRadius = OctoShoots.Core.Plane.LightBubbleTuning.Radius;
     /// <summary>Their light on the swim layer: radius in metres (never past 3, merged or not), strength as a share of hers.</summary>
     const float GroundRadius = 1.5f, GroundStrength = 0.35f;
     /// <summary>Halos past this distance from her are off screen and not sent.</summary>
@@ -81,6 +83,12 @@ public partial class CombatView : Node3D
     const float LampReach = 3.4f, LampEnergy = 1.1f, LampAbove = 0.35f;
     ShaderMaterial _halo = null!;
     readonly QuadMesh _haloQuad = new() { Size = new Vector2(2f, 2f) };
+    /// <summary>Her light bubbles (LightBubbleTuning): the clear sphere of white light, and the burning water round each.</summary>
+    ShaderMaterial _lightBubble = null!, _lightHaze = null!;
+    readonly List<MeshInstance3D> _hazes = new();
+    /// <summary>How far round a light bubble its water burns (× its radius), and its light's colour (white, for now).</summary>
+    const float HazeReach = 3.2f;
+    static readonly Color BubbleLight = new(1f, 1f, 1f);
     /// <summary>Her bubbles as last drawn: where each was and how many it held (pops and kills look the bubble up).</summary>
     Dictionary<PlaneShot, (System.Numerics.Vector2 At, int Bubbles)> _seen = new(), _seenNext = new();
     readonly List<(System.Numerics.Vector2 At, float Strength, float Radius)> _candidates = new();
@@ -92,6 +100,8 @@ public partial class CombatView : Node3D
         _needle = PufferlingView.NeedleMaterial();
         _herShot = Glow(new Color(1f, 0.85f, 0.65f));
         _bubble = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/plane_bubble.gdshader") };
+        _lightBubble = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/light_bubble.gdshader"), RenderPriority = 3 };
+        _lightHaze = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/light_bubble_haze.gdshader"), RenderPriority = 1 };
         _sparkMat = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/light_shot.gdshader"), RenderPriority = 2 };
         _trails = new LightTrails();
         AddChild(_trails);
@@ -317,6 +327,7 @@ public partial class CombatView : Node3D
         }
         foreach (var s in _shots) s.QueueFree();
         foreach (var h in _halos) h.QueueFree();
+        foreach (var h in _hazes) h.QueueFree();
         foreach (var l in _lamps) l.QueueFree();
         _trails.Clear();
         _fireworks.Clear();
@@ -327,6 +338,7 @@ public partial class CombatView : Node3D
         foreach (var q in _pearls) q.QueueFree();
         _shots.Clear();
         _halos.Clear();
+        _hazes.Clear();
         _lamps.Clear();
         _merges.Clear();
         ClearLights();
@@ -972,6 +984,9 @@ void fragment() {
             var halo = new MeshInstance3D { Mesh = _haloQuad, MaterialOverride = _halo, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Scale = Vector3.One * HaloRadius, Visible = false };
             AddChild(halo);
             _halos.Add(halo);
+            var haze = new MeshInstance3D { Mesh = _haloQuad, MaterialOverride = _lightHaze, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = false };
+            AddChild(haze);
+            _hazes.Add(haze);
             var lamp = new OmniLight3D { ShadowEnabled = false, OmniAttenuation = 1.2f, LightSpecular = 0.4f, Visible = false };
             AddChild(lamp);
             _lamps.Add(lamp);
@@ -983,6 +998,7 @@ void fragment() {
             bool used = i < world.Shots.Count;
             _shots[i].Visible = used;
             _halos[i].Visible = false;
+            _hazes[i].Visible = false;
             _lamps[i].Visible = false;
             if (!used) continue;
             var shot = world.Shots[i];
@@ -998,6 +1014,37 @@ void fragment() {
                 continue;
             }
             _shots[i].Basis = Basis.Identity;
+            if (shot.FromPlayer && shot.Straight)
+            {
+                // A light bubble: a clear sphere as big as the sim's, filled with white light; the water burning round it;
+                // its glow in the water and its light on the reef.
+                float lseed = (System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(shot) & 1023) * 0.0137f;
+                _shots[i].Mesh = _unitSphere;
+                _shots[i].Scale = Vector3.One * shot.Radius;
+                _shots[i].MaterialOverride = _lightBubble;
+                _shots[i].SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("seed"), lseed);
+                _shots[i].SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("light_color"), BubbleLight);
+                var haze = _hazes[i];
+                haze.Visible = true;
+                haze.Position = _shots[i].Position;
+                haze.Scale = Vector3.One * shot.Radius * HazeReach;
+                haze.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("seed"), lseed * 13f);
+                haze.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("strength"), Mathf.Clamp(shot.Age / 0.06f, 0f, 1f));
+                var lhalo = _halos[i];
+                lhalo.Visible = true;
+                lhalo.Position = _shots[i].Position;
+                lhalo.Scale = Vector3.One * HaloRadius * shot.Radius / LightBubbleRadius;
+                lhalo.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("strength"), HaloMax * 0.8f);
+                lhalo.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("color"), BubbleLight);
+                _candidates.Add((shot.Position, GroundStrength, GroundRadius * shot.Radius / LightBubbleRadius));
+                var llamp = _lamps[i];
+                llamp.Visible = true;
+                llamp.Position = _shots[i].Position + Vector3.Up * LampAbove;
+                llamp.OmniRange = LampReach;
+                llamp.LightEnergy = LampEnergy;
+                llamp.LightColor = BubbleLight;
+                continue;
+            }
             if (shot.FromPlayer)
             {
                 // A shot of light: a small hot mote, no bubble (it hits where the sim says, with the sim's radius). It

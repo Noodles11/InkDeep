@@ -53,15 +53,36 @@ the Coral Polyp pearl (slow), havens and a sealed leak cave (full, as now).
 Her aura and beam cost nothing to shine. They are what the murklings drink: a murkling feeding on either takes from
 her one pool.
 
-### 2.2 Aura and beam
+### 2.2 Her beam, her lamp
 
-- **Aura**: a point emitter on her, always on.
-- **Beam**: a cone from her bell along her aim, on while the beam button is held (the left mouse button, the arrow
-  keys, RT). It points where she aims, not where she swims. Turning it off is a choice: the beam is the brightest
-  thing she has, and a murkling goes for the brightest light.
-- While pearls move from shots to the beam (§5), shots are on the right mouse button (RB).
+In the game her beam is her lamp (`PlaneWorld.BeamLamp`, set by `TopDownMain` on every world):
+- **No glow:** she has no aura; nothing lights round her but her beam.
+- **Her beam:** a cone from her bell along her aim (the mouse pointer, the right stick, the arrow keys). It points
+  where she aims, not where she swims.
+- **On and off:** it is lit from the start and stays lit (`PlaneWorld.BeamLit`). The glow's button puts it out or lights
+  it again (Ctrl; RB on a controller), with the lamp's pull-chain click. It stays as she left it from place to place.
+- **Fire** (the left mouse button, RT, the arrow keys) throws her light bubbles (§2.3).
 
-### 2.3 What the beam does
+The sim's own tests keep the older rules unless they set `BeamLamp`: an aura always on round her, the beam on while its
+input is held, her shots as her pearls shape them.
+
+### 2.3 Her light bubbles
+
+Her attack (`LightBubbleTuning`, `PlaneCombat.ThrowLightBubble`; drawn by `CombatView`, `light_bubble.gdshader`,
+`light_bubble_haze.gdshader`).
+- **What one is:** a clear sphere filled with white light, the size of a lesser murkling (0.36 m radius). Round it the
+  water burns: the picture behind it shimmers and bends as air over a hot road. Its glow lies on the water and its
+  light on the reef.
+- **How she throws them:** 4 a second along her aim while fire is held.
+- **How they fly:** straight on at 20 m/s for 18 m, then pop on their own. They neither pierce nor bounce: the first
+  rock or creature they meet pops them.
+- **What they do:** each strikes for 5 off a creature's corruption (a murkling holds 36). They do not burn or dazzle
+  what is near them as they pass, and they strike seals with their light as shots do.
+- **Stats:** each number is scaled by her stats (shot speed, shot size, damage, fire rate, range), for the pearls that
+  will alter them. The beam's pearls change only her beam.
+- **Verification:** `--fire` throws them straight ahead (at the nearest creature, if any).
+
+### What the beam does
 
 The beam does what her shots' light did, continuously, and **by how much of its light reaches the thing**
 (`PlaneWorld.BeamLight`): `NearLight` (2) shots' worth at her bell, falling to `FarLight` (0.25) at the end of its reach
@@ -69,7 +90,7 @@ The beam does what her shots' light did, continuously, and **by how much of its 
 so the one nearest her shades those behind; Swordfish Bill (her shots pierce) lets it through them all.
 
 - **Burns** the corrupted it reaches, at `Burn` per second × her damage stat × the light reaching them, freeing them
-  when their meter is empty.
+  when their meter is empty. As her lamp it burns only `LampBurn` (15%) of that: her light bubbles do the harm.
 - **Dazzles** a creature once as it comes into the light, as shots do: it holds still for `Dazzle`, then is not
   dazzled again until it has been out of all her light for `Rearm`. A creature kept in the beam is not frozen for
   ever.
@@ -83,11 +104,11 @@ so the one nearest her shades those behind; Swordfish Bill (her shots pierce) le
 
 The aura burns nothing (as her lamp does now). It reveals what is near her (§4).
 
-### 2.4 Her glow put out
+### 2.4 Her light put out
 
-She can put her glow out and light it again (Ctrl; RB on a controller; `PlaneInput.ToggleGlow`, `PlaneWorld.GlowOff`),
-each time with a lamp's pull-chain click heard under water. Out, she has no aura: her bell is all but dark and the reef
-round her with it. With her beam dark too she is **hidden** (`PlaneWorld.Hidden`): the Leak's creatures lose her, as in
+She can put her beam out and light it again (Ctrl; RB on a controller; `PlaneInput.ToggleGlow`, `PlaneWorld.BeamLit`),
+each time with a lamp's pull-chain click heard under water. (Under the older rules the button puts out her glow,
+`PlaneWorld.GlowOff`.) With no light of hers she is **hidden** (`PlaneWorld.Hidden`): the Leak's creatures lose her, as in
 her Ink Cloud (`Unseen`), and a murkling beside her never finds her. But she sees little more than they do (the
 murklings show only in her light), and her inner light seals no leak while it is out. Her beam gives her away the
 moment it shines.

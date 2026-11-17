@@ -618,7 +618,7 @@ public sealed partial class PlaneWorld
         var a = _aura!;
         a.Position = Player.Position;
         a.Range = LightTuning.AuraReach * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.Glow], 0.1f));
-        a.Active = !Defeated && !GlowOff;
+        a.Active = !Defeated && !GlowOff && !BeamLamp;
     }
 
     /// <summary>
@@ -629,7 +629,17 @@ public sealed partial class PlaneWorld
     public bool GlowOff;
 
     /// <summary>Her glow out and her beam dark: no light of hers for anything to find her by.</summary>
-    public bool Hidden => GlowOff && !BeamOn && !Defeated;
+    public bool Hidden => (GlowOff || BeamLamp) && !BeamOn && !Defeated;
+
+    /// <summary>
+    /// Her beam her lamp (the game's rule, docs/LIGHT-AND-GRAPH.md §2.2): no glow round her at all; her beam is her light
+    /// to swim by, on or off with the glow's button (BeamLit), and fire throws light bubbles (LightBubbleTuning). Off,
+    /// the older rules: her glow, her beam while held, her shots as her pearls make them (the sim's own tests).
+    /// </summary>
+    public bool BeamLamp { get; set; }
+
+    /// <summary>Her beam lit (with BeamLamp): on from the start, toggled by the glow's button.</summary>
+    public bool BeamLit { get; set; } = true;
 
     /// <summary>
     /// The registry kept in step with the world: her aura on her, her beam along her aim while it is held, an emitter for
