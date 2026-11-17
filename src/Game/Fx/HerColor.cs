@@ -5,9 +5,9 @@ namespace OctoShoots.Game.Fx;
 
 /// <summary>
 /// Clementine's colour, from one place: res://data/clementine_color.cfg (or the F1 debug menu, which can save back to it).
-/// Her body (the bell, the tentacles) is the main colour; her light (bubbles, shots, their halos and trails, the
-/// active pearl's charge) is derived from it — lighter and a touch warmer, the way gold sits beside tangerine — unless
-/// the file sets it too. Her glow in the water and the warm pool on the floor are derived as well.
+/// Her body (the bell, the tentacles) is tangerine; all her light (her beam, her light bubbles, their halos and trails,
+/// the active pearl's charge) is cyan by default, against the ink-drawn reef's sepia (docs/ART-LOOKS.md), unless the
+/// file or her jelly's look sets it. Her glow in the water and the pool on the floor are derived from her light.
 /// Published as global shader parameters (her_body, her_light, her_warm in project.godot), so every shader follows at
 /// once; views that colour lights or nodes themselves read the properties here (and <see cref="Changed"/>).
 /// </summary>
@@ -16,19 +16,24 @@ public static class HerColor
     public const string File = "res://data/clementine_color.cfg";
     const string Section = "clementine";
 
-    /// <summary>The default: tangerine (THEME-BIBLE §6.1), and gold for her light.</summary>
+    /// <summary>The default: tangerine (THEME-BIBLE §6.1), and cyan for her light.</summary>
     public static readonly Color DefaultBody = Color.FromHtml("#FF8C42");
+    public static readonly Color DefaultLight = Color.FromHtml(OctoShoots.Core.Saves.JellyLook.DefaultGlow);
+
+    /// <summary>A jelly's light as her look gives it: the old gold default counts as unset (the cyan now).</summary>
+    static Color? LookLight(string glow) =>
+        !Color.HtmlIsValid(glow) || string.Equals(glow, OctoShoots.Core.Saves.JellyLook.OldGlow, StringComparison.OrdinalIgnoreCase) ? null : Color.FromHtml(glow);
 
     public static Color Body { get; private set; } = DefaultBody;
     /// <summary>Set in the file or menu; null: derived from the body.</summary>
     public static Color? LightOverride { get; private set; }
 
     /// <summary>Her light: bubbles, shots, halos, trails.</summary>
-    public static Color Light => LightOverride ?? Shift(Body, hue: 0.041f, sat: 0.78f);
-    /// <summary>The colour of her glow in the water (the light she casts): from her light when it is set, else her body.</summary>
-    public static Color Glow => Shift(LightOverride ?? Body, hue: 0.004f, sat: 0.65f);
-    /// <summary>The tint her glow lays on the floor under her: a deeper, richer shade of the same.</summary>
-    public static Color Warm => Shift(LightOverride ?? Body, hue: -0.008f, sat: 1.1f);
+    public static Color Light => LightOverride ?? DefaultLight;
+    /// <summary>The colour of her glow in the water (the light she casts): from her light.</summary>
+    public static Color Glow => Shift(Light, hue: 0.004f, sat: 0.65f);
+    /// <summary>The tint her light lays on the floor under her: a deeper, richer shade of the same.</summary>
+    public static Color Warm => Shift(Light, hue: -0.008f, sat: 1.1f);
 
     public static event Action? Changed;
 
@@ -43,7 +48,7 @@ public static class HerColor
     public static void SetLook(OctoShoots.Core.Saves.JellyLook look)
     {
         if (Color.HtmlIsValid(look.Arms)) Body = Color.FromHtml(look.Arms);
-        LightOverride = Color.HtmlIsValid(look.Glow) ? Color.FromHtml(look.Glow) : null;
+        LightOverride = LookLight(look.Glow);
         Tips = Color.HtmlIsValid(look.Tips) ? Color.FromHtml(look.Tips) : null;
         Gonads = Math.Max(0, Array.IndexOf(OctoShoots.Core.Saves.JellyNames.Symbols, look.Gonads));
         Publish();
@@ -53,8 +58,8 @@ public static class HerColor
     public static (Color Body, Color Light, Color Glow) Of(OctoShoots.Core.Saves.JellyLook look)
     {
         var body = Color.HtmlIsValid(look.Arms) ? Color.FromHtml(look.Arms) : DefaultBody;
-        Color? light = Color.HtmlIsValid(look.Glow) ? Color.FromHtml(look.Glow) : null;
-        return (body, light ?? Shift(body, hue: 0.041f, sat: 0.78f), Shift(light ?? body, hue: 0.004f, sat: 0.65f));
+        var light = LookLight(look.Glow) ?? DefaultLight;
+        return (body, light, Shift(light, hue: 0.004f, sat: 0.65f));
     }
 
     static bool _loaded;
@@ -77,7 +82,7 @@ public static class HerColor
         Publish();
     }
 
-    /// <summary>A new colour (the debug menu): applied at once; null light derives it from the body.</summary>
+    /// <summary>A new colour (the debug menu): applied at once; null light: the default cyan.</summary>
     public static void Set(Color body, Color? light)
     {
         Body = body;

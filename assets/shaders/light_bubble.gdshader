@@ -15,6 +15,7 @@ void fragment() {
 	// The light in it: a glow from its heart outward.
 	float heart = pow(facing, 2.5);
 	float shimmer = 0.9 + 0.1 * sin(TIME * 13.0 + seed * 7.0);
-	ALBEDO = light_color * (rim * 1.1 + heart * 0.85 * shimmer);
+	// (Its heart whiter than its rim: the light in it at its hottest.)
+	ALBEDO = light_color * rim * 1.1 + mix(light_color, vec3(1.0), 0.55) * heart * 0.85 * shimmer;
 	ALPHA = 1.0;
 }

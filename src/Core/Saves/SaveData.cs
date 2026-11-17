@@ -94,8 +94,10 @@ public sealed class JellyLook
 {
     /// <summary>The shape her four gonads take (JellyNames.Symbols).</summary>
     public string Gonads { get; set; } = "horseshoe";
-    /// <summary>Her glow: her light, her rim, her shots. Clementine's own gold by default.</summary>
-    public string Glow { get; set; } = "#FFC46B";
+    /// <summary>Her light: her beam, her rim, her light bubbles. Clementine's own cyan by default.</summary>
+    public string Glow { get; set; } = DefaultGlow;
+    /// <summary>Her light's default (cyan), and the gold it was before (read as the default).</summary>
+    public const string DefaultGlow = "#3FE6F2", OldGlow = "#FFC46B";
     /// <summary>Her bell and oral arms.</summary>
     public string Arms { get; set; } = "#FF8C42";
     /// <summary>The tips of her eight tentacles.</summary>

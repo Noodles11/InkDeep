@@ -25,7 +25,7 @@ Every decision — art, audio, system, sentence — must serve at least one of t
 
 ### Pillar 1 — Small warm light in overwhelming dark
 
-The Below principle, adapted: our campfires are bioluminescent and the dark is the ocean itself. Clementine is always the warm light in the scene — in every depth, at every menace level, she never gets scary and never goes out. By Depth 5 she is the lighting design.
+The Below principle, adapted: our campfires are bioluminescent and the dark is the ocean itself. Clementine is always the living light in the scene (her body tangerine, her light cyan against the sepia-ink reef) — in every depth, at every menace level, she never gets scary and never goes out. By Depth 5 she is the lighting design.
 
 ### Pillar 2 — Kept, not watched
 
@@ -195,7 +195,7 @@ Rules: fog density, saturation falloff and glow reach all scale with Menace. Fog
 
 ### 6.3 Palette (▸ concrete values; the depth list is fixed)
 
-Master rule: warmth belongs to Clementine and to healthy life; artificiality is glossy, saturated-in-the-wrong-way, and slightly too bright. Reds are absorbed with depth (real water optics), so the deeper the game gets, the more her tangerine glow is the only warm hue on screen.
+Master rule: warmth belongs to Clementine and to healthy life; artificiality is glossy, saturated-in-the-wrong-way, and slightly too bright. Reds are absorbed with depth (real water optics), so the deeper the game gets, the more her tangerine body is the only warm hue on screen; her light is cyan, the one cool, vivid colour against the reef's sepia ink.
 
 | Depth | Water | Seabed/rock | Accent | Notes |
 |---|---|---|---|---|
@@ -341,7 +341,7 @@ Sparse warm pads in the Shallows thinning to single-instrument drones by the Tre
 Rule one: diegetic first. The HUD exists only where the body can’t carry the information.
 
 - Her vitals are on her and on the HUD's bell (docs/ADVENTURE.md §6): top left, Clementine seen from above, her four oral arms her stats (health, inner light, the active pearl's charge, experience), her shells beside her. The magenta hurt flash washes her bell for a beat; absorption is a chromatic ripple.
-- The minimap's bezel is her corruption meter: dark ink filling over a pale gold track. The same language marks the corrupted: a thin ring of ink round each one she can see, drawing back as it is cleansed. No green, no red, no bars: ink is corruption, gold is her light.
+- The minimap's bezel is her corruption meter: dark ink filling over a pale gold track. The same language marks the corrupted: a thin ring of ink round each one she can see, drawing back as it is cleansed. No green, no red, no bars: ink is corruption, gold is her life.
 - No run clock unless asked for (a setting); where the run stands shows as a level arrives.
 - Minimap: north-up, fog of war revealed round her that persists, the unseen filled as solid rock; a place shows as its emblem once she has been there. The map shows the reef she is on only.
 - Tab map: the whole reef under the same fog, with a legend. The chart (pause menu): the dive's graph as far as she has seen it.

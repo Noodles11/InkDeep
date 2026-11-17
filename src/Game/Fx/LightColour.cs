@@ -25,7 +25,7 @@ public static class LightColour
     /// <summary>Her light as drawn in the game's look, tinted by a colour of hers (none: her nearly white showcase light).</summary>
     public static Color Beam(LightHue hue, bool showcase)
     {
-        var plain = showcase ? HerColor.Light.Lerp(new Color(0.9f, 0.96f, 1f), 0.65f) : HerColor.Light;
+        var plain = showcase ? HerColor.Light.Lerp(new Color(0.9f, 0.96f, 1f), 0.2f) : HerColor.Light;
         if (hue == LightHue.None) return plain;
         // (Deepened in the water's haze, so the colour holds against the bright sand.)
         var c = Of(hue);

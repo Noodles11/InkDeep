@@ -88,7 +88,7 @@ public partial class CombatView : Node3D
     readonly List<MeshInstance3D> _hazes = new();
     /// <summary>How far round a light bubble its water burns (× its radius), and its light's colour (white, for now).</summary>
     const float HazeReach = 3.2f;
-    static readonly Color BubbleLight = new(1f, 1f, 1f);
+    static Color BubbleLight => HerColor.Light.Lerp(Colors.White, 0.35f);
     /// <summary>Her bubbles as last drawn: where each was and how many it held (pops and kills look the bubble up).</summary>
     Dictionary<PlaneShot, (System.Numerics.Vector2 At, int Bubbles)> _seen = new(), _seenNext = new();
     readonly List<(System.Numerics.Vector2 At, float Strength, float Radius)> _candidates = new();
