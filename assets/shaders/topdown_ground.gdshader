@@ -18,6 +18,8 @@ uniform bool debug_normals = false;
 // odd pebble past it). The cut's edge on the rock outlined in the same ink (see_line_width metres, or a couple of
 // pixels). The cap's vertices carry how far into the rock they lie (colour red, in metres over CAP_DEPTH).
 uniform vec3 see_cap = vec3(0.025, 0.028, 0.035);
+// The coloured ink drawing (InkLook): the cut a cross-section as an engraver draws one: pale, its strokes in dark ink.
+uniform bool ink_cap = false;
 uniform vec3 see_line = vec3(0.26, 0.27, 0.3);
 // The hatching, in world metres: its band's depth into the rock, a bundle's size, the gap between its strokes; and a
 // stroke's weight in pixels.
@@ -140,7 +142,7 @@ void fragment() {
 	if (is_cap < 0.5 && !FRONT_FACING) {
 		if (IN_SHADOW_PASS) discard;
 		ALBEDO = vec3(0.0);
-		EMISSION = see_cap;
+		EMISSION = ink_cap ? vec3(0.55, 0.5, 0.42) : see_cap;
 		BACKLIGHT = vec3(0.0);
 		SPECULAR = 0.0;
 		ROUGHNESS = 1.0;
@@ -152,7 +154,7 @@ void fragment() {
 		float liner = 1.0 - smoothstep(see_ink_px * (0.75 + 0.5 * see_hash(floor(world.xz * 0.5))) * 0.5, see_ink_px + 0.5, d_px);
 		float ink = max(liner, 0.85 * see_hatch(world.xz, cap_in, ppm));
 		ALBEDO = vec3(0.0);
-		EMISSION = mix(see_cap, see_line, ink);
+		EMISSION = ink_cap ? mix(vec3(0.55, 0.5, 0.42), vec3(0.015, 0.012, 0.01), max(liner, 0.85 * see_hatch(world.xz, cap_in * 0.35, ppm))) : mix(see_cap, see_line, ink);
 		BACKLIGHT = vec3(0.0);
 		SPECULAR = 0.0;
 		ROUGHNESS = 1.0;
@@ -205,7 +207,7 @@ void fragment() {
 	if (outline) {
 		// Unlit, flat: the cut's edge a line in the cap's ink.
 		ALBEDO = vec3(0.0);
-		EMISSION = see_line;
+		EMISSION = ink_cap ? vec3(0.015, 0.012, 0.01) : see_line;
 		BACKLIGHT = vec3(0.0);
 		SPECULAR = 0.0;
 		ROUGHNESS = 1.0;

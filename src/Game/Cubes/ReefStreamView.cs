@@ -100,6 +100,7 @@ public partial class ReefStreamView : Node3D
         _here = new ShaderMaterial { Shader = shader };
         _below = new ShaderMaterial { Shader = shader };
         _above = new ShaderMaterial { Shader = shader };
+        foreach (var m in new[] { _here, _below, _above }) InkLook.ApplyGround(m);
         SetRise(1f, 0f, 0f);
         _murk = new MeshInstance3D
         {

@@ -154,6 +154,14 @@ uniform float fluor_strength = 0.75;
 // The lit stone lanterns' pools of light (PlaneLanterns; xz, reach, strength): the reef shows round each in its colours, warmed.
 uniform vec4 lantern_pools[8];
 uniform int lantern_count = 0;
+// The coloured ink drawing (docs/ART-LOOKS.md, "Coloured ink"; InkLook): the reef drawn in ink lines, hatching and
+// washes of colour on paper (ink_paper, darker each layer down), withered to faded sepia ink in the dark and vivid in her
+// light. ink_on: 1 on, 0 the painted look as it was.
+uniform float ink_on = 0.0;
+uniform vec3 ink_paper = vec3(0.92, 0.87, 0.76);
+uniform vec3 ink_ink = vec3(0.2, 0.13, 0.08);
+// How much of its colour the drawing keeps out of any light (the sunlit warm-up layer some; below it none).
+uniform float ink_awake = 0.0;
 
 float ink_hash(vec2 p) {
 	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -307,6 +315,53 @@ float art_outline(vec2 uv, vec2 frag, mat4 inv_projection, mat4 inv_view, vec2 v
 		step_m = max(step_m, abs(zk - zc));
 	}
 	return smoothstep(0.2, 0.45, step_m) * (0.82 + 0.18 * value_noise(frag * 0.3));
+}
+
+// The ink's line: wherever the depth breaks between this pixel and its neighbours, by a share of how far it lies (a
+// silhouette, a wall's lip over the floor, a creature against the sand), its width wavering as a dip pen's does.
+float ink_outline(vec2 uv, vec2 frag, mat4 inv_projection, vec2 viewport) {
+	float wob = value_noise(frag * 0.05) * 0.7 + value_noise(frag * 0.013 + 3.0) * 0.3;
+	vec2 px = (0.6 + 0.9 * wob) / viewport;
+	float zc = view_depth(uv, inv_projection);
+	float e = 0.0;
+	for (int k = 0; k < 8; k++) {
+		float a = float(k) * 0.785398;
+		float zk = view_depth(uv + vec2(cos(a), sin(a)) * px, inv_projection);
+		// (Only the nearer side of a break is inked, so the line lies on the shape, not on what is behind it.)
+		e = max(e, zk - zc);
+	}
+	float line = smoothstep(0.015, 0.05, e / max(zc, 1.0));
+	// (Broken here and there, as a hand's line is.)
+	return line * (0.75 + 0.25 * smoothstep(0.2, 0.6, value_noise(frag * 0.08 + 11.0)));
+}
+
+// The ink's hatching (0..1 of ink) on the floor at this brightness: parallel strokes laid at a slant in its metres,
+// crossed by a second set where it is darker still.
+float ink_hatch(vec3 w, float l) {
+	vec2 hp = w.xz;
+	float wob = value_noise(hp * 0.7) * 0.35;
+	float u = dot(hp, vec2(0.7071, 0.7071)) / 0.32 + wob;
+	float v = dot(hp, vec2(-0.7071, 0.7071)) / 0.38 + wob * 0.7;
+	float fu = max(fwidth(u), 1e-3), fv = max(fwidth(v), 1e-3);
+	float su = 1.0 - smoothstep(0.1, 0.1 + fu * 1.2, abs(fract(u) - 0.5));
+	float sv = 1.0 - smoothstep(0.1, 0.1 + fv * 1.2, abs(fract(v) - 0.5));
+	// (Strokes that would crowd under a few pixels fade out rather than shimmer.)
+	su *= 1.0 - smoothstep(0.1, 0.25, fu);
+	sv *= 1.0 - smoothstep(0.1, 0.25, fv);
+	float one = smoothstep(0.3, 0.14, l), two = smoothstep(0.13, 0.05, l);
+	return max(su * one, sv * two) * (0.65 + 0.35 * value_noise(hp * 2.3));
+}
+
+// The ink's contours up the rock (0..1 of ink), as a hand-drawn chart of a relief: a line at a wall's foot just over
+// the floor, then one every 1.6 m up its face, fainter the higher; none on the flat floor.
+float ink_contour(float h) {
+	float s = (h + 0.55) / 1.6;
+	float d = abs(fract(s + 0.5) - 0.5) * 1.6;
+	float w = max(fwidth(h), 1e-4);
+	float line = 1.0 - smoothstep(w * 0.7, w * 1.7, d);
+	// (Where the face is so steep a line would smear, or so flat it would flood, none.)
+	line *= smoothstep(0.004, 0.02, w) * (1.0 - smoothstep(0.6, 1.2, w));
+	return line * step(-0.9, h) * (1.0 - 0.6 * smoothstep(2.0, 12.0, h));
 }
 
 void fragment() {
@@ -486,6 +541,17 @@ void fragment() {
 		col = mix(col, mix(vec3(0.025, 0.035, 0.085), vec3(0.12, 0.55, 0.7), reef_dark), line * mix(0.7, 0.35, reef_dark));
 	}
 
+	// Coloured ink (InkLook): the reef as a drawing before the water is laid over it. Its washes grained as pigment
+	// settles in paper, hatched in its shade, and every edge inked.
+	if (ink_on > 0.0 && !open_deep) {
+		float il = dot(col, vec3(0.299, 0.587, 0.114));
+		col *= 0.86 + 0.22 * value_noise(world.xz * 1.6 + world.y) + 0.08 * (value_noise(world.xz * 0.25) - 0.5);
+		col = mix(col, col * 0.25, ink_hatch(world, il) * 0.7 * (1.0 - smoothstep(-0.6, -0.2, h)));
+		float ink_line = ink_outline(uv, FRAGCOORD.xy, INV_PROJECTION_MATRIX, VIEWPORT_SIZE) * mix(1.0, 0.55, smoothstep(1.0, 6.0, below));
+		ink_line = max(ink_line, ink_contour(h) * 0.8);
+		col = mix(col, vec3(0.02, 0.015, 0.01), ink_line * 0.85);
+	}
+
 	// How much water this pixel is seen through (the painted looks: as deep as it lies).
 	bool one_reef = (reef_art == 0 || reef_art == 5 || paper) && !open_deep;
 	float seen = !floor_fog ? 0.0 : one_reef ? mix(reef_water, below, smoothstep(far_water, far_water + 6.0, below)) : layered;
@@ -641,6 +707,8 @@ void fragment() {
 		lantern_lit = max(lantern_lit, (1.0 - smoothstep(lp.z * 0.5, lp.z, ld)) * lp.w);
 	}
 	col = col * (1.0 + vec3(1.0, 0.62, 0.3) * lantern_lit * 0.35) + vec3(1.0, 0.6, 0.25) * lantern_lit * lantern_lit * 0.02;
+	// (The picture before it is drained, for the ink drawing's own withering.)
+	vec3 ink_src = col;
 	// (How coloured the reef is here before it is drained: its corals and gardens are, its chalk little.)
 	float raw_hi = max(col.r, max(col.g, col.b)), raw_lo = min(col.r, min(col.g, col.b));
 	float raw_chroma = (raw_hi - raw_lo) / max(raw_hi, 0.02);
@@ -671,7 +739,7 @@ void fragment() {
 
 	// A cave's dark is never black: where the depth breaks (an edge of rock, a ledge, a creature's rim) a faint cool line
 	// shows what is there, all but hidden; not where her light already shows it.
-	if (reef_dark > 0.0) {
+	if (reef_dark > 0.0 && ink_on <= 0.0) {
 		vec2 px = 1.5 / VIEWPORT_SIZE;
 		float zc = view_depth(uv, INV_PROJECTION_MATRIX);
 		float e = abs(view_depth(uv + vec2(px.x, 0.0), INV_PROJECTION_MATRIX) - zc) + abs(view_depth(uv - vec2(px.x, 0.0), INV_PROJECTION_MATRIX) - zc)
@@ -685,6 +753,31 @@ void fragment() {
 		float tooth = hash12(floor(FRAGCOORD.xy * 0.5));
 		float wash = value_noise(FRAGCOORD.xy * 0.006) * 0.6 + value_noise(FRAGCOORD.xy * 0.02 + 9.0) * 0.4;
 		col *= 0.955 + 0.05 * tooth + 0.06 * (wash - 0.5);
+	}
+	// Coloured ink: withered in the dark, vivid in her light. Out of her light the drawing fades to sepia ink on its
+	// paper: its darks a brown ink, its lights the paper itself, its colour all but gone. In her light its colours come
+	// back vivid. (Instead of the painted look's drain.)
+	if (ink_on > 0.0) {
+		float sl = dot(ink_src, vec3(0.299, 0.587, 0.114));
+		float pl = max(dot(ink_paper, vec3(0.299, 0.587, 0.114)), 0.05);
+		// (The ink a deep brown on any paper: a share of the paper's own tone, darker the lighter the paper.)
+		vec3 ink_c = mix(ink_ink, ink_paper * 0.3, 0.35);
+		float tone = smoothstep(0.015, 0.4 * (0.6 + 0.4 * pl), sl);
+		vec3 faded = mix(ink_c, ink_paper, tone);
+		// (A breath of its own colour left in it, as a wash faded in the sun.)
+		vec3 hue = ink_src / max(sl, 1e-3);
+		faded *= mix(vec3(1.0), clamp(hue, 0.5, 1.6), 0.12);
+		float vl = sl;
+		vec3 vivid = max(mix(vec3(vl), ink_src, 1.75), vec3(0.0)) * 1.1;
+		// (As washes of ink: the water's blue cast taken back, the tones stepped a little, as a wash dries in layers.)
+		vivid *= vec3(1.12, 1.0, 0.84);
+		vivid = art_marker_fill(vivid, 1.0, 0.45);
+		// (Pigment on paper: the lit drawing keeps a little of the paper's warmth.)
+		vivid *= mix(vec3(1.0), ink_paper / pl, 0.12);
+		// (Only light brings the colour back: hers, a lantern's, a pearl's, a sealed leak's wave; not the reef's waking.)
+		float lit_ink = open_deep ? 0.0 : max(max(lit, reef_lit(world, CAMERA_POSITION_WORLD)), max(max(pearl_shown * 0.9, lantern_lit), reef_wave_front(world)));
+		lit_ink = max(lit_ink, ink_awake);
+		col = open_deep ? mix(ink_paper * 0.55, ink_src, lit_ink) : mix(faded, vivid, lit_ink);
 	}
 	// The reef answers her light (docs/VISUAL-SHOWCASE.md): its corals and gardens, and drifts of fluorescent life on
 	// its rock and sand, glow on in colours of their own (green, orange, magenta, cyan) where her light has lately
@@ -706,7 +799,9 @@ void fragment() {
 				: hn < 3.0 ? mix(vec3(1.0, 0.2, 0.7), vec3(0.2, 0.85, 1.0), smoothstep(2.6, 3.0, hn))
 				: mix(vec3(0.2, 0.85, 1.0), vec3(0.2, 1.0, 0.45), smoothstep(3.6, 4.0, hn));
 			float after = smoothstep(0.0, 0.6, mem) * (1.0 - 0.7 * shown);
-			col += hue * life * dots * after * fluor_strength * (0.6 + 0.6 * reef_menace);
+			// (On the ink drawing's light paper, a gentler glow: it would be garish there.)
+			float on_paper = ink_on > 0.0 ? 1.0 - 0.7 * smoothstep(0.1, 0.7, dot(ink_paper, vec3(0.299, 0.587, 0.114))) : 1.0;
+			col += hue * life * dots * after * fluor_strength * (0.6 + 0.6 * reef_menace) * on_paper;
 		}
 	}
 	// The inkseeds' stains: no light shows within one, only the deepest ink.
@@ -715,7 +810,14 @@ void fragment() {
 	// contrast).
 	vec2 d = (uv - 0.5) * vec2(VIEWPORT_SIZE.x / VIEWPORT_SIZE.y, 1.0);
 	float v = smoothstep(0.32, 1.05, length(d) * 1.3);
-	col = mix(col, reef_murk * 0.25, v * reef_vignette * (reef_art == 6 ? 1.3 : 1.0));
+	col = ink_on > 0.0 ? mix(col, ink_paper * 0.45, v * 0.75) : mix(col, reef_murk * 0.25, v * reef_vignette * (reef_art == 6 ? 1.3 : 1.0));
+	// The ink drawing's paper: its tooth, its fibres, and the faint unevenness of a wash dried on it.
+	if (ink_on > 0.0) {
+		float tooth = hash12(floor(FRAGCOORD.xy * 0.5));
+		float fibre = value_noise(FRAGCOORD.xy * vec2(0.09, 0.02)) * value_noise(FRAGCOORD.xy * vec2(0.02, 0.11) + 4.0);
+		float dried = value_noise(FRAGCOORD.xy * 0.005) * 0.6 + value_noise(FRAGCOORD.xy * 0.017 + 9.0) * 0.4;
+		col *= 0.95 + 0.06 * tooth + 0.08 * (dried - 0.5) - 0.05 * fibre;
+	}
 	// A big-merge kill lifts the screen's edges toward white for an instant (never its middle).
 	col = mix(col, vec3(1.0, 0.97, 0.9), edge_flash * 0.55 * smoothstep(0.45, 1.15, length(d) * 1.3));
 

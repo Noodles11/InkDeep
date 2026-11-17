@@ -398,7 +398,7 @@ Rule one: diegetic first. The HUD exists only where the body can’t carry the i
 - **No faces, anywhere in play:** no boss cut-in; creatures and bosses are real animals.
 - **The corrupted's meters** are rings of ink, never coloured bars.
 - **The build shows in her light** (§5.2).
-- **The reef's colour is the reward of cleansing it:** grey and quiet outside her light while its leak pours, the whole
-  painting once it is sealed (docs/VISUAL-SHOWCASE.md).
+- **The reef is a coloured ink drawing** (docs/ART-LOOKS.md): withered to faded sepia ink in the dark, its colours
+  vivid only where light falls; each depth drawn on darker paper.
 
 *Ink Deep — the dark is the ocean, the light is you, and everything you swallow becomes part of the lantern.*

@@ -98,6 +98,15 @@ public partial class CameraRig : Node3D
     /// </summary>
     public const float UnlitFlatten = 0.35f, HighlightKnee = 0.5f, HerSeat = 0.5f;
 
+    /// <summary>The coloured ink drawing (InkLook) on this layer's paper, or off.</summary>
+    public void SetInk(bool on, Vector3 paper, float awake = 0f)
+    {
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ink_awake"), awake);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ink_on"), on ? 1f : 0f);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ink_paper"), paper);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ink_ink"), OctoShoots.Game.Fx.InkLook.Ink);
+    }
+
     public void SetShowcase(bool on)
     {
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("below_blur"), on ? 1.4f : 5.2f);

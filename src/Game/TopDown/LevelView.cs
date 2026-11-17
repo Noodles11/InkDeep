@@ -227,6 +227,7 @@ public partial class LevelView : Node3D
         _flora = new FloraViews { Unlimited = true };
         AddChild(_flora);
         _ground = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/topdown_ground.gdshader") };
+        OctoShoots.Game.Fx.InkLook.ApplyGround(_ground);
         _rock = GD.Load<Shader>("res://assets/shaders/reef_rock.gdshader");
         if (OS.GetCmdlineUserArgs().Contains("--dbg-normals")) _ground.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("debug_normals"), true);
     }

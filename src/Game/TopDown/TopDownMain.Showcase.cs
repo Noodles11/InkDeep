@@ -44,6 +44,9 @@ public partial class TopDownMain
     {
         _showcase = IsShowcase;
         _camera.SetShowcase(_showcase);
+        // Drawn in coloured ink, on the paper of the layer she is on (or under: a place behind a mouth keeps its layer's).
+        int inkLayer = _reef is not null ? _layer : 0;
+        _camera.SetInk(InkLook.On && _showcase, InkLook.Paper(inkLayer), InkLook.Awake(inkLayer));
         ShowcaseOn = _showcase;
         _wake = _showcase ? LeaksSealedShare : 0f;
         _waveRadius = 0f;

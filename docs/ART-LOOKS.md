@@ -1,6 +1,8 @@
 # Art looks
 
-The game is **painted** (look 0) in the Blue Hollow's palettes (docs/VISUAL-SHOWCASE.md); **look 7** is a study of it in watercolour from straight overhead. Before that it was drawn in
+The game is **drawn in coloured ink** over the painted look (look 0, in the Blue Hollow's palettes:
+docs/VISUAL-SHOWCASE.md); `--ink=0` shows the painted look alone. **Look 7** is a study of it in watercolour from
+straight overhead. Before that it was drawn in
 **look 6, felt tip and highlighter** (`--showcase=0` brings it back): a minimal illustration, after a reference of ink lines and
 flat washes of blue. Looks 1–5 are earlier studies, and 0 the old painted-photographic look; each repaints the reef in
 its own surface shading (`reef_art.gdshaderinc`, used by the ground and the free rock) and changes how the depth pass
@@ -8,7 +10,36 @@ states distance (`topdown_post.gdshader`). Looks 4 and 5 draw only round dots: t
 camera's middle, and off it, on rock seen nearly edge-on (a wall's face low on the screen, a drop's lip), a dot would show
 drawn out into a dash or a line; where its stretch on screen passes 1.25 it fades, gone by 1.6 (`art_round`).
 
-## Look 6: felt tip and highlighter (the game's look)
+## Coloured ink (the game's look)
+
+The reef as a coloured ink drawing on paper, the camera kept as it is (tilted, the walls cut flat over her plane). It is
+an ink stage over the painted look in the post pass (`topdown_post`'s `ink_*`, set by `InkLook` and
+`CameraRig.SetInk`), so every place takes it.
+
+- **Ink lines:**
+  - every silhouette, inked on its nearer side, wherever the depth breaks by more than about 1.5% of its distance; the
+    line wavers in width as a dip pen's does and breaks here and there (`ink_outline`);
+  - contour lines up the rock, as a hand-drawn relief chart: one at a wall's foot just over the floor, then one every
+    1.6 m up its face, fainter the higher, none on the flat floor (`ink_contour`).
+- **Hatching** in the floor's shade: strokes at a slant fixed to the floor's metres, crossed by a second set where it
+  is darker still. They fade out before they would crowd under a few pixels, so they never shimmer (`ink_hatch`).
+- **Washes:** the colour grained as pigment settles in paper.
+- **The cut rock** is an engraver's cross-section: a pale fill, a dark ink liner along its edge and dark hatching
+  inside (`topdown_ground`'s `ink_cap`, `InkLook.ApplyGround`).
+- **Withered in the dark, vivid in light:**
+  - Out of any light the drawing fades to sepia ink on its paper: its darks a deep brown ink, its lights the paper
+    itself, a breath of its own colour left.
+  - Where light falls (her glow and beam, a lit lantern, a clam room's pearl, a sealed leak's wave) its colours come
+    back vivid: saturated, the water's blue cast taken back, the tones stepped a little as a wash dries in layers.
+  - The reef's waking does not bring the colour back; only light does.
+  - The sunlit warm-up layer keeps 35% of its colour out of light (`InkLook.Awake`).
+- **Each layer on darker paper** (`InkLook.Paper`): cream on the warm-up layer, then parchment, tan, umber and slate,
+  near-black in the Abyss and below. The open deep is the paper's dark, the vignette darker paper still.
+- **The paper's own grain:** its tooth, its fibres, the faint unevenness of a dried wash.
+- **What is drawn after the post pass keeps its own look:** Clementine, her light's shots, the particles.
+- **The fluorescent afterglow** (VISUAL-SHOWCASE) glows on the drawing too, gentler on light paper.
+
+## Look 6: felt tip and highlighter
 
 - **The reef held back, so the creatures carry the picture.** Each material one flat marker tone, a whisper of its own
   colour left, held toward the depth's water; shading evenly with height, no bands or lines up the walls (the deeper,

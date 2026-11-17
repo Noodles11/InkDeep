@@ -225,10 +225,10 @@ emptied, it is freed, leaving a core of light.
   the emblems on the places round her; top centre a dot per leak. Messages slide down from the top edge. Nothing else stays on
   the screen.
 - **On the reef**: corruption rings round the corrupted she can see; the pearl she is absorbing on its own card.
-- **Readable at a glance** (VISUAL-SHOWCASE, "The order of the eye"): outside her light the reef is grey and quiet and
-  never outshines her; what she
-  cannot see near her troubles the water and is heard (CORRUPTION, "Sensing the unseen"). A wholly cleansed reef gets
-  its full colour back.
+- **Drawn in coloured ink** (ART-LOOKS, "Coloured ink"): the reef is an ink drawing on paper, darker paper each layer
+  down. Outside any light it is withered to faded sepia ink and never outshines her; in her light (and a lantern's) its
+  colours come back vivid. What she cannot see near her troubles the water and is heard (CORRUPTION, "Sensing the
+  unseen").
 - **The pause menu**: Level up, Stats, Pearls, Achievements, Requests, Chart.
 - **The title** (TITLE-MENU): the three jellies over a live sea; statistics; the Sea-pedia; settings.
 
