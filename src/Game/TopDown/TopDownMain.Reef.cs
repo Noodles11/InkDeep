@@ -1190,7 +1190,6 @@ public partial class TopDownMain
     {
         _reefView.Follow(eye);
         float open = _dbgNoCarve ? 0f : 1f;
-        _level.SeeRise = _reefView.HereRise;
         // (Her layer's reef life and mouths are cut with its rock.)
         _level.SeeThrough(_bell.GlobalPosition, ReefSeeBehind, open);
         _reefView.SeeThrough(_bell.GlobalPosition, ReefSeeBehind, open, _level.SeeCutMask);

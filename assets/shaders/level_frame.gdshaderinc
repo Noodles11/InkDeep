@@ -33,11 +33,11 @@ vec3 lf_local(vec3 world) { return world - level_offset; }
 // A local position where patterns are drawn: absolute across the dive.
 vec3 lf_pattern(vec3 local) { return vec3(local.x + level_origin.x, local.y, local.z + level_origin.y); }
 
-// The cutout: every body of rock on screen that covers her anywhere, or runs on off the screen (LevelView.SeeCut), is
-// cut whole, off flat
+// The cutout: no wall is drawn but one that may be (LevelView.SeeCut): all rock on the camera's side of her line, and
+// behind it every body of rock rooted in front of her or coming up to her, is cut whole, off flat
 // LF_SEE_OVER over her level's swim plane (see_through_y): all its walls gone down to their stumps, showing the reef's
 // cap there (a flat dotted fill drawn inside all the rock at that height at all times, topdown_ground's cap), and
-// outlined. A body wholly on screen that does not cover her stands whole, seen only from outside (a rock's inside is never drawn). It
+// outlined. A body behind her line rooted behind it stands whole, seen only from outside (a rock's inside is never drawn). It
 // is on (see_through.w > 0) or off: no transition; in the reef it is always on.
 
 // How open it is, and the height it cuts at (the caps' own: LevelView.CapHeight).
@@ -53,13 +53,13 @@ float lf_see_front(vec3 world, vec3 cam) {
 	return dot(world.xz - see_through.xy, toward) + see_through.z;
 }
 
-// Whether the cut takes what stands over a point (at any height over the cut): the rock of every body that covers
-// her or runs on off the screen, whole (see_cut, LevelView.SeeCut); without its map, all that lies on the camera's side of her line.
+// Whether the cut takes what stands over a point (at any height over the cut): the rock that may not be drawn, whole
+// (see_cut, LevelView.SeeCut); without its map, all that lies on the camera's side of her line.
 bool lf_see_column(vec3 world, vec3 cam) {
 	if (see_through.w <= 0.0) return false;
 	if (see_cut_box.z <= 0.0) return lf_see_front(world, cam) > 0.0;
 	vec2 uv = (world.xz - see_cut_box.xy) / see_cut_box.z;
-	// (Past its map, far off the screen: cut, as all rock off the screen is.)
+	// (Past its map, far off: cut, no wall drawn but one known to be allowed.)
 	if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) return true;
 	return texture(see_cut, uv).r > 0.5;
 }
