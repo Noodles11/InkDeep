@@ -6,7 +6,7 @@ namespace OctoShoots.Game.Fx;
 /// <summary>
 /// Clementine's colour, from one place: res://data/clementine_color.cfg (or the F1 debug menu, which can save back to it).
 /// Her body (the bell, the tentacles) is tangerine; all her light (her beam, her light bubbles, their halos and trails,
-/// the active pearl's charge) is cyan by default, against the ink-drawn reef's sepia (docs/ART-LOOKS.md), unless the
+/// the active pearl's charge) is cyan by default, against the ink-drawn reef's blue (docs/ART-LOOKS.md), unless the
 /// file or her jelly's look sets it. Her glow in the water and the pool on the floor are derived from her light.
 /// Published as global shader parameters (her_body, her_light, her_warm in project.godot), so every shader follows at
 /// once; views that colour lights or nodes themselves read the properties here (and <see cref="Changed"/>).

@@ -159,11 +159,11 @@ uniform float maze_fog = 0.0;
 uniform vec4 fog_clear[8];
 uniform int fog_clear_count = 0;
 // The coloured ink drawing (docs/ART-LOOKS.md, "Coloured ink"; InkLook): the reef drawn in ink lines, hatching and
-// washes of colour on paper (ink_paper, darker each layer down), withered to faded sepia ink in the dark and vivid in her
+// washes of colour on paper (ink_paper, darker each layer down), withered to faded blue ink in the dark and vivid in her
 // light. ink_on: 1 on, 0 the painted look as it was.
 uniform float ink_on = 0.0;
-uniform vec3 ink_paper = vec3(0.92, 0.87, 0.76);
-uniform vec3 ink_ink = vec3(0.2, 0.13, 0.08);
+uniform vec3 ink_paper = vec3(0.82, 0.9, 0.94);
+uniform vec3 ink_ink = vec3(0.07, 0.11, 0.22);
 // How much of its colour the drawing keeps out of any light (the sunlit warm-up layer some; below it none).
 uniform float ink_awake = 0.0;
 
@@ -553,7 +553,7 @@ void fragment() {
 		col = mix(col, col * 0.25, ink_hatch(world, il) * 0.7 * (1.0 - smoothstep(-0.6, -0.2, h)));
 		float ink_line = ink_outline(uv, FRAGCOORD.xy, INV_PROJECTION_MATRIX, VIEWPORT_SIZE) * mix(1.0, 0.55, smoothstep(1.0, 6.0, below));
 		ink_line = max(ink_line, ink_contour(h) * 0.8);
-		col = mix(col, vec3(0.02, 0.015, 0.01), ink_line * 0.85);
+		col = mix(col, vec3(0.01, 0.015, 0.03), ink_line * 0.85);
 	}
 
 	// How much water this pixel is seen through (the painted looks: as deep as it lies).
@@ -762,13 +762,13 @@ void fragment() {
 		float wash = value_noise(FRAGCOORD.xy * 0.006) * 0.6 + value_noise(FRAGCOORD.xy * 0.02 + 9.0) * 0.4;
 		col *= 0.955 + 0.05 * tooth + 0.06 * (wash - 0.5);
 	}
-	// Coloured ink: withered in the dark, vivid in her light. Out of her light the drawing fades to sepia ink on its
-	// paper: its darks a brown ink, its lights the paper itself, its colour all but gone. In her light its colours come
+	// Coloured ink: withered in the dark, vivid in her light. Out of her light the drawing fades to blue ink on its
+	// paper: its darks a deep blue ink, its lights the paper itself, its colour all but gone. In her light its colours come
 	// back vivid. (Instead of the painted look's drain.)
 	if (ink_on > 0.0) {
 		float sl = dot(ink_src, vec3(0.299, 0.587, 0.114));
 		float pl = max(dot(ink_paper, vec3(0.299, 0.587, 0.114)), 0.05);
-		// (The ink a deep brown on any paper: a share of the paper's own tone, darker the lighter the paper.)
+		// (The ink a deep blue on any paper: a share of the paper's own tone, darker the lighter the paper.)
 		vec3 ink_c = mix(ink_ink, ink_paper * 0.3, 0.35);
 		float tone = smoothstep(0.015, 0.4 * (0.6 + 0.4 * pl), sl);
 		vec3 faded = mix(ink_c, ink_paper, tone);

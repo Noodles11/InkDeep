@@ -149,7 +149,7 @@ void fragment() {
 		float liner = 1.0 - smoothstep(see_ink_px * (0.75 + 0.5 * see_hash(floor(world.xz * 0.5))) * 0.5, see_ink_px + 0.5, d_px);
 		float ink = max(liner, 0.85 * see_hatch(world.xz, cap_in, ppm));
 		ALBEDO = vec3(0.0);
-		EMISSION = ink_cap ? mix(vec3(0.55, 0.5, 0.42), vec3(0.015, 0.012, 0.01), max(liner, 0.85 * see_hatch(world.xz, cap_in * 0.35, ppm))) : mix(see_cap, see_line, ink);
+		EMISSION = ink_cap ? mix(vec3(0.40, 0.50, 0.60), vec3(0.008, 0.012, 0.025), max(liner, 0.85 * see_hatch(world.xz, cap_in * 0.35, ppm))) : mix(see_cap, see_line, ink);
 		BACKLIGHT = vec3(0.0);
 		SPECULAR = 0.0;
 		ROUGHNESS = 1.0;
@@ -202,7 +202,7 @@ void fragment() {
 	if (outline) {
 		// Unlit, flat: the cut's edge a line in the cap's ink.
 		ALBEDO = vec3(0.0);
-		EMISSION = ink_cap ? vec3(0.015, 0.012, 0.01) : see_line;
+		EMISSION = ink_cap ? vec3(0.008, 0.012, 0.025) : see_line;
 		BACKLIGHT = vec3(0.0);
 		SPECULAR = 0.0;
 		ROUGHNESS = 1.0;

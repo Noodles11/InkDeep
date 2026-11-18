@@ -25,7 +25,7 @@ Every decision — art, audio, system, sentence — must serve at least one of t
 
 ### Pillar 1 — Small warm light in overwhelming dark
 
-The Below principle, adapted: our campfires are bioluminescent and the dark is the ocean itself. Clementine is always the living light in the scene (her body tangerine, her light cyan against the sepia-ink reef) — in every depth, at every menace level, she never gets scary and never goes out. By Depth 5 she is the lighting design.
+The Below principle, adapted: our campfires are bioluminescent and the dark is the ocean itself. Clementine is always the living light in the scene (her body tangerine, her light cyan against the blue-ink reef) — in every depth, at every menace level, she never gets scary and never goes out. By Depth 5 she is the lighting design.
 
 ### Pillar 2 — Kept, not watched
 
@@ -195,7 +195,7 @@ Rules: fog density, saturation falloff and glow reach all scale with Menace. Fog
 
 ### 6.3 Palette (▸ concrete values; the depth list is fixed)
 
-Master rule: warmth belongs to Clementine and to healthy life; artificiality is glossy, saturated-in-the-wrong-way, and slightly too bright. Reds are absorbed with depth (real water optics), so the deeper the game gets, the more her tangerine body is the only warm hue on screen; her light is cyan, the one cool, vivid colour against the reef's sepia ink.
+Master rule: warmth belongs to Clementine and to healthy life; artificiality is glossy, saturated-in-the-wrong-way, and slightly too bright. Reds are absorbed with depth (real water optics), so the deeper the game gets, the more her tangerine body is the only warm hue on screen; her light is cyan, the one cool, vivid colour against the reef's blue ink.
 
 | Depth | Water | Seabed/rock | Accent | Notes |
 |---|---|---|---|---|
@@ -398,7 +398,7 @@ Rule one: diegetic first. The HUD exists only where the body can’t carry the i
 - **No faces, anywhere in play:** no boss cut-in; creatures and bosses are real animals.
 - **The corrupted's meters** are rings of ink, never coloured bars.
 - **The build shows in her light** (§5.2).
-- **The reef is a coloured ink drawing** (docs/ART-LOOKS.md): withered to faded sepia ink in the dark, its colours
+- **The reef is a coloured ink drawing** (docs/ART-LOOKS.md): withered to faded blue ink in the dark, its colours
   vivid only where light falls; each depth drawn on darker paper.
 
 *Ink Deep — the dark is the ocean, the light is you, and everything you swallow becomes part of the lantern.*

@@ -42,7 +42,7 @@ between).
 - **Coral crust** (`reef_surface.gdshaderinc`): thicker, broken into polyps and heads, in pink and violet with patches of
   orange and yellow.
 - **Her light is cyan** (`HerColor.DefaultLight`; her jelly's look may set another), only a little paled on the reef,
-  so it stands out against the ink-drawn reef's sepia: her beam's fan and its spot, her light in the water and on the
+  so it stands out against the ink-drawn reef's blue: her beam's fan and its spot, her light in the water and on the
   reef, her light bubbles (their hearts whiter). Her body stays tangerine.
 - **Her light shows the reef** (`reef_show.gdshaderinc`): what her aura and her beam fall on, cut off by the rock
   between, lifts in its own colours. (Under a drawn look it also swaps the drawn skin for the painted one there.)

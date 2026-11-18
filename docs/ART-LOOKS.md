@@ -24,17 +24,17 @@ an ink stage over the painted look in the post pass (`topdown_post`'s `ink_*`, s
 - **Hatching** in the floor's shade: strokes at a slant fixed to the floor's metres, crossed by a second set where it
   is darker still. They fade out before they would crowd under a few pixels, so they never shimmer (`ink_hatch`).
 - **Washes:** the colour grained as pigment settles in paper.
-- **The cut rock** is an engraver's cross-section: a pale fill, a dark ink liner along its edge and dark hatching
+- **The cut rock** is an engraver's cross-section: a pale blue-grey fill, a deep blue ink liner along its edge and dark hatching
   inside (`topdown_ground`'s `ink_cap`, `InkLook.ApplyGround`).
 - **Withered in the dark, vivid in light:**
-  - Out of any light the drawing fades to sepia ink on its paper: its darks a deep brown ink, its lights the paper
+  - Out of any light the drawing fades to blue ink on its paper: its darks a deep blue-black ink, its lights the paper
     itself, a breath of its own colour left.
   - Where light falls (her glow and beam, a lit lantern, a clam room's pearl, a sealed leak's wave) its colours come
     back vivid: saturated, the water's blue cast taken back, the tones stepped a little as a wash dries in layers.
   - The reef's waking does not bring the colour back; only light does.
   - The sunlit warm-up layer keeps 35% of its colour out of light (`InkLook.Awake`).
-- **Each layer on darker paper** (`InkLook.Paper`): cream on the warm-up layer, then parchment, tan, umber and slate,
-  near-black in the Abyss and below. The open deep is the paper's dark, the vignette darker paper still.
+- **Each layer on a deeper blue paper** (`InkLook.Paper`): pale aqua on the warm-up layer, then sky, steel blue,
+  slate blue and deep navy, near-black navy in the Abyss and below. The open deep is the paper's dark, the vignette darker paper still.
 - **The paper's own grain:** its tooth, its fibres, the faint unevenness of a dried wash.
 - **What is drawn after the post pass keeps its own look:** Clementine, her light's shots, the particles.
 - **The fluorescent afterglow** (VISUAL-SHOWCASE) glows on the drawing too, gentler on light paper.
