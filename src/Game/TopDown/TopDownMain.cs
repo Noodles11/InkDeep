@@ -523,6 +523,7 @@ public partial class TopDownMain : Node3D
         AddChild(_cueView);
         _crackView = new CrackSealView();
         AddChild(_crackView);
+        _level.SeeOver = PlugOver;
         _portals = new PortalView();
         AddChild(_portals);
         _mirrorView = new MirrorView();
@@ -2003,8 +2004,8 @@ public partial class TopDownMain : Node3D
         _vapour.Tick(dt, _camera.Camera);
         _blight.Sync(_world, dt, _camera.Camera);
         _lanternView.Sync(_world, _elapsed);
-        if (InReef) _crackView.Ground = _reefView.Here;
-        _crackView.Sync(_world, _elapsed, dt);
+        if (InReef) SyncPlugs();
+        _crackView.Sync(_world, _elapsed, dt, PlugSurface, InReef ? _reefView.Lift : 0f, InReef ? _reefView.HereRise : 0f);
         _bars.Visible = _hudRoot.Visible;
         _bars.Sync(_world, _camera.Camera, _blight);
         _ash.Sync(_world, dt, _camera.Camera);
@@ -4312,7 +4313,7 @@ public partial class TopDownMain : Node3D
                     if (FacesCamera(s) && (best is null || System.Numerics.Vector2.Distance(s.At, her) < System.Numerics.Vector2.Distance(best.Value.At, her))) best = s;
             if (best is not { } socket) return true;
             var mouth = socket with { At = L(socket.At) };
-            _dbgCrackSeal = _world.PlaceCrackSeal(mouth);
+            _dbgCrackSeal = SealMouth(mouth);
             var into = System.Numerics.Vector2.Normalize(mouth.Into);
             _world.Player.Position = _world.Player.PrevPosition = mouth.At - into * 5f;
             _dbgCrackAt = _world.Time;

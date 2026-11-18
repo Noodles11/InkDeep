@@ -177,11 +177,13 @@ A secret room is a sub-level too: a cube she claims opens one time in three, its
   - *Where:* a secret's way in is only ever placed behind a wall the camera faces, its passage running north into the
     rock, so its seal is seen (`TopDownMain.Grant`: secrets are placed first; with no such socket left, the cube has no
     secret).
-  - *What it is:* a continuous wall of the reef's rock across its passage just inside the mouth, drawn with her layer's
-    own ground so it stands, rises and is cut as the walls do. A jagged vertical crack runs down its middle, glowing
-    faintly from inside, its light breathing slowly.
-  - *What it hides:* its passage behind it is filled as rock, with a cap at the cut's height, so nothing behind it
-    shows, even where the walls are cut away round her. It stops her, the creatures and her shots.
+  - *What it is:* the reef's rock as it stood before the passage was cut (`CubeTerrain.Uncut`, drawn by
+    `CubeShapes.Plug` over the cube's ground with the same skin, rise and caps), so its face is flush with the wall
+    round it: no alcove, and from above no seam where it meets the rock. The cutout reads it as rock too
+    (`LevelView.SeeOver`). A jagged vertical crack runs up the middle of its face, from a little under her plane up the
+    risen wall, glowing faintly from inside, its light breathing slowly, and cut with the wall (`crack_seal.gdshader`).
+  - *What it hides:* nothing of the passage shows while it stands. Its sim rock (`WeakRock`) stands at the face's line at
+    her plane and stops her, the creatures and her shots.
   - *Breaking it:* only her dash driven into its crack (within 0.75 m of its middle, heading in) gets through. It
     crumbles into chunks that tumble out and sink into the sand, with a deep crack and a rumble, felt ("A hidden way
     opens").

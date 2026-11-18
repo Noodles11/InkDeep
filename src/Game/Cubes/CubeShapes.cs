@@ -68,7 +68,7 @@ public static class CubeShapes
     {
         int x0 = t.Cube.X * CubeTuning.Side, y0 = t.Cube.Y * CubeTuning.Side;
         int w = t.Cube.Wide * CubeTuning.Side, h = t.Cube.Tall * CubeTuning.Side;
-        float Height(float x, float y) => Smooth(t, x, y);
+        float Height(float x, float y) => Smooth(t, t.Heights, x, y);
         // (Kept down to just above the void's floor, its outline smooth: the layer below shows through the void.)
         float Kept(float x, float y) => Height(x, y) - (VoidHeight + 0.3f);
         var surfaces = new List<LevelShape.Surface>();
@@ -89,6 +89,57 @@ public static class CubeShapes
             pieces.Add(new List<LevelShape.Surface> { roofs });
         }
         return new CubeShape(surfaces, pieces);
+    }
+
+    /// <summary>
+    /// A socket sealed (a secret's cracked seal, docs/DIVE.md §6.1), drawn as the rock it was before it was cut: its own
+    /// piece of ground over the cells its cutting changed (and a few metres round, where it is the ground itself), laid
+    /// over the cube's ground. Its heights never under the ground's (so the cut passage is wholly under it), its skin, rise
+    /// and caps made as the ground's are (so where it meets the ground they are one), its caps a hair over the ground's (so
+    /// over the passage's it is its own that show). Its height (the reef's metres), and its rock's heights by cell.
+    /// </summary>
+    public sealed record PlugShape(CubeShape Shape, Func<float, float, float> Height, Dictionary<(int X, int Y), float> Cells);
+
+    /// <summary>How far round a socket's line its cut cells are its own (m); how far past them its piece of ground runs; its caps' lift.</summary>
+    const float PlugReach = 8f, CapLift = 0.004f;
+    const int PlugMargin = 4;
+
+    public static PlugShape? Plug(CubeTerrain t, OctoShoots.Core.Gen.TopDown.Doorway socket)
+    {
+        if (t.Uncut is not { } uncut) return null;
+        var into = System.Numerics.Vector2.Normalize(socket.Into);
+        System.Numerics.Vector2 a = socket.At - into * 4f, b = socket.Back + into * 2f;
+        var heights = (float[])t.Heights.Clone();
+        var cells = new Dictionary<(int, int), float>();
+        int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
+        for (int k = 0; k < uncut.Length; k++)
+        {
+            if (float.IsNaN(uncut[k]) || uncut[k] <= heights[k]) continue;
+            int gx = t.X0 + k % t.Stride, gy = t.Y0 + k / t.Stride;
+            if (OctoShoots.Core.Gen.TopDown.Geo.SegmentDistance(new System.Numerics.Vector2(gx, gy), a, b) > PlugReach) continue;
+            heights[k] = uncut[k];
+            cells[(gx, gy)] = uncut[k];
+            minX = Math.Min(minX, gx);
+            maxX = Math.Max(maxX, gx);
+            minY = Math.Min(minY, gy);
+            maxY = Math.Max(maxY, gy);
+        }
+        if (cells.Count == 0) return null;
+        // (Never under the ground: the smoothing's overshoot would let the ground show through.)
+        float Height(float x, float y) => Mathf.Max(Smooth(t, heights, x, y), Smooth(t, t.Heights, x, y));
+        float Kept(float x, float y) => Height(x, y) - (VoidHeight + 0.3f);
+        int x0 = Math.Max(minX - PlugMargin, t.X0 + 2), y0 = Math.Max(minY - PlugMargin, t.Y0 + 2);
+        int x1 = Math.Min(maxX + PlugMargin, t.X0 + t.Stride - 3), y1 = Math.Min(maxY + PlugMargin, t.Y0 + t.Rows - 3);
+        var surfaces = new List<LevelShape.Surface>();
+        if (LevelView.SurfaceMesh(1 << 20, Height, x0, y0, x1, y1, null, Kept) is { } s) surfaces.Add(UnderAbove(t, s));
+        if (LevelView.Cap(1 << 20, Height, x0, y0, x1, y1) is { } cap)
+        {
+            var lifted = (Vector3[])cap.Vertices.Clone();
+            for (int k = 0; k < lifted.Length; k++) lifted[k].Y += CapLift;
+            surfaces.Add(new LevelShape.Surface(lifted, cap.Normals, cap.Colors, cap.Indices));
+        }
+        if (surfaces.Count == 0) return null;
+        return new PlugShape(new CubeShape(surfaces, new List<List<LevelShape.Surface>> { surfaces }), Height, cells);
     }
 
     /// <summary>
@@ -227,13 +278,12 @@ public static class CubeShapes
     /// past the cell's own corners). Read by cell from the point's floor, so a point on a cube line is the sample itself
     /// in both cubes.
     /// </summary>
-    static float Smooth(CubeTerrain t, float x, float y)
+    static float Smooth(CubeTerrain t, float[] h, float x, float y)
     {
         int n = t.Stride;
         int ix = Math.Clamp(Mathf.FloorToInt(x), t.X0 + 1, t.X0 + n - 3), iy = Math.Clamp(Mathf.FloorToInt(y), t.Y0 + 1, t.Y0 + t.Rows - 3);
         float fx = x - ix, fy = y - iy;
         int k = (iy - t.Y0) * n + (ix - t.X0);
-        var h = t.Heights;
         float Row(int r) => LevelView.CatmullRom(h[r - 1], h[r], h[r + 1], h[r + 2], fx);
         float v = LevelView.CatmullRom(Row(k - n), Row(k), Row(k + n), Row(k + 2 * n), fy);
         float c00 = h[k], c10 = h[k + 1], c01 = h[k + n], c11 = h[k + n + 1];

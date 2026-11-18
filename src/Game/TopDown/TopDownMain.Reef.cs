@@ -1063,8 +1063,72 @@ public partial class TopDownMain
             var mouth = _map.Mouths[i];
             if (_world.CrackSeals.Any(s => s.Mouth == mouth)) continue;
             if (PlaceOfMouth(i) is { } p && (p.Record.Opened.Contains(p.Place) || p.Record.Visited.Contains(p.Place))) continue;
-            _world.PlaceCrackSeal(mouth);
+            SealMouth(mouth);
         }
+    }
+
+    /// <summary>The sealed passages' rock (CubeShapes.Plug), by their seal.</summary>
+    readonly Dictionary<CrackSeal, CubeShapes.PlugShape> _plugs = new();
+
+    /// <summary>
+    /// A mouth of her layer sealed: its passage drawn as the rock it was (flush with the wall round it, one with the
+    /// ground), the seal's face where that rock's is at her plane.
+    /// </summary>
+    CrackSeal SealMouth(Doorway mouth)
+    {
+        var door = mouth with { At = G(mouth.At) };
+        var plug = _reef is null ? null : CubeShapes.Plug(_reef.Terrain(CubeId.Of(door.At, _layer)), door);
+        if (plug is null) return _world.PlaceCrackSeal(mouth);
+        var into = System.Numerics.Vector2.Normalize(door.Into);
+        System.Numerics.Vector2? face = null;
+        for (float s = -6f; s <= Doorway.Depth; s += 0.05f)
+        {
+            var q = door.At + into * s;
+            if (plug.Height(q.X, q.Y) < LevelMap.SwimBand) continue;
+            face = L(q);
+            break;
+        }
+        var seal = _world.PlaceCrackSeal(mouth, face);
+        _plugs[seal] = plug;
+        _reefView.ShowPlug(seal, plug.Shape);
+        _level.SeeMaskStale();
+        return seal;
+    }
+
+    /// <summary>Each frame: a sealed passage's rock gone with its seal (broken, or her world left).</summary>
+    void SyncPlugs()
+    {
+        if (_plugs.Count == 0) return;
+        List<CrackSeal>? gone = null;
+        foreach (var seal in _plugs.Keys)
+            if (seal.Open || !_world.CrackSeals.Contains(seal)) (gone ??= new()).Add(seal);
+        if (gone is null) return;
+        foreach (var seal in gone)
+        {
+            _plugs.Remove(seal);
+            _reefView.HidePlug(seal);
+        }
+        _level.SeeMaskStale();
+    }
+
+    /// <summary>The sealed passages' rock at a point of her layer's map (NaN none): for the cutout (LevelView.SeeOver).</summary>
+    float PlugOver(int x, int y)
+    {
+        if (_plugs.Count == 0) return float.NaN;
+        var g = G(new System.Numerics.Vector2(x, y));
+        var key = ((int)MathF.Round(g.X), (int)MathF.Round(g.Y));
+        float most = float.NaN;
+        foreach (var plug in _plugs.Values)
+            if (plug.Cells.TryGetValue(key, out float h) && !(h <= most)) most = h;
+        return most;
+    }
+
+    /// <summary>A sealed passage's rock's own height under a point of her plane, if it is one's.</summary>
+    float? PlugSurface(CrackSeal seal, System.Numerics.Vector2 p)
+    {
+        if (!_plugs.TryGetValue(seal, out var plug)) return null;
+        var g = G(p);
+        return plug.Height(g.X, g.Y);
     }
 
     /// <summary>A cracked seal crumbled: its place kept open for good.</summary>
@@ -1144,6 +1208,7 @@ public partial class TopDownMain
         _level.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, SeeScale(_reefSeeThrough));
         _reefView.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, SeeScale(_reefSeeThrough), _level.SeeMask);
         _portals.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, SeeScale(_reefSeeThrough), _level.Position.Y + LevelMap.SwimBand, _level.SeeMask);
+        _crackView.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, SeeScale(_reefSeeThrough), _level.Position.Y + LevelMap.SwimBand, _level.SeeMask);
     }
 
     /// <summary>How far round her (metres, on the camera's side) the water is kept in view: rock between the camera and any of it is cut.</summary>

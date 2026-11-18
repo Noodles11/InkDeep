@@ -501,6 +501,8 @@ public partial class LevelView : Node3D
                     float roof = _map.RoofAt(gx, gy), lid = _map.LidAt(gx, gy);
                     if (!float.IsNaN(roof)) h = Mathf.Max(h, roof);
                     if (!float.IsNaN(lid)) h = Mathf.Max(h, lid);
+                    // (Rock drawn over the map's: a sealed passage, CubeShapes.Plug.)
+                    if (SeeOver?.Invoke(gx, gy) is float over && !float.IsNaN(over)) h = Mathf.Max(h, over);
                 }
                 data[j * n + i] = h + Position.Y;
             }
@@ -1932,6 +1934,9 @@ public partial class LevelView : Node3D
             AddChild(Instances(new SphereMesh { Radius = 1f, Height = 2f, RadialSegments = 8, Rings = 4 },
                 new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, AlbedoColor = new Color(0.4f, 1f, 0.9f), EmissionEnabled = true, Emission = new Color(0.4f, 1f, 0.9f), EmissionEnergyMultiplier = 2f }, glows, shadow: false));
     }
+
+    /// <summary>Rock drawn over her map's at a point of it (NaN none): the cutout reads it as rock (a sealed passage).</summary>
+    public Func<int, int, float>? SeeOver { get; set; }
 
     /// <summary>Her map changed round her (a cube laid on it): the cutout's map of it made again at once.</summary>
     public void SeeMaskStale()

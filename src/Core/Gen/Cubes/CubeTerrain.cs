@@ -61,6 +61,12 @@ public sealed class CubeTerrain
     /// <summary>The rock over its sockets' passages (NaN elsewhere; null with none), as a level's Roof.</summary>
     public float[]? Roof { get; init; }
     public float RoofAt(int gx, int gy) => Roof is { } r && Has(gx, gy) ? r[Index(gx, gy)] : float.NaN;
+    /// <summary>
+    /// The heights its sockets' cutting changed, as they stood before (NaN elsewhere; null with none): a secret's cracked
+    /// seal draws its socket as the rock it was (CubeShapes.Plug).
+    /// </summary>
+    public float[]? Uncut { get; init; }
+    public float UncutAt(int gx, int gy) => Uncut is { } u && Has(gx, gy) ? u[Index(gx, gy)] : float.NaN;
 
     public bool Has(int gx, int gy) => gx >= X0 && gy >= Y0 && gx < X0 + Stride && gy < Y0 + Rows;
     public int Index(int gx, int gy) => (gy - Y0) * Stride + (gx - X0);
@@ -113,10 +119,11 @@ public sealed class CubeTerrain
     /// on a scratch map of the cube, from spots of shelf water deep inside it. Pure: the cube's own rng, after all else.
     /// </summary>
     static List<Doorway> CutSockets(ulong seed, CubeId c, CubeCell[] cells, float[] heights, int nw, int nh, int x0, int y0,
-        List<(EdgeId, Gate, Vector2)> gates, List<Well> down, List<Well> arrivals, bool[] roofed, Rng rng, out float[]? roof)
+        List<(EdgeId, Gate, Vector2)> gates, List<Well> down, List<Well> arrivals, bool[] roofed, Rng rng, out float[]? roof, out float[]? uncut)
     {
         var sockets = new List<Doorway>();
         roof = null;
+        uncut = null;
         var map = new LevelMap(Math.Max(nw, nh) - 1) { Seed = seed };
         Array.Fill(map.Heights, RockLow + RockRim);
         for (int j = 0; j < nh; j++)
@@ -151,6 +158,8 @@ public sealed class CubeTerrain
         }
         if (sockets.Count == 0) return sockets;
         roof = new float[nw * nh];
+        uncut = new float[nw * nh];
+        Array.Fill(uncut, float.NaN);
         for (int j = 0; j < nh; j++)
         for (int i = 0; i < nw; i++)
         {
@@ -158,6 +167,7 @@ public sealed class CubeTerrain
             float now = map[i, j];
             roof[k] = map.RoofAt(i, j);
             if (now == heights[k]) continue;
+            uncut[k] = heights[k];
             heights[k] = now;
             if (now <= 0f && cells[k] == CubeCell.Rock) cells[k] = CubeCell.Shelf;
         }
@@ -547,9 +557,9 @@ public sealed class CubeTerrain
         }
 
         // 6. A boss arena's basin; else its sockets, cut into its walls.
-        float[]? roof = null;
+        float[]? roof = null, uncut = null;
         var sockets = new List<Doorway>();
-        if (!arena) sockets = CutSockets(space.Seed, c, outCells, outHeights, nw, nh, c.X * Side - Apron, c.Y * Side - Apron, gates, down, arrivals, outCanopy, rng, out roof);
+        if (!arena) sockets = CutSockets(space.Seed, c, outCells, outHeights, nw, nh, c.X * Side - Apron, c.Y * Side - Apron, gates, down, arrivals, outCanopy, rng, out roof, out uncut);
 
         return new CubeTerrain
         {
@@ -559,6 +569,7 @@ public sealed class CubeTerrain
             Kind = cubeKind,
             Spires = spires.ConvertAll(s => new Vector3(s.X + origin.X, s.Y + origin.Y, s.Z)),
             Roof = roof,
+            Uncut = uncut,
             Stride = nw,
             Rows = nh,
             X0 = c.X * Side - Apron,

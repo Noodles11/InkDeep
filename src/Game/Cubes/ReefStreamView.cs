@@ -156,9 +156,38 @@ public partial class ReefStreamView : Node3D
     /// </summary>
     public void SetRise(float here, float below, float above)
     {
+        HereRise = Rise * here;
         _here.SetShaderParameter(SN.Of("rise"), Rise * here);
         _below.SetShaderParameter(SN.Of("rise"), Rise * below);
         _above.SetShaderParameter(SN.Of("rise"), Rise * above);
+    }
+
+    /// <summary>How far her layer's walls rise (m).</summary>
+    public float HereRise { get; private set; }
+
+    /// <summary>The dive's lift of her layer (its ground drawn that much up).</summary>
+    public float Lift => _lift;
+
+    /// <summary>Sealed sockets' rock (CubeShapes.Plug), drawn on her layer as its ground is, by who laid them.</summary>
+    readonly Dictionary<object, List<MeshInstance3D>> _plugs = new();
+
+    public void ShowPlug(object key, CubeShape shape)
+    {
+        HidePlug(key);
+        var list = new List<MeshInstance3D>();
+        foreach (var mesh in shape.Meshes)
+        {
+            var m = new MeshInstance3D { Mesh = mesh, MaterialOverride = _here, Position = new Vector3(0f, _lift, 0f) };
+            AddChild(m);
+            list.Add(m);
+        }
+        _plugs[key] = list;
+    }
+
+    public void HidePlug(object key)
+    {
+        if (!_plugs.Remove(key, out var list)) return;
+        foreach (var m in list) m.QueueFree();
     }
 
     public void SetLayer(int layer, float lift = 0f)
@@ -274,6 +303,8 @@ public partial class ReefStreamView : Node3D
 
     void Place()
     {
+        foreach (var list in _plugs.Values)
+            foreach (var m in list) m.Position = new Vector3(0f, _lift, 0f);
         _pall.Position = new Vector3(0f, _lift, 0f);
         _pallStale = true;
         _here.SetShaderParameter(SN.Of("level_offset"), new Vector3(0f, _lift, 0f));
