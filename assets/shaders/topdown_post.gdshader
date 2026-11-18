@@ -172,6 +172,18 @@ vec3 blurred(vec2 uv, float amount) {
 	return sum / w;
 }
 
+// This pixel's line of sight in the world: o a point on it (on the near plane), d its way. Right for either camera:
+// the perspective one's rays fan out from the eye, the orthographic one's (the crossover's straight-down view) run
+// parallel, each from its own point.
+void view_ray(vec2 uv, mat4 ip, mat4 iv, out vec3 o, out vec3 d) {
+	vec4 a = ip * vec4(uv * 2.0 - 1.0, 1.0, 1.0);
+	vec4 b = ip * vec4(uv * 2.0 - 1.0, 0.5, 1.0);
+	vec3 pa = (iv * vec4(a.xyz / a.w, 1.0)).xyz;
+	vec3 pb = (iv * vec4(b.xyz / b.w, 1.0)).xyz;
+	o = pa;
+	d = normalize(pb - pa);
+}
+
 float hash12(vec2 p) {
 	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
 	p3 += dot(p3, p3.yzx + 33.33);
@@ -288,9 +300,8 @@ void fragment() {
 	// shoved outward along the ring; the water thickens a shade where it passes. No surface ripple, no lines.
 	float swell_density = 0.0;
 	if (swell_count > 0 || current_count > 0 || leak_count > 0 || her_beam_show.w > 0.0) {
-		vec4 vm = INV_PROJECTION_MATRIX * vec4(uv * 2.0 - 1.0, 0.5, 1.0);
-		vec3 ray = normalize((INV_VIEW_MATRIX * vec4(vm.xyz / vm.w, 0.0)).xyz);
-		vec3 cam = INV_VIEW_MATRIX[3].xyz;
+		vec3 cam, ray;
+		view_ray(uv, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX, cam, ray);
 		vec3 sp = cam + ray * ((swim_level + 0.4 - cam.y) / min(ray.y, -1e-3));
 		// The water's eddies (as the currents' own): slow swirls with fine shivers riding them.
 		vec2 q = sp.xz;
@@ -390,9 +401,8 @@ void fragment() {
 	// Blasts' marks: inside each, the picture smeared in toward its middle (a zoom blur), strongest at its heart,
 	// softening out to its rim and fading as it ages — painterly, never a bright disc.
 	if (blur_count > 0) {
-		vec4 bm = INV_PROJECTION_MATRIX * vec4(uv * 2.0 - 1.0, 0.5, 1.0);
-		vec3 bray = normalize((INV_VIEW_MATRIX * vec4(bm.xyz / bm.w, 0.0)).xyz);
-		vec3 bcam = INV_VIEW_MATRIX[3].xyz;
+		vec3 bcam, bray;
+		view_ray(uv, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX, bcam, bray);
 		vec3 bp = bcam + bray * ((swim_level - bcam.y) / min(bray.y, -1e-3));
 		for (int i = 0; i < blur_count; i++) {
 			vec4 b = blurs[i];
@@ -452,9 +462,8 @@ void fragment() {
 		float deep = 1.0;
 		vec3 dark = mix(reef_water_deep, reef_murk, 0.45) * paper_dark;
 		col = mix(col, dark, deep * (0.86 - 0.3 * lit));
-		vec4 pm = INV_PROJECTION_MATRIX * vec4(uv * 2.0 - 1.0, 0.5, 1.0);
-		vec3 pray = normalize((INV_VIEW_MATRIX * vec4(pm.xyz / pm.w, 0.0)).xyz);
-		vec3 pcam = INV_VIEW_MATRIX[3].xyz;
+		vec3 pcam, pray;
+		view_ray(uv, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX, pcam, pray);
 		vec2 on_plane = (pcam + pray * ((swim_level - pcam.y) / min(pray.y, -1e-3))).xz + world_origin;
 		float tooth = value_noise(on_plane * 9.0) * 0.55 + value_noise(on_plane * 21.0 + 13.0) * 0.45;
 		float mottle = value_noise(on_plane * 0.9 + 5.0) * 0.6 + value_noise(on_plane * 2.3 + 17.0) * 0.4;
@@ -466,9 +475,8 @@ void fragment() {
 	// Fish far under her plane: their vague shadows on all that lies below it, where this pixel's ray crosses their depth (over the
 	// water's veil, which would wash them away).
 	if (deep_fish_count > 0 && below > 0.0) {
-		vec4 fm = INV_PROJECTION_MATRIX * vec4(uv * 2.0 - 1.0, 0.5, 1.0);
-		vec3 fray = normalize((INV_VIEW_MATRIX * vec4(fm.xyz / fm.w, 0.0)).xyz);
-		vec3 fcam = INV_VIEW_MATRIX[3].xyz;
+		vec3 fcam, fray;
+		view_ray(uv, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX, fcam, fray);
 		float down = 1.0 / min(fray.y, -1e-3);
 		float shadow = 0.0;
 		for (int i = 0; i < deep_fish_count; i++) {
@@ -509,8 +517,8 @@ void fragment() {
 		float shadow = (1.0 - smoothstep(0.1, 0.62, d)) * k * (1.0 - smoothstep(2.0, 5.0, gap));
 		col *= 1.0 - 0.6 * shadow;
 	}
-	vec3 cam = CAMERA_POSITION_WORLD;
-	vec3 ray = normalize(world - cam);
+	vec3 cam, ray;
+	view_ray(uv, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX, cam, ray);
 
 	// God rays: march the view ray through the water column, from the sea surface down to what it hits, summing the
 	// shaft density (parallel to the sun, drifting with the swell) where the sun reaches. Longer water paths gather more

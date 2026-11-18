@@ -189,6 +189,8 @@ public partial class TitleMain : Node3D
             _slotBells[i] = new BellView { Puppet = true, Visible = false, Lit = 0f };
             AddChild(_slotBells[i]);
         }
+        // (The title's sea keeps the tilted perspective; only the game's camera is Flat.)
+        CameraRig.Flat = false;
         _camera = new CameraRig();
         AddChild(_camera);
         _snow = new MarineSnow(900, new Vector3(22f, 7f, 17f), 0.11f);

@@ -186,7 +186,7 @@ public partial class LightTrails : Node3D
         if (camera is not null)
         {
             float distance = (camera.GlobalPosition.Y - OctoShoots.Core.Gen.TopDown.LevelMap.SwimBand) / Mathf.Max(camera.GlobalBasis.Z.Y, 0.1f);
-            _pixel = 2f * distance * Mathf.Tan(Mathf.DegToRad(camera.Fov) * 0.5f) / Mathf.Max(camera.GetViewport().GetVisibleRect().Size.Y, 1f);
+            _pixel = CameraRig.ViewHeight(camera, distance) / Mathf.Max(camera.GetViewport().GetVisibleRect().Size.Y, 1f);
         }
         var gone = new List<PlaneShot>();
         foreach (var (shot, trail) in _live)

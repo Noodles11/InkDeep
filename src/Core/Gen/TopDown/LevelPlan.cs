@@ -71,10 +71,10 @@ public sealed class LevelPlan
     public int Treasures { get; init; }
     public int Secrets { get; init; }
     public int Crabs { get; init; }
-    public int Curses { get; init; }
+    public int Curses { get; private set; }
     public int Shops { get; init; }
     /// <summary>Ways into a haven (docs/DIVE.md §4), 0 or 1.</summary>
-    public int Havens { get; init; }
+    public int Havens { get; private set; }
     public int Caches { get; init; }
     /// <summary>The level above was a boss level: she arrives on its arena's floor.</summary>
     public bool EntryFromArena { get; init; }
@@ -125,7 +125,22 @@ public sealed class LevelPlan
         id.Depth == Tutorial ? 0f : ((id.Cycle - 1) * (Depths - 1) + id.Depth - Tutorial - 1) / (float)(Depths - Tutorial - 1);
 
     /// <param name="luck">Her luck (LuckTuning): a chance of a clam room on a level without one.</param>
-    public static LevelPlan For(SeedCode seed, LevelId id, float luck = 0f)
+    /// <param name="crossover">
+    /// The crossover's rules (docs/proposals/CROSSOVER.md §11, Run.Crossover): no havens, no leak caves or curse dens.
+    /// Everything else is rolled exactly as the dive rolls it, from the same streams.
+    /// </param>
+    public static LevelPlan For(SeedCode seed, LevelId id, float luck = 0f, bool crossover = false)
+    {
+        var plan = DivePlan(seed, id, luck);
+        if (crossover)
+        {
+            plan.Havens = 0;
+            plan.Curses = 0;
+        }
+        return plan;
+    }
+
+    static LevelPlan DivePlan(SeedCode seed, LevelId id, float luck)
     {
         var streams = new RunStreams(seed);
         var rng = streams.Plan(id);

@@ -39,6 +39,8 @@ reef's map, zones, cave mouths in regions, homeward current, charts, lost light 
 
 ## 3. Camera
 
+*(The crossover branch's game camera is straight down and orthographic, framing the same ground: GAME.md §14.)*
+
 While the reef is calm the camera stands 55 m from her, about 36 × 54 m of ground, a tenth of a level
 (`CameraRig.Distance`). **In a fight it draws in** to 38 m (`FightZoom`; 47 m in a boss's arena, so the whole arena
 stays in view): as soon as a corrupted creature is within 12 m of her, seen or not, or she is hit (`PlaneWorld.Calm`),
@@ -48,6 +50,8 @@ when it matters, and the camera drawing in is itself a warning of something near
 their dimmed look (`ReefLook.OpenShallows`) so the wider view never washes out.
 
 ## 4. Havens
+
+*(Shelved by the crossover: its levels have none, GAME.md §14.)*
 
 A haven is a small safe sub-level behind a reef's mouth (`PoiKind.Haven`), as a leak cave or a secret's labyrinth is
 (§6): made with its reef from its own sub-seed (`TopDownGenerator.GenerateHaven`, `HavenLayout`), entered by swimming

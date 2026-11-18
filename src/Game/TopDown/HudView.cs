@@ -298,7 +298,7 @@ public partial class HudView : Control
             _health = health;
             _healthShown = Mathf.MoveToward(_healthShown, _health, dt * 0.8f);
             _hurt = Mathf.MoveToward(_hurt, 0f, dt * 2.5f);
-            _xpFull = world.Run.Points > 0;
+            _xpFull = world.Run.Points > 0 && !OctoShoots.Core.Run.Crossover.On;
             _xpShare = _xpFull ? 1f : Mathf.Clamp(world.Run.Xp / (float)Mathf.Max(world.Run.XpNeeded, 1), 0f, 1f);
             _xpLevel = world.Run.XpLevel;
             _active = world.Run.Active?.Active is not null ? world.Run.Active : null;

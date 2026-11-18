@@ -4,6 +4,10 @@ The one current design of the whole game, as it is built, and the decided plan f
 Every other document goes into one part of it in detail. Where two documents disagree, the order of trust is: **this
 page**, then the system documents (§0), then DESIGN-TOPDOWN.md, then anything in `archive/`.
 
+> **The `inkdeep-crossover` branch** is rebuilding the game as the crossover of
+> [proposals/CROSSOVER.md](proposals/CROSSOVER.md). What is built of it so far is in §14; the rest of this page still
+> describes the dive the crossover starts from.
+
 ## 0. The documents
 
 | Document | What it holds |
@@ -215,3 +219,17 @@ emptied, it is freed, leaving a core of light.
 - **Code from the open reef** is still in the game (`PortalView`, the region and current-ride code in `TopDownMain`,
   `PlaneReef`, the three active slots in `PlaneRun`); its comments point to archive/RPG-PROPOSAL.md. It should be removed
   or brought under the dive.
+
+## 14. The crossover, built so far
+
+The crossover (proposals/CROSSOVER.md) is being built step by step (its §15). The game runs with its switch
+(`Run.Crossover.On`); the sim takes it as a parameter (`LevelPlan.For`, `TopDownGenerator.Generate`: `crossover`), so
+the tests of the dive still test the dive.
+
+- **Step 1 (0.49.0), shelving:** the game's camera is straight down and orthographic (`CameraRig.Flat`), framing
+  the same ground the tilted one did at her (`--dbg-tilted` brings the tilted view back for comparison); the title's
+  sea keeps the tilted view. Its levels have no havens and no leak caves or curse dens (and so no Tide Fan,
+  requests, mirror or folk homes to reach). Skill points are shelved: no level-up message, no pulse on her bell or the
+  HUD, and the pause menu has no Level up, Requests or Chart tab. Still to shelve: experience itself, and the hole
+  rims that name a curse den's reef (the dive graph goes in step 2).
+

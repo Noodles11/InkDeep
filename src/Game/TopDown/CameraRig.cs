@@ -6,13 +6,25 @@ namespace OctoShoots.Game.TopDown;
 
 /// <summary>
 /// The top-down camera (DESIGN-TOPDOWN §3): tilted ~60°, narrow perspective (~35° FOV), fixed yaw with north always up,
-/// smoothed follow, no rotation. About 30×22 m of the level fit on screen (§4.5).
+/// smoothed follow, no rotation. About 30×22 m of the level fit on screen (§4.5). In the crossover (docs/proposals/
+/// CROSSOVER.md §13) the game's camera is Flat: straight down and orthographic, framing as much ground as the
+/// perspective one did at the followed point.
 /// </summary>
 public partial class CameraRig : Node3D
 {
-    /// <summary>Downward tilt from the horizontal: 60°, or straight down in the watercolour study (ArtLook.Watercolour).</summary>
-    public static float Tilt => OctoShoots.Game.Fx.ArtLook.IsWatercolour ? 90f : 60f;
+    /// <summary>
+    /// The crossover's view: straight down, orthographic (the game sets it; the title's sea keeps the tilted
+    /// perspective). Set before the rig is added to the tree.
+    /// </summary>
+    public static bool Flat { get; set; }
+
+    /// <summary>Downward tilt from the horizontal: 60°, or straight down when Flat or in the watercolour study (ArtLook.Watercolour).</summary>
+    public static float Tilt => Flat || OctoShoots.Game.Fx.ArtLook.IsWatercolour ? 90f : 60f;
     public const float Fov = 35f;
+
+    /// <summary>How much ground (metres, top to bottom) a camera shows at this distance from it, by either projection.</summary>
+    public static float ViewHeight(Camera3D camera, float distance) =>
+        camera.Projection == Camera3D.ProjectionType.Orthogonal ? camera.Size : 2f * distance * Mathf.Tan(Mathf.DegToRad(camera.Fov) * 0.5f);
     /// <summary>
     /// Distance from the followed point while the reef is calm: ~36 m of ground top to bottom and ~54 m across at 16:9,
     /// about a tenth of a 140 m level (docs/DIVE.md §3). In a fight the camera draws in (FightZoom).
@@ -251,6 +263,11 @@ public partial class CameraRig : Node3D
     public override void _Ready()
     {
         Camera = new Camera3D { Fov = Fov, Near = 0.5f, Far = 200f, Current = true };
+        if (Flat)
+        {
+            Camera.Projection = Camera3D.ProjectionType.Orthogonal;
+            Camera.Size = 2f * _distance * Mathf.Tan(Mathf.DegToRad(Fov) * 0.5f);
+        }
         AddChild(Camera);
         // The depth focus: the swim level sharp, the deeps blurred into fog, high rock blurred into silhouette (Below's look).
         _post = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/topdown_post.gdshader"), RenderPriority = -100 };
@@ -287,7 +304,10 @@ public partial class CameraRig : Node3D
         }
         float tilt = Mathf.DegToRad(Tilt);
         // North is −Z: the camera sits south of the focus, looking north and down.
-        Vector3 offset = new Vector3(0f, Mathf.Sin(tilt), Mathf.Cos(tilt)) * _distance * Zoom * Close;
+        float away = _distance * Zoom * Close;
+        Vector3 offset = new Vector3(0f, Mathf.Sin(tilt), Mathf.Cos(tilt)) * away;
+        // (Flat: the same ground framed as the perspective camera frames at the followed point; drawing in narrows it.)
+        if (Camera.Projection == Camera3D.ProjectionType.Orthogonal) Camera.Size = 2f * away * Mathf.Tan(Mathf.DegToRad(Fov) * 0.5f);
         _shakeTime += dt;
         _shake = Mathf.MoveToward(_shake, 0f, dt * 1.6f);
         Vector3 jolt = _shake > 0f ? new Vector3(Mathf.Sin(_shakeTime * 53f), Mathf.Sin(_shakeTime * 61f + 1f), Mathf.Sin(_shakeTime * 47f + 2f)) * _shake * _shake : Vector3.Zero;

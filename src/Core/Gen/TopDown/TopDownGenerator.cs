@@ -84,8 +84,9 @@ public static partial class TopDownGenerator
     /// <param name="cosmeticSalt">Test hook: changes only the cosmetic stream (decoration), to prove it never touches gameplay.</param>
     /// <param name="background">Made while she plays (the level below): on one thread, leaving the rest to the game.</param>
     /// <param name="luck">Her luck as she comes to the level (LuckTuning): it may add a clam room, bring a spring.</param>
-    public static LevelMap Generate(RunStreams streams, LevelId id, Action<string>? log = null, string cosmeticSalt = "", bool background = false, float luck = 0f) =>
-        Generate(streams, LevelPlan.For(streams.Seed, id, luck), log, cosmeticSalt, luck);
+    /// <param name="crossover">The crossover's rules for the level's plan (LevelPlan.For).</param>
+    public static LevelMap Generate(RunStreams streams, LevelId id, Action<string>? log = null, string cosmeticSalt = "", bool background = false, float luck = 0f, bool crossover = false) =>
+        Generate(streams, LevelPlan.For(streams.Seed, id, luck, crossover), log, cosmeticSalt, luck);
 
     /// <summary>
     /// A leak cave (docs/DIVE.md §6): a seeded level from its own plan (LevelPlan.ForCave), its leak at the dead

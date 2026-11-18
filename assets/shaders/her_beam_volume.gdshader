@@ -79,16 +79,27 @@ float light_at(vec3 v, vec3 across, out float dist, out float dark) {
 }
 
 void fragment() {
+	// The line of sight: from the eye (perspective), or straight along the view from this pixel's own point on the
+	// camera's plane (orthographic: the crossover's straight-down view, whose rays run parallel).
+	bool ortho = PROJECTION_MATRIX[3][3] > 0.5;
 	vec3 cam = CAMERA_POSITION_WORLD;
-	vec3 to_back = v_world - cam;
-	float t_back = length(to_back);
-	vec3 d = to_back / t_back;
+	vec3 d;
+	float t_back;
+	if (ortho) {
+		d = normalize(-INV_VIEW_MATRIX[2].xyz);
+		t_back = dot(v_world - cam, d);
+		cam = v_world - d * t_back;
+	} else {
+		vec3 to_back = v_world - cam;
+		t_back = length(to_back);
+		d = to_back / t_back;
+	}
 	// (Once per pixel: from its far side only.)
 	if (dot(v_out, d) <= 0.0) discard;
 	// The reef in front: the march ends there.
 	float scene = texture(depth_tex, SCREEN_UV).r;
 	vec4 at = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, scene, 1.0);
-	float t_scene = length(at.xyz / at.w);
+	float t_scene = ortho ? -at.z / at.w : length(at.xyz / at.w);
 	float t_end = min(t_back, t_scene);
 	// Where the line of sight comes into the cone (its side; else into its reach, through its far end).
 	vec3 co = cam - origin;

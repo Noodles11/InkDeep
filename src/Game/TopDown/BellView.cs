@@ -674,7 +674,8 @@ public partial class BellView : Node3D
     void SyncVitals(PlaneWorld world, float h)
     {
         // A skill point waits: her gonads pulse until it is spent.
-        _points = Mathf.MoveToward(_points, world.Run.Points > 0 ? 1f : 0f, h * 3f);
+        // (The crossover shelves skill points: nothing waits.)
+        _points = Mathf.MoveToward(_points, world.Run.Points > 0 && !OctoShoots.Core.Run.Crossover.On ? 1f : 0f, h * 3f);
         _bellMaterial.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("points"), _points);
         // The adventure shows her health and her pearl's charge on the HUD's gonad gauge: her gonads and her rim are
         // only hers then, always whole, never a gauge.

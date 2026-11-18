@@ -334,7 +334,7 @@ current, the pickups and treasures, the ink look and the HUD.
 
 Each step ends with a build that runs and passing tests.
 
-1. **Strip:** shelve §11's systems and the leaks behind a flag; remove the views in §14's "Remove" row; set the
+1. **Strip** (begun in 0.49.0: GAME.md §14): shelve §11's systems and the leaks behind a flag; remove the views in §14's "Remove" row; set the
    camera to orthographic. *(about 1 week)*
 2. **Template caves:** the cell walk, sockets, an ASCII template reader, chunks, the erosion pass; 30 Sunlit Reef
    templates with mob and POI marks; the dive clock. *First playable: endless Sunlit Reef levels.* *(3 weeks)*

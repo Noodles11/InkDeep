@@ -499,6 +499,9 @@ public partial class TopDownMain : Node3D
         _vapour = new InkVapour();
         AddChild(_vapour);
         _blight.Vapour = _vapour;
+        // The crossover's view: straight down, orthographic (docs/proposals/CROSSOVER.md §13).
+        // (Verification: `--dbg-tilted` keeps the dive's tilted perspective, to compare the two.)
+        CameraRig.Flat = Crossover.On && !OS.GetCmdlineUserArgs().Contains("--dbg-tilted");
         _camera = new CameraRig();
         AddChild(_camera);
         _snow = new MarineSnow(900, new Vector3(22f, 7f, 17f), 0.11f);
@@ -887,7 +890,7 @@ public partial class TopDownMain : Node3D
         // Its sub-levels made with it (docs/LIGHT-AND-GRAPH.md §7).
         return Task.Run(() =>
         {
-            var shape = LevelShape.Prepare(Abyss(TopDownGenerator.Generate(streams, id, background: background, luck: luck)));
+            var shape = LevelShape.Prepare(Abyss(TopDownGenerator.Generate(streams, id, background: background, luck: luck, crossover: Crossover.On)));
             PrepareCaves(seed, shape);
             return shape;
         });
@@ -1323,7 +1326,7 @@ public partial class TopDownMain : Node3D
             _seed = parsed;
         }
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        var shape = _id.Haven ? Shape(_id).Result : LevelShape.Prepare(Abyss(TopDownGenerator.Generate(new RunStreams(_seed), _id, luck: Luck)));
+        var shape = _id.Haven ? Shape(_id).Result : LevelShape.Prepare(Abyss(TopDownGenerator.Generate(new RunStreams(_seed), _id, luck: Luck, crossover: Crossover.On)));
         ShowLevel(shape, keepRun, watch.ElapsedMilliseconds);
     }
 
@@ -2538,7 +2541,8 @@ public partial class TopDownMain : Node3D
                 _crab.OnEvent(_world, e);
                 _seals.OnEvent(_world, e);
                 // A level reached: her gonads pulse, on her and on the HUD, until the point is spent in the pause menu.
-                if (e.Type == PlaneEventType.LevelUp)
+                // (The crossover shelves skill points: no level to announce.)
+                if (e.Type == PlaneEventType.LevelUp && !Crossover.On)
                 {
                     Say($"Level {(int)e.Size}! A skill point waits in the pause menu");
                     _sfx.PlayPitched("synergy", 1.25f, -6f);
@@ -3866,7 +3870,7 @@ public partial class TopDownMain : Node3D
         var cam = _camera.Camera;
         float distance = (cam.GlobalPosition - Focus(1f)).Length();
         var size = GetViewport().GetVisibleRect().Size;
-        float half = distance * Mathf.Tan(Mathf.DegToRad(cam.Fov) * 0.5f) * size.X / Mathf.Max(size.Y, 1f);
+        float half = CameraRig.ViewHeight(cam, distance) * 0.5f * size.X / Mathf.Max(size.Y, 1f);
         return (0.5f - MenuAt) * 2f * half;
     }
 

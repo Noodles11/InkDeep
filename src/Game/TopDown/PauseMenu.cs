@@ -120,6 +120,7 @@ public partial class PauseMenu : Control
             int tab = i;
             _tabs[i] = new Button { Text = names[i], ToggleMode = true, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(0f, 34f), SizeFlagsHorizontal = SizeFlags.ExpandFill };
             _tabs[i].Pressed += () => ShowList(tab);
+            _tabs[i].Visible = !Shelved(i);
             tabs.AddChild(_tabs[i]);
         }
         _tabRight = TabHint();
@@ -213,6 +214,24 @@ public partial class PauseMenu : Control
 
     /// <summary>Verification: opens on a tab.</summary>
     public void ShowTab(int tab) => ShowList(Math.Clamp(tab, 0, Tabs - 1));
+
+    /// <summary>
+    /// The crossover shelves the tabs of the long dive (docs/proposals/CROSSOVER.md §11): no skill points to lay, no
+    /// requests, no chart of the graph.
+    /// </summary>
+    static bool Shelved(int tab) => OctoShoots.Core.Run.Crossover.On && tab is LevelTab or RequestTab or ChartTab;
+
+    /// <summary>The next tab shown, this way round from the open one.</summary>
+    int NextShown(int way)
+    {
+        int tab = _tab;
+        for (int i = 0; i < Tabs; i++)
+        {
+            tab = (tab + way + Tabs) % Tabs;
+            if (_tabs[tab].Visible) return tab;
+        }
+        return _tab;
+    }
 
     /// <summary>0 the level-up, 1 her stats, 2 the absorbed pearls, 3 the achievements, 4 the requests she carries, 5 the chart.</summary>
     void ShowList(int tab)
@@ -377,7 +396,7 @@ public partial class PauseMenu : Control
         _restart.Visible = Restartable;
         _opening = true;
         Visible = true;
-        ShowList(run.Points > 0 ? LevelTab : StatTab);
+        ShowList(run.Points > 0 && !Shelved(LevelTab) ? LevelTab : StatTab);
     }
 
     /// <summary>
@@ -388,7 +407,7 @@ public partial class PauseMenu : Control
     /// <summary>The Chart tab: the dive's graph round where she is (ChartView); hidden off a dive's graph (the open reef).</summary>
     public void FillChart(OctoShoots.Core.Run.DiveGraph? graph, OctoShoots.Core.Gen.TopDown.LevelId at, IEnumerable<OctoShoots.Core.Gen.TopDown.LevelId> visited, int sight)
     {
-        _tabs[ChartTab].Visible = graph is not null;
+        _tabs[ChartTab].Visible = graph is not null && !Shelved(ChartTab);
         if (graph is not null) _chart.Show(graph, at, visited, sight);
     }
 
@@ -517,8 +536,8 @@ public partial class PauseMenu : Control
         Visible = _opening || _open > 0f;
         Place();
         if (!_opening) return;
-        if (Input.IsActionJustPressed(InputSetup.MenuTabLeft)) ShowList((_tab + Tabs - 1) % Tabs);
-        else if (Input.IsActionJustPressed(InputSetup.MenuTabRight)) ShowList((_tab + 1) % Tabs);
+        if (Input.IsActionJustPressed(InputSetup.MenuTabLeft)) ShowList(NextShown(-1));
+        else if (Input.IsActionJustPressed(InputSetup.MenuTabRight)) ShowList(NextShown(1));
         if (!InputSetup.UsingPad) return;
         float scroll = Input.GetAxis(InputSetup.AimUp, InputSetup.AimDown);
         if (Mathf.Abs(scroll) > 0.2f) _scroll.ScrollVertical += Mathf.RoundToInt(scroll * ScrollSpeed * dt);
