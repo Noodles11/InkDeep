@@ -1345,10 +1345,15 @@ at mist distance (inherited fade rule).
   cave's lid) stands between the camera and any part of her (her middle and 0.8 m round it; `LevelView.Hides`). Whatever
   stands on the camera's side of her is cut away (`LevelView.SeeThrough`, `ReefStreamView.SeeThrough`, level_frame's
   `lf_see_cut`):
-  - **Its shape:** a flat, horizontal slice 0.5 m over her plane through everything on the camera's side of her line
-    (the screen's lower half, she being at its middle; the line 0.5 m behind her on the reef, 1.5 m in a sub-level), out
-    past the screen's edges: every wall there is cut down to its stump, whichever wall it belongs to, and a roof or an
-    arch over a passage there goes too. What stands behind her line (up the screen) is drawn whole.
+  - **Its shape:** on the camera's side of her line (the screen's lower half, she being at its middle; the line 0.5 m
+    behind her on the reef, 1.5 m in a sub-level), what stands over a flat slice 0.5 m over her plane is cut where the
+    eye sees it over open water or over her line: where the camera's sight through it meets her plane in water, or
+    beyond her line (level_frame's `lf_see_column`, on a metre-a-texel map of the rock at her plane round her,
+    `LevelView.SeeHeights`: the reef's own and a sealed passage's, not a roof or a lid). So a wall in front of her keeps
+    its outer side, the face toward the camera, only where all it hides is its own rock; what of it would hang over the
+    water or over her line goes, down to its cap, outlined along the edge where it stands. A roof or an arch over a
+    passage in front of her goes. Nothing in front of her ever hides her, her line or the water. What stands behind her
+    line (up the screen) is drawn whole.
   - **Solid inside:** the cut reads as solid rock cut through, never as the water or the void under it. Every reef
     area of the swim level carries a cap inside its rock at all times (`LevelView.Cap`; the cube reef's with each
     chunk of its ground) at the cut's height (0.5 m over the swim plane, never following her bob), its outline on the

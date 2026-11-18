@@ -168,6 +168,14 @@ void fragment() {
 		// whole meets it.)
 		float edge = lf_see_height() - world.y;
 		outline = lf_see_column(world, CAMERA_POSITION_WORLD) && edge >= 0.0 && (edge < line_width || edge / max(fwidth(edge), 1e-4) < 2.0);
+		// (And where a wall in front of her stands, along the edge where it is cut as the eye sees it over water or her
+		// line: a pixel or two of what stands, next to what is cut.)
+		if (edge < 0.0 && lf_see_front(world, CAMERA_POSITION_WORLD) > 0.0 && !lf_see_column(world, CAMERA_POSITION_WORLD)) {
+			vec3 nx = world + dFdx(world) * 2.0, ny = world + dFdy(world) * 2.0;
+			vec3 px = world - dFdx(world) * 2.0, py = world - dFdy(world) * 2.0;
+			outline = outline || lf_see_column(nx, CAMERA_POSITION_WORLD) || lf_see_column(ny, CAMERA_POSITION_WORLD)
+				|| lf_see_column(px, CAMERA_POSITION_WORLD) || lf_see_column(py, CAMERA_POSITION_WORLD);
+		}
 	}
 	vec3 local = lf_local(world);
 	float px = length(fwidth(world.xz));

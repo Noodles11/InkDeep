@@ -398,7 +398,7 @@ public partial class LevelView : Node3D
         var v = new Vector4(her.X, her.Z, radius, amount);
         if (v == _seeThrough) return;
         _seeThrough = v;
-        _seeReach = radius;
+        if (amount > 0f) SeeHeights(her);
         foreach (var m in _materials)
         {
             m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_through"), KeptWhole(m) ? v with { W = 0f } : v);
@@ -449,35 +449,22 @@ public partial class LevelView : Node3D
     }
 
     /// <summary>
-    /// The map round her for the cutout, a metre a texel (level_frame's see_heights, see_keep, see_heights_box): its
-    /// height (for the see floor: it caps only what lies under rock), and which rock the cut may take. Every material
-    /// that is cut reads it (the cube reef's too: SeeMask).
+    /// The map round her for the cutout, a metre a texel (level_frame's see_heights, see_heights_box): the rock's height
+    /// at her plane (the reef's own and a sealed passage's, not a roof or lid over water), so the cut can tell where a
+    /// wall in front of her would hide only its own rock (it stands) and where water (it is cut). Every material that is
+    /// cut reads it (the cube reef's too: SeeMask).
     /// </summary>
     const int SeeHeightsSize = 192;
-    ImageTexture? _seeHeights, _seeKeep;
-    float[] _seeH = Array.Empty<float>();
-    Vector2 _seeHeightsAt = new(float.MaxValue, float.MaxValue), _seeKeepAt = new(float.MaxValue, float.MaxValue);
-    Vector2 _seeKeepToward;
-    byte[]? _seeKeepWas;
-    float _seeReach;
-
-    /// <summary>How far past her line (metres, along the wall) a wall the cut takes is taken with it: so it goes whole.</summary>
-    const float SeeWholeReach = 24f;
+    ImageTexture? _seeHeights;
+    Vector2 _seeHeightsAt = new(float.MaxValue, float.MaxValue);
     Vector3 _seeBox;
 
     /// <summary>The cutout's map round her (null until it is first cut), for the cube reef's rock.</summary>
-    public (Texture2D Heights, Texture2D Keep, Vector3 Box)? SeeMask =>
-        _seeHeights is null || _seeKeep is null ? null : (_seeHeights, _seeKeep, _seeBox);
+    public (Texture2D Heights, Vector3 Box)? SeeMask =>
+        _seeHeights is null ? null : (_seeHeights, _seeBox);
 
     /// <summary>
-    /// How far to her side of the line from her to the camera rock hides her (metres): her body and a margin; and how far
-    /// for a wall already cut, so a wall at the edge of it does not flick between whole and cut as she moves.
-    /// </summary>
-    const float SeeHideReach = 1.6f, SeeHideKeep = 2.8f;
-
-    /// <summary>
-    /// The height map round her made again once she has swum a quarter of its span from where it was made; which rock
-    /// the cut may take made again as she moves (SeeKeep).
+    /// The height map round her, made again once she has swum a quarter of its span from where it was made.
     /// </summary>
     void SeeHeights(Vector3 her)
     {
@@ -496,16 +483,11 @@ public partial class LevelView : Node3D
                 if (gx >= 0 && gy >= 0 && gx <= _map.Size && gy <= _map.Size)
                 {
                     h = _map[gx, gy];
-                    // (A tunnel's roof or a cave's lid is rock over it too.)
-                    float roof = _map.RoofAt(gx, gy), lid = _map.LidAt(gx, gy);
-                    if (!float.IsNaN(roof)) h = Mathf.Max(h, roof);
-                    if (!float.IsNaN(lid)) h = Mathf.Max(h, lid);
                     // (Rock drawn over the map's: a sealed passage, CubeShapes.Plug.)
                     if (SeeOver?.Invoke(gx, gy) is float over && !float.IsNaN(over)) h = Mathf.Max(h, over);
                 }
                 data[j * n + i] = h + Position.Y;
             }
-            _seeH = data;
             var bytes = new byte[data.Length * 4];
             Buffer.BlockCopy(data, 0, bytes, 0, bytes.Length);
             var image = Image.CreateFromData(n, n, false, Image.Format.Rf, bytes);
@@ -513,145 +495,11 @@ public partial class LevelView : Node3D
             else _seeHeights.Update(image);
             // (Texel centres on the metres: its corner half a metre short of the first.)
             _seeBox = new Vector3(x0 - 0.5f + Position.X, y0 - 0.5f + Position.Z, n);
-            _seeKeepAt = new(float.MaxValue, float.MaxValue);
-            _seeKeepWas = null;
-        }
-        var cam = GetViewport()?.GetCamera3D();
-        var toward = cam is null ? new Vector2(0f, 1f) : new Vector2(cam.GlobalPosition.X - her.X, cam.GlobalPosition.Z - her.Z);
-        toward = toward.LengthSquared() < 1e-6f ? new Vector2(0f, 1f) : toward.Normalized();
-        if (_seeKeep is null || at.DistanceTo(_seeKeepAt) >= 0.4f || toward.Dot(_seeKeepToward) < 0.999f)
-        {
-            _seeKeepAt = at;
-            _seeKeepToward = toward;
-            var keep = SeeKeep(_seeH, n, _seeBox, her, Position.Y + LevelMap.SwimBand, toward, _seeReach, _seeKeepWas);
-            _seeKeepWas = keep;
-            var image = Image.CreateFromData(n, n, false, Image.Format.R8, keep);
-            if (_seeKeep is null) _seeKeep = ImageTexture.CreateFromImage(image);
-            else _seeKeep.Update(image);
         }
         foreach (var m in _materials)
         {
             m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_heights"), _seeHeights);
-            m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_keep"), _seeKeep);
             m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_heights_box"), _seeBox);
-        }
-    }
-
-    /// <summary>
-    /// Where the cut takes the rock (255) and where it leaves it (0), over the height map. The rock standing over her plane
-    /// is gathered into its walls (cells joined side to side). A wall with nothing on the camera's side of her is left;
-    /// one reaching back past her line (more than reach behind her) is left whole unless it hides her (it crosses the
-    /// line from her toward the camera within SeeHideReach of it, or SeeHideKeep for a wall it took before); every other
-    /// wall in front of her is taken: all of it on the camera's side of her line, and on from there along the wall for
-    /// SeeWholeReach behind it, so a wall goes whole, never leaving faces of it standing. The open floor round what is
-    /// taken is marked taken for two metres, so the rock's smooth skin past its cells goes with it.
-    /// </summary>
-    static byte[] SeeKeep(float[] heights, int n, Vector3 box, Vector3 her, float plane, Vector2 toward, float reach, byte[]? before)
-    {
-        var keep = new byte[n * n];
-        float over = plane + CapOver;
-        var wall = new int[n * n];
-        Array.Fill(wall, -1);
-        var front = new float[n * n];
-        var cells = new List<int>();
-        var stack = new Stack<int>();
-        var queue = new Queue<int>();
-        var along = new float[n * n];
-        int walls = 0;
-        for (int start = 0; start < n * n; start++)
-        {
-            if (wall[start] >= 0 || heights[start] <= over) continue;
-            cells.Clear();
-            stack.Push(start);
-            wall[start] = walls;
-            bool back = false, ahead = false, hides = false, cut = false, near = false;
-            while (stack.Count > 0)
-            {
-                int c = stack.Pop();
-                cells.Add(c);
-                int cx = c % n, cy = c / n;
-                float x = box.X + 0.5f + cx - her.X, z = box.Y + 0.5f + cy - her.Z;
-                float f = x * toward.X + z * toward.Y + reach, side = Mathf.Abs(x * toward.Y - z * toward.X);
-                front[c] = f;
-                // (Past her line by a cell more than the cut reaches back.)
-                if (f < -1f) back = true;
-                if (f > 0f) { ahead = true; if (side < SeeHideReach) hides = true; else if (side < SeeHideKeep) near = true; }
-                if (before is not null && before[c] != 0) cut = true;
-                if (cx > 0) Visit(c - 1);
-                if (cx < n - 1) Visit(c + 1);
-                if (cy > 0) Visit(c - n);
-                if (cy < n - 1) Visit(c + n);
-            }
-            walls++;
-            if (!ahead || back && !hides && !(near && cut)) continue;
-            // Taken: on the camera's side of her line, and on along the wall from there.
-            queue.Clear();
-            foreach (int c in cells)
-            {
-                along[c] = float.MaxValue;
-                if (front[c] > 0f) { along[c] = 0f; keep[c] = 255; queue.Enqueue(c); }
-            }
-            while (queue.Count > 0)
-            {
-                int c = queue.Dequeue();
-                if (along[c] >= SeeWholeReach) continue;
-                int cx = c % n, cy = c / n;
-                if (cx > 0) Spread(c, c - 1);
-                if (cx < n - 1) Spread(c, c + 1);
-                if (cy > 0) Spread(c, c - n);
-                if (cy < n - 1) Spread(c, c + n);
-            }
-        }
-        // The open floor: on the camera's side of her line all it has over it is taken (a roof, an arch over a passage in
-        // front of her), and round what is taken (the rock's skin past its cells) too; but not within two metres of rock
-        // left standing, so its skin stays with it.
-        var rock = (byte[])keep.Clone();
-        for (int pass = 0; pass < 2; pass++)
-        {
-            var was = (byte[])keep.Clone();
-            for (int c = 0; c < n * n; c++)
-            {
-                if (heights[c] > over || was[c] != 0) continue;
-                int cx = c % n, cy = c / n;
-                if (cx > 0 && was[c - 1] != 0 || cx < n - 1 && was[c + 1] != 0 || cy > 0 && was[c - n] != 0 || cy < n - 1 && was[c + n] != 0)
-                    keep[c] = 255;
-            }
-        }
-        var nearLeft = new int[n * n];
-        Array.Fill(nearLeft, int.MaxValue);
-        queue.Clear();
-        for (int c = 0; c < n * n; c++)
-            if (heights[c] > over && rock[c] == 0) { nearLeft[c] = 0; queue.Enqueue(c); }
-        while (queue.Count > 0)
-        {
-            int c = queue.Dequeue();
-            if (nearLeft[c] >= 2) continue;
-            int cx = c % n, cy = c / n;
-            foreach (int q in new[] { cx > 0 ? c - 1 : -1, cx < n - 1 ? c + 1 : -1, cy > 0 ? c - n : -1, cy < n - 1 ? c + n : -1 })
-                if (q >= 0 && heights[q] <= over && nearLeft[q] > nearLeft[c] + 1) { nearLeft[q] = nearLeft[c] + 1; queue.Enqueue(q); }
-        }
-        for (int c = 0; c < n * n; c++)
-        {
-            if (heights[c] > over) continue;
-            if (nearLeft[c] <= 2) { keep[c] = 0; continue; }
-            float x = box.X + 0.5f + c % n - her.X, z = box.Y + 0.5f + c / n - her.Z;
-            if (x * toward.X + z * toward.Y + reach > 0f) keep[c] = 255;
-        }
-        return keep;
-
-        void Visit(int c)
-        {
-            if (wall[c] >= 0 || heights[c] <= over) return;
-            wall[c] = walls;
-            stack.Push(c);
-        }
-
-        void Spread(int from, int to)
-        {
-            if (heights[to] <= over || wall[to] != wall[from] || along[to] <= along[from] + 1f) return;
-            along[to] = along[from] + 1f;
-            keep[to] = 255;
-            queue.Enqueue(to);
         }
     }
 
@@ -1941,7 +1789,6 @@ public partial class LevelView : Node3D
     public void SeeMaskStale()
     {
         _seeHeightsAt = new(float.MaxValue, float.MaxValue);
-        _seeKeepAt = new(float.MaxValue, float.MaxValue);
     }
 
     void ShowDecor(LevelShape shape)
