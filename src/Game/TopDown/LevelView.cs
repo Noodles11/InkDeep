@@ -412,8 +412,10 @@ public partial class LevelView : Node3D
     /// The rock the cutout takes (level_frame's see_cut, see_cut_box), a metre a texel round her. The rock on screen (a
     /// roof or a lid over the water counted as rock) is told apart into bodies, joined through rock on screen only. A
     /// body that covers her anywhere (any of its rock between her and the camera within CoverHalf of her sight line, or
-    /// within CoverNear of her) is cut whole, every wall of it on screen; any other body stands whole, in front of her
-    /// line or behind it. Made again as she moves (each SeeCutStep) or her map changes.
+    /// within CoverNear of her), or that runs on off the screen (joined to rock off it, or rising off it as it is drawn:
+    /// a point is on screen only if its foot and its top are), is cut whole, as is all the rock off the screen (its walls
+    /// would lean in over it) and every crumb under StandLeast; the cut reaches CutSpread out over the water at its feet.
+    /// Only a body wholly on screen that does not cover her stands, in front of her line or behind it. Made again as she moves (each SeeCutStep) or her map changes.
     /// </summary>
     void SeeCut(Vector3 her, float reach)
     {
@@ -429,10 +431,12 @@ public partial class LevelView : Node3D
         var sight = eye - at;
         float sightLength = Mathf.Max(sight.Length(), 1e-3f);
         var along = sight / sightLength;
-        // The rock on screen (with a margin, as a wall rising off its edge shows on it).
+        // The rock on screen (a little in from its edges: a body reaching them runs on off it).
         var view = GetViewport()!.GetVisibleRect().Size;
-        var margin = view * 0.08f;
+        var margin = view * -0.03f;
         float capY = CapHeight + Position.Y;
+        // (Rock anywhere, and the rock of it on screen.)
+        var any = new bool[n * n];
         var rock = new bool[n * n];
         for (int j = 0; j < n; j++)
         for (int i = 0; i < n; i++)
@@ -440,11 +444,20 @@ public partial class LevelView : Node3D
             int gx = x0 + i, gy = y0 + j;
             if (gx < 0 || gy < 0 || gx > _map.Size || gy > _map.Size) continue;
             if (_map[gx, gy] <= CapHeight && float.IsNaN(_map.RoofAt(gx, gy)) && float.IsNaN(_map.LidAt(gx, gy))) continue;
+            any[j * n + i] = true;
+            // (On screen only if its foot and its top as drawn are: a wall rising off the screen runs on off it.)
             var w = new Vector3(gx + Position.X, capY, gy + Position.Z);
-            if (cam.IsPositionBehind(w)) continue;
-            var sp = cam.UnprojectPosition(w);
-            if (sp.X < -margin.X || sp.Y < -margin.Y || sp.X > view.X + margin.X || sp.Y > view.Y + margin.Y) continue;
+            if (!OnScreen(w)) continue;
+            float h = Mathf.Max(_map[gx, gy], float.IsNaN(_map.RoofAt(gx, gy)) ? 0f : _map.RoofAt(gx, gy));
+            float t = Mathf.Clamp((h - 1.4f) / 1.8f, 0f, 1f);
+            if (!OnScreen(w with { Y = h + SeeRise * t * t * (3f - 2f * t) + Position.Y })) continue;
             rock[j * n + i] = true;
+        }
+        bool OnScreen(Vector3 p)
+        {
+            if (cam.IsPositionBehind(p)) return false;
+            var sp = cam.UnprojectPosition(p);
+            return sp.X >= -margin.X && sp.Y >= -margin.Y && sp.X <= view.X + margin.X && sp.Y <= view.Y + margin.Y;
         }
         // Its bodies, and which cover her.
         var body = new int[n * n];
@@ -456,12 +469,19 @@ public partial class LevelView : Node3D
             if (!rock[start] || body[start] >= 0) continue;
             int id = covers.Count;
             bool cover = false;
+            int size = 0;
             body[start] = id;
             todo.Push(start);
             while (todo.Count > 0)
             {
                 int c = todo.Pop();
+                size++;
                 int ci = c % n, cj = c / n;
+                // (Running on off the screen, or past the map's edge: it is cut.)
+                if (!cover && (ci == 0 || cj == 0 || ci == n - 1 || cj == n - 1
+                    || ci > 0 && any[c - 1] && !rock[c - 1] || ci < n - 1 && any[c + 1] && !rock[c + 1]
+                    || cj > 0 && any[c - n] && !rock[c - n] || cj < n - 1 && any[c + n] && !rock[c + n]))
+                    cover = true;
                 if (!cover)
                 {
                     var p = new Vector2(x0 + ci, y0 + cj) - at;
@@ -473,11 +493,26 @@ public partial class LevelView : Node3D
                 if (cj > 0 && rock[c - n] && body[c - n] < 0) { body[c - n] = id; todo.Push(c - n); }
                 if (cj < n - 1 && rock[c + n] && body[c + n] < 0) { body[c + n] = id; todo.Push(c + n); }
             }
-            covers.Add(cover);
+            // (A crumb of rock, under StandLeast, is cut too: risen, it would stand as a needle over the whole screen.)
+            covers.Add(cover || size < StandLeast);
         }
         var cut = new byte[n * n];
+        // (All rock is cut but the bodies left standing: rock off the screen too, whose walls would lean in over it.)
         for (int k = 0; k < cut.Length; k++)
-            if (body[k] >= 0 && covers[body[k]]) cut[k] = 255;
+            if (any[k] && !(body[k] >= 0 && !covers[body[k]])) cut[k] = 255;
+        // (And on out over the water at its feet by CutSpread: the rock's skin past its cells, a wall's foot sloping out
+        // over them, is cut with it. Only what stands over the cut's height goes, never the floor.)
+        for (int pass = 0; pass < CutSpread; pass++)
+        {
+            var was = (byte[])cut.Clone();
+            for (int k = 0; k < cut.Length; k++)
+            {
+                if (was[k] != 0 || any[k]) continue;
+                int ci = k % n, cj = k / n;
+                if (ci > 0 && was[k - 1] != 0 || ci < n - 1 && was[k + 1] != 0 || cj > 0 && was[k - n] != 0 || cj < n - 1 && was[k + n] != 0)
+                    cut[k] = 255;
+            }
+        }
         var image = Image.CreateFromData(n, n, false, Image.Format.R8, cut);
         if (_seeCut is null) _seeCut = ImageTexture.CreateFromImage(image);
         else _seeCut.Update(image);
@@ -495,6 +530,14 @@ public partial class LevelView : Node3D
     /// CoverNear of her.
     /// </summary>
     const float CoverHalf = 3.5f, CoverNear = 1.5f;
+    /// <summary>How far the walls rise as drawn (the cube reef's: topdown_ground's rise), for what of them is on screen.</summary>
+    public float SeeRise { get; set; }
+
+    /// <summary>How far (metres) the cut reaches out over the water past cut rock.</summary>
+    const int CutSpread = 3;
+
+    /// <summary>The least body of rock (m², on screen) that may stand.</summary>
+    const int StandLeast = 40;
 
     /// <summary>The cut's map round her: its span (metres), and how far she swims before it is made again.</summary>
     const int SeeCutSize = 128;

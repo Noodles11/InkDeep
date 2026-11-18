@@ -1349,8 +1349,13 @@ at mist distance (inherited fade rule).
     roof or a lid over the water counted as rock) is told apart into bodies, joined through rock on screen only
     (`LevelView.SeeCut`, level_frame's `see_cut`, a metre a texel round her, made again as she swims a quarter metre or
     her map changes). **A body that covers her anywhere** (any of its rock between her and the camera within 3.5 m of
-    her sight line, or within 1.5 m of her) **is cut whole**: every wall of it on screen down to its stump. A body
-    that does not cover her stands whole, in front of her line or behind it. The ground decides by where each point
+    her sight line, or within 1.5 m of her) **is cut whole**: every wall of it on screen down to its stump; and so is
+    **a body that runs on off the screen**: joined to rock off it, or rising off it as drawn (a point counts as on
+    screen only if both its foot and its top as drawn are, 3% in from the screen's edges). All rock off the screen is
+    cut (its walls would lean in over it), and so is every crumb under 40 m². The cut reaches 3 m out over the water
+    at the rock's feet (only what stands over the cut's height). Only a body wholly on screen that does not cover her
+    stands, whole, in front of her line or behind it: with the walls risen past the camera, in practice every wall is
+    cut, and the reef reads as its hatched caps over the water. The ground decides by where each point
     stood before the grown wall pushed it, so a bulge never strays across the cut. Rock is drawn only by its outer
     surface: a rock's inside is never drawn (topdown_ground draws no far face), so a wall risen past the camera, seen
     from inside, shows its cap instead. Whatever lies within 1.2 m of the camera's sight line to her, short of her, is
