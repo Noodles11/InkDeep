@@ -51,12 +51,14 @@ public partial class CrackSealView : Node3D
     /// <summary>The cutout as it stands (level_frame's see_through: her xz, radius, amount; its plane).</summary>
     Vector4 _seeThrough;
     float _seePlane;
+    (Texture2D Cut, Vector3 Box)? _seeMask;
 
     /// <summary>The cutout (as PortalView's): the crack is cut where it takes the wall the crack is in.</summary>
-    public void SeeThrough(Vector3 her, float radius, float amount, float plane)
+    public void SeeThrough(Vector3 her, float radius, float amount, float plane, (Texture2D Cut, Vector3 Box)? mask)
     {
         _seeThrough = new Vector4(her.X, her.Z, radius, amount);
         _seePlane = plane;
+        _seeMask = mask;
         foreach (var look in _shown.Values) See(look.Crack);
     }
 
@@ -64,6 +66,9 @@ public partial class CrackSealView : Node3D
     {
         m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_through"), _seeThrough);
         m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_through_y"), _seePlane);
+        if (_seeMask is not { } k) return;
+        m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_cut"), k.Cut);
+        m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_cut_box"), k.Box);
     }
 
     /// <summary>The rock's own height drawn, risen as the walls are.</summary>

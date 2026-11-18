@@ -19,12 +19,17 @@ public partial class PortalView : Node3D
     /// The cutout (level_frame's see_through, at the swim plane's height plane): an opening's dark is gone whole where it
     /// takes the wall the opening is in.
     /// </summary>
-    public void SeeThrough(Vector3 her, float radius, float amount, float plane)
+    public void SeeThrough(Vector3 her, float radius, float amount, float plane, (Texture2D Cut, Vector3 Box)? mask = null)
     {
         foreach (var m in _throats)
         {
             m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_through"), new Vector4(her.X, her.Z, radius, amount));
             m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_through_y"), plane);
+            if (mask is { } k)
+            {
+                m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_cut"), k.Cut);
+                m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_cut_box"), k.Box);
+            }
         }
     }
 

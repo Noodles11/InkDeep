@@ -1348,7 +1348,12 @@ at mist distance (inherited fade rule).
   - **Its shape:** a flat, horizontal slice 0.5 m over her plane through everything on the camera's side of her line
     (the screen's lower half, she being at its middle; the line 0.5 m behind her on the reef, 1.5 m in a sub-level),
     out past the screen's edges: every wall there is cut down to its stump, whichever wall it belongs to, and a roof or
-    an arch over a passage there goes too. Behind her line (up the screen) a wall is drawn only by its outer surface:
+    an arch over a passage there goes too. **Walls are continuous:** behind her line, rock that runs on unbroken from
+    the cut toward her line (from it toward the camera through rock alone, a roof or a lid counted as rock, never
+    crossing water) is the same wall and is cut whole with it (`LevelView.SeeCut`, level_frame's `see_cut`, a metre a
+    texel round her, made again as she swims a quarter metre); the ground decides by where each point stood before the
+    grown wall pushed it, so a bulge never strays across the cut. A wall behind her with water between it and her line
+    stands. Behind her line (up the screen) a wall is drawn only by its outer surface:
     a rock's inside is never drawn (topdown_ground draws no far face), so a wall risen past the camera, seen from
     inside, shows its cap instead. Whatever lies within 1.2 m of the camera's sight line to her, short of her, is cut
     too (`lf_see_covers`), so nothing behind her line covers her either.

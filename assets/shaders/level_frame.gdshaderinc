@@ -16,6 +16,10 @@ uniform vec2 level_origin = vec2(0.0);
 uniform vec4 portal = vec4(0.0);
 uniform vec4 see_through = vec4(0.0);
 uniform float see_through_y = 0.0;
+// The rock behind her line cut with the wall in front of her (LevelView.SeeCut; box: x, z of its corner, its span in
+// metres, 0 for none): 1 where it is, a metre a texel.
+uniform sampler2D see_cut : filter_linear, repeat_disable;
+uniform vec3 see_cut_box = vec3(0.0);
 
 // The dissolve threshold at a pixel (0..1): interleaved gradient noise, fine and even, with no grid to it (an ordered
 // 4×4 dither showed as a screen door over a fade).
@@ -30,7 +34,8 @@ vec3 lf_local(vec3 world) { return world - level_offset; }
 vec3 lf_pattern(vec3 local) { return vec3(local.x + level_origin.x, local.y, local.z + level_origin.y); }
 
 // The cutout: everything on the camera's side of her (from see_through.z metres behind her, out past the screen's
-// edges: the screen's lower half, she being at its middle) is cut off flat LF_SEE_OVER over her level's swim plane
+// edges: the screen's lower half, she being at its middle), and behind her the rock running on unbroken from it (the
+// same wall), is cut off flat LF_SEE_OVER over her level's swim plane
 // (see_through_y): the walls and peaks in front of her gone down to their stumps, showing the reef's cap there (a flat
 // dotted fill drawn inside all the rock at that height at all times, topdown_ground's cap), and outlined. What stands
 // behind her stays whole, seen only from outside (a rock's inside is never drawn). It is on (see_through.w > 0) or off:
@@ -50,10 +55,15 @@ float lf_see_front(vec3 world, vec3 cam) {
 }
 
 // Whether the cut takes what stands over a point (at any height over the cut): all that lies on the camera's side of
-// her line (the screen's lower half, she being at its middle), whatever wall it belongs to.
+// her line (the screen's lower half, she being at its middle), whatever wall it belongs to; and behind her line, the
+// rock running on unbroken from it (the same wall, see_cut), so a wall is cut whole, never left standing in chunks.
 bool lf_see_column(vec3 world, vec3 cam) {
 	if (see_through.w <= 0.0) return false;
-	return lf_see_front(world, cam) > 0.0;
+	if (lf_see_front(world, cam) > 0.0) return true;
+	if (see_cut_box.z <= 0.0) return false;
+	vec2 uv = (world.xz - see_cut_box.xy) / see_cut_box.z;
+	if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) return false;
+	return texture(see_cut, uv).r > 0.5;
 }
 
 // How far (metres) a point is from the cut away (< 0 inside it, > 0 outside), for the cut and its outline.

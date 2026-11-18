@@ -36,6 +36,8 @@ uniform int door_count = 0;
 uniform vec3 door_size = vec3(4.5, 1.7, 2.8);
 
 varying vec3 world;
+// Where the point stood before the grown wall pushed it (the cutout decides by it, so a bulge never strays across the cut).
+varying vec2 base_xz;
 varying vec3 world_normal;
 // The cap's vertices are marked by their colour's alpha (LevelView.CapColour); how far into the rock (metres).
 varying float is_cap;
@@ -79,6 +81,7 @@ float gr_push(vec3 p) {
 }
 
 void vertex() {
+	base_xz = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
 	is_cap = abs(COLOR.a - 0.5) < 0.1 ? 1.0 : 0.0;
 	cap_in = COLOR.r * CAP_DEPTH;
 	if (rise > 0.0 && is_cap < 0.5) {
@@ -183,7 +186,8 @@ float door_dark(vec3 p) {
 
 void fragment() {
 	// (Not from the sun's eye: the rock's shadows stay as they are.)
-	if (lf_portal_cut(world, FRAGCOORD.xy) || !IN_SHADOW_PASS && lf_see_cut(world, CAMERA_POSITION_WORLD, FRAGCOORD.xy)) discard;
+	vec3 cut_at = vec3(base_xz.x, world.y, base_xz.y);
+	if (lf_portal_cut(world, FRAGCOORD.xy) || !IN_SHADOW_PASS && lf_see_cut(cut_at, CAMERA_POSITION_WORLD, FRAGCOORD.xy)) discard;
 	// The rock's inside (its far faces: a wall risen past the camera, or seen through a cut) is never drawn: a wall
 	// shows only its outer side, and where only its inside would show, the cap inside it shows instead.
 	if (is_cap < 0.5 && !FRONT_FACING) discard;
@@ -209,7 +213,7 @@ void fragment() {
 		// (A couple of pixels wide however steep the rock; measured on the cut's own distance, not where rock kept
 		// whole meets it.)
 		float edge = lf_see_height() - world.y;
-		outline = lf_see_column(world, CAMERA_POSITION_WORLD) && edge >= 0.0 && (edge < line_width || edge / max(fwidth(edge), 1e-4) < 2.0);
+		outline = lf_see_column(cut_at, CAMERA_POSITION_WORLD) && edge >= 0.0 && (edge < line_width || edge / max(fwidth(edge), 1e-4) < 2.0);
 	}
 	vec3 local = lf_local(world);
 	float px = length(fwidth(world.xz));

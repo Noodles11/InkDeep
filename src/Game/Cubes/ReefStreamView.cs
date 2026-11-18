@@ -219,8 +219,14 @@ public partial class ReefStreamView : Node3D
     }
 
     /// <summary>What stands on the camera's side of her cut away (level_frame's see_through).</summary>
-    public void SeeThrough(Vector3 her, float radius, float open)
+    public void SeeThrough(Vector3 her, float radius, float open, (Texture2D Cut, Vector3 Box)? mask = null)
     {
+        // (The rock behind her line cut with the wall in front: LevelView.SeeCut.)
+        if (mask is { } m)
+        {
+            _here.SetShaderParameter(SN.Of("see_cut"), m.Cut);
+            _here.SetShaderParameter(SN.Of("see_cut_box"), m.Box);
+        }
         _here.SetShaderParameter(SN.Of("see_through"), new Vector4(her.X, her.Z, radius, open));
         // (Cut at her layer's swim plane, where its caps lie, never her bobbing.)
         _here.SetShaderParameter(SN.Of("see_through_y"), _lift + OctoShoots.Core.Gen.TopDown.LevelMap.SwimBand);

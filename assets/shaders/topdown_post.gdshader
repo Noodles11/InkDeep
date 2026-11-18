@@ -37,7 +37,10 @@ uniform float swim_level = 0.0;
 /// Heights within this band of the swim level stay in focus (the bell floats ~0.7 m above it).
 uniform float focus_above = 1.6;
 uniform float focus_below = 0.6;
-uniform float below_blur = 5.2;
+// Under her plane: the blur's amount at her plane (the floor she swims over), how much more each metre down, its most.
+uniform float under_soft = 0.7;
+uniform float under_rate = 0.45;
+uniform float under_most = 6.0;
 uniform float above_blur = 3.4;
 uniform float deep_fog = 0.06;
 /// One reef at every height (the game's own look): all of it is seen through this many metres of water, its colour the
@@ -500,9 +503,12 @@ void fragment() {
 		float x = below / 2.2;
 		layered = (floor(x) + smoothstep(0.8, 1.0, fract(x))) * 2.2;
 	}
-	// The deeper, the softer: a few metres down (a shallow seabed's dunes) only a little, its full blur by about 14 m.
+	// Everything under her plane is soft, the more the deeper: the floor she swims over only slightly, then the blur's
+	// reach doubling every 1/under_rate metres further down (its amount is the log of its reach), to under_most.
 	// Drawn in felt tip (look 4), the deep is not blurred at all: the stippling states it.
-	float lod = below_blur * (reef_art == 4 ? 0.0 : reef_art > 0 && reef_art != 5 ? 0.12 : 1.0) * (below > 0.0 ? 0.2 + 0.8 * smoothstep(0.0, 14.0, below) : 0.0) * smoothstep(0.0, 0.8, below)
+	float under = open_deep ? 40.0 : max(-h, 0.0);
+	if (!floor_fog && !open_deep) under = 0.0;
+	float lod = (reef_art == 4 ? 0.0 : 1.0) * (under > 0.05 ? min(under_soft + under_rate * under, under_most) * smoothstep(0.05, 0.4, under) : 0.0)
 		+ above_blur * smoothstep(0.0, 9.0, above);
 	float peak = open_deep ? 0.0 : smoothstep(peak_from, peak_from + peak_span, h);
 	lod += peak_blur * peak;

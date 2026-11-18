@@ -109,7 +109,6 @@ public partial class CameraRig : Node3D
 
     public void SetShowcase(bool on)
     {
-        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("below_blur"), on ? 1.4f : 5.2f);
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("above_blur"), on ? 1.6f : 3.4f);
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("deep_fog"), on ? 0.025f : 0.06f);
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("reef_water"), on ? 1.2f : 3.0f);
