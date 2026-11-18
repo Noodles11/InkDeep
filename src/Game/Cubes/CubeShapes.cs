@@ -178,7 +178,8 @@ public static class CubeShapes
     /// <summary>
     /// Its roofs (CUBE-WORLD-PLAN §4.4): rock over the throats of its roofed gates and its tunnels bored through rock, in
     /// one piece, its outline smooth (its canopy blurred). Inside it rises with the walls (so from above the wall runs on
-    /// whole over the way through); at its edge it stays at RoofHeight, the lintel over each mouth. Made over its own
+    /// whole over the way through); toward its edge it curls down in a rounded lip (a quarter round from RoofHeight down
+    /// to LipLow), so every edge of an arch or a tube's mouth is rounded as the rock's own edges are. Made over its own
     /// squares only, its canopy read on past them as its apron holds it, so neighbours' roofs meet at full height.
     /// </summary>
     static LevelShape.Surface? Roofs(CubeTerrain t)
@@ -219,7 +220,13 @@ public static class CubeShapes
             float a = Mathf.Lerp(cover[j * bw + i], cover[j * bw + i + 1], u), b = Mathf.Lerp(cover[(j + 1) * bw + i], cover[(j + 1) * bw + i + 1], u);
             return Mathf.Lerp(a, b, v);
         }
-        float Top(float x, float y) => RoofHeight + 0.25f * Mathf.Sin(x * 0.9f + Mathf.Sin(y * 0.7f) * 1.5f) * Mathf.Sin(y * 0.8f + 1.3f);
+        float Top(float x, float y)
+        {
+            float top = RoofHeight + 0.25f * Mathf.Sin(x * 0.9f + Mathf.Sin(y * 0.7f) * 1.5f) * Mathf.Sin(y * 0.8f + 1.3f);
+            // (Its lip: down to LipLow at the outline, rounding up to the top over its first stretch in.)
+            float u = Mathf.Clamp((Cover(x, y) - 0.34f) / 0.2f, 0f, 1f);
+            return Mathf.Lerp(LipLow, top, Mathf.Sqrt(1f - (1f - u) * (1f - u)));
+        }
         int ox0 = t.Cube.X * CubeTuning.Side, oy0 = t.Cube.Y * CubeTuning.Side, ox1 = ox0 + t.Cube.Wide * CubeTuning.Side, oy1 = oy0 + t.Cube.Tall * CubeTuning.Side;
         int sx0 = Math.Max(minX - 3, ox0), sy0 = Math.Max(minY - 3, oy0), sx1 = Math.Min(maxX + 3, ox1), sy1 = Math.Min(maxY + 3, oy1);
         if (sx1 <= sx0 || sy1 <= sy0) return null;
@@ -234,6 +241,9 @@ public static class CubeShapes
         }
         return new LevelShape.Surface(slab.Vertices, slab.Normals, colors, slab.Indices);
     }
+
+    /// <summary>How low a roof's rounded lip comes at its outline (over her plane, clear of her).</summary>
+    const float LipLow = OctoShoots.Core.Gen.TopDown.LevelMap.SwimBand + 0.9f;
 
     /// <summary>Its canopy at a point, read on past its arrays' edge as their last sample.</summary>
     static bool CanopyNear(CubeTerrain t, int gx, int gy) =>

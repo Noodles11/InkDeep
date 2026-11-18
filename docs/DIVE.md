@@ -40,7 +40,11 @@ levels one after another: the layers are the depths.
   walls grow** as they rise (topdown_ground's `grow`): pushed out and drawn in along their facing by a 3D noise of
   the world's metres (bulges, undercuts, overhangs, heads swelling over narrower necks) and stepping back in ledges
   every few metres of height, with live rock's lumps and darker pits over the face; nothing moves at a wall's foot,
-  where she meets it. Most
+  where she meets it. **Natural arches** (`CubeTerrain.Arch`): thin bands along a slow noise's contours, about half
+  of them, grow rock across over her wherever they cross water within 5 m of a wall, so over a narrow way it spans the
+  whole way and over a wide one it reaches out from the wall as an overhanging shelf; only over a shelf's floor,
+  never by a well or in a gate's throat. Every roof (an arch, a roofed gate, a tunnel's tube) curls down at its edge
+  in a rounded lip, a quarter round from its top to 0.9 m over her plane (`CubeShapes.Roofs`). Most
   gates between cubes and most tunnels through rock are **roofed** (§4.4): openings carved through the walls, the rock
   running on whole over them. A wall or roof between the camera and her, or
   the water 5 m round her on the camera's side, is cut open (so walls crowding in beside her go too, however close the

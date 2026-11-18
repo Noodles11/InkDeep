@@ -6,7 +6,7 @@ references: a canyon of overhanging, mushroom-headed stacks under god rays; poro
 furred with growth; a narrow slot between knobbly walls opening onto bright water; a deep coral corridor of
 plate-and-fan walls over a sand floor.
 
-Status: steps 1 and 2 built (CUBE-WORLD-PLAN §5, DIVE §1); 3 and 4 to come. The blue ink look (ART-LOOKS) is in.
+Status: steps 1, 2 and 4 built (CUBE-WORLD-PLAN §5, DIVE §1); 3 to come. The blue ink look (ART-LOOKS) is in.
 
 ## What it is now, and why it reads cut
 

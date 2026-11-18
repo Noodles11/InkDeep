@@ -107,7 +107,7 @@ public sealed class CubeTerrain
     const int Lip = 1;
 
     // Noise fields, one seed each (every cube reads the same at the same global point).
-    const int NoiseThroat = 1, NoiseChamber = 2, NoiseTunnel = 3, NoiseShelf = 4, NoiseTop = 5, NoiseFloor = 6, NoiseBays = 7;
+    const int NoiseThroat = 1, NoiseChamber = 2, NoiseTunnel = 3, NoiseShelf = 4, NoiseTop = 5, NoiseFloor = 6, NoiseBays = 7, NoiseArch = 8;
     /// <summary>The stacked cavern field (CubeSpace.Strata).</summary>
     const int NoiseCavern = 8;
 
@@ -278,7 +278,7 @@ public sealed class CubeTerrain
         arrivals.AddRange(space.Floor(c.Second.Over).Wells);
         var rng = ReefHash.Rng(space.Seed, ReefHash.Cube, c.X, c.Y, c.Z, c.OnEnd ? 1 : 0);
         uint throatSeed = space.NoiseSeed(NoiseThroat), chamberSeed = space.NoiseSeed(NoiseChamber), tunnelSeed = space.NoiseSeed(NoiseTunnel);
-        uint shelfSeed = space.NoiseSeed(NoiseShelf), topSeed = space.NoiseSeed(NoiseTop), floorSeed = space.NoiseSeed(NoiseFloor);
+        uint shelfSeed = space.NoiseSeed(NoiseShelf), topSeed = space.NoiseSeed(NoiseTop), floorSeed = space.NoiseSeed(NoiseFloor), archSeed = space.NoiseSeed(NoiseArch);
 
         // 1. The plan inside it: its gates' mouths, its wells, its chambers (local metres).
         var gates = new List<(EdgeId, Gate, Vector2)>();
@@ -464,6 +464,9 @@ public sealed class CubeTerrain
         // that and its own carving, blurred so the face runs smoothly between the grid's points.
         var own = OwnField(water, ow, oh, gw, gh, m);
         var (allEdges, allCorners) = SharedNear(space, c.Z, gx0, gy0, gw, gh);
+        // (The rock's top relief and the shelf noise are slow: read on a 4 m grid and between its points.)
+        var topNoise = Coarse((x, y) => TerrainNoise.Fbm(x * 0.06f, y * 0.06f, topSeed, 3), gx0, gy0, gw, gh);
+        var shelfNoises = Coarse((x, y) => TerrainNoise.Fbm(x * 0.035f, y * 0.035f, shelfSeed, 2), gx0, gy0, gw, gh);
         var field = new float[gw * gh];
         var cell = new CubeCell[gw * gh];
         var shelf = new float[gw * gh];
@@ -491,7 +494,7 @@ public sealed class CubeTerrain
             if (!wet)
             {
                 cell[k] = CubeCell.Rock;
-                top[k] = RockLow + RockRise * Math.Clamp(TerrainNoise.Fbm(p.X * 0.06f, p.Y * 0.06f, topSeed, 3) * 0.5f + 0.5f, 0f, 1f);
+                top[k] = RockLow + RockRise * Math.Clamp(topNoise[k] * 0.5f + 0.5f, 0f, 1f);
                 canopy[k] = underRoof;
                 continue;
             }
@@ -514,7 +517,7 @@ public sealed class CubeTerrain
             canopy[k] = underRoof && !byWell;
             // Void only where the shelf noise opens it over the layer below's caverns (CUBE-WORLD-PLAN §4.3), so what she
             // sees down through it is that layer's open water.
-            float shelfNoise = TerrainNoise.Fbm(p.X * 0.035f, p.Y * 0.035f, shelfSeed, 2);
+            float shelfNoise = shelfNoises[k];
             // (A drop's void more, blended in from its edges as its own carving is.)
             float more = 0f;
             if (cubeKind == CubeKind.Drop)
@@ -523,6 +526,10 @@ public sealed class CubeTerrain
                 more = DropMore * Smooth(Apron, Apron + BlendWidth, near) * Smooth(-4f, 10f, dropFar ? along : -along);
             }
             float open = MathF.Min(ShelfCut + VoidMore + more - shelfNoise, under[k] - CavernCut + 0.02f);
+            // A natural arch: rock grown across over her where a band of its noise crosses water near the walls (the whole
+            // way over a narrow way; over a wide one, a shelf of it reaching out from the wall). Only over a shelf's floor.
+            if (!canopy[k] && !inWell && !byWell && open <= 0f && ownPoint && shared is null && -s < ArchReach && Arch(p, archSeed))
+                canopy[k] = true;
             if (inWell) cell[k] = CubeCell.Void;
             else if (canopy[k]) cell[k] = CubeCell.Shelf;
             else cell[k] = open > 0f ? CubeCell.Void : CubeCell.Shelf;
@@ -585,6 +592,23 @@ public sealed class CubeTerrain
             Tunnels = tunnels.ConvertAll(t => Array.ConvertAll(t.Points, q => q + origin)),
         };
     }
+
+    /// <summary>
+    /// Whether a natural arch's band runs over a point: thin bands along the contours of a slow noise, about ArchWidth
+    /// across, and only where a second noise lets them (so about half of them grow).
+    /// </summary>
+    static bool Arch(Vector2 p, uint seed)
+    {
+        float n = TerrainNoise.Perlin(p.X * ArchScale, p.Y * ArchScale, seed);
+        if (MathF.Abs(n) > ArchBand) return false;
+        return TerrainNoise.Perlin(p.X * 0.02f, p.Y * 0.02f, seed + 5u) > 0f;
+    }
+
+    /// <summary>
+    /// A natural arch's noise scale, the half-width of its band in that noise (about 4–5 m of rock across), and how far
+    /// out over the water from a wall it reaches.
+    /// </summary>
+    const float ArchScale = 0.03f, ArchBand = 0.05f, ArchReach = 5f;
 
     /// <summary>
     /// A shelf floor's relief (metres over or under ShelfHeight): never flat, yet not bumpy. A broad, slow noise is
@@ -713,6 +737,37 @@ public sealed class CubeTerrain
         }
         return f;
     }
+
+    /// <summary>
+    /// A slow field over the worked grid, read every CoarseStep metres (on the global grid, so neighbours agree) and
+    /// bilinearly between.
+    /// </summary>
+    static float[] Coarse(Func<float, float, float> f, int gx0, int gy0, int gw, int gh)
+    {
+        const int Step = CoarseStep;
+        int cx0 = FloorDiv(gx0, Step) * Step, cy0 = FloorDiv(gy0, Step) * Step;
+        int cw = (gx0 + gw - cx0) / Step + 2, ch = (gy0 + gh - cy0) / Step + 2;
+        var coarse = new float[cw * ch];
+        for (int j = 0; j < ch; j++)
+        for (int i = 0; i < cw; i++) coarse[j * cw + i] = f(cx0 + i * Step, cy0 + j * Step);
+        var o = new float[gw * gh];
+        for (int j = 0; j < gh; j++)
+        {
+            int ry = gy0 + j - cy0, cj = ry / Step;
+            float v = (ry - cj * Step) / (float)Step;
+            for (int i = 0; i < gw; i++)
+            {
+                int rx = gx0 + i - cx0, ci = rx / Step;
+                float u = (rx - ci * Step) / (float)Step;
+                int k = cj * cw + ci;
+                float a = coarse[k] + (coarse[k + 1] - coarse[k]) * u, b = coarse[k + cw] + (coarse[k + cw + 1] - coarse[k + cw]) * u;
+                o[j * gw + i] = a + (b - a) * v;
+            }
+        }
+        return o;
+    }
+
+    const int CoarseStep = 4;
 
     /// <summary>How far a wall's wander moves on (in its noise) from one layer to the next.</summary>
     const float WallDepth = 0.12f;
