@@ -409,40 +409,75 @@ public partial class LevelView : Node3D
     Vector4 _seeThrough;
 
     /// <summary>
-    /// The rock the cutout takes behind her line (level_frame's see_cut, see_cut_box), a metre a texel round her: rock
-    /// at the cut's height (a roof or a lid over the water counted as rock) that runs on unbroken toward the camera to her line (from it toward the camera through rock
-    /// alone, never crossing water) is the same wall as what is cut in front of her, and is cut whole with it. A wall
-    /// behind her with water between it and her line stands. Made again as she moves (each SeeCutStep) or her map changes.
+    /// The rock the cutout takes (level_frame's see_cut, see_cut_box), a metre a texel round her. The rock on screen (a
+    /// roof or a lid over the water counted as rock) is told apart into bodies, joined through rock on screen only. A
+    /// body that covers her anywhere (any of its rock between her and the camera within CoverHalf of her sight line, or
+    /// within CoverNear of her) is cut whole, every wall of it on screen; any other body stands whole, in front of her
+    /// line or behind it. Made again as she moves (each SeeCutStep) or her map changes.
     /// </summary>
     void SeeCut(Vector3 her, float reach)
     {
         var at = new Vector2(her.X - Position.X, her.Z - Position.Z);
         if (_seeCut is not null && at.DistanceTo(_seeCutAt) < SeeCutStep) return;
+        var cam = GetViewport()?.GetCamera3D();
+        if (cam is null) return;
         _seeCutAt = at;
         const int n = SeeCutSize;
         int x0 = Mathf.FloorToInt(at.X) - n / 2, y0 = Mathf.FloorToInt(at.Y) - n / 2;
-        var cam = GetViewport()?.GetCamera3D();
-        var toward = cam is null ? new Vector2(0f, 1f) : new Vector2(cam.GlobalPosition.X - her.X, cam.GlobalPosition.Z - her.Z);
-        toward = toward.LengthSquared() < 1e-6f ? new Vector2(0f, 1f) : toward.Normalized();
-        // (Swept a row at a time from the camera's side, each cell reading the one next toward the camera: the camera
-        // stands to the south, so toward it is along the rows' axis.)
-        int step = toward.Y >= 0f ? 1 : -1;
-        var cut = new byte[n * n];
-        for (int r = 0; r < n; r++)
+        // Her sight line on the map: from her to under the camera.
+        var eye = new Vector2(cam.GlobalPosition.X - Position.X, cam.GlobalPosition.Z - Position.Z);
+        var sight = eye - at;
+        float sightLength = Mathf.Max(sight.Length(), 1e-3f);
+        var along = sight / sightLength;
+        // The rock on screen (with a margin, as a wall rising off its edge shows on it).
+        var view = GetViewport()!.GetVisibleRect().Size;
+        var margin = view * 0.08f;
+        float capY = CapHeight + Position.Y;
+        var rock = new bool[n * n];
+        for (int j = 0; j < n; j++)
+        for (int i = 0; i < n; i++)
         {
-            int j = step > 0 ? n - 1 - r : r;
-            for (int i = 0; i < n; i++)
-            {
-                int gx = x0 + i, gy = y0 + j;
-                // (A roof or a lid over the water is rock too: an arch or a tube runs on with its walls.)
-                if (gx < 0 || gy < 0 || gx > _map.Size || gy > _map.Size) continue;
-                if (_map[gx, gy] <= CapHeight && float.IsNaN(_map.RoofAt(gx, gy)) && float.IsNaN(_map.LidAt(gx, gy))) continue;
-                float front = (gx - at.X) * toward.X + (gy - at.Y) * toward.Y + reach;
-                int jn = j + step;
-                bool next = jn >= 0 && jn < n && cut[jn * n + i] != 0;
-                if (front > 0f || next) cut[j * n + i] = 255;
-            }
+            int gx = x0 + i, gy = y0 + j;
+            if (gx < 0 || gy < 0 || gx > _map.Size || gy > _map.Size) continue;
+            if (_map[gx, gy] <= CapHeight && float.IsNaN(_map.RoofAt(gx, gy)) && float.IsNaN(_map.LidAt(gx, gy))) continue;
+            var w = new Vector3(gx + Position.X, capY, gy + Position.Z);
+            if (cam.IsPositionBehind(w)) continue;
+            var sp = cam.UnprojectPosition(w);
+            if (sp.X < -margin.X || sp.Y < -margin.Y || sp.X > view.X + margin.X || sp.Y > view.Y + margin.Y) continue;
+            rock[j * n + i] = true;
         }
+        // Its bodies, and which cover her.
+        var body = new int[n * n];
+        Array.Fill(body, -1);
+        var covers = new List<bool>();
+        var todo = new Stack<int>();
+        for (int start = 0; start < n * n; start++)
+        {
+            if (!rock[start] || body[start] >= 0) continue;
+            int id = covers.Count;
+            bool cover = false;
+            body[start] = id;
+            todo.Push(start);
+            while (todo.Count > 0)
+            {
+                int c = todo.Pop();
+                int ci = c % n, cj = c / n;
+                if (!cover)
+                {
+                    var p = new Vector2(x0 + ci, y0 + cj) - at;
+                    float t = p.Dot(along), side = Mathf.Abs(p.X * along.Y - p.Y * along.X);
+                    if (p.Length() < CoverNear || t > -reach && t < sightLength && side < CoverHalf) cover = true;
+                }
+                if (ci > 0 && rock[c - 1] && body[c - 1] < 0) { body[c - 1] = id; todo.Push(c - 1); }
+                if (ci < n - 1 && rock[c + 1] && body[c + 1] < 0) { body[c + 1] = id; todo.Push(c + 1); }
+                if (cj > 0 && rock[c - n] && body[c - n] < 0) { body[c - n] = id; todo.Push(c - n); }
+                if (cj < n - 1 && rock[c + n] && body[c + n] < 0) { body[c + n] = id; todo.Push(c + n); }
+            }
+            covers.Add(cover);
+        }
+        var cut = new byte[n * n];
+        for (int k = 0; k < cut.Length; k++)
+            if (body[k] >= 0 && covers[body[k]]) cut[k] = 255;
         var image = Image.CreateFromData(n, n, false, Image.Format.R8, cut);
         if (_seeCut is null) _seeCut = ImageTexture.CreateFromImage(image);
         else _seeCut.Update(image);
@@ -454,6 +489,12 @@ public partial class LevelView : Node3D
             m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_cut_box"), _seeCutBox);
         }
     }
+
+    /// <summary>
+    /// A body covers her with rock within CoverHalf of her sight line (her body and a wall's bulge round it), or within
+    /// CoverNear of her.
+    /// </summary>
+    const float CoverHalf = 3.5f, CoverNear = 1.5f;
 
     /// <summary>The cut's map round her: its span (metres), and how far she swims before it is made again.</summary>
     const int SeeCutSize = 128;

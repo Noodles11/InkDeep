@@ -1345,18 +1345,16 @@ at mist distance (inherited fade rule).
   cave's lid) stands between the camera and any part of her (her middle and 0.8 m round it; `LevelView.Hides`). Whatever
   stands on the camera's side of her is cut away (`LevelView.SeeThrough`, `ReefStreamView.SeeThrough`, level_frame's
   `lf_see_cut`):
-  - **Its shape:** a flat, horizontal slice 0.5 m over her plane through everything on the camera's side of her line
-    (the screen's lower half, she being at its middle; the line 0.5 m behind her on the reef, 1.5 m in a sub-level),
-    out past the screen's edges: every wall there is cut down to its stump, whichever wall it belongs to, and a roof or
-    an arch over a passage there goes too. **Walls are continuous:** behind her line, rock that runs on unbroken from
-    the cut toward her line (from it toward the camera through rock alone, a roof or a lid counted as rock, never
-    crossing water) is the same wall and is cut whole with it (`LevelView.SeeCut`, level_frame's `see_cut`, a metre a
-    texel round her, made again as she swims a quarter metre); the ground decides by where each point stood before the
-    grown wall pushed it, so a bulge never strays across the cut. A wall behind her with water between it and her line
-    stands. Behind her line (up the screen) a wall is drawn only by its outer surface:
-    a rock's inside is never drawn (topdown_ground draws no far face), so a wall risen past the camera, seen from
-    inside, shows its cap instead. Whatever lies within 1.2 m of the camera's sight line to her, short of her, is cut
-    too (`lf_see_covers`), so nothing behind her line covers her either.
+  - **Its shape:** a flat, horizontal slice 0.5 m over her plane, through whole bodies of rock. The rock on screen (a
+    roof or a lid over the water counted as rock) is told apart into bodies, joined through rock on screen only
+    (`LevelView.SeeCut`, level_frame's `see_cut`, a metre a texel round her, made again as she swims a quarter metre or
+    her map changes). **A body that covers her anywhere** (any of its rock between her and the camera within 3.5 m of
+    her sight line, or within 1.5 m of her) **is cut whole**: every wall of it on screen down to its stump. A body
+    that does not cover her stands whole, in front of her line or behind it. The ground decides by where each point
+    stood before the grown wall pushed it, so a bulge never strays across the cut. Rock is drawn only by its outer
+    surface: a rock's inside is never drawn (topdown_ground draws no far face), so a wall risen past the camera, seen
+    from inside, shows its cap instead. Whatever lies within 1.2 m of the camera's sight line to her, short of her, is
+    cut too (`lf_see_covers`).
   - **Solid inside:** the cut reads as solid rock cut through, never as the water or the void under it. Every reef
     area of the swim level carries a cap inside its rock at all times (`LevelView.Cap`; the cube reef's with each
     chunk of its ground) at the cut's height (0.5 m over the swim plane, never following her bob), its outline on the
