@@ -135,8 +135,10 @@ over its two squares.
    only the edges' field counts; over the next 3 m the cube's own blends in. The face is the field's zero line, which
    runs smoothly between the grid's points: no 1 m steps anywhere.
 5. **Heights** on the field: all noise (rock relief, shelf floors) is read at **global** coordinates. Rock rises from
-   its face over 2.5 m to its own 3–6.5 m; the floor falls from the face to a shelf's or the void's depth over 1–4 m
-   (the deeper, the further). A shelf's floor drops into the void along the shelf noise's contour as a bank, and sinks
+   its face over 5 m to its own 3–6.5 m; the floor falls from the face to a shelf's or the void's depth over 1–4 m
+   (the deeper, the further). A shelf's floor is never flat (`CubeTerrain.Relief`): a slow noise stepped into terraces
+   a few metres across, each top all but level and its edge lowered gradually into a slope to the next, 1.8 m deep in
+   all (half on the warm-up layer). A shelf's floor drops into the void along the shelf noise's contour as a bank, and sinks
    smoothly into a well. The ground's edge over the void and a roof's outline follow their fields' smooth lines too
    (`LevelView.SurfaceMesh`'s field).
 6. **Apron**: the cube's arrays carry 2 m of its neighbours' samples round them (the ground's smoothing reads two

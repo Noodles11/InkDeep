@@ -36,7 +36,11 @@ levels one after another: the layers are the depths.
   layer's walls rise 60 m above their own rock where the layer above is rock (past the camera's own height, so no
   wall's top is ever seen: each runs on past the screen's edge until the cutout takes it), and under the layer above's
   open water only to about its floor, as they are drawn (topdown_ground's rise; play keeps the walls' real heights),
-  the higher the softer (topdown_post's tall blur); the layer she goes to grows its walls as she reaches it. Most
+  the higher the softer (topdown_post's tall blur); the layer she goes to grows its walls as she reaches it. **The
+  walls grow** as they rise (topdown_ground's `grow`): pushed out and drawn in along their facing by a 3D noise of
+  the world's metres (bulges, undercuts, overhangs, heads swelling over narrower necks) and stepping back in ledges
+  every few metres of height, with live rock's lumps and darker pits over the face; nothing moves at a wall's foot,
+  where she meets it. Most
   gates between cubes and most tunnels through rock are **roofed** (§4.4): openings carved through the walls, the rock
   running on whole over them. A wall or roof between the camera and her, or
   the water 5 m round her on the camera's side, is cut open (so walls crowding in beside her go too, however close the

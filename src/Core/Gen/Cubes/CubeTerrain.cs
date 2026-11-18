@@ -551,7 +551,8 @@ public sealed class CubeTerrain
             if (kind == CubeCell.Rock) outHeights[o] = top[k] * Smooth(0f, RockRamp, s);
             else
             {
-                float floor = VoidHeight + (ShelfHeight + 0.3f * TerrainNoise.Perlin(gx * 0.18f, gy * 0.18f, floorSeed) - VoidHeight) * shelf[k];
+                // (No relief worked out where the floor is the void's.)
+                float floor = shelf[k] <= 0f ? VoidHeight : VoidHeight + (ShelfHeight + Relief(gx, gy, floorSeed, c.Z) - VoidHeight) * shelf[k];
                 outHeights[o] = floor * Smooth(0f, FloorRamp + FloorRampPerMetre * -floor, -s);
             }
         }
@@ -585,8 +586,32 @@ public sealed class CubeTerrain
         };
     }
 
+    /// <summary>
+    /// A shelf floor's relief (metres over or under ShelfHeight): never flat, yet not bumpy. A broad, slow noise is
+    /// stepped into terraces: each step's top all but level, falling away smoothly to the next over most of a step (so
+    /// a flat stretch's edges are lowered gradually into slopes), the steps a couple of metres to a few across. The
+    /// warm-up layer's half as deep (broader, gentler sand). Always well under her plane.
+    /// </summary>
+    public static float Relief(float x, float y, uint seed, int layer)
+    {
+        float n = TerrainNoise.Perlin(x * ReliefScale, y * ReliefScale, seed + 31u);
+        float steps = (n * 0.5f + 0.5f) * ReliefSteps;
+        float whole = MathF.Floor(steps), part = steps - whole;
+        // (Level for its first ReliefFlat of a step, then easing down to the next: a plateau with a soft edge.)
+        float edge = Smooth(ReliefFlat, 1f, part);
+        float terraced = (whole + edge) / ReliefSteps;
+        float depth = layer == 0 ? 0.5f : 1f;
+        return (ReliefTop - ReliefDepth * (1f - terraced)) * depth;
+    }
+
+    /// <summary>
+    /// The relief's noise scale (per metre), its steps across the noise's range, the share of a step kept level, its top
+    /// over ShelfHeight and its whole depth.
+    /// </summary>
+    const float ReliefScale = 0.16f, ReliefSteps = 5f, ReliefFlat = 0.35f, ReliefTop = 0.35f, ReliefDepth = 1.8f;
+
     /// <summary>How far in from its outer edges a cube's own carving blends in (past its apron), and the rock's and floor's ramps from the face.</summary>
-    const float BlendWidth = 3f, RockRamp = 2.5f, FloorRamp = 0.8f, FloorRampPerMetre = 0.3f;
+    const float BlendWidth = 3f, RockRamp = 5f, FloorRamp = 0.8f, FloorRampPerMetre = 0.3f;
     /// <summary>A throat runs on this far past its mouth, closing as it goes, into the cube's own water there.</summary>
     const float ThroatPast = 2f;
     /// <summary>The cube's own water widened by this much (metres), so the blur never pinches a narrow way shut.</summary>

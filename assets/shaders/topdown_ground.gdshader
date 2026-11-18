@@ -48,6 +48,36 @@ uniform float rise = 0.0;
 uniform float rise_from = 1.4;
 uniform float rise_to = 3.2;
 
+// The grown wall: as it rises, its face is pushed out and drawn in along its own facing (bulges, undercuts and
+// overhangs, a head swelling over a narrower neck), stepping back in ledges every few metres of height. Measured in the
+// world's metres, so neighbouring pieces of ground agree; nothing moves at its foot (the rock she meets at her plane).
+uniform float grow = 3.2;
+uniform float grow_ledge = 1.1;
+const float GROW_LEDGE_STEP = 4.5;
+
+float gr_hash(vec3 p) {
+	p = fract(p * 0.3183099 + 0.1);
+	p *= 17.0;
+	return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+}
+
+float gr_noise(vec3 x) {
+	vec3 i = floor(x), f = fract(x);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(mix(gr_hash(i), gr_hash(i + vec3(1, 0, 0)), f.x), mix(gr_hash(i + vec3(0, 1, 0)), gr_hash(i + vec3(1, 1, 0)), f.x), f.y),
+		mix(mix(gr_hash(i + vec3(0, 0, 1)), gr_hash(i + vec3(1, 0, 1)), f.x), mix(gr_hash(i + vec3(0, 1, 1)), gr_hash(i + vec3(1, 1, 1)), f.x), f.y), f.z) * 2.0 - 1.0;
+}
+
+// How far (metres) the face at p is pushed out along its facing.
+float gr_push(vec3 p) {
+	float big = gr_noise(p * vec3(0.075, 0.055, 0.075)) * 0.7 + gr_noise(p * vec3(0.16, 0.12, 0.16) + 7.3) * 0.3;
+	float lumps = gr_noise(p * vec3(0.35, 0.3, 0.35) + 3.1);
+	// (Ledges: the face steps back a little at each, a band of height wide, where they come round on its own wavering.)
+	float h = p.y / GROW_LEDGE_STEP + gr_noise(p * 0.05 + 11.0) * 0.8;
+	float ledge = smoothstep(0.0, 0.3, fract(h)) - 0.5;
+	return grow * big + 0.6 * lumps + grow_ledge * ledge;
+}
+
 void vertex() {
 	is_cap = abs(COLOR.a - 0.5) < 0.1 ? 1.0 : 0.0;
 	cap_in = COLOR.r * CAP_DEPTH;
@@ -57,6 +87,23 @@ void vertex() {
 		float stretch = 1.0 + rise * COLOR.a * 6.0 * t * (1.0 - t) / (rise_to - rise_from);
 		VERTEX.y += rise * k;
 		NORMAL = normalize(vec3(NORMAL.x * stretch, NORMAL.y, NORMAL.z * stretch));
+		// Grown: pushed along its facing (flat ground and the wall's foot not at all), its normal bent to match.
+		vec2 facing = NORMAL.xz;
+		float steep = length(facing);
+		if (grow > 0.0 && steep > 0.05 && k > 0.0) {
+			vec3 wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+			vec2 out_dir = facing / steep;
+			// (Grows in over the first metres of its rise, so its foot stays where the rock is.)
+			float amount = smoothstep(0.0, 0.12, k) * steep;
+			float d = gr_push(wp);
+			VERTEX.xz += out_dir * d * amount;
+			// The face's slope from how the push changes with height and along it.
+			const float e = 0.8;
+			float dy = (gr_push(wp + vec3(0.0, e, 0.0)) - gr_push(wp - vec3(0.0, e, 0.0))) / (2.0 * e);
+			vec3 side = normalize(vec3(-out_dir.y, 0.0, out_dir.x));
+			float ds = (gr_push(wp + side * e) - gr_push(wp - side * e)) / (2.0 * e);
+			NORMAL = normalize(NORMAL + (vec3(0.0, -dy, 0.0) - side * ds) * amount * steep);
+		}
 	}
 	world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
@@ -183,6 +230,22 @@ void fragment() {
 		s.albedo = mix(mix(wash * 1.5, s.albedo, 0.16) * 0.4, wash * 0.3, wk);
 		s.emission = mix(mix(wash * 1.5, nat.albedo, 0.16) * 0.55, wash * 0.8, wk);
 		nat.emission = s.emission;
+	}
+	// Grown rock (the risen walls): live rock's lumps and pits over the face, finer than its mesh can carry; its
+	// hollows darker. Not on the floor, nor low by her plane.
+	if (rise > 0.0 && grow > 0.0) {
+		vec3 wn = normalize(world_normal);
+		float wall = (1.0 - smoothstep(0.55, 0.85, wn.y)) * smoothstep(rise_from + 0.5, rise_from + 6.0, world.y);
+		if (wall > 0.01) {
+			vec3 q = world * 0.55;
+			const float e = 0.35;
+			float c0 = gr_noise(q), c1 = gr_noise(q * 2.3 + 5.1) * 0.5;
+			vec3 g = vec3(gr_noise(q + vec3(e, 0, 0)) - gr_noise(q - vec3(e, 0, 0)), gr_noise(q + vec3(0, e, 0)) - gr_noise(q - vec3(0, e, 0)),
+				gr_noise(q + vec3(0, 0, e)) - gr_noise(q - vec3(0, 0, e))) / (2.0 * e);
+			s.normal = normalize(s.normal - (g - wn * dot(g, wn)) * 0.55 * wall);
+			float pit = smoothstep(0.25, 0.75, -(c0 + c1));
+			s.albedo *= 1.0 - 0.45 * pit * wall;
+		}
 	}
 	float show = reef_show_skin(s, nat, world, CAMERA_POSITION_WORLD);
 	float dark = door_count > 0 ? door_dark(local) : 0.0;
