@@ -9,7 +9,7 @@ namespace OctoShoots.Game.Fx;
 /// positionally. All of them go through the Sfx bus, heard as through water: a low-pass filter takes the treble off,
 /// more the deeper she is (SetDepth). Her light thrown is a pop (PlayThrow: one of the recorded pops at random). Recorded
 /// too, and heard whatever OnlyToggle says: her light striking anything it can harm (PlayStrike: a squish), a murkling
-/// emerging (PlayEmerge: a bloop), an ink bomb's detonator set off (PlayFuse) and the bomb going off (PlaySplat), a sealed
+/// emerging (PlayEmerge: a bloop), her dash (PlayDash: a swish), an ink bomb's detonator set off (PlayFuse) and the bomb going off (PlaySplat), a sealed
 /// wall unlocking or a cracked seal broken (PlaySecret), a shell gathered (PlayGather: its chime with one of two gathers at random), and
 /// the roar of her beam's fire while it burns a creature (Burning: a loop, eased in and out).
 /// </summary>
@@ -24,6 +24,8 @@ public partial class Sfx : Node
     const string StrikePath = "res://audio/sfx/squish.mp3";
     /// <summary>A murkling emerging; an ink bomb's detonator set off, and the bomb going off.</summary>
     const string BloopPath = "res://audio/sfx/bloop.wav", FusePath = "res://audio/sfx/fuse.ogg", SplatPath = "res://audio/sfx/splat.wav";
+    /// <summary>Her dash (a swish).</summary>
+    const string DashPath = "res://audio/sfx/dash.wav";
 
     /// <summary>A bubble vault popping.</summary>
     const string BubblePath = "res://audio/sfx/big_bubble.mp3";
@@ -34,7 +36,7 @@ public partial class Sfx : Node
     /// <summary>The beam's fire: its loudness at full (dB), and how fast it swells in and dies away (per second, of its 0..1).</summary>
     const float FireDb = -6f, FireIn = 6f, FireOut = 3f;
 
-    AudioStream? _secret, _gather, _fire, _bubble, _bloop, _fuse, _splat;
+    AudioStream? _secret, _gather, _fire, _bubble, _bloop, _fuse, _splat, _dash;
     readonly List<AudioStream> _gathers = new();
     AudioStreamPlayer? _firePlayer;
     float _fireOn;
@@ -76,6 +78,7 @@ public partial class Sfx : Node
         _bloop = ResourceLoader.Exists(BloopPath) ? GD.Load<AudioStream>(BloopPath) : null;
         _fuse = ResourceLoader.Exists(FusePath) ? GD.Load<AudioStream>(FusePath) : null;
         _splat = ResourceLoader.Exists(SplatPath) ? GD.Load<AudioStream>(SplatPath) : null;
+        _dash = ResourceLoader.Exists(DashPath) ? GD.Load<AudioStream>(DashPath) : null;
         _gather = ResourceLoader.Exists(GatherPath) ? GD.Load<AudioStream>(GatherPath) : null;
         foreach (string path in GatherVariants)
             if (ResourceLoader.Exists(path)) _gathers.Add(GD.Load<AudioStream>(path));
@@ -218,6 +221,12 @@ public partial class Sfx : Node
     public void PlayFuse(float volumeDb = -4f)
     {
         if (_fuse is not null) PlayRecorded(_fuse, volumeDb, 0.96f + (float)_random.NextDouble() * 0.08f);
+    }
+
+    /// <summary>Her dash: a swish, a touch apart in pitch each time.</summary>
+    public void PlayDash(float volumeDb = -4f)
+    {
+        if (_dash is not null) PlayRecorded(_dash, volumeDb, 0.94f + (float)_random.NextDouble() * 0.12f);
     }
 
     /// <summary>An ink bomb going off: a wet splat.</summary>

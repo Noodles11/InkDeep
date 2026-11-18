@@ -2716,6 +2716,7 @@ public partial class TopDownMain : Node3D
                     _snow.Stir(_bell.GlobalPosition, 3.5f, 3f);
                     _combat.DashBurst(e.Position);
                     _haptics.Pulse(0.35f, 0.3f, 0.14f);
+                    _sfx.PlayDash();
                 }
                 else if (e.Type == PlaneEventType.PlayerHit)
                 {

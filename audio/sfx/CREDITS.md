@@ -4,6 +4,7 @@
 - `squish.mp3` — her light striking anything it can harm (`Sfx.PlayStrike`), supplied for the project.
 - `squishpop.mp3` — supplied for the project; not played now.
 - `bloop.wav` — a murkling emerging (`Sfx.PlayEmerge`), supplied for the project.
+- `dash.wav` (the supplied `swish-6.wav`) — her dash (`Sfx.PlayDash`), supplied for the project.
 - `fuse.ogg` — an ink bomb's detonator set off (`Sfx.PlayFuse`), supplied for the project.
 - `splat.wav` (converted from the supplied `splat.flac`, from the "independent.nu ljudbank" wet squish, slurp and impacts pack) — an ink bomb going off (`Sfx.PlaySplat`), supplied for the project.
 - `secret.wav` (converted from the supplied `secret.aif`) — a sealed wall unlocking (`Sfx.PlaySecret`), supplied for the project.

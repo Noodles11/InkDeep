@@ -1235,6 +1235,7 @@ The FP staging ("look up through the surface") is replaced:
   - *Her light striking* (`Sfx.PlayStrike`): whenever a shot of hers hits anything it can harm (a creature, a boss), a
     squish (audio/sfx/squish.mp3), once a step however many it struck.
   - *A murkling emerging* (`Sfx.PlayEmerge`): a bloop (audio/sfx/bloop.wav), once a step.
+  - *Her dash* (`Sfx.PlayDash`): a swish (audio/sfx/dash.wav), as each dash starts.
   - *An ink bomb* (CORRUPTION): its detonator set off, its fuse (`Sfx.PlayFuse`, audio/sfx/fuse.ogg); going off, a wet
     splat (`Sfx.PlaySplat`, audio/sfx/splat.wav).
   - *A way opened:* a light seal's wall sliding down or a cracked seal broken by her dash (`Sfx.PlaySecret`).
