@@ -154,6 +154,10 @@ uniform float fluor_strength = 0.75;
 // The lit stone lanterns' pools of light (PlaneLanterns; xz, reach, strength): the reef shows round each in its colours, in her light's.
 uniform vec4 lantern_pools[8];
 uniform int lantern_count = 0;
+// A secret labyrinth's dark fog (CameraRig.SetMazeFog): how thick (0 none), and its prize kept clear of it (xz, reach).
+uniform float maze_fog = 0.0;
+uniform vec4 fog_clear[8];
+uniform int fog_clear_count = 0;
 // The coloured ink drawing (docs/ART-LOOKS.md, "Coloured ink"; InkLook): the reef drawn in ink lines, hatching and
 // washes of colour on paper (ink_paper, darker each layer down), withered to faded sepia ink in the dark and vivid in her
 // light. ink_on: 1 on, 0 the painted look as it was.
@@ -808,13 +812,29 @@ void fragment() {
 			col += hue * life * dots * after * fluor_strength * (0.6 + 0.6 * reef_menace) * on_paper;
 		}
 	}
+	// A secret labyrinth's dark fog: over all of it but what light shows (her glow and beam, her light's bubbles, a
+	// lantern's pool, a pearl's) and its prize; drifting slowly, a little uneven. She is drawn after this pass.
+	if (maze_fog > 0.0) {
+		// (The open water round the maze is fog through and through.)
+		float clear = open_deep ? 0.0 : max(max(lit, her_reach(world)), max(reef_lit(world, CAMERA_POSITION_WORLD), max(lantern_lit, pearl_shown)));
+		clear = max(clear, clamp(bubbles * 2.0, 0.0, 1.0));
+		for (int i = 0; i < fog_clear_count; i++) {
+			vec4 fc = fog_clear[i];
+			if (!open_deep) clear = max(clear, 1.0 - smoothstep(fc.z * 0.55, fc.z, distance(world.xz, fc.xy)));
+		}
+		vec2 fq = world.xz * 0.12 + vec2(TIME * 0.03, -TIME * 0.02);
+		float drift = value_noise(fq) * 0.65 + value_noise(fq * 2.7 + 5.0) * 0.35;
+		vec3 fog_c = mix(vec3(0.006, 0.007, 0.014), vec3(0.03, 0.03, 0.05), drift);
+		col = mix(col, fog_c, maze_fog * (0.92 + 0.08 * drift) * (1.0 - smoothstep(0.05, 0.6, clear)));
+	}
 	// The inkseeds' stains: no light shows within one, only the deepest ink.
 	if (ink_stain_count > 0 && !open_deep) col = mix(col, vec3(0.005, 0.003, 0.01), ink_stained(world.xz));
 	// Vignette, oval to the screen, tinted by the deep water; heavier as the depths darken (and for the drawn look's
 	// contrast).
 	vec2 d = (uv - 0.5) * vec2(VIEWPORT_SIZE.x / VIEWPORT_SIZE.y, 1.0);
 	float v = smoothstep(0.32, 1.05, length(d) * 1.3);
-	col = ink_on > 0.0 ? mix(col, ink_paper * 0.45, v * 0.75) : mix(col, reef_murk * 0.25, v * reef_vignette * (reef_art == 6 ? 1.3 : 1.0));
+	// (Under a labyrinth's fog, toward its dark rather than the paper.)
+	col = ink_on > 0.0 ? mix(col, mix(ink_paper * 0.45, vec3(0.006, 0.007, 0.014), maze_fog), v * 0.75) : mix(col, reef_murk * 0.25, v * reef_vignette * (reef_art == 6 ? 1.3 : 1.0));
 	// The ink drawing's paper: its tooth, its fibres, and the faint unevenness of a wash dried on it.
 	if (ink_on > 0.0) {
 		float tooth = hash12(floor(FRAGCOORD.xy * 0.5));

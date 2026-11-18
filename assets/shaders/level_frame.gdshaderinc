@@ -35,11 +35,11 @@ vec3 lf_local(vec3 world) { return world - level_offset; }
 // A local position where patterns are drawn: absolute across the dive.
 vec3 lf_pattern(vec3 local) { return vec3(local.x + level_origin.x, local.y, local.z + level_origin.y); }
 
-// The cutout: while something stands between the camera and her, everything on the camera's side of her (from
-// see_through.z metres behind her, out past the screen's edges) is cut off flat LF_SEE_OVER over her level's swim plane
+// The cutout: everything on the camera's side of her (from see_through.z metres behind her, out past the screen's
+// edges: the screen's lower half, she being at its middle) is cut off flat LF_SEE_OVER over her level's swim plane
 // (see_through_y): the walls and peaks in front of her gone down to their stumps, showing the reef's cap there (a flat
 // dotted fill drawn inside all the rock at that height at all times, topdown_ground's cap), and outlined. What stands
-// behind her stays whole. It is on (see_through.w > 0) or off: no transition.
+// behind her stays whole. It is on (see_through.w > 0) or off: no transition; in the reef it is always on.
 
 // How open it is, and the height it cuts at (the caps' own: LevelView.CapHeight).
 float lf_see_open() { return clamp(see_through.w, 0.0, 1.0); }
@@ -54,14 +54,10 @@ float lf_see_front(vec3 world, vec3 cam) {
 	return dot(world.xz - see_through.xy, toward) + see_through.z;
 }
 
-// Whether the cut takes what stands over a point (at any height over the cut): on the map round her, as it says (whole
-// walls, LevelView.SeeKeep); past it, what lies on the camera's side of her.
+// Whether the cut takes what stands over a point (at any height over the cut): all that lies on the camera's side of
+// her line (the screen's lower half, she being at its middle), whatever wall it belongs to.
 bool lf_see_column(vec3 world, vec3 cam) {
 	if (see_through.w <= 0.0) return false;
-	if (see_heights_box.z > 0.0) {
-		vec2 uv = (world.xz - see_heights_box.xy) / see_heights_box.z;
-		if (uv.x >= 0.0 && uv.y >= 0.0 && uv.x <= 1.0 && uv.y <= 1.0) return texture(see_keep, uv).r > 0.5;
-	}
 	return lf_see_front(world, cam) > 0.0;
 }
 

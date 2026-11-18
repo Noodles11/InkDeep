@@ -45,6 +45,18 @@ public partial class TopDownMain : Node3D
     LampView _lamps = null!;
     /// <summary>How lit her bell stays with her glow out (a faint shape for the player, no light for the reef).</summary>
     const float GlowOffLit = 0.12f;
+    /// <summary>A sound out in the reef (a murkling emerging, an ink bomb) is heard at full within HeardNear of her, fading out to HeardFar (m).</summary>
+    const float HeardNear = 8f, HeardFar = 26f;
+
+    /// <summary>How much fainter (dB) a sound out in the reef is heard where it is; null past HeardFar.</summary>
+    float? Heard(System.Numerics.Vector2 at)
+    {
+        float far = System.Numerics.Vector2.Distance(at, _world.Player.Position);
+        return far < HeardFar ? -14f * Mathf.Clamp((far - HeardNear) / (HeardFar - HeardNear), 0f, 1f) : null;
+    }
+    /// <summary>A secret labyrinth's fog kept off its prize this far round it (metres): its vault, and each pearl or shell.</summary>
+    const float MazeVaultClear = 2.6f, MazeTreasureClear = 1.2f;
+    readonly Vector4[] _fogClears = new Vector4[8];
     bool _dbgGlowOff;
     float _dbgSealAt;
     /// <summary>The rims of the reef's holes, each in the colour of where it leads.</summary>
@@ -2583,9 +2595,15 @@ public partial class TopDownMain : Node3D
             _elapsed += PlaneWorld.Dt;
             _accumulator -= PlaneWorld.Dt;
             steps++;
-            bool struck = false;
+            bool struck = false, emerged = false;
             foreach (var e in _world.Events)
             {
+                // A murkling emerging: a bloop (once a step), fainter the farther off it is.
+                if (e.Type == PlaneEventType.MurklingEmerged && !emerged && Heard(e.Position) is float emergeDb)
+                {
+                    emerged = true;
+                    _sfx.PlayEmerge(-4f + emergeDb);
+                }
                 NoteRequest(e);
                 NoteChainEvent(e);
                 _blight.OnEvent(e);
@@ -2929,6 +2947,22 @@ public partial class TopDownMain : Node3D
                 }
             }
             _camera.SetLanternPools(_lanternPools, pools);
+            // A secret labyrinth under dark fog: all but her, what light shows and its prize (its vault, then what it held).
+            int clears = 0;
+            if (InLabyrinth)
+            {
+                var herAt = _world.Player.Position;
+                var prize = _world.Vaults.Where(v => !v.Popped).Select(v => new Vector4(v.Position.X, v.Position.Y, MazeVaultClear, 1f))
+                    .Concat(_world.Pearls.Select(p => new Vector4(p.Position.X, p.Position.Y, MazeTreasureClear, 1f)))
+                    .Concat(_world.Shells.Select(sh => new Vector4(sh.Position.X, sh.Position.Y, MazeTreasureClear, 1f)))
+                    .OrderBy(c => (c.X - herAt.X) * (c.X - herAt.X) + (c.Y - herAt.Y) * (c.Y - herAt.Y));
+                foreach (var c in prize)
+                {
+                    if (clears >= _fogClears.Length) break;
+                    _fogClears[clears++] = c;
+                }
+            }
+            _camera.SetMazeFog(InLabyrinth ? 1f : 0f, _fogClears, clears);
             _shoals.Step(new Vector2(_bell.GlobalPosition.X, _bell.GlobalPosition.Z), dt);
             _camera.SetDeepFish(_shoals);
         }
@@ -3510,8 +3544,8 @@ public partial class TopDownMain : Node3D
                 if (InReef) KeepLanterns();
                 break;
             case PlaneEventType.InkseedWoke:
-                // Woken: a small wet click, then its heart quickens.
-                _sfx.PlayPitched("pop", 1.7f, -12f);
+                // Its detonator set off: its fuse, then its heart quickens.
+                if (Heard(e.Position) is float fuseDb) _sfx.PlayFuse(-4f + fuseDb);
                 break;
             case PlaneEventType.InkseedFreed:
                 _sfx.PlayPitched("bell_ring", 1.7f, -9f);
@@ -3521,6 +3555,7 @@ public partial class TopDownMain : Node3D
                 // for good.
                 _sfx.PlayPitched("bell_ring", 0.38f, -3f);
                 _sfx.PlayPitched("pop", 0.3f, -4f);
+                _sfx.PlaySecret();
                 _camera.Shake(0.45f);
                 _haptics.Pulse(0.8f, 0.6f, 0.4f);
                 _swells.AddRing(new Vector2(e.Position.X, e.Position.Y), 1.4f, 1.6f);
@@ -3533,7 +3568,8 @@ public partial class TopDownMain : Node3D
                 _swells.AddRing(new Vector2(e.Position.X, e.Position.Y), Mathf.Clamp(e.Size / 6f, 0.3f, 1.6f), 0.5f + 0.12f * e.Size, 0.45f, 3f);
                 break;
             case PlaneEventType.InkseedBurst:
-                // A deep thump, felt.
+                // A wet splat, and a deep thump, felt.
+                if (Heard(e.Position) is float splatDb) _sfx.PlaySplat(-2f + splatDb);
                 _sfx.PlayPitched("bell_ring", 0.42f, -2f);
                 _haptics.Pulse(0.7f, 0.5f, 0.35f);
                 break;
@@ -4245,8 +4281,8 @@ public partial class TopDownMain : Node3D
     Murkling? _dbgHidden;
 
     /// <summary>
-    /// Verification (--dbg-seeds): she holds still; three seeds by her, one near enough for her glow to wake it (it swells
-    /// and bursts on her), one her beam holds and frees, one beyond (its heartbeat only). Once the near one has burst, a
+    /// Verification (--dbg-seeds): she holds still; three seeds by her, one near enough to set off (it goes off on her a
+    /// moment later), one her beam holds and defuses, one beyond (its heartbeat only). Once the near one has gone off, a
     /// murkling waits in its stain, her beam on it.
     /// </summary>
     bool DebugSeeds(ref PlaneInput input)
@@ -4263,7 +4299,7 @@ public partial class TopDownMain : Node3D
                 if (r > best) { best = r; _dbgRowWay = w; }
             }
             var across = new System.Numerics.Vector2(-_dbgRowWay.Y, _dbgRowWay.X);
-            _dbgBurst = from + _dbgRowWay * 3.2f + across * 1.8f;
+            _dbgBurst = from + _dbgRowWay * 2.2f + across * 1f;
             _world.PlaceInkseed(default, _dbgBurst);
             _world.PlaceInkseed(default, from + _dbgRowWay * 8f - across * 1.2f);
             _dbgSeedFreed = _world.Inkseeds[^1];

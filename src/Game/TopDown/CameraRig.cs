@@ -209,6 +209,17 @@ public partial class CameraRig : Node3D
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("lantern_count"), count);
     }
 
+    /// <summary>
+    /// A secret labyrinth's dark fog (topdown_post's maze_fog): how thick (0 none), and its prize kept clear of it (each
+    /// world x, z, reach).
+    /// </summary>
+    public void SetMazeFog(float amount, Vector4[] clears, int count)
+    {
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("maze_fog"), amount);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("fog_clear"), clears);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("fog_clear_count"), count);
+    }
+
     /// <summary>Where her light has lately fallen (LightMemory), for the reef's fluorescent life to glow on after it; or none.</summary>
     public void SetLightMemory(OctoShoots.Game.Fx.LightMemory? memory)
     {

@@ -1231,9 +1231,16 @@ The FP staging ("look up through the surface") is replaced:
 - **Her light thrown pops** (`Sfx.PlayThrow`, on every volley): one of ten recorded pops (audio/sfx/pop1–pop10.wav)
   at random, never the same twice running, its pitch a little apart each time, muffled by the water. A stronger volley
   is a little louder.
-- **Her light striking pops squishily** (`Sfx.PlayStrike`): whenever a shot of hers hits anything it can harm (a
-  creature, a boss), the squishy pop (audio/sfx/squishpop.mp3), once a step however many it struck, through
-  the same water.
+- **The sounds heard now** (`Sfx.OnlyToggle`): the synth placeholders and her throw's pops are off; these play:
+  - *Her light striking* (`Sfx.PlayStrike`): whenever a shot of hers hits anything it can harm (a creature, a boss), a
+    squish (audio/sfx/squish.mp3), once a step however many it struck.
+  - *A murkling emerging* (`Sfx.PlayEmerge`): a bloop (audio/sfx/bloop.wav), once a step.
+  - *An ink bomb* (CORRUPTION): its detonator set off, its fuse (`Sfx.PlayFuse`, audio/sfx/fuse.ogg); going off, a wet
+    splat (`Sfx.PlaySplat`, audio/sfx/splat.wav).
+  - *A way opened:* a light seal's wall sliding down or a cracked seal broken by her dash (`Sfx.PlaySecret`).
+  - Her glow's pull-chain switch, a shell gathered, a bubble vault popping, and her beam's fire.
+  - A sound out in the reef (a murkling, a bomb) is heard at full within 8 m of her, fainter farther off, and not past
+    26 m (`TopDownMain.Heard`).
 - **Every explosion is felt** (`TopDownMain.Explode`): hers (a Starburst burst — only a subtle tremor, since it comes
   with nearly every shot; a Pistol Shrimp's bang),
   the creatures' (a Blotter's bomb, a creature of ink bursting — a prime far more than a murkling — a Blightroot bursting
@@ -1332,18 +1339,15 @@ at mist distance (inherited fade rule).
 - A layout that fails validation retries with the next seeded attempt, up to **100** attempts.
 - **Passes** are chosen through the highest rock first (the thickest roof).
 - Boulders and bommies are decoration only, never collision.
-- **The cutout** (a presentation rule for walls, as Baldur's Gate 3's; the canopy layer has its own fade): while rock
-  (the reef, a tunnel's roof, a cave's lid) stands between the camera and any part of her (her middle and 0.8 m round
-  it; `LevelView.Hides`; on the cube reef also its risen walls and arches), whatever stands between the camera and her
-  plane is cut away (`LevelView.SeeThrough`, `ReefStreamView.SeeThrough`, level_frame's `lf_see_cut`):
-  - **Its shape:** a flat, horizontal slice 0.5 m over her plane through the walls in front of her, out past the
-    screen's edges: they are cut down to their stumps. The walls are told apart on a metre-a-texel map of the rock round
-    her (`LevelView.SeeKeep`). A wall with anything on the camera's side of her line (1.5 m behind her) is taken whole:
-    all of it on that side, and on along the wall for 24 m past the line, so no faces of a cut mountain are left
-    standing. The open floor on the camera's side of her line is taken too (a roof or an arch over a passage in front
-    of her goes), but not within 2 m of rock left standing. What stands only behind her (up the screen) is drawn whole, and so is a wall reaching back past her that
-    does not hide her (it does not cross the line from her toward the camera within 1.6 m of it; 2.8 m for a wall
-    already taken, so one at the edge never flicks between the two).
+- **The cutout** (a presentation rule for walls, as Baldur's Gate 3's; the canopy layer has its own fade): on the cube
+  reef it is always on; in a sub-level (a cave, a haven, a labyrinth) it is on while rock (the reef, a tunnel's roof, a
+  cave's lid) stands between the camera and any part of her (her middle and 0.8 m round it; `LevelView.Hides`). Whatever
+  stands on the camera's side of her is cut away (`LevelView.SeeThrough`, `ReefStreamView.SeeThrough`, level_frame's
+  `lf_see_cut`):
+  - **Its shape:** a flat, horizontal slice 0.5 m over her plane through everything on the camera's side of her line
+    (the screen's lower half, she being at its middle; the line 0.5 m behind her on the reef, 1.5 m in a sub-level), out
+    past the screen's edges: every wall there is cut down to its stump, whichever wall it belongs to, and a roof or an
+    arch over a passage there goes too. What stands behind her line (up the screen) is drawn whole.
   - **Solid inside:** the cut reads as solid rock cut through, never as the water or the void under it. Every reef
     area of the swim level carries a cap inside its rock at all times (`LevelView.Cap`; the cube reef's with each
     chunk of its ground) at the cut's height (0.5 m over the swim plane, never following her bob), its outline on the
@@ -1356,11 +1360,9 @@ at mist distance (inherited fade rule).
     where the cut takes the wall it is in.
   - **What it cuts:** the rock (the ground's heightfield and the free rock) and the coral and flora on it; the floor
     she swims over stays whole. The shadows stay as they are (the cut is not made from the sun's eye).
-  - **Its timing:** no transition: it is there at once, whole, the moment something hides her, and stays 0.8 s after the
-    last moment anything did, then is gone at once, so it never flickers as she swims along a wall's edge. A wall once
-    cut stays cut while it still crosses within 2.8 m of the line from her toward the camera (1.6 m to be cut at all).
-    A wall she only swims beside stays whole. A canopy fading over Clementine is
-    drawn unblurred while it fades.
+  - **Its timing:** no transition: in a sub-level it is there at once, whole, the moment something hides her, and
+    stays 0.8 s after the last moment anything did, then is gone at once. A canopy fading over Clementine is drawn
+    unblurred while it fades.
   - **Verification:** `--at=hidden` starts her where rock hides her (`--dbg-hidden2`: another such spot);
     `--dbg-nocarve` keeps every wall whole.
 - **Leaving a level fades all of it** (`TopDownMain.FadeLevelLife`): down a hole, or up and out of a sub-level, the

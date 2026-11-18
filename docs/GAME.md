@@ -147,9 +147,10 @@ emptied, it is freed, leaving a core of light.
   them and budded out of the leak caves' ink: basic ones that cling and drink her light, throwers, shoals (a whole school at once, ringing her) and
   primes (which break into murklings). The deeper (the Menace), the bigger and the more of them. Their size is their
   corruption; they wear no ring.
-- **Inkseeds** (CORRUPTION): traps of ink in the reef's water, unseen but for their heartbeat. Her light wakes one and
-  it swells; her beam held on it 2 s frees it, else it bursts, throwing everything back, hurting her alone, and
-  leaving a stain of darkness no light shows through for 10 s, where murklings hide.
+- **Inkseeds** (CORRUPTION): ink bombs, black spheres in the reef's water, unseen but for their heartbeat. Her coming
+  near sets one off and it goes off half a second later; her light catching one from afar sets it off too, and it goes
+  off once dark again, unless her light stays on it 5 s and defuses it (a shell). Going off, it throws everything back,
+  hurts her alone, and leaves a stain of darkness no light shows through for 10 s, where murklings hide.
 - **Kept, switched off** (CORRUPTION; ADVENTURE §3–4): the war's creatures (Blightroots, Blotters, Thumpsquirts,
   Inkwardens, Lashjaws, their dens) and the fish that turn (spiked, tadpole and shoal murklings, Hearthguards).
 - **Planned** (proposals/DEEP-FISH-PROPOSAL.md): two fish of their own for each depth.

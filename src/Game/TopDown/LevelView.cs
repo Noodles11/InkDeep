@@ -399,7 +399,6 @@ public partial class LevelView : Node3D
         if (v == _seeThrough) return;
         _seeThrough = v;
         _seeReach = radius;
-        if (amount > 0f) SeeHeights(her);
         foreach (var m in _materials)
         {
             m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_through"), KeptWhole(m) ? v with { W = 0f } : v);
@@ -1949,6 +1948,8 @@ public partial class LevelView : Node3D
     {
         PaintFlora(ReefLook.For(shape.Map.Depth));
         _floraItems = shape.Flora.ToList();
+        // (A labyrinth's drawn solid, so its dark fog lies over it.)
+        _flora.Faded = !shape.Map.Labyrinth;
         _flora.Show(shape.Flora);
         AddChild(Instances(new SphereMesh { Radius = 1f, Height = 2f, RadialSegments = 18, Rings = 9 }, Rock(0.22f), shape.Rocks));
         if (shape.Glows.Count > 0)

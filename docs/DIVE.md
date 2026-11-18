@@ -179,8 +179,7 @@ A secret room is a sub-level too: a cube she claims opens one time in three, its
     secret).
   - *What it is:* the reef's rock as it stood before the passage was cut (`CubeTerrain.Uncut`, drawn by
     `CubeShapes.Plug` over the cube's ground with the same skin, rise and caps), so its face is flush with the wall
-    round it: no alcove, and from above no seam where it meets the rock. The cutout reads it as rock too
-    (`LevelView.SeeOver`). A jagged vertical crack runs up the middle of its face, from a little under her plane up the
+    round it: no alcove, and from above no seam where it meets the rock; the cutout takes it with the wall round it. A jagged vertical crack runs up the middle of its face, from a little under her plane up the
     risen wall, glowing faintly from inside, its light breathing slowly, and cut with the wall (`crack_seal.gdshader`).
   - *What it hides:* nothing of the passage shows while it stands. Its sim rock (`WeakRock`) stands at the face's line at
     her plane and stops her, the creatures and her shots.
@@ -211,6 +210,10 @@ A secret room is a sub-level too: a cube she claims opens one time in three, its
 - **Solved, its water carries her home** (`PlaneWorld.LabyrinthSolved`, its way home: DESIGN-TOPDOWN §4.7): once its
   reward is taken, a current wakes along the way from its heart to its way out and carries her there and out of its
   mouth, back onto the reef.
+- **Under dark fog** (topdown_post's `maze_fog`, `CameraRig.SetMazeFog`): all of it lies in a near-black fog that
+  drifts slowly, the open water round the maze too, but for her, what light shows (her glow and beam, her light's
+  bubbles, a lantern's or a pearl's light) and its prize (its vault, 2.6 m round it; then each pearl or shell it held,
+  1.2 m). Its flora is drawn solid so the fog lies over it (`FloraViews.Faded`), and the screen's edges darken into it.
 - **No map in it:** neither the emblems nor the whole level's map show inside.
 - **She can leave at any time** by swimming out by its way out; there is no key for it (her active pearl's key does
   nothing in a labyrinth).

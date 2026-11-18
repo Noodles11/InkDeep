@@ -8,7 +8,7 @@ using Xunit;
 
 namespace OctoShoots.Core.Tests;
 
-/// <summary>Inkseeds (docs/CORRUPTION.md; PlaneInkseeds.cs): woken by her light, freed by her beam, or bursting into a stain no light shows through.</summary>
+/// <summary>Inkseeds (docs/CORRUPTION.md; PlaneInkseeds.cs): set off by her near or by her light, defused by her light kept on them, or going off into a stain no light shows through.</summary>
 public class InkseedTests
 {
     static readonly Lazy<ItemCatalog> Catalog = new(() =>
@@ -43,63 +43,69 @@ public class InkseedTests
     }
 
     [Fact]
-    public void Her_glow_wakes_a_seed_and_unheeded_it_bursts_on_her()
+    public void Her_near_sets_it_off_and_it_goes_off_a_moment_later_on_her()
     {
         var w = World();
         var (at, way) = Open(w, 10f);
-        w.PlaceInkseed(default, at + way * 2.5f);
-        var seed = w.Inkseeds[0];
+        w.PlaceInkseed(default, at + way * 2f);
         float hp = w.Player.Hp = w.Run.MaxHp;
-        bool woke = false, burst = false;
-        for (int i = 0; i < (int)(4f / PlaneWorld.Dt) && !burst; i++)
+        int shells = w.Shells.Count;
+        float setOff = -1f, wentOff = -1f;
+        for (int i = 0; i < (int)(2f / PlaneWorld.Dt) && wentOff < 0f; i++)
         {
-            w.Player.Position = w.Player.PrevPosition = at;
-            w.Player.Velocity = Vector2.Zero;
-            w.Step(default);
-            woke |= w.Events.Any(e => e.Type == PlaneEventType.InkseedWoke);
-            burst |= w.Events.Any(e => e.Type == PlaneEventType.InkseedBurst);
+            Hold(w, at, default);
+            if (setOff < 0f && w.Events.Any(e => e.Type == PlaneEventType.InkseedWoke)) setOff = i * PlaneWorld.Dt;
+            if (w.Events.Any(e => e.Type == PlaneEventType.InkseedBurst)) wentOff = i * PlaneWorld.Dt;
         }
-        Assert.True(woke);
-        Assert.True(burst);
+        Assert.True(setOff >= 0f);
+        Assert.InRange(wentOff - setOff, InkseedTuning.Fuse - 2f * PlaneWorld.Dt, InkseedTuning.Fuse + 2f * PlaneWorld.Dt);
         Assert.Empty(w.Inkseeds);
         Assert.Single(w.Stains);
+        Assert.Equal(shells, w.Shells.Count);
         Assert.Equal(hp - InkseedTuning.Damage * (1f + w.Menace), w.Player.Hp, 3);
         // Thrown straight back from it.
         Assert.True(Vector2.Dot(w.Player.Velocity, -way) > 1f);
     }
 
     [Fact]
-    public void Her_beam_held_on_it_frees_it_and_stops_it_swelling()
+    public void Her_light_kept_on_it_defuses_it_and_it_drops_a_shell()
     {
         var w = World();
         var (at, way) = Open(w, 12f);
         w.PlaceInkseed(default, at + way * 9f);
         var seed = w.Inkseeds[0];
-        bool freed = false;
-        for (int i = 0; i < (int)(2.5f / PlaneWorld.Dt) && !freed; i++)
+        int shells = w.Shells.Count;
+        bool defused = false;
+        for (int i = 0; i < (int)((InkseedTuning.Defuse + 0.5f) / PlaneWorld.Dt) && !defused; i++)
         {
             Hold(w, at, new PlaneInput { Beam = true, Aim = way });
-            Assert.Equal(0f, seed.Swell);
-            freed |= w.Events.Any(e => e.Type == PlaneEventType.InkseedFreed);
+            defused |= w.Events.Any(e => e.Type == PlaneEventType.InkseedFreed);
+            Assert.DoesNotContain(w.Events, e => e.Type == PlaneEventType.InkseedBurst);
         }
-        Assert.True(freed);
+        Assert.True(defused);
         Assert.Empty(w.Inkseeds);
         Assert.Empty(w.Stains);
+        Assert.Equal(shells + InkseedTuning.Shells, w.Shells.Count);
     }
 
     [Fact]
-    public void Her_beam_taken_off_sets_the_freeing_back_and_it_swells_meanwhile()
+    public void Set_off_by_her_light_it_goes_off_once_dark_again_and_drops_nothing()
     {
         var w = World();
         var (at, way) = Open(w, 12f);
         w.PlaceInkseed(default, at + way * 9f);
         var seed = w.Inkseeds[0];
+        int shells = w.Shells.Count;
         for (int i = 0; i < (int)(1.5f / PlaneWorld.Dt); i++) Hold(w, at, new PlaneInput { Beam = true, Aim = way });
         Assert.True(seed.Armed);
         Assert.True(seed.Held > 1f);
-        Hold(w, at, default);
-        Assert.Equal(0f, seed.Held);
-        Assert.True(seed.Swell > 0f);
+        Assert.Single(w.Inkseeds);
+        // Her beam turned away: dark again, it goes off at once.
+        Hold(w, at, new PlaneInput { Beam = true, Aim = -way });
+        Hold(w, at, new PlaneInput { Beam = true, Aim = -way });
+        Assert.Empty(w.Inkseeds);
+        Assert.Single(w.Stains);
+        Assert.Equal(shells, w.Shells.Count);
     }
 
     [Fact]

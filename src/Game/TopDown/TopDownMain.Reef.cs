@@ -121,7 +121,7 @@ public partial class TopDownMain
     int _makingLayer = -1;
 
     LayerMove _layerMove;
-    float _layerTime, _layerPulse, _hoverDown, _hoverUp, _heldShown, _reefSeeThrough;
+    float _layerTime, _layerPulse, _hoverDown, _hoverUp, _heldShown;
     System.Numerics.Vector2 _layerFrom;
     bool _downLatch, _upLatch;
     LayerBlock _down = LayerBlock.NotReady, _up = LayerBlock.NotReady;
@@ -1196,64 +1196,22 @@ public partial class TopDownMain
         _currents.SyncFlows(_reefFlows, origin, CurrentWindow, false, dt, _camera);
     }
 
-    /// <summary>Each frame she swims: the reef drawn round her, an arch over her seen through, the currents' streaks.</summary>
+    /// <summary>
+    /// Each frame she swims: the reef drawn round her, and the cutout always on: every wall on
+    /// the camera's side of her (the screen's lower half, she being at its middle) cut down to its cap.
+    /// </summary>
     void SyncReefView(float dt, Vector3 eye)
     {
         _reefView.Follow(eye);
-        var p = G(_world.Player.Position);
-        bool hidden = _reef!.Made(CubeId.Of(p, _layer))?.CanopyAt(Mathf.RoundToInt(p.X), Mathf.RoundToInt(p.Y)) == true
-            || WallHides(_bell.GlobalPosition, _camera.Camera.GlobalPosition) || _level.Hides(_bell.GlobalPosition, _camera.Camera.GlobalPosition);
-        _reefSeeThrough = SeeStep(_reefSeeThrough, hidden, dt);
-        // (Her layer's reef life and mouths are cut with its rock; its map tells which rock the cut may take.)
-        _level.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, SeeScale(_reefSeeThrough));
-        _reefView.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, SeeScale(_reefSeeThrough), _level.SeeMask);
-        _portals.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, SeeScale(_reefSeeThrough), _level.Position.Y + LevelMap.SwimBand, _level.SeeMask);
-        _crackView.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, SeeScale(_reefSeeThrough), _level.Position.Y + LevelMap.SwimBand, _level.SeeMask);
+        float open = _dbgNoCarve ? 0f : 1f;
+        // (Her layer's reef life and mouths are cut with its rock.)
+        _level.SeeThrough(_bell.GlobalPosition, ReefSeeBehind, open);
+        _reefView.SeeThrough(_bell.GlobalPosition, ReefSeeBehind, open, _level.SeeMask);
+        _portals.SeeThrough(_bell.GlobalPosition, ReefSeeBehind, open, _level.Position.Y + LevelMap.SwimBand, _level.SeeMask);
+        _crackView.SeeThrough(_bell.GlobalPosition, ReefSeeBehind, open, _level.Position.Y + LevelMap.SwimBand, _level.SeeMask);
     }
 
-    /// <summary>How far round her (metres, on the camera's side) the water is kept in view: rock between the camera and any of it is cut.</summary>
-    const float SeeClear = 5f;
-
-    /// <summary>
-    /// Whether rock of her layer, risen as it is drawn (ReefStreamView.Rise, topdown_ground's rise; a roof with its
-    /// wall), stands between the camera and her or the water SeeClear round her on the camera's side: each such line
-    /// stepped along, against each point's rock as it is drawn. So walls crowding in beside her are cut too, however
-    /// close the camera has drawn (CameraRig.Close).
-    /// </summary>
-    bool WallHides(Vector3 her, Vector3 camera)
-    {
-        var toward = new Vector3(camera.X - her.X, 0f, camera.Z - her.Z);
-        toward = toward.LengthSquared() < 1e-6f ? new Vector3(0f, 0f, 1f) : toward.Normalized();
-        var side = new Vector3(-toward.Z, 0f, toward.X);
-        if (LineHidden(her, camera)) return true;
-        for (int k = -2; k <= 2; k++)
-        {
-            float a = k * Mathf.Pi / 4f;
-            if (LineHidden(her + (toward * Mathf.Cos(a) + side * Mathf.Sin(a)) * SeeClear, camera)) return true;
-        }
-        return false;
-    }
-
-    bool LineHidden(Vector3 from, Vector3 camera)
-    {
-        var way = camera - from;
-        for (int i = 0; i <= 40; i++)
-        {
-            var at = from + way * (i / 40f);
-            if (at.Y > ReefStreamView.Rise + CubeTuning.RockLow + CubeTuning.RockRise) break;
-            if (DrawnHeight(at.X, at.Z) > at.Y) return true;
-        }
-        return false;
-    }
-
-    /// <summary>Her layer's rock at a point as it is drawn: its wall risen, a roof risen whole over its water.</summary>
-    float DrawnHeight(float x, float z)
-    {
-        int gx = Mathf.RoundToInt(x), gy = Mathf.RoundToInt(z);
-        if (gx >= 0 && gy >= 0 && gx <= _map.Size && gy <= _map.Size && !float.IsNaN(_map.RoofAt(gx, gy))) return ReefStreamView.Rise + CubeTuning.RoofHeight;
-        float h = _map.HeightAt(new System.Numerics.Vector2(x, z));
-        float t = Mathf.Clamp((h - 1.4f) / (3.2f - 1.4f), 0f, 1f);
-        return h + ReefStreamView.Rise * t * t * (3f - 2f * t);
-    }
+    /// <summary>How far behind her line (metres, away from the camera) the reef's cut starts: her bell's own reach.</summary>
+    const float ReefSeeBehind = 0.5f;
 
 }

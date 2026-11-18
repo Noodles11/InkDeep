@@ -403,23 +403,26 @@ The reef's fish (DESIGN-TOPDOWN, Reef fish) are what the murklings corrupt.
 
 ## Inkseeds (`Inkseed`, `PlaneInkseeds.cs`)
 
-Traps of ink lying in the cube reef's water, unseen in the dark. Numbers are first guesses, tuned in play
+Ink bombs lying in the cube reef's water, unseen in the dark. Numbers are first guesses, tuned in play
 (`InkseedTuning`).
 
-- **What it is:** a dot of ink the size of a lesser murkling (radius 0.36 m), resting in her plane. It is not a
-  creature: it does not move by itself, attack or drink; it has no meter and leaves nothing.
+- **What it is:** a black sphere the size of a lesser murkling (radius 0.36 m), resting in her plane. It is not a
+  creature: it does not move by itself, attack or drink; it has no meter.
 - **Seen only in her light** (`BlightView.Inkseeds`, `inkseed.gdshader`): while her glow, her beam or a shot's light
-  falls on it, it shows as a small black hole: lightless black, a thin wavering ring of her light round its silhouette,
-  the water bent and whirling round it (`murk_hole`), its core a dull ember.
+  falls on it, it shows as a plain glossy black ball, a soft highlight and a thin pale rim round it, taking no hue and
+  with no bent water round it, so it never reads as a murkling. On its crown its detonator: a dull spark until set off;
+  set off by her light, a red spark blinking, slowing and cooling to her light's colour as her light defuses it; set
+  off by her near, blinking fast and white-hot. It shivers when about to go off.
 - **Its heartbeat:** within 14 m of her, lit or not, it beats: two quick rings of the water's shimmer out from it, one
-  beat every 1.6 s at 14 m quickening to every 0.35 s at 2 m. This is how she finds them in the dark.
-- **Woken:** the first time any light of hers falls on it (her glow, her beam, a shot's light), it wakes for good.
-  Awake, it swells to twice its size over 3 s, lit or not, **except while her beam is on it**: then it holds its size.
-  Its core glows a deepening red-violet as it swells, flickering faster, its ring brightening, its heartbeat quickening
-  to a flutter, and it shivers toward the end.
-- **Freed:** her beam held on it 2 s unbroken (taken off, the count starts again) frees it: it implodes as a freed
-  murkling does, with a soft chime, and is gone, leaving nothing.
-- **Bursting:** swollen to twice its size, it always goes off (with a deep thump, felt):
+  beat every 1.6 s at 14 m quickening to every 0.35 s at 2 m, twice as quick once set off. This is how she finds them
+  in the dark.
+- **Set off by her near:** her within 2.5 m of it (past her own and its radius), lit or not, sets its detonator off
+  (its fuse heard): it goes off 0.5 s later, whatever happens.
+- **Set off by her light:** any light of hers falling on it from farther off (her glow, her beam, a shot's light) sets
+  its detonator off (its fuse heard). From then it goes off the moment no light of hers is on it.
+- **Defused:** her light kept on it 5 s unbroken from then defuses it: it implodes as a freed murkling does, with a
+  soft chime, drops a shell, and is gone.
+- **Going off** (a wet splat and a deep thump, felt; no shell):
   - *The stain:* a stain of darkness spreads from it to 4 m in a quarter of a second, its rim ragged as spilt ink, and
     shrinks away over 10 s. No light of any kind shows or works within it: her glow, her beam passing through it, her
     shots' light, a charge stone's. What lies in it is unlit: a murkling inside it cannot be seen or burned, nor does
@@ -437,8 +440,8 @@ Traps of ink lying in the cube reef's water, unseen in the dark. Numbers are fir
   back puts them back.
 - **The water carries them:** her cube's drift and the wake current push a seed within 48 m of her as they push her,
   and a geyser's spray too, rock stopping it.
-- **Verification:** `--dbg-seeds` lays three by her as she holds still: one her glow wakes and lets burst on her, one
-  her beam frees, one beyond; then a murkling waits in the stain, her beam on it, unseen.
+- **Verification:** `--dbg-seeds` lays three by her as she holds still: one near enough to set off (it goes off on
+  her), one her beam defuses, one beyond; then a murkling waits in the stain, her beam on it, unseen.
 - Tests: `InkseedTests`, `CubeReefTests`.
 
 ## Corruption meters (`CorruptionMeter`)

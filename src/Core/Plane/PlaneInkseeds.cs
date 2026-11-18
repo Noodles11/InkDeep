@@ -6,18 +6,23 @@ using System.Numerics;
 namespace OctoShoots.Core.Plane;
 
 /// <summary>
-/// Inkseeds (docs/CORRUPTION.md): traps of ink lying in the reef's water, unseen in the dark. The first light of hers
-/// on one wakes it; awake, it swells to twice its size over Swell seconds unless her beam is on it, and her beam held
-/// on it Defuse seconds unbroken frees it. Swollen full, it bursts: a stain of darkness Reach metres round that no light
-/// shows through, shrinking away over Stain seconds; everything within its reach thrown back (Knock m/s at its middle,
-/// easing to nothing at its reach), and she alone hurt (Damage × (1 + Menace)). First guesses, tuned in play.
+/// Inkseeds (docs/CORRUPTION.md): ink bombs lying in the reef's water, black spheres unseen in the dark. Its detonator
+/// is set off by her coming within Near of it (it goes off Fuse seconds later, whatever happens), or by any light of
+/// hers catching it from farther off: then it goes off the moment no light of hers is on it, and her light kept on it
+/// Defuse seconds unbroken defuses it (it drops Shells shells and is gone). Going off: a stain of darkness Reach metres
+/// round that no light shows through, shrinking away over Stain seconds; everything within its reach thrown back (Knock
+/// m/s at its middle, easing to nothing at its reach), and she alone hurt (Damage × (1 + Menace)); no shell. First
+/// guesses, tuned in play.
 /// </summary>
 public static class InkseedTuning
 {
-    /// <summary>Its radius asleep (a lesser murkling's); swollen full, twice it.</summary>
+    /// <summary>Its radius (a lesser murkling's).</summary>
     public const float Radius = MurkSizeTuning.Least;
-    /// <summary>Awake, it swells full over this long; her beam held on it this long unbroken frees it.</summary>
-    public const float Swell = 3f, Defuse = 2f;
+    /// <summary>Her this near it (metres, past its own radius) sets it off, and it goes off Fuse seconds later.</summary>
+    public const float Near = 2.5f, Fuse = 0.5f;
+    /// <summary>Her light kept on it this long unbroken defuses it, and it drops this many shells.</summary>
+    public const float Defuse = 5f;
+    public const int Shells = 1;
     /// <summary>Its burst: its reach, the knock at its middle (m/s), her tumble at most (s), her hurt at Menace 0.</summary>
     public const float Reach = 4f, Knock = 9f, Tumble = 0.35f, Damage = 12f;
     /// <summary>The stain it leaves: spread out to its reach over Spread seconds, gone after Stain.</summary>
@@ -29,21 +34,21 @@ public static class InkseedTuning
     public const float Still = 48f;
 }
 
-/// <summary>A trap of ink: where it is, whether awake and how far swollen, how long her beam has been on it.</summary>
+/// <summary>An ink bomb: where it is, whether its detonator is set off and how, how long her light has been on it.</summary>
 public sealed class Inkseed
 {
     public Vector2 Position;
-    /// <summary>Woken by her light (for good).</summary>
+    /// <summary>Its detonator set off (for good).</summary>
     public bool Armed;
-    /// <summary>How far swollen (0 asleep → 1: it bursts).</summary>
-    public float Swell;
-    /// <summary>How long her beam has been on it without a break.</summary>
+    /// <summary>Set off by her coming near: the seconds left before it goes off (below naught: not so).</summary>
+    public float Fuse = -1f;
+    /// <summary>How long her light has been on it without a break, once set off (Defuse: defused).</summary>
     public float Held;
     /// <summary>Some light of hers falls on it this step (it shows); her beam is on it.</summary>
     public bool Lit, Beamed;
     /// <summary>The cube it lies in (kept with the cube's record when she leaves the layer).</summary>
     public OctoShoots.Core.Gen.Cubes.CubeId? Cube;
-    public float Radius => InkseedTuning.Radius * (1f + Swell);
+    public float Radius => InkseedTuning.Radius;
 }
 
 /// <summary>A burst seed's stain of darkness: where, and how long since.</summary>
@@ -102,7 +107,10 @@ public sealed partial class PlaneWorld
         return false;
     }
 
-    /// <summary>The seeds: woken by her light, swelling, freed by her beam held on them, or bursting; the stains fading.</summary>
+    /// <summary>
+    /// The seeds: set off by her coming near (going off a moment later) or by her light (going off once it is dark again,
+    /// or defused by her light kept on it); the stains fading.
+    /// </summary>
     void StepInkseeds()
     {
         for (int i = Stains.Count - 1; i >= 0; i--)
@@ -115,31 +123,46 @@ public sealed partial class PlaneWorld
         for (int i = Inkseeds.Count - 1; i >= 0; i--)
         {
             var s = Inkseeds[i];
-            // (Far off, asleep: no light of hers reaches it.)
+            // (Far off and not set off: nothing of hers reaches it.)
             if (!s.Armed && Vector2.DistanceSquared(s.Position, her) > 30f * 30f)
             {
                 s.Lit = s.Beamed = false;
                 continue;
             }
             s.Lit = HerLightOn(s.Position, s.Radius, s, out s.Beamed);
-            if (!s.Armed)
+            // Her near it: its detonator set off, and it goes off a moment later whatever happens.
+            if (s.Fuse < 0f && !Defeated && Vector2.Distance(s.Position, her) < InkseedTuning.Near + s.Radius + Radius)
             {
-                if (!s.Lit) continue;
+                s.Fuse = InkseedTuning.Fuse;
                 s.Armed = true;
                 Events.Add(new PlaneEvent(PlaneEventType.InkseedWoke, s.Position, Vector2.Zero, s.Radius));
             }
-            if (s.Beamed)
+            if (s.Fuse >= 0f)
             {
-                // Her beam on it: it holds its size, and held long enough, it is freed.
+                s.Fuse -= Dt;
+                if (s.Fuse > 0f) continue;
+                Inkseeds.RemoveAt(i);
+                BurstInkseed(s);
+                continue;
+            }
+            if (!s.Armed)
+            {
+                if (!s.Lit) continue;
+                // Her light catches it: its detonator set off.
+                s.Armed = true;
+                Events.Add(new PlaneEvent(PlaneEventType.InkseedWoke, s.Position, Vector2.Zero, s.Radius));
+            }
+            if (s.Lit)
+            {
+                // Her light kept on it: held long enough, it is defused and drops its shell.
                 s.Held += Dt;
                 if (s.Held < InkseedTuning.Defuse) continue;
                 Inkseeds.RemoveAt(i);
+                for (int k = 0; k < InkseedTuning.Shells; k++) Shells.Add(new PlaneShell { Position = s.Position, Velocity = Fling(2f, 4f) });
                 Events.Add(new PlaneEvent(PlaneEventType.InkseedFreed, s.Position, Vector2.Zero, s.Radius));
                 continue;
             }
-            s.Held = 0f;
-            s.Swell += Dt / InkseedTuning.Swell;
-            if (s.Swell < 1f) continue;
+            // Dark again once set off: it goes off.
             Inkseeds.RemoveAt(i);
             BurstInkseed(s);
         }
@@ -152,7 +175,7 @@ public sealed partial class PlaneWorld
         BurstInkseed(s);
     }
 
-    /// <summary>Swollen full, it bursts: its stain, everything in its reach thrown back, and she hurt if she is in it.</summary>
+    /// <summary>It goes off: its stain, everything in its reach thrown back, and she hurt if she is in it.</summary>
     void BurstInkseed(Inkseed s)
     {
         var at = s.Position;

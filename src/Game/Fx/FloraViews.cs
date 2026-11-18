@@ -45,6 +45,12 @@ public partial class FloraViews : Node3D
     /// <summary>Draw at any distance (the top-down camera sees the whole view at once).</summary>
     public bool Unlimited { get; set; }
 
+    /// <summary>
+    /// Whether its tiles fade out at their range's end. A fading tile is drawn with the see-through things, after the
+    /// post pass (so not under a labyrinth's fog, topdown_post's maze_fog); off, it is drawn solid, before it.
+    /// </summary>
+    public bool Faded { get; set; } = true;
+
     /// <summary>A level's flora is drawn out to this far from the camera (the camera hangs ~55 m off; the screen's corners are within ~75 m).</summary>
     const float LevelRange = 85f;
 
@@ -146,7 +152,7 @@ public partial class FloraViews : Node3D
             // (A level's own: out to past what the camera can see, ~70 m off, so no tile far beyond the screen is drawn.)
             VisibilityRangeEnd = Unlimited ? LevelRange + Tile * 0.5f : look.Range + Tile * 0.5f,
             VisibilityRangeEndMargin = 8f,
-            VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self,
+            VisibilityRangeFadeMode = Faded ? GeometryInstance3D.VisibilityRangeFadeModeEnum.Self : GeometryInstance3D.VisibilityRangeFadeModeEnum.Disabled,
         };
         AddChild(node);
         _tiles[key] = (list, node);
