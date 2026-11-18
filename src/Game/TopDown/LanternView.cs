@@ -15,7 +15,8 @@ namespace OctoShoots.Game.TopDown;
 /// </summary>
 public partial class LanternView : Node3D
 {
-    static readonly Color Flame = new(1f, 0.62f, 0.22f);
+    /// <summary>Its flame and light: her own light's colour (HerColor.Light), as her beam kindled it.</summary>
+    static Color Flame => OctoShoots.Game.Fx.HerColor.Light;
     /// <summary>How much larger than life it is drawn.</summary>
     const float DrawnScale = 1.6f;
 
@@ -70,6 +71,10 @@ public partial class LanternView : Node3D
             look.Fire.Scale = Vector3.One * (0.35f + 0.65f * k) * (l.Lit ? flicker : 1f);
             look.FireMaterial.EmissionEnergyMultiplier = (l.Lit ? 1.6f : 0.8f + 0.8f * k) * flicker;
             // Its light as strong as hers, kindled up to it as it catches.
+            // (In her light's colour as it is now.)
+            var flame = Flame;
+            look.FireMaterial.AlbedoColor = look.FireMaterial.Emission = look.Light.LightColor = flame;
+            look.Halo.SetInstanceShaderParameter(SN.Of("color"), new Vector3(flame.R, flame.G, flame.B));
             look.Light.LightEnergy = BellView.BulbEnergy * k * k * (0.9f + 0.1f * flicker);
             look.Halo.SetInstanceShaderParameter(SN.Of("strength"), HaloStrength * k * k * (0.85f + 0.15f * flicker));
         }

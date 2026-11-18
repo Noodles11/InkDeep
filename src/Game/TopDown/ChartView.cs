@@ -63,13 +63,14 @@ public partial class ChartView : Control
         }
         foreach (var e in chart.Shut)
             DrawLine(At(e.Point(0f, 0f)), At(e.Point(OctoShoots.Core.Gen.Cubes.CubeTuning.Side, 0f)), new Color(0.95f, 0.35f, 0.3f, 0.9f), 3f, true);
-        // Her stone lanterns: lit ones a warm flame, the others grey stone.
+        // Her stone lanterns: lit ones a flame in her light's colour, the others grey stone.
+        var flame = OctoShoots.Game.Fx.HerColor.Light;
         foreach (var (at, lit) in chart.Lanterns)
         {
             if (lit)
             {
-                DrawCircle(At(at), 7f, new Color(1f, 0.6f, 0.2f, 0.25f));
-                DrawCircle(At(at), 3.5f, new Color(1f, 0.7f, 0.3f));
+                DrawCircle(At(at), 7f, flame with { A = 0.25f });
+                DrawCircle(At(at), 3.5f, flame);
             }
             else DrawCircle(At(at), 3f, new Color(0.62f, 0.6f, 0.56f, 0.8f));
         }

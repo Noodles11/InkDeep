@@ -151,7 +151,7 @@ uniform vec2 glow_origin = vec2(0.0);
 uniform float glow_span = 64.0;
 uniform float glow_on = 0.0;
 uniform float fluor_strength = 0.75;
-// The lit stone lanterns' pools of light (PlaneLanterns; xz, reach, strength): the reef shows round each in its colours, warmed.
+// The lit stone lanterns' pools of light (PlaneLanterns; xz, reach, strength): the reef shows round each in its colours, in her light's.
 uniform vec4 lantern_pools[8];
 uniform int lantern_count = 0;
 // The coloured ink drawing (docs/ART-LOOKS.md, "Coloured ink"; InkLook): the reef drawn in ink lines, hatching and
@@ -699,14 +699,18 @@ void fragment() {
 	// (Gently: lifted hard, the room and its pearl wash out and the pearl's pattern is lost.)
 	col = col * (1.0 + clam * 0.45) + clam * 0.1;
 
-	// The lit stone lanterns: each a pool of warm light on the reef round it, the reef showing there as in her light.
+	// The lit stone lanterns: each a pool of her light's colour on the reef round it, the reef showing there as in her light.
 	float lantern_lit = 0.0;
 	for (int i = 0; i < lantern_count; i++) {
 		vec4 lp = lantern_pools[i];
-		float ld = distance(on_layer.xz, lp.xy);
+		// (On the reef where it lies round the lantern: the floor itself, not her plane over it.)
+		float ld = distance(world.xz, lp.xy);
 		lantern_lit = max(lantern_lit, (1.0 - smoothstep(lp.z * 0.5, lp.z, ld)) * lp.w);
 	}
-	col = col * (1.0 + vec3(1.0, 0.62, 0.3) * lantern_lit * 0.35) + vec3(1.0, 0.6, 0.25) * lantern_lit * lantern_lit * 0.02;
+	// (Lit as her own glow lights the floor round her: the reef there tinted and lifted in her light's colour, never left
+	// in the dark of the water it is seen through.)
+	col = mix(col, col * her_light * 1.15 + her_light * 0.08, lantern_lit * 0.3);
+	col = col * (1.0 + her_light * lantern_lit * 0.35) + her_light * lantern_lit * lantern_lit * 0.02;
 	// (The picture before it is drained, for the ink drawing's own withering.)
 	vec3 ink_src = col;
 	// (How coloured the reef is here before it is drained: its corals and gardens are, its chalk little.)

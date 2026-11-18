@@ -185,13 +185,14 @@ A stone lantern (tōrō) stands on the open floor of about one cube in two (`Pla
   A flame grows in its fire box as she holds the beam, and when it catches there is a warm chime and a ring of light
   out over the water.
 - **Lit, it keeps:**
-  - a flickering flame with a warm glow round it in the water, about as wide and bright as hers looks round her
-    (`bubble_halo.gdshader`), and a warm light as strong and far-reaching as her own (`BellView`'s bulb);
-  - a pool of warm light 6 m round it (`topdown_post`'s `lantern_pools`), where the reef shows in its colours as in her
+  - a flickering flame in her light's colour (`HerColor.Light`), with a glow round it in the water about as wide and
+    bright as hers looks round her (`bubble_halo.gdshader`), and a light as strong and far-reaching as her own
+    (`BellView`'s bulb), all in her colour;
+  - a pool of her light's colour 6 m round it (`topdown_post`'s `lantern_pools`), where the reef shows in its colours as in her
     light, and where the creatures are seen as in a charge stone's light (`LanternSees`, through `ChargeStoneSees`);
   - a gentle healing for her within 3 m: 6% of her health a second, out of a store of half her health.
 - **Kept for the dive:** the cube's record keeps it lit with what is left of its store (`CubeRecord.Lantern`, and the
-  dive's save). The pause menu's chart shows her claimed cubes' lanterns: lit ones as a warm flame, unlit ones as grey
+  dive's save). The pause menu's chart shows her claimed cubes' lanterns: lit ones as a flame in her light's colour, unlit ones as grey
   stone.
 - **Verification:** `--dbg-reveal` (or `--dbg-reveal=N`, diving down to layer N first; `--dive-cooldown=seconds`
   shortens the wait between layers) stands one by her, lights it with her beam, then sweeps her beam round her over two

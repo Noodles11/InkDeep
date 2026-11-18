@@ -59,7 +59,7 @@ float rs_beam_shadow(vec3 p) {
 	return smoothstep(-soft, soft, texture(her_beam_shadow, vec2(u, 0.5)).g * her_beam_frame.w - dist);
 }
 
-// Her beam's light on a point (0..1): strongest down its middle and near her, soft at the cone's sides, fading to its
+// Her beam's light on a point (0..1): only in its cone, strongest down its middle, soft at the cone's sides, fading to its
 // reach, cut off by the rock between and by what stands in its way (rs_beam_shadow).
 float rs_beam(vec3 p) {
 	if (her_beam_show.w <= 0.0 || her_show_dir.y <= 0.0) return 0.0;
@@ -67,7 +67,7 @@ float rs_beam(vec3 p) {
 	float d = length(to);
 	if (d >= her_beam_show.w) return 0.0;
 	float angle = acos(clamp(dot(to / max(d, 1e-3), normalize(her_show_dir.xz)), -1.0, 1.0));
-	float cone = d < 0.8 ? 1.0 : 1.0 - smoothstep(her_show_dir.w * 0.6, her_show_dir.w * 1.1, angle);
+	float cone = 1.0 - smoothstep(her_show_dir.w * 0.6, her_show_dir.w * 1.1, angle);
 	// (Fading out to nothing over its last stretch, so no edge shows where it ends.)
 	float fall = pow(1.0 - d / her_beam_show.w, 0.9) * (1.0 - smoothstep(her_beam_show.w * 0.55, her_beam_show.w, d));
 	return cone * fall * her_show_dir.y * her_sight(p) * rs_beam_shadow(p);
