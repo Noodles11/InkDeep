@@ -138,7 +138,11 @@ over its two squares.
    its face over 5 m to its own 3–6.5 m; the floor falls from the face to a shelf's or the void's depth over 1–4 m
    (the deeper, the further). A shelf's floor is never flat (`CubeTerrain.Relief`): a slow noise stepped into terraces
    a few metres across, each top all but level and its edge lowered gradually into a slope to the next, 1.8 m deep in
-   all (half on the warm-up layer). A shelf's floor drops into the void along the shelf noise's contour as a bank, and sinks
+   all (half on the warm-up layer). The cube's own faces grow **knobs and bays** (`CubeTerrain.Knobs`): a noise about
+   6 m across pushes the face out into the water or back into the rock by up to 3.2 m, a knob only as far as its way
+   keeps 6 m across (knobs from both sides together, its room read over 4 m round it), a bay only as far as its wall
+   keeps 3 m; the noise drifts on a little from each layer to the next, as the walls do. Near the cube's edges, where
+   the shared field decides, there are none. A shelf's floor drops into the void along the shelf noise's contour as a bank, and sinks
    smoothly into a well. The ground's edge over the void and a roof's outline follow their fields' smooth lines too
    (`LevelView.SurfaceMesh`'s field).
 6. **Apron**: the cube's arrays carry 2 m of its neighbours' samples round them (the ground's smoothing reads two

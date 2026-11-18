@@ -107,7 +107,7 @@ public sealed class CubeTerrain
     const int Lip = 1;
 
     // Noise fields, one seed each (every cube reads the same at the same global point).
-    const int NoiseThroat = 1, NoiseChamber = 2, NoiseTunnel = 3, NoiseShelf = 4, NoiseTop = 5, NoiseFloor = 6, NoiseBays = 7, NoiseArch = 8;
+    const int NoiseThroat = 1, NoiseChamber = 2, NoiseTunnel = 3, NoiseShelf = 4, NoiseTop = 5, NoiseFloor = 6, NoiseBays = 7, NoiseArch = 8, NoiseKnobs = 9;
     /// <summary>The stacked cavern field (CubeSpace.Strata).</summary>
     const int NoiseCavern = 8;
 
@@ -462,8 +462,11 @@ public sealed class CubeTerrain
         // 4. Every point's signed distance to the rock's face (CUBE-WORLD-PLAN §4.2; positive in rock): near its outer
         // edges what the edges and corners decide (shared with the neighbours, so its apron is theirs too), further in
         // that and its own carving, blurred so the face runs smoothly between the grid's points.
-        var own = OwnField(water, ow, oh, gw, gh, m);
+        var own = OwnField(water, ow, oh, gw, gh, m, gx0, gy0, space.NoiseSeed(NoiseKnobs), c.Z);
         var (allEdges, allCorners) = SharedNear(space, c.Z, gx0, gy0, gw, gh);
+        // (Its wells, down and arriving, in one list for the points' loop.)
+        var allWells = new List<Well>(down);
+        allWells.AddRange(arrivals);
         // (The rock's top relief and the shelf noise are slow: read on a 4 m grid and between its points.)
         var topNoise = Coarse((x, y) => TerrainNoise.Fbm(x * 0.06f, y * 0.06f, topSeed, 3), gx0, gy0, gw, gh);
         var shelfNoises = Coarse((x, y) => TerrainNoise.Fbm(x * 0.035f, y * 0.035f, shelfSeed, 2), gx0, gy0, gw, gh);
@@ -512,7 +515,7 @@ public sealed class CubeTerrain
                     if (d < reach) inWell = true;
                     rise = MathF.Min(rise, Smooth(reach, reach + 2.5f, d));
                 }
-            foreach (var well in Concat(down, arrivals))
+            foreach (var well in allWells)
                 if (Vector2.Distance(local, well.Center - origin) < well.Radius + 2f) byWell = true;
             canopy[k] = underRoof && !byWell;
             // Void only where the shelf noise opens it over the layer below's caverns (CUBE-WORLD-PLAN §4.3), so what she
@@ -739,12 +742,11 @@ public sealed class CubeTerrain
     }
 
     /// <summary>
-    /// A slow field over the worked grid, read every CoarseStep metres (on the global grid, so neighbours agree) and
-    /// bilinearly between.
+    /// A slow field over the worked grid, read every Step metres (CoarseStep unless told; on the global grid, so
+    /// neighbours agree) and bilinearly between.
     /// </summary>
-    static float[] Coarse(Func<float, float, float> f, int gx0, int gy0, int gw, int gh)
+    static float[] Coarse(Func<float, float, float> f, int gx0, int gy0, int gw, int gh, int Step = CoarseStep)
     {
-        const int Step = CoarseStep;
         int cx0 = FloorDiv(gx0, Step) * Step, cy0 = FloorDiv(gy0, Step) * Step;
         int cw = (gx0 + gw - cx0) / Step + 2, ch = (gy0 + gh - cy0) / Step + 2;
         var coarse = new float[cw * ch];
@@ -984,6 +986,81 @@ public sealed class CubeTerrain
         return d;
     }
 
+    /// <summary>
+    /// The grown outline: knobs of rock bulging out into the water and bays reaching back into the rock along every face,
+    /// a few metres across and up to KnobDepth deep, from a noise of the world's metres. A knob grows only as far as its
+    /// way has room (each way keeps WayLeast across, knobs from both its sides together), a bay only as deep as its wall
+    /// is thick (each wall keeps WallLeast); their room is the way's or the wall's half-width round them (RoomReach).
+    /// </summary>
+    static void Knobs(float[] f, bool[] wet, float[] toWet, float[] toDry, int gw, int gh, int gx0, int gy0, uint seed, int layer)
+    {
+        // (Each point's most of its own kind's distance along its row within RoomReach; read down its column for the band only.)
+        var rowWet = RowMax(toDry, wet, true, gw, gh);
+        var rowDry = RowMax(toWet, wet, false, gw, gh);
+        // (Its noise read every 2 m and between: its knobs are a few metres across.)
+        // (Drifting on through its noise from layer to layer, as the walls do: a layer's knobs much like the next's.)
+        float drift = layer * KnobDrift;
+        var noise = Coarse((x, y) => TerrainNoise.Perlin(x * KnobScale + drift, y * KnobScale - drift * 0.6f, seed), gx0, gy0, gw, gh, 2);
+        for (int k = 0; k < f.Length; k++)
+        {
+            float face = wet[k] ? toDry[k] : toWet[k];
+            if (face > KnobDepth + 1.5f) continue;
+            float room = ColumnMax(wet[k] ? rowWet : rowDry, k, gw, gh);
+            float d = KnobDepth * Math.Clamp(noise[k] * 1.6f, -1f, 1f);
+            if (wet[k] && d > 0f) d = MathF.Min(d, MathF.Max(0f, room - WayLeast * 0.5f));
+            if (!wet[k] && d < 0f) d = -MathF.Min(-d, MathF.Max(0f, room - WallLeast * 0.5f));
+            f[k] += d;
+        }
+    }
+
+    /// <summary>
+    /// The most of a distance along each point's row within RoomReach, over the points of one kind only (the others count
+    /// as naught): a sliding maximum (van Herk), its cost the same whatever the reach.
+    /// </summary>
+    static float[] RowMax(float[] d, bool[] wet, bool kind, int gw, int gh)
+    {
+        const int R = RoomReach, W = 2 * R + 1;
+        int n = gw + 2 * R, blocks = (n + W - 1) / W * W;
+        var v = new float[blocks];
+        var pre = new float[blocks];
+        var suf = new float[blocks];
+        var o = new float[gw * gh];
+        for (int j = 0; j < gh; j++)
+        {
+            Array.Clear(v);
+            for (int i = 0; i < gw; i++)
+            {
+                int k = j * gw + i;
+                v[i + R] = wet[k] == kind ? d[k] : 0f;
+            }
+            for (int b0 = 0; b0 < blocks; b0 += W)
+            {
+                pre[b0] = v[b0];
+                for (int q = 1; q < W; q++) pre[b0 + q] = MathF.Max(pre[b0 + q - 1], v[b0 + q]);
+                suf[b0 + W - 1] = v[b0 + W - 1];
+                for (int q = W - 2; q >= 0; q--) suf[b0 + q] = MathF.Max(suf[b0 + q + 1], v[b0 + q]);
+            }
+            // (The window [i, i + W − 1] of the padded row is point i's reach.)
+            for (int i = 0; i < gw; i++) o[j * gw + i] = MathF.Max(suf[i], pre[i + W - 1]);
+        }
+        return o;
+    }
+
+    /// <summary>The most of a row-max field down a point's column within RoomReach (with RowMax: over a square).</summary>
+    static float ColumnMax(float[] rows, int k, int gw, int gh)
+    {
+        int i = k % gw, j = k / gw;
+        float most = 0f;
+        for (int q = Math.Max(0, j - RoomReach); q <= Math.Min(gh - 1, j + RoomReach); q++) most = MathF.Max(most, rows[q * gw + i]);
+        return most;
+    }
+
+    /// <summary>The knobs' noise scale (per metre), their most depth, the least a way and a wall keep across, and the reach their room is read over.</summary>
+    const float KnobScale = 0.16f, KnobDepth = 3.2f, WayLeast = 6f, WallLeast = 3f;
+    const int RoomReach = 4;
+    /// <summary>How far the knobs' noise moves on from one layer to the next.</summary>
+    const float KnobDrift = 0.12f;
+
     /// <summary>How far a face is sought (the field is clamped there), and the blur's passes.</summary>
     const int FieldReach = 6, BlurPasses = 2;
 
@@ -992,7 +1069,7 @@ public sealed class CubeTerrain
     /// other kind less half a metre, clamped to FieldReach), blurred so its face is a smooth line, not the grid's steps.
     /// Outside its own square it is rock.
     /// </summary>
-    static float[] OwnField(bool[] water, int ow, int oh, int gw, int gh, int m)
+    static float[] OwnField(bool[] water, int ow, int oh, int gw, int gh, int m, int gx0, int gy0, uint knobSeed, int layer)
     {
         var wet = new bool[gw * gh];
         for (int j = 0; j < gh; j++)
@@ -1007,6 +1084,7 @@ public sealed class CubeTerrain
         var f = new float[gw * gh];
         for (int k = 0; k < f.Length; k++)
             f[k] = wet[k] ? -MathF.Min(toDry[k] - 0.5f, FieldReach) - Widen : MathF.Min(toWet[k] - 0.5f, FieldReach) - Widen;
+        Knobs(f, wet, toWet, toDry, gw, gh, gx0, gy0, knobSeed, layer);
         var tmp = new float[gw * gh];
         ReadOnlySpan<float> kernel = stackalloc float[] { 1f / 16f, 4f / 16f, 6f / 16f, 4f / 16f, 1f / 16f };
         for (int pass = 0; pass < BlurPasses; pass++)

@@ -128,7 +128,8 @@ public class CubeWorldTests
         while (Vector2.Distance(near.Player.Position, goal) > 1.5f && ticks < 60 * 120)
         {
             ticks++;
-            while (at + 1 < path!.Count && Vector2.Distance(near.Player.Position, path[at]) < 2.5f) at++;
+            // (Followed closely: the walls' knobs catch a swimmer cutting corners.)
+            while (at + 1 < path!.Count && Vector2.Distance(near.Player.Position, path[at]) < 1.2f) at++;
             if (ticks % 90 == 0) sprint = rng.NextFloat() < 0.4f;
             var wish = Vector2.Normalize(path[at] - near.Player.Position + new Vector2(1e-4f, 0f));
             var input = new PlaneInput { Move = wish, Dash = sprint && ticks % 90 == 1, DashHeld = sprint };
