@@ -60,7 +60,7 @@ between).
   - *Kelp Jungle:* giant kelp at the walls' feet, and forests of it grown up out of the void from the floor far below.
   - *Sunken Galleon:* broken planks among the gardens, and now and then a wreck's hull in the sand: keel, ribs, a strake
     of planking, a fallen mast.
-  - *Coral Carnival:* gardens packed denser, with tube and barrel sponges.
+  - *Coral Carnival:* gardens packed denser, with tube sponges.
   - *Twilight Trench:* sea fans and sea rods, and clusters of vent chimneys, their lips rimmed with an ember of mineral.
   - *The Abyss:* few living things, lone vertebrae, and now and then a whale fall: a spine, ribs arching over the sand,
     its skull.
@@ -72,8 +72,10 @@ between).
     cyan. They are dotted like polyps, a little stronger on corals and gardens, and stronger the deeper the layer.
   - So she leaves a fading trail of colour behind her in the grey. While her light is still on a spot the glow is faint
     there, so the reef's own colours show.
-- **Coral gardens** (`LevelView.Gardens`): sea rods, staghorn, sea fans, elkhorn and brain corals (no sponges) packed
-  in drifting patches on the walls' tops and ledges, and in a band along their feet at the edge of the open floor; like the seagrass and the coral heads, only half the spots are dressed (`LevelView.DecorShare`).
+- **Coral gardens** (`LevelView.Gardens`): sea rods, staghorn, sea fans and elkhorn (no sponges) packed in drifting
+  patches on the walls' tops and ledges, and in a band along their feet at the edge of the open floor; like the
+  seagrass, only half the spots are dressed (`LevelView.DecorShare`). No round corals or barrel sponges anywhere: cut
+  by the cutout they showed as hollow pots.
 
 - **Wakes** (`WakeField`, `topdown_post`'s `wake_map`): everything that swims (Clementine, every creature, the reef's
   fish, her shells in flight, a boss) leaves a V of disturbed water behind it, as a motorboat does seen from above, drawn

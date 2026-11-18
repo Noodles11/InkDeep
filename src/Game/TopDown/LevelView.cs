@@ -1892,12 +1892,11 @@ public partial class LevelView : Node3D
             if (area is { } a && !a.HasPoint(new Vector2(d.Position.X, d.Position.Y))) continue;
             var pos = new Vector3(d.Position.X, d.Height, d.Position.Y);
             var basis = new Basis(Vector3.Up, d.Yaw).Scaled(Vector3.One * d.Scale);
-            // Only the seagrass meadows and the brain corals (the sponge-like rocks): the rest of the dressing drew the eye
-            // away from what matters (DESIGN-TOPDOWN §4.1).
+            // Only the seagrass meadows: the rest of the dressing drew the eye away from what matters (DESIGN-TOPDOWN
+            // §4.1), and the round corals and sponges, cut by the cutout, showed as hollow pots.
             FloraKind? kind = d.Kind switch
             {
                 DecorKind.GrassMeadow => FloraKind.TurtleGrass,
-                DecorKind.Bommie => FloraKind.BrainCoral,
                 _ => null,
             };
             if (kind is { } k)
@@ -1955,20 +1954,20 @@ public partial class LevelView : Node3D
         int theme = Theme(map);
         FloraKind[] top = theme switch
         {
-            1 => new[] { FloraKind.SeaRod, FloraKind.BrainCoral, FloraKind.SeaFan },
-            3 => new[] { FloraKind.TubeSponge, FloraKind.SeaFan, FloraKind.Staghorn, FloraKind.BrainCoral, FloraKind.TubeSponge, FloraKind.SeaRod, FloraKind.Elkhorn },
+            1 => new[] { FloraKind.SeaRod, FloraKind.SeaFan },
+            3 => new[] { FloraKind.TubeSponge, FloraKind.SeaFan, FloraKind.Staghorn, FloraKind.TubeSponge, FloraKind.SeaRod, FloraKind.Elkhorn },
             4 => new[] { FloraKind.SeaFan, FloraKind.SeaRod, FloraKind.SeaFan },
-            >= 5 => new[] { FloraKind.BarrelSponge, FloraKind.SeaFan },
-            _ => new[] { FloraKind.SeaRod, FloraKind.Staghorn, FloraKind.SeaFan, FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Elkhorn },
+            >= 5 => new[] { FloraKind.SeaFan },
+            _ => new[] { FloraKind.SeaRod, FloraKind.Staghorn, FloraKind.SeaFan, FloraKind.SeaRod, FloraKind.Elkhorn },
         };
         FloraKind[] foot = theme switch
         {
             1 => new[] { FloraKind.Kelp, FloraKind.Kelp, FloraKind.Kelp, FloraKind.SeaRod },
-            2 => new[] { FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Plank, FloraKind.Staghorn },
-            3 => new[] { FloraKind.BrainCoral, FloraKind.TubeSponge, FloraKind.SeaRod, FloraKind.BarrelSponge, FloraKind.Staghorn },
-            4 => new[] { FloraKind.SeaFan, FloraKind.SeaRod, FloraKind.BrainCoral },
-            >= 5 => new[] { FloraKind.Vertebra, FloraKind.BarrelSponge, FloraKind.Vertebra },
-            _ => new[] { FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Staghorn },
+            2 => new[] { FloraKind.SeaRod, FloraKind.Plank, FloraKind.Staghorn },
+            3 => new[] { FloraKind.TubeSponge, FloraKind.SeaRod, FloraKind.Staghorn },
+            4 => new[] { FloraKind.SeaFan, FloraKind.SeaRod },
+            >= 5 => new[] { FloraKind.Vertebra },
+            _ => new[] { FloraKind.SeaRod, FloraKind.Staghorn },
         };
         float share = theme switch { 3 => 1.4f, >= 5 => 0.35f, _ => 1f };
         Landmarks(map, items, area, seed, theme);
@@ -2089,9 +2088,8 @@ public partial class LevelView : Node3D
     /// <summary>
     /// Ground cover, for the look only (nothing in play depends on it): a deterministic scatter from the level's seed so
     /// the seabed reads as a living reef rather than a beach (THEME-BIBLE §7, Depth 1: healthy neighbours everywhere),
-    /// kept sparse so it never draws the eye from play: seagrass meadows in drifting patches, a few small brain corals at
-    /// the feet of the walls and a lone coral head now and then out on the open sand. The exit is left clear round the
-    /// shaft.
+    /// kept sparse so it never draws the eye from play: seagrass meadows in drifting patches. The exit is left clear round
+    /// the shaft.
     /// </summary>
     static void Scatter(LevelMap map, List<FloraItem> items, List<Transform3D> rocks, Rect2? area = null)
     {
@@ -2119,24 +2117,13 @@ public partial class LevelView : Node3D
             float slope = map.Gradient(p).Length();
             if (slope > 0.9f) continue;
             if (map.HasBoss ? System.Numerics.Vector2.Distance(p, rift.Position) < rift.Radius * 0.6f || map.InShaft(p, 1.5f) : map.InShaft(p, 1.5f)) continue;
-            bool nearWall = false;
-            for (int i = 0; i < 6 && !nearWall; i++)
-            {
-                float a = i * Mathf.Tau / 6f;
-                nearWall = map.HeightAt(p + new System.Numerics.Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 2.6f) > 0.2f;
-            }
             float meadow = TerrainNoise.Fbm(p.X * 0.045f, p.Y * 0.045f, seed, 3);
             float r = Hash(x, y, 3), yaw = Hash(x, y, 4) * Mathf.Tau, size = Hash(x, y, 5);
             var at = new Vector3(p.X, h - 0.05f, p.Y);
             var tint = new Color(Hash(x, y, 6) < 0.42f ? 1f : 0f, 0.86f + 0.26f * Hash(x, y, 7), 1f, Hash(x, y, 8));
             FloraItem Item(FloraKind kind, float scale) => new(kind, new Transform3D(new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale), at), tint);
-            if (nearWall && r < 0.06f)
-                // The reef's foot: a few small brain corals.
-                items.Add(Item(FloraKind.BrainCoral, 0.55f + 0.4f * size));
-            else if (meadow > 0.1f && slope < 0.35f && r < 0.85f * Mathf.SmoothStep(0.1f, 0.35f, meadow))
+            if (meadow > 0.1f && slope < 0.35f && r < 0.85f * Mathf.SmoothStep(0.1f, 0.35f, meadow))
                 items.Add(Item(FloraKind.TurtleGrass, 1.9f + 1.1f * size));
-            else if (slope < 0.3f && r < 0.012f)
-                items.Add(Item(FloraKind.BrainCoral, 1.1f + 0.9f * size));
         }
     }
 
