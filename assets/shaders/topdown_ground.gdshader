@@ -137,16 +137,11 @@ float door_dark(vec3 p) {
 void fragment() {
 	// (Not from the sun's eye: the rock's shadows stay as they are.)
 	if (lf_portal_cut(world, FRAGCOORD.xy) || !IN_SHADOW_PASS && lf_see_cut(world, CAMERA_POSITION_WORLD, FRAGCOORD.xy)) discard;
+	// The rock's inside (its far faces: a wall risen past the camera, or seen through a cut) is never drawn: a wall
+	// shows only its outer side, and where only its inside would show, the cap inside it shows instead.
+	if (is_cap < 0.5 && !FRONT_FACING) discard;
 	// The cap: unlit, inked, everywhere inside the rock at the cut's height (not from the sun's eye).
-	// The rock's inside (its far faces, seen only through a cut): solid, the cap's near-black.
-	if (is_cap < 0.5 && !FRONT_FACING) {
-		if (IN_SHADOW_PASS) discard;
-		ALBEDO = vec3(0.0);
-		EMISSION = ink_cap ? vec3(0.55, 0.5, 0.42) : see_cap;
-		BACKLIGHT = vec3(0.0);
-		SPECULAR = 0.0;
-		ROUGHNESS = 1.0;
-	} else if (is_cap > 0.5) {
+	if (is_cap > 0.5) {
 		if (IN_SHADOW_PASS) discard;
 		float ppm = 1.0 / max(length(fwidth(world.xz)) * 0.7071, 1e-4);
 		float d_px = cap_in * ppm;
@@ -168,14 +163,6 @@ void fragment() {
 		// whole meets it.)
 		float edge = lf_see_height() - world.y;
 		outline = lf_see_column(world, CAMERA_POSITION_WORLD) && edge >= 0.0 && (edge < line_width || edge / max(fwidth(edge), 1e-4) < 2.0);
-		// (And where a wall in front of her stands, along the edge where it is cut as the eye sees it over water or her
-		// line: a pixel or two of what stands, next to what is cut.)
-		if (edge < 0.0 && lf_see_front(world, CAMERA_POSITION_WORLD) > 0.0 && !lf_see_column(world, CAMERA_POSITION_WORLD)) {
-			vec3 nx = world + dFdx(world) * 2.0, ny = world + dFdy(world) * 2.0;
-			vec3 px = world - dFdx(world) * 2.0, py = world - dFdy(world) * 2.0;
-			outline = outline || lf_see_column(nx, CAMERA_POSITION_WORLD) || lf_see_column(ny, CAMERA_POSITION_WORLD)
-				|| lf_see_column(px, CAMERA_POSITION_WORLD) || lf_see_column(py, CAMERA_POSITION_WORLD);
-		}
 	}
 	vec3 local = lf_local(world);
 	float px = length(fwidth(world.xz));

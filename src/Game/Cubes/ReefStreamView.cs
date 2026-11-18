@@ -218,15 +218,9 @@ public partial class ReefStreamView : Node3D
         _above.SetShaderParameter(SN.Of("portal"), radius < 0f || !climbing ? off : new Vector4(at.X, at.Y, radius, 2f));
     }
 
-    /// <summary>What stands between the camera and her (an arch) cut open round her (level_frame's see_through).</summary>
-    public void SeeThrough(Vector3 her, float radius, float open, (Texture2D Heights, Vector3 Box)? mask = null)
+    /// <summary>What stands on the camera's side of her cut away (level_frame's see_through).</summary>
+    public void SeeThrough(Vector3 her, float radius, float open)
     {
-        // (The map round her: which rock the cut may take, LevelView.SeeMask.)
-        if (mask is { } m)
-        {
-            _here.SetShaderParameter(SN.Of("see_heights"), m.Heights);
-            _here.SetShaderParameter(SN.Of("see_heights_box"), m.Box);
-        }
         _here.SetShaderParameter(SN.Of("see_through"), new Vector4(her.X, her.Z, radius, open));
         // (Cut at her layer's swim plane, where its caps lie, never her bobbing.)
         _here.SetShaderParameter(SN.Of("see_through_y"), _lift + OctoShoots.Core.Gen.TopDown.LevelMap.SwimBand);

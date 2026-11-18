@@ -16,10 +16,6 @@ uniform vec2 level_origin = vec2(0.0);
 uniform vec4 portal = vec4(0.0);
 uniform vec4 see_through = vec4(0.0);
 uniform float see_through_y = 0.0;
-// The map round her for the cutout (LevelView.SeeHeights; box: x, z of its corner, its span in metres, 0 for none):
-// see_heights the rock's height at her plane (no roofs or lids over water).
-uniform sampler2D see_heights : filter_linear, repeat_disable;
-uniform vec3 see_heights_box = vec3(0.0);
 
 // The dissolve threshold at a pixel (0..1): interleaved gradient noise, fine and even, with no grid to it (an ordered
 // 4×4 dither showed as a screen door over a fade).
@@ -33,14 +29,12 @@ vec3 lf_local(vec3 world) { return world - level_offset; }
 // A local position where patterns are drawn: absolute across the dive.
 vec3 lf_pattern(vec3 local) { return vec3(local.x + level_origin.x, local.y, local.z + level_origin.y); }
 
-// The cutout: what stands on the camera's side of her (from see_through.z metres behind her, out past the screen's
-// edges) over a flat slice LF_SEE_OVER over her level's swim plane (see_through_y) is cut where the eye sees it over
-// open water or over her line: where the camera's sight through it meets her plane in water, or beyond her line (the
-// screen's upper half, she being at its middle). So a wall in front of her keeps its outer side, the face toward the
-// camera, only where all it hides is its own rock; whatever of it would hang over water or over her line is gone,
-// showing the reef's cap there (a flat dotted fill drawn inside all the rock at that height at all times,
-// topdown_ground's cap), and outlined. Nothing in front of her ever hides her, her line or the water. What stands
-// behind her stays whole. It is on (see_through.w > 0) or off: no transition; in the reef it is always on.
+// The cutout: everything on the camera's side of her (from see_through.z metres behind her, out past the screen's
+// edges: the screen's lower half, she being at its middle) is cut off flat LF_SEE_OVER over her level's swim plane
+// (see_through_y): the walls and peaks in front of her gone down to their stumps, showing the reef's cap there (a flat
+// dotted fill drawn inside all the rock at that height at all times, topdown_ground's cap), and outlined. What stands
+// behind her stays whole, seen only from outside (a rock's inside is never drawn). It is on (see_through.w > 0) or off:
+// no transition; in the reef it is always on.
 
 // How open it is, and the height it cuts at (the caps' own: LevelView.CapHeight).
 float lf_see_open() { return clamp(see_through.w, 0.0, 1.0); }
@@ -55,29 +49,11 @@ float lf_see_front(vec3 world, vec3 cam) {
 	return dot(world.xz - see_through.xy, toward) + see_through.z;
 }
 
-// Where the camera's sight through a point meets her plane (the point itself, at or under it).
-vec3 lf_see_seen(vec3 world, vec3 cam) {
-	vec3 d = world - cam;
-	if (world.y <= see_through_y || d.y >= -1e-4) return world;
-	return cam + d * ((see_through_y - cam.y) / d.y);
-}
-
-// Whether there is rock at a point of her plane (on the map round her; past it, none).
-bool lf_see_rock(vec3 at) {
-	if (see_heights_box.z <= 0.0) return false;
-	vec2 uv = (at.xz - see_heights_box.xy) / see_heights_box.z;
-	if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) return false;
-	return texture(see_heights, uv).r > lf_see_height();
-}
-
-// Whether the cut takes a point (over the cut's slice): on the camera's side of her line, and seen over open water or
-// over her line (the camera's sight through it meets her plane in water, or beyond her line). What is seen over its own
-// rock in front of her line stands: a wall's outer face toward the camera.
+// Whether the cut takes what stands over a point (at any height over the cut): all that lies on the camera's side of
+// her line (the screen's lower half, she being at its middle), whatever wall it belongs to.
 bool lf_see_column(vec3 world, vec3 cam) {
 	if (see_through.w <= 0.0) return false;
-	if (lf_see_front(world, cam) <= 0.0) return false;
-	vec3 seen = lf_see_seen(world, cam);
-	return lf_see_front(seen, cam) <= 0.0 || !lf_see_rock(seen);
+	return lf_see_front(world, cam) > 0.0;
 }
 
 // How far (metres) a point is from the cut away (< 0 inside it, > 0 outside), for the cut and its outline.
@@ -92,9 +68,20 @@ vec2 lf_see_edge(vec3 world, vec3 cam) {
 	return vec2(lf_see_dist(world, cam), 1.0);
 }
 
+// Round her sight line (LF_SEE_HER metres round the line from the camera to her middle, short of her): whatever lies
+// there would cover her, behind her line or not, and is cut too.
+const float LF_SEE_HER = 1.2;
+bool lf_see_covers(vec3 world, vec3 cam) {
+	vec3 her = vec3(see_through.x, see_through_y + 0.4, see_through.y);
+	vec3 d = her - cam;
+	float t = dot(world - cam, d) / max(dot(d, d), 1e-4);
+	if (t <= 0.0 || t >= 0.97) return false;
+	return length(world - (cam + d * t)) < LF_SEE_HER;
+}
+
 // True where something in front of her is cut away: its edge sharp.
 bool lf_see_cut(vec3 world, vec3 cam, vec2 frag) {
-	return see_through.w > 0.0 && lf_see_dist(world, cam) < 0.0;
+	return see_through.w > 0.0 && (lf_see_dist(world, cam) < 0.0 || lf_see_covers(world, cam));
 }
 
 // The outline along the cut (0..1), on what is left at its edge.

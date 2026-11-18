@@ -398,7 +398,6 @@ public partial class LevelView : Node3D
         var v = new Vector4(her.X, her.Z, radius, amount);
         if (v == _seeThrough) return;
         _seeThrough = v;
-        if (amount > 0f) SeeHeights(her);
         foreach (var m in _materials)
         {
             m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_through"), KeptWhole(m) ? v with { W = 0f } : v);
@@ -446,61 +445,6 @@ public partial class LevelView : Node3D
         var normals = new Vector3[s.Normals.Length];
         Array.Fill(normals, Vector3.Up);
         return new LevelShape.Surface(s.Vertices, normals, colours, s.Indices);
-    }
-
-    /// <summary>
-    /// The map round her for the cutout, a metre a texel (level_frame's see_heights, see_heights_box): the rock's height
-    /// at her plane (the reef's own and a sealed passage's, not a roof or lid over water), so the cut can tell where a
-    /// wall in front of her would hide only its own rock (it stands) and where water (it is cut). Every material that is
-    /// cut reads it (the cube reef's too: SeeMask).
-    /// </summary>
-    const int SeeHeightsSize = 192;
-    ImageTexture? _seeHeights;
-    Vector2 _seeHeightsAt = new(float.MaxValue, float.MaxValue);
-    Vector3 _seeBox;
-
-    /// <summary>The cutout's map round her (null until it is first cut), for the cube reef's rock.</summary>
-    public (Texture2D Heights, Vector3 Box)? SeeMask =>
-        _seeHeights is null ? null : (_seeHeights, _seeBox);
-
-    /// <summary>
-    /// The height map round her, made again once she has swum a quarter of its span from where it was made.
-    /// </summary>
-    void SeeHeights(Vector3 her)
-    {
-        var at = new Vector2(her.X - Position.X, her.Z - Position.Z);
-        int n = SeeHeightsSize;
-        if (_seeHeights is null || at.DistanceTo(_seeHeightsAt) >= n * 0.25f)
-        {
-            _seeHeightsAt = at;
-            float x0 = Mathf.Floor(at.X) - n / 2, y0 = Mathf.Floor(at.Y) - n / 2;
-            var data = new float[n * n];
-            for (int j = 0; j < n; j++)
-            for (int i = 0; i < n; i++)
-            {
-                int gx = (int)x0 + i, gy = (int)y0 + j;
-                float h = -100f;
-                if (gx >= 0 && gy >= 0 && gx <= _map.Size && gy <= _map.Size)
-                {
-                    h = _map[gx, gy];
-                    // (Rock drawn over the map's: a sealed passage, CubeShapes.Plug.)
-                    if (SeeOver?.Invoke(gx, gy) is float over && !float.IsNaN(over)) h = Mathf.Max(h, over);
-                }
-                data[j * n + i] = h + Position.Y;
-            }
-            var bytes = new byte[data.Length * 4];
-            Buffer.BlockCopy(data, 0, bytes, 0, bytes.Length);
-            var image = Image.CreateFromData(n, n, false, Image.Format.Rf, bytes);
-            if (_seeHeights is null) _seeHeights = ImageTexture.CreateFromImage(image);
-            else _seeHeights.Update(image);
-            // (Texel centres on the metres: its corner half a metre short of the first.)
-            _seeBox = new Vector3(x0 - 0.5f + Position.X, y0 - 0.5f + Position.Z, n);
-        }
-        foreach (var m in _materials)
-        {
-            m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_heights"), _seeHeights);
-            m.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("see_heights_box"), _seeBox);
-        }
     }
 
     /// <summary>How far round her middle (metres) rock counts as hiding her: her bell and the strands under it.</summary>
@@ -1780,15 +1724,6 @@ public partial class LevelView : Node3D
         if (glows.Count > 0)
             AddChild(Instances(new SphereMesh { Radius = 1f, Height = 2f, RadialSegments = 8, Rings = 4 },
                 new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, AlbedoColor = new Color(0.4f, 1f, 0.9f), EmissionEnabled = true, Emission = new Color(0.4f, 1f, 0.9f), EmissionEnergyMultiplier = 2f }, glows, shadow: false));
-    }
-
-    /// <summary>Rock drawn over her map's at a point of it (NaN none): the cutout reads it as rock (a sealed passage).</summary>
-    public Func<int, int, float>? SeeOver { get; set; }
-
-    /// <summary>Her map changed round her (a cube laid on it): the cutout's map of it made again at once.</summary>
-    public void SeeMaskStale()
-    {
-        _seeHeightsAt = new(float.MaxValue, float.MaxValue);
     }
 
     void ShowDecor(LevelShape shape)

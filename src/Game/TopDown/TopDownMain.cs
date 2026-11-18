@@ -535,7 +535,6 @@ public partial class TopDownMain : Node3D
         AddChild(_cueView);
         _crackView = new CrackSealView();
         AddChild(_crackView);
-        _level.SeeOver = PlugOver;
         _portals = new PortalView();
         AddChild(_portals);
         _mirrorView = new MirrorView();

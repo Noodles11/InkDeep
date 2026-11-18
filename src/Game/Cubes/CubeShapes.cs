@@ -96,9 +96,9 @@ public static class CubeShapes
     /// piece of ground over the cells its cutting changed (and a few metres round, where it is the ground itself), laid
     /// over the cube's ground. Its heights never under the ground's (so the cut passage is wholly under it), its skin, rise
     /// and caps made as the ground's are (so where it meets the ground they are one), its caps a hair over the ground's (so
-    /// over the passage's it is its own that show). Its height (the reef's metres), and its rock's heights by cell.
+    /// over the passage's it is its own that show). Its height (the reef's metres).
     /// </summary>
-    public sealed record PlugShape(CubeShape Shape, Func<float, float, float> Height, Dictionary<(int X, int Y), float> Cells);
+    public sealed record PlugShape(CubeShape Shape, Func<float, float, float> Height);
 
     /// <summary>How far round a socket's line its cut cells are its own (m); how far past them its piece of ground runs; its caps' lift.</summary>
     const float PlugReach = 8f, CapLift = 0.004f;
@@ -110,7 +110,7 @@ public static class CubeShapes
         var into = System.Numerics.Vector2.Normalize(socket.Into);
         System.Numerics.Vector2 a = socket.At - into * 4f, b = socket.Back + into * 2f;
         var heights = (float[])t.Heights.Clone();
-        var cells = new Dictionary<(int, int), float>();
+        int changed = 0;
         int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
         for (int k = 0; k < uncut.Length; k++)
         {
@@ -118,13 +118,13 @@ public static class CubeShapes
             int gx = t.X0 + k % t.Stride, gy = t.Y0 + k / t.Stride;
             if (OctoShoots.Core.Gen.TopDown.Geo.SegmentDistance(new System.Numerics.Vector2(gx, gy), a, b) > PlugReach) continue;
             heights[k] = uncut[k];
-            cells[(gx, gy)] = uncut[k];
+            changed++;
             minX = Math.Min(minX, gx);
             maxX = Math.Max(maxX, gx);
             minY = Math.Min(minY, gy);
             maxY = Math.Max(maxY, gy);
         }
-        if (cells.Count == 0) return null;
+        if (changed == 0) return null;
         // (Never under the ground: the smoothing's overshoot would let the ground show through.)
         float Height(float x, float y) => Mathf.Max(Smooth(t, heights, x, y), Smooth(t, t.Heights, x, y));
         float Kept(float x, float y) => Height(x, y) - (VoidHeight + 0.3f);
@@ -139,7 +139,7 @@ public static class CubeShapes
             surfaces.Add(new LevelShape.Surface(lifted, cap.Normals, cap.Colors, cap.Indices));
         }
         if (surfaces.Count == 0) return null;
-        return new PlugShape(new CubeShape(surfaces, new List<List<LevelShape.Surface>> { surfaces }), Height, cells);
+        return new PlugShape(new CubeShape(surfaces, new List<List<LevelShape.Surface>> { surfaces }), Height);
     }
 
     /// <summary>

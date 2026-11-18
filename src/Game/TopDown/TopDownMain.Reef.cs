@@ -514,7 +514,6 @@ public partial class TopDownMain
         var corner = L(cube.Origin);
         var area = new Rect2(corner.X, corner.Y, cube.Size.X, cube.Size.Y);
         _life.Add((map, area, _lifeAhead.Remove((map, cube), out var ahead) ? ahead : System.Threading.Tasks.Task.Run(() => LevelShape.ReefLife(map, area))));
-        _level.SeeMaskStale();
         // (The way through the water found again over it: PlaneWorld.NavStale.)
         _world.NavStale(L(cube.Origin), L(cube.Origin + cube.Size));
         _sunStale = true;
@@ -1091,7 +1090,6 @@ public partial class TopDownMain
         var seal = _world.PlaceCrackSeal(mouth, face);
         _plugs[seal] = plug;
         _reefView.ShowPlug(seal, plug.Shape);
-        _level.SeeMaskStale();
         return seal;
     }
 
@@ -1108,19 +1106,6 @@ public partial class TopDownMain
             _plugs.Remove(seal);
             _reefView.HidePlug(seal);
         }
-        _level.SeeMaskStale();
-    }
-
-    /// <summary>The sealed passages' rock at a point of her layer's map (NaN none): for the cutout (LevelView.SeeOver).</summary>
-    float PlugOver(int x, int y)
-    {
-        if (_plugs.Count == 0) return float.NaN;
-        var g = G(new System.Numerics.Vector2(x, y));
-        var key = ((int)MathF.Round(g.X), (int)MathF.Round(g.Y));
-        float most = float.NaN;
-        foreach (var plug in _plugs.Values)
-            if (plug.Cells.TryGetValue(key, out float h) && !(h <= most)) most = h;
-        return most;
     }
 
     /// <summary>A sealed passage's rock's own height under a point of her plane, if it is one's.</summary>
@@ -1206,9 +1191,9 @@ public partial class TopDownMain
         float open = _dbgNoCarve ? 0f : 1f;
         // (Her layer's reef life and mouths are cut with its rock.)
         _level.SeeThrough(_bell.GlobalPosition, ReefSeeBehind, open);
-        _reefView.SeeThrough(_bell.GlobalPosition, ReefSeeBehind, open, _level.SeeMask);
-        _portals.SeeThrough(_bell.GlobalPosition, ReefSeeBehind, open, _level.Position.Y + LevelMap.SwimBand, _level.SeeMask);
-        _crackView.SeeThrough(_bell.GlobalPosition, ReefSeeBehind, open, _level.Position.Y + LevelMap.SwimBand, _level.SeeMask);
+        _reefView.SeeThrough(_bell.GlobalPosition, ReefSeeBehind, open);
+        _portals.SeeThrough(_bell.GlobalPosition, ReefSeeBehind, open, _level.Position.Y + LevelMap.SwimBand);
+        _crackView.SeeThrough(_bell.GlobalPosition, ReefSeeBehind, open, _level.Position.Y + LevelMap.SwimBand);
     }
 
     /// <summary>How far behind her line (metres, away from the camera) the reef's cut starts: her bell's own reach.</summary>
