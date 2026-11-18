@@ -60,9 +60,9 @@ public partial class BellView : Node3D
     OmniLight3D _light = null!;
     OmniLight3D _halo = null!;
     /// <summary>How far her light reaches and how strong it is (before Lantern, glow, her breath and pulse).</summary>
-    const float BulbRange = 11f, BulbEnergy = 1.3f;
+    internal const float BulbRange = 11f, BulbEnergy = 1.3f;
     /// <summary>How sharply her light dims with distance (OmniAttenuation), in the Shallows and in the deepest dark.</summary>
-    const float Falloff = 1.7f, FalloffDeep = 1.15f;
+    internal const float Falloff = 1.7f, FalloffDeep = 1.15f;
     /// <summary>How much of her light gets through (1 all; the curse den's dark fades it).</summary>
     public float Dim = 1f;
     /// <summary>The depth's lantern (ReefLook.Lantern): her light's strength and reach against the dark.</summary>
