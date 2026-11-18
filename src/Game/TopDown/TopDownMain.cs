@@ -23,7 +23,7 @@ namespace OctoShoots.Game.TopDown;
 /// screen (RunLaunch); run directly with verification flags, it starts a run on its own and saves nothing.
 /// WASD swims (north is up), Space dashes, ↓ dives (InputSetup), the mouse aims, F1 opens the debug menu (any
 /// level, any pearls), F3 toggles the debug map, R regenerates from the seed field.
-/// Verification flags: --seed=, --cycle=, --depth=, --level=, --at=start|arch|arch-near|cave|exit|hole|kelp|shop|shop-out|cache|cache-near|secret|secret-in|treasure|treasure-out|clam-pearl|mob|boss|spring|spring-in,
+/// Verification flags: --seed=, --cycle=, --depth=, --level=, --at=start|arch|arch-near|cave|exit|hole|well|kelp|shop|shop-out|cache|cache-near|secret|secret-in|treasure|treasure-out|clam-pearl|mob|boss|spring|spring-in,
 /// --autopilot, --dive (dives whenever it can), --dbg-pad (on the controller from the start), --calm (no creatures), --fire, --pearls=, --hp=, --luck=, --boss-hp=, --paused, --map, --f3, --no-focus, --dbg-nofog (no floor fog),
 /// --capture=dir --frames=a,b, --dbg-say=text (a message banner, a second in), --dbg-loose=id (that pearl loose near her), --at=prism|trio|charge (in a prism stones' bed, a charge stones' trio's
 /// nook, before a charge stone), --dbg-prism (a coloured seal's stones laid on her way to it; --fire aims at it), --dbg-shadow (her beam held
@@ -2056,6 +2056,21 @@ public partial class TopDownMain : Node3D
         return best is { } found ? L(found) : null;
     }
 
+    /// <summary>The cube reef: beside the well down nearest her start, a few metres south of its mouth (captures of its rim).</summary>
+    System.Numerics.Vector2? BesideWell()
+    {
+        if (_reef is null) return null;
+        var start = G(_world.Player.Position);
+        System.Numerics.Vector2? best = null;
+        foreach (var cube in _reef.Space.CubesNear(OctoShoots.Core.Gen.Cubes.CellCoord.Of(start, _layer), 3))
+            foreach (var well in _reef.Terrain(cube).Down)
+            {
+                var at = well.Center + new System.Numerics.Vector2(0f, well.Radius + 4.5f);
+                if (best is null || System.Numerics.Vector2.Distance(at, start) < System.Numerics.Vector2.Distance(best.Value, start)) best = at;
+            }
+        return best is { } found ? L(found) : null;
+    }
+
     /// <summary>Verification: start somewhere interesting.</summary>
     void PlaceAt(string? where)
     {
@@ -2086,8 +2101,10 @@ public partial class TopDownMain : Node3D
             "fan" => _map.Fan + new System.Numerics.Vector2(0f, 1f),
             // Just south of it, the fan and its ribbons in view.
             "fan-near" => _map.Fan + new System.Numerics.Vector2(0f, 4.5f),
-            // The cube reef: at the mouth of the roofed gate nearest her start, or under its roof ("roof-in").
+            // The cube reef: at the mouth of the roofed gate nearest her start, or under its roof ("roof-in"); beside the
+            // well down nearest her start ("well").
             "roof" or "roof-in" => RoofedGate(where == "roof-in"),
+            "well" => BesideWell(),
             "mirror-near" => _map.Mirror + new System.Numerics.Vector2(0f, 3.2f),
             // Six metres out from a region's first cave mouth, or a leak cave's way out (with --dbg-steer she swims into it).
             "mouth" => _map.Mouths.Count > 0 ? _map.Mouths[0].At - _map.Mouths[0].Into * 6f : null,

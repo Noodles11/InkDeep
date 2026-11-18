@@ -122,7 +122,10 @@ over its two squares.
    stacked cavern field (§4.3) is over its cut (0.2, about a fifth of the reef *(tune)*), and a chamber round each
    well (over it and under it). Gate mouths and wells are joined by a spanning tree of the shortest tunnels (bowed
    curves 5.6–8.8 m wide, from the cube's own hash) plus a loop or two; a cavern not joined to them by then is filled
-   if small (under 30 m²) or bored through to the nearest water that is. 75% of tunnels *(tune)* are **bored**: where
+   if small (under 30 m²) or bored through to the nearest water that is. Where an open tunnel leaves the water it was
+   carved from (a cavern or a chamber; a clean change, 3 m either side along its line), its **throat flares**: 4.5 m
+   back from that water it widens by up to 2.5 m a side, easing in, so the rock's corners round into the wider water
+   (`CubeTerrain.Flare`). 75% of tunnels *(tune)* are **bored**: where
    they run through rock (outside the caverns of this layer and the one above) they are roofed (§4.4). Rims wobble by
    low noise; then **bays** are bitten into the rock within 5 m of the water open to the sky where the bay noise is
    high, so walls wander rather than trace the plan (none off a roofed tunnel: no skylights in its roof). Every gate
@@ -142,8 +145,9 @@ over its two squares.
    6 m across pushes the face out into the water or back into the rock by up to 3.2 m, a knob only as far as its way
    keeps 6 m across (knobs from both sides together, its room read over 4 m round it), a bay only as far as its wall
    keeps 3 m; the noise drifts on a little from each layer to the next, as the walls do. Near the cube's edges, where
-   the shared field decides, there are none. A shelf's floor drops into the void along the shelf noise's contour as a bank, and sinks
-   smoothly into a well. The ground's edge over the void and a roof's outline follow their fields' smooth lines too
+   the shared field decides, there are none. A shelf's floor drops into the void along the shelf noise's contour as a bank, and a
+   well's mouth has a **rim**: the floor swells 0.7 m round it, eases away into the floor over 3 m outward, and its
+   lip rounds over into the void across 1.6 m (a quarter round). The ground's edge over the void and a roof's outline follow their fields' smooth lines too
    (`LevelView.SurfaceMesh`'s field).
 6. **Apron**: the cube's arrays carry 2 m of its neighbours' samples round them (the ground's smoothing reads two
    samples past a cell), all of it decided by the edges, so meshes, normals and soft masks are right up to the line.

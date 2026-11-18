@@ -6,7 +6,7 @@ references: a canyon of overhanging, mushroom-headed stacks under god rays; poro
 furred with growth; a narrow slot between knobbly walls opening onto bright water; a deep coral corridor of
 plate-and-fan walls over a sand floor.
 
-Status: built (CUBE-WORLD-PLAN §5, DIVE §1): terraced floors whose edges slope away, grown walls, deep knobs and bays, natural arches and rounded lips on every roof. The blue ink look (ART-LOOKS) is in.
+Status: built (CUBE-WORLD-PLAN §5, DIVE §1): terraced floors whose edges slope away, grown walls, deep knobs and bays, tunnels' throats flaring into wider water, rims round wells' mouths, natural arches and rounded lips on every roof. The blue ink look (ART-LOOKS) is in.
 
 ## What it is now, and why it reads cut
 

@@ -373,12 +373,16 @@ public sealed class CubeTerrain
                 float wob = 1f + 0.3f * TerrainNoise.Fbm((origin.X + x) * 0.07f, (origin.Y + y) * 0.07f, chamberSeed, 2);
                 return Vector2.Distance(new Vector2(x, y), at) < MathF.Max(least, radius * wob);
             }, water, ow, oh);
+        // (The water before its tunnels: where a tunnel leaves it, its throat flares open.)
+        var before = (bool[])water.Clone();
         for (int n = 0; n < tunnels.Count; n++)
         {
             var t = tunnels[n];
             StampLine(t.Points, t.Half + 1.5f, (x, y, d) =>
                 d < t.Half + 1.1f * TerrainNoise.Fbm((origin.X + x) * 0.1f, (origin.Y + y) * 0.1f, tunnelSeed, 2), roofedTunnel[n] && !t.Wells ? bore : water, ow, oh);
         }
+        for (int n = 0; n < tunnels.Count; n++)
+            if (!(roofedTunnel[n] && !tunnels[n].Wells)) Flare(tunnels[n].Points, tunnels[n].Half, before, water, ow, oh);
         // Caverns not joined to its gates and wells: the small filled, the rest bored through to the nearest that is.
         var blocked = new bool[ow * oh];
         foreach (var e in edges)
@@ -475,6 +479,7 @@ public sealed class CubeTerrain
         var shelf = new float[gw * gh];
         var top = new float[gw * gh];
         var canopy = new bool[gw * gh];
+        var rim = new float[gw * gh];
         for (int j = 0; j < gh; j++)
         for (int i = 0; i < gw; i++)
         {
@@ -510,10 +515,14 @@ public sealed class CubeTerrain
                 {
                     float d = Vector2.Distance(local, well.Center - origin);
                     // (Past its widest reach and the slope round it, nothing to work out.)
-                    if (d >= well.Radius * 1.3f + 2.5f) continue;
+                    if (d >= well.Radius * 1.3f + WellLip + WellRimOut) continue;
                     float reach = well.Radius * (1f + 0.3f * MathF.Max(0f, TerrainNoise.Perlin(p.X * 0.15f, p.Y * 0.15f, floorSeed + 9u)));
                     if (d < reach) inWell = true;
-                    rise = MathF.Min(rise, Smooth(reach, reach + 2.5f, d));
+                    // (Its lip rounds over into the void, a quarter round over WellLip; out from its crest the rim's swell
+                    // eases away into the floor.)
+                    float lip = Math.Clamp((d - reach) / WellLip, 0f, 1f);
+                    rise = MathF.Min(rise, MathF.Sqrt(1f - (1f - lip) * (1f - lip)));
+                    rim[k] = MathF.Max(rim[k], WellRim * Smooth(reach + WellLip + WellRimOut, reach + WellLip, d));
                 }
             foreach (var well in allWells)
                 if (Vector2.Distance(local, well.Center - origin) < well.Radius + 2f) byWell = true;
@@ -562,7 +571,7 @@ public sealed class CubeTerrain
             else
             {
                 // (No relief worked out where the floor is the void's.)
-                float floor = shelf[k] <= 0f ? VoidHeight : VoidHeight + (ShelfHeight + Relief(gx, gy, floorSeed, c.Z) - VoidHeight) * shelf[k];
+                float floor = shelf[k] <= 0f ? VoidHeight : VoidHeight + (ShelfHeight + Relief(gx, gy, floorSeed, c.Z) + rim[k] - VoidHeight) * shelf[k];
                 outHeights[o] = floor * Smooth(0f, FloorRamp + FloorRampPerMetre * -floor, -s);
             }
         }
@@ -636,6 +645,67 @@ public sealed class CubeTerrain
     /// over ShelfHeight and its whole depth.
     /// </summary>
     const float ReliefScale = 0.16f, ReliefSteps = 5f, ReliefFlat = 0.35f, ReliefTop = 0.35f, ReliefDepth = 1.8f;
+
+    /// <summary>
+    /// A well's mouth (GROWN-REEF §3): a rim of rock swelling WellRim over the floor round it, its lip rounding over
+    /// into the void across WellLip, its swell easing away into the floor over WellRimOut past its crest. Under her plane
+    /// with the relief's top (ShelfHeight + ReliefTop + WellRim &lt; SwimBand).
+    /// </summary>
+    const float WellRim = 0.7f, WellLip = 1.6f, WellRimOut = 3f;
+
+    /// <summary>How far a tunnel's throat flares back from where it leaves wider water, how much wider it is there (each side), and how clean the change must be.</summary>
+    const float FlareLength = 4.5f, FlareWide = 2.5f, FlareClean = 3f;
+
+    /// <summary>
+    /// A tunnel's throats (GROWN-REEF §3): wherever its line leaves the water it was carved from (a cavern or a chamber),
+    /// its way flares open over FlareLength toward that water, so the rock's corners round into it as a trumpet's mouth,
+    /// never a punched hole. Only ever more water (no way narrowed).
+    /// </summary>
+    static void Flare(Vector2[] points, float half, bool[] open, bool[] water, int ow, int oh)
+    {
+        bool Open(Vector2 q)
+        {
+            int x = (int)MathF.Round(q.X), y = (int)MathF.Round(q.Y);
+            return x < 0 || y < 0 || x >= ow || y >= oh || open[y * ow + x];
+        }
+        // (Its line walked every half metre; at each change from open water to its own, a throat.)
+        var walk = new List<Vector2>();
+        for (int k = 0; k + 1 < points.Length; k++)
+        {
+            int n = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(points[k], points[k + 1]) / 0.5f));
+            for (int q = 0; q < n; q++) walk.Add(Vector2.Lerp(points[k], points[k + 1], q / (float)n));
+        }
+        walk.Add(points[^1]);
+        var opened = walk.ConvertAll(Open);
+        // (Only a clean change: open water for FlareClean metres one side, its own way the other, so a ragged cavern
+        // edge along its line flares nothing.)
+        int clean = (int)(FlareClean / 0.5f);
+        bool All(int from, int to, bool v)
+        {
+            for (int q = from; q <= to; q++) if (q < 0 || q >= opened.Count || opened[q] != v) return false;
+            return true;
+        }
+        for (int k = 0; k + 1 < walk.Count; k++)
+        {
+            bool a = opened[k], b = opened[k + 1];
+            if (a == b) continue;
+            if (!All(k - clean + 1, k, a) || !All(k + 1, k + clean, b)) continue;
+            var at = a ? walk[k] : walk[k + 1];
+            var into = Vector2.Normalize(a ? walk[k + 1] - walk[k] : walk[k] - walk[k + 1]);
+            if (!float.IsFinite(into.X)) continue;
+            float reach = FlareLength + half + FlareWide;
+            Stamp(at, reach, (x, y) =>
+            {
+                var d = new Vector2(x, y) - at;
+                float along = Vector2.Dot(d, into);
+                if (along < -2f || along > FlareLength) return false;
+                float across = MathF.Abs(d.X * into.Y - d.Y * into.X);
+                // (Widest at the open water, closing smoothly to the tunnel's own width.)
+                float t = Math.Clamp(along / FlareLength, 0f, 1f);
+                return across < half + FlareWide * (1f - t) * (1f - t);
+            }, water, ow, oh);
+        }
+    }
 
     /// <summary>How far in from its outer edges a cube's own carving blends in (past its apron), and the rock's and floor's ramps from the face.</summary>
     const float BlendWidth = 3f, RockRamp = 5f, FloorRamp = 0.8f, FloorRampPerMetre = 0.3f;

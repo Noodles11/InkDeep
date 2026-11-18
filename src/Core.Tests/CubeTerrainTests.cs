@@ -227,7 +227,9 @@ public class CubeTerrainTests
         }
         double next = Same(3, 4), far = Same(0, 8);
         _out.WriteLine($"water shared: next layer {next:P0}, eight down {far:P0}");
-        Assert.True(next >= 0.6 && next > far + 0.25, $"next {next:P0}, far {far:P0}");
+        // (Far apart, layers still share some water by chance, the more the more open the reef: the next layer shares
+        // at least twenty points more than one eight down.)
+        Assert.True(next >= 0.6 && next > far + 0.2, $"next {next:P0}, far {far:P0}");
         // Down through the void (out of the wells' and the walls' way) she sees the layer below's water, not its rock.
         int voids = 0, onRock = 0;
         for (int z = 0; z < Layers - 1; z++)
