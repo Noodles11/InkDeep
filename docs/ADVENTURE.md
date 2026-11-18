@@ -10,7 +10,7 @@ It is on with `PlaneOptions.Adventure` (the game's default). The simulation is i
 `src/Core/Plane/PlaneFlounder.cs` (flounders and Hearthguards) and
 `src/Core/Gen/TopDown/AbyssReef.cs` (the abyss); the presentation in `src/Game/TopDown/AdventureView.cs` (dots, their
 bracket marks, leaks), `BlightView` (the murklings' bodies: `murkling.gdshaderinc` spikes and tadpole tail),
-`BlightView.Flounders` (flounders and Hearthguards), `ReefFishView` (anemone pillars) and `HudView` (the gonad gauge). Tests: `AdventureTests`, `MurkRosterTests`.
+`BlightView.Flounders` (flounders and Hearthguards), `ReefFishView` (anemone pillars) and `HudView` (her bars). Tests: `AdventureTests`, `MurkRosterTests`.
 
 All numbers are first guesses (`AdventureTuning`).
 
@@ -177,17 +177,14 @@ the seabed, a store of healing she may come back to, too bright for any murkling
   (a murkling, an Inkwarden) takes 30% of a shot's damage, once every 0.4 s.
 
 - **No stamina:** she shoots, dashes and surges whenever she likes; only the dash's own cooldown holds it back.
-- **Her gauge** (top left): Clementine seen from above. Her bell, a disc of glass with her four gonads and her glowing
-  rim (static); holding an active pearl, its colours and pattern fill the glass (no pearl is drawn), whitening for a
-  beat when she uses it. Under it three of her oral arms hang, one stat each, left to right by urgency, each as long
-  as its stat is full, over a faint track of its whole length, with a small sign at its foot:
-  1. **health** (warm white-gold; a heart) — a hit frays the lost piece off the arm, drifting away; low (under a
-     quarter), it turns ragged and pulses rose;
-  2. **the active pearl's charge** (the pearl's own colour; a pearl) — breathing when ready; without one, the arm is
-     curled up short and dim;
-  3. **experience** (amber; her level at its foot) — growing toward the next level, pulsing full with a point to
-     spend.
-  Beside the bell **her shells** (the shell and its count — shown only once she has collected at least one).
+- **Her bars** (top left, `HudView`): her health as a plain bar, as long as her max HP (longer as it grows), its colour
+  by how much is left: green over 60%, amber over 30%, red and pulsing under. A hit flashes it, and what it took stays
+  pale a moment, then drains away. Under it a thinner bar, her active pearl's charge in the pearl's own colour,
+  breathing when ready and flashing as she uses it; beside it the pearl itself, turning slowly (drawn in 3D, with the
+  pearl's own look), glowing behind once ready. Without an active pearl, the bar is an empty track and no pearl shows.
+  Under the bars **her shells** (the shell and its count, shown only once she has collected at least one), and the
+  danger's marks right of the count. Experience is not shown: a level reached is said, and a skill point to spend
+  pulses her gonads in the water.
 - **Maps:** no map of the whole level (nothing opens under Tab / Select), and no minimap: emblems mark the places round her (DESIGN-TOPDOWN §9).
   The cleansing meter is gone.
   The whole level's map is cut out of its square along the level's outline — all its water and a few metres of rock

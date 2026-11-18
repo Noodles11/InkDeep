@@ -183,7 +183,7 @@ What changes is the protagonist's skin:
   jelly +30%).
 
 #### Diegetic vitals — the gonad rings and the bell rim
-In the adventure (docs/ADVENTURE.md §6) these gauges are on the HUD's gonad gauge instead, and her gonads and rim are
+In the adventure (docs/ADVENTURE.md §6) these gauges are on the HUD's bars instead, and her gonads and rim are
 only hers — always whole and lit, never a gauge. Without it:
 Clementine's body carries her two most important gauges; there is no HP bar and
 no active-item slot on the HUD (only a quiet echo of her health on the minimap's
@@ -1154,8 +1154,8 @@ The FP staging ("look up through the surface") is replaced:
 
 ## 9. UI
 
-- **HUD** (`HudView`, `EdgeArrows`): minimal — top left her gonad gauge (health, the active pearl's
-  charge, experience) and her shells, the emblems on the places round her (at the screen's edges while they are off it), and the top centre empty
+- **HUD** (`HudView`, `EdgeArrows`): minimal — top left her bars (health, and the active pearl's
+  charge with the pearl beside it) and her shells under them, the emblems on the places round her (at the screen's edges while they are off it), and the top centre empty
   at rest, for what comes and goes. Health and the active pearl's charge are
   diegetic on the bell (§2.5: gonad rings and rim), bubble orbs under it; no numbers for any of them on the HUD. One
   text style throughout: light text with a soft dark outline, no boxes, readable on bright sand and in the deeps.
