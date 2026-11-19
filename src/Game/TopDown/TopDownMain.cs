@@ -1068,7 +1068,7 @@ public partial class TopDownMain : Node3D
 
     void BuildEnvironment()
     {
-        _environment = MakeEnvironment(ReefLook.For(_id.Depth));
+        _environment = MakeEnvironment(ReefLook.Of(_id));
         AddChild(_environment);
     }
 
@@ -1078,11 +1078,11 @@ public partial class TopDownMain : Node3D
     /// <summary>
     /// This level's look: its depth's, a leak cave's dark, or in a haven the bay's summer evening.
     /// </summary>
-    ReefLook Look => _map is { } map ? LookAt(map, _world?.Player.Position ?? map.Start.Position) : ReefLook.For(_id.Depth);
+    ReefLook Look => _map is { } map ? LookAt(map, _world?.Player.Position ?? map.Start.Position) : ReefLook.Of(_id);
 
     /// <summary>A level's own look: a leak cave's dark, a haven's bay evening, else its depth's.</summary>
     static ReefLook LookOf(LevelMap map) =>
-        map.LeakCave ? ReefLook.Cave : map.Haven is not null ? ReefLook.Bay : ReefLook.For(map.LookDepth ?? map.Id.Depth);
+        map.LeakCave ? ReefLook.Cave : map.Haven is not null ? ReefLook.Bay : map.LookDepth is { } shown ? ReefLook.For(shown) : ReefLook.Of(map.Id);
 
     static ReefLook LookAt(LevelMap map, System.Numerics.Vector2 p) => LookOf(map);
 
@@ -3138,8 +3138,8 @@ public partial class TopDownMain : Node3D
         // Down the hole she is over (the first, if she is somehow over none).
         _diveHole = Math.Max(0, _world.HoleUnder);
         var next = _diveTo = DestinationOf(_diveHole);
-        _lookFrom = _id.Haven ? ReefLook.Bay : ReefLook.For(_id.Depth);
-        _lookTo = next.Haven ? ReefLook.Bay : ReefLook.For(next.Depth);
+        _lookFrom = _id.Haven ? ReefLook.Bay : ReefLook.Of(_id);
+        _lookTo = next.Haven ? ReefLook.Bay : ReefLook.Of(next);
         _bell.Kick();
         _hud.Diving = true;
         _holes.Visible = false;

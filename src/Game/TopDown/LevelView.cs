@@ -1575,7 +1575,7 @@ public partial class LevelView : Node3D
 
     void ShowDecor(LevelShape shape)
     {
-        PaintFlora(ReefLook.For(shape.Map.Depth));
+        PaintFlora(ReefLook.Of(shape.Map.Id));
         _floraItems = shape.Flora;
         _flora.Show(shape.Flora);
         AddChild(Instances(new SphereMesh { Radius = 1f, Height = 2f, RadialSegments = 18, Rings = 9 }, Rock(0.22f), shape.Rocks));

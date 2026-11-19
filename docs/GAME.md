@@ -385,4 +385,22 @@ the tests of the dive still test the dive.
     (`VaultView.OwnGlow`) showing it from afar; lit, it shows as before, and what it holds.
   - `--dbg-sweep` turns the auto-fire's aim round her (verification of the afterimage).
   - (0.58.1) Her beam lights its cone alone, right up to her bell: no lit disc round her (reef_show's `rs_beam`).
+- **Step 7, second part (0.59.0), the biomes' cells and looks:**
+  - **Cells by biome** (`CaveTemplates.KelpForest`, `Shipwreck`, `SunkenRuins`, `VariantsOf`, `ChunksOf`): five cells
+    each, one of every shape a cell can take (a cross, a T, a straight, a bend, a dead end; turned and mirrored they open
+    every way), with chunk lists of their own. The Kelp Forest's are wide open water among a few rounded rocks (its kelp
+    beds stand in them); the Shipwreck's square holds and decks, a beam or a stack of crates in them, a keel down a long
+    hull and ribs along its walls; the Ruins' a forum, an atrium round its pool, a colonnade, a temple's cella over its
+    steps, a shrine's niche. Every passage is at least 4 m wide (narrower ones close up under the reef's walls and its
+    corridors), so their levels are made as readily as the Sunlit Reef's (about 1.1–1.6 attempts). A level takes its
+    biome's cells (`CaveLayout.FromTemplates(…, biome)`); a shape a biome lacks falls back to the Sunlit Reef's.
+  - **Looks by biome** (`ReefLook.Of`, `ForBiome`): a biome's look is its depth's painted look blended halfway to its own
+    palette, the Kelp Forest's greens, the Shipwreck's rust and old timber (the drawn Galleon's), the Ruins' marble,
+    warm sand, terracotta and faded fresco blue (`ReefLook.Ruins`); so her light finds each biome's own colours. Used for
+    the level's environment, its flora, the dive's look from one to the next, and the map.
+  - A pickup placed along a template level's straight two-point corridor no longer divides by zero
+    (`PlacePickups`), and a failed attempt is logged with its reason.
+  - Not done: the biomes' own rock and dressing (every biome still wears the reef's coral, sand and sea grass), their
+    hazards (kelp walls her beam burns through, tangles, urchin beds, falling debris, cannons, dart traps, amphorae,
+    light-locked doors), and the Ruins' treasure.
 

@@ -352,7 +352,7 @@ Each step ends with a build that runs and passing tests.
 6. **The ink look** (built in 0.55.0: GAME.md §14; her glow's sunset, not her bell's colours; no interface frames yet): outline, halftone, paper grain, her sunset gradient, the neon edges of cleansed things.
    *(2 weeks)*
 7. **Depths 2–3** (begun in 0.56.0: GAME.md §14; the route, the first branch, the bosses and rosters by biome; the
-   biomes' templates and looks still to come): Kelp Forest or Shipwreck, then Sunken Ruins: templates, rosters, Tull,
+   biomes' cells and looks in 0.59.0; their rock, dressing and hazards still to come): Kelp Forest or Shipwreck, then Sunken Ruins: templates, rosters, Tull,
    Kip and Ottilie moved in, the first branch. *A short full run.* *(4–5 weeks)*
 8. **Depths 4–5 and the end:** Alien Wreckage, Drowned Temple, Atlantis, the Crack, the keystone pieces, new jellies.
    *(5–6 weeks)*

@@ -43,12 +43,12 @@ public sealed partial class CaveLayout
     /// those that live in a cave take a room cell, the rest a POI mark; one that finds no room or mark is left out.
     /// <paramref name="boss"/>: a boss level, whose walk ends in the boss's arena (its exit), a 2 × 2 block of cells.
     /// </summary>
-    public static (CaveLayout? Layout, string? Why) FromTemplates(Rng rng, IReadOnlyList<PoiKind> kinds, Func<PoiKind, float> radius, bool boss = false)
+    public static (CaveLayout? Layout, string? Why) FromTemplates(Rng rng, IReadOnlyList<PoiKind> kinds, Func<PoiKind, float> radius, bool boss = false, OctoShoots.Core.Run.Biome biome = OctoShoots.Core.Run.Biome.SunlitReef)
     {
         string why = "no layout";
         for (int t = 0; t < TemplateTries; t++)
         {
-            var (g, w) = TryTemplates(rng, kinds, radius, boss);
+            var (g, w) = TryTemplates(rng, kinds, radius, boss, biome);
             if (g is not null) return (g, null);
             why = w!;
         }
@@ -57,7 +57,7 @@ public sealed partial class CaveLayout
 
     enum Use { None, Path, Side, Room, Arena }
 
-    static (CaveLayout? Layout, string? Why) TryTemplates(Rng rng, IReadOnlyList<PoiKind> kinds, Func<PoiKind, float> radius, bool boss)
+    static (CaveLayout? Layout, string? Why) TryTemplates(Rng rng, IReadOnlyList<PoiKind> kinds, Func<PoiKind, float> radius, bool boss, OctoShoots.Core.Run.Biome biome)
     {
         const int C = Cells, CS = CaveTemplates.Cell;
         var use = new Use[C * C];
@@ -199,13 +199,16 @@ public sealed partial class CaveLayout
         {
             if (use[i] is Use.None or Use.Arena) continue;
             int opens = OpeningsOf(i);
-            var pool = (use[i] == Use.Room ? CaveTemplates.RoomVariants : CaveTemplates.SunlitVariants).Where(v => v.Openings == opens).ToList();
+            // (Its biome's cells, CROSSOVER.md §8; any way they lack, the Sunlit Reef's.)
+            var pool = (use[i] == Use.Room ? CaveTemplates.RoomVariants : CaveTemplates.VariantsOf(biome)).Where(v => v.Openings == opens).ToList();
+            if (pool.Count == 0 && use[i] != Use.Room) pool = CaveTemplates.SunlitVariants.Where(v => v.Openings == opens).ToList();
             if (pool.Count == 0) return (null, $"no cave template opens {opens}");
             var v = pool[rng.Int(pool.Count)];
             var cell = (char[,])v.Grid.Clone();
             foreach (var (sx, sy) in v.Slots)
             {
-                var chunk = CaveTemplates.ChunkVariants[rng.Int(CaveTemplates.ChunkVariants.Count)];
+                var chunks = CaveTemplates.ChunksOf(biome);
+                var chunk = chunks[rng.Int(chunks.Count)];
                 for (int j = 0; j < CaveTemplates.Chunk; j++)
                 for (int k = 0; k < CaveTemplates.Chunk; k++)
                     cell[sx + k, sy + j] = chunk[k, j];

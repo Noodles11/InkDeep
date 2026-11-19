@@ -326,6 +326,7 @@ public static partial class TopDownGenerator
                 return map;
             }
             reasons.Add(problem);
+            log?.Invoke($"Top-down level {id}: attempt {attempt + 1} failed: {problem}");
         }
         throw new InvalidOperationException($"No valid top-down level for {id} after {MaxAttempts} attempts: {string.Join("; ", reasons.Distinct())}");
     }
@@ -575,7 +576,7 @@ public static partial class TopDownGenerator
 
         // A template level (docs/proposals/CROSSOVER.md §2): its cells, and the places its rooms and POI marks can hold.
         var (cave, why) = plan.Templated
-            ? CaveLayout.FromTemplates(rng, kinds.Where(k => k is not (PoiKind.Hole or PoiKind.Secret or PoiKind.LeakCave or PoiKind.Haven or PoiKind.CurseDen)).ToList(), RadiusOf, plan.HasBoss)
+            ? CaveLayout.FromTemplates(rng, kinds.Where(k => k is not (PoiKind.Hole or PoiKind.Secret or PoiKind.LeakCave or PoiKind.Haven or PoiKind.CurseDen)).ToList(), RadiusOf, plan.HasBoss, plan.Biome)
             : CaveLayout.Build(rng, plan.HasBoss, plan.EntryFromArena, kinds, RadiusOf, plan.Template?.Layout, plan.AreaScale);
         open = cave?.Open ?? Array.Empty<bool>();
         if (cave is null) return why;
@@ -2261,7 +2262,17 @@ public static partial class TopDownGenerator
         var mains = map.Corridors.Where(c => c.Kind == CorridorKind.Main).ToList();
         Vector2 OnFlat(float offset)
         {
+            // (A level with no main corridor: by its start.)
+            if (mains.Count == 0) return map.Start.Position;
             var c = mains[rng.Int(mains.Count)];
+            // (A corridor straight from end to end, two points only, as a template level's may be: along its line.)
+            if (c.Points.Count < 3)
+            {
+                var a = c.Points[0];
+                var b = c.Points[^1];
+                var along = Geo.Normalize(b - a, Vector2.UnitX);
+                return Vector2.Lerp(a, b, rng.Range(0.2f, 0.8f)) + Geo.Perp(along) * (rng.Range(-1f, 1f) * offset * c.HalfWidth);
+            }
             int i = 1 + rng.Int(c.Points.Count - 2);
             Vector2 tangent = Geo.Normalize(c.Points[i + 1] - c.Points[i - 1], Vector2.UnitX);
             return c.Points[i] + Geo.Perp(tangent) * (rng.Range(-1f, 1f) * offset * c.HalfWidth);

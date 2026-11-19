@@ -123,6 +123,33 @@ public class BiomeTests
             "{ \"treasures\": [ { \"id\": \"pearl_altar\", \"title\": \"A\", \"biome\": \"The Moon\", \"depth\": 1, \"line\": \"a\", \"does\": \"b\" } ] }"));
     }
 
+    [Theory]
+    [InlineData(Biome.KelpForest)]
+    [InlineData(Biome.Shipwreck)]
+    [InlineData(Biome.SunkenRuins)]
+    public void Each_biome_has_its_own_cell_for_every_way_a_cell_can_open(Biome biome)
+    {
+        var cells = CaveTemplates.VariantsOf(biome);
+        Assert.NotSame(CaveTemplates.SunlitVariants, cells);
+        for (int opens = 1; opens < 16; opens++)
+            Assert.Contains(cells, v => v.Openings == opens);
+        Assert.NotEmpty(CaveTemplates.ChunksOf(biome));
+    }
+
+    [Fact]
+    public void Each_biome_s_levels_are_made_from_its_cells()
+    {
+        var streams = new RunStreams(TestLevels.Seed);
+        foreach (var (depth, branch) in new[] { (2, 0), (2, 1), (3, 0) })
+            for (int level = 1; level <= LevelStocking.LevelsPerDepth; level++)
+            {
+                var map = TopDownGenerator.Generate(streams, At(depth, level, branch), crossover: true);
+                Assert.True(map.Templated);
+                Assert.Equal(Biomes.Of(At(depth, level, branch)), map.Biome);
+                Assert.Null(LevelValidator.Validate(map));
+            }
+    }
+
     [Fact]
     public void A_saved_run_keeps_its_branch()
     {

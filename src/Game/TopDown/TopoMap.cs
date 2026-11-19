@@ -145,7 +145,7 @@ public partial class TopoMap : Control
             image.SetPixel(x, y, new Color(shown[i], Mathf.Min(intoRock[i], 64f), Mathf.Min(intoWater[i], 64f)));
         }
         // The depth's own water, and its reef rock in a stone tone (never paper white).
-        var look = ReefLook.For(map.Depth);
+        var look = ReefLook.Of(map.Id);
         _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("water_col"), look.WaterShallow);
         _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("deep_col"), look.Murk);
         _terrain.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("rock_col"), RockTone(look));

@@ -96,6 +96,37 @@ public sealed record ReefLook
         return PaintedLooks[at] = look with { Name = Drawn(depth).Name };
     }
 
+    /// <summary>
+    /// A level's look (the crossover's by its biome, CROSSOVER.md §8; else its depth's). In the painted look a biome's is
+    /// its depth's own, blended halfway to the biome's palette (the Kelp Forest's greens, the Shipwreck's rust and old
+    /// timber, the Ruins' marble and terracotta), so her light finds each biome's own colours; the Sunlit Reef is its
+    /// depth's as it was.
+    /// </summary>
+    public static ReefLook Of(LevelId id) =>
+        !OctoShoots.Core.Run.Crossover.On || id.IsTutorial || id.Haven ? For(id.Depth) : ForBiome(OctoShoots.Core.Run.Biomes.Of(id), id.Depth);
+
+    static readonly System.Collections.Generic.Dictionary<(OctoShoots.Core.Run.Biome, int, bool), ReefLook> BiomeLooks = new();
+
+    public static ReefLook ForBiome(OctoShoots.Core.Run.Biome biome, int depth)
+    {
+        if (biome == OctoShoots.Core.Run.Biome.SunlitReef) return For(depth);
+        lock (BiomeLooks)
+        {
+            if (BiomeLooks.TryGetValue((biome, depth, Painted), out var made)) return made;
+            var own = biome switch
+            {
+                OctoShoots.Core.Run.Biome.KelpForest => Kelp,
+                OctoShoots.Core.Run.Biome.Shipwreck => Galleon,
+                _ => Ruins,
+            };
+            var look = (Painted ? Blend(For(depth), own, BiomeShare) : own) with { Name = OctoShoots.Core.Run.Biomes.Name(biome) };
+            return BiomeLooks[(biome, depth, Painted)] = look;
+        }
+    }
+
+    /// <summary>How far a biome's look leans from its depth's painted look to its own palette.</summary>
+    public const float BiomeShare = 0.5f;
+
     /// <summary>The seven depths' drawn palettes (THEME-BIBLE §6.3), for the drawn look.</summary>
     public static ReefLook Drawn(int depth) => depth switch
     {
@@ -254,6 +285,18 @@ public sealed record ReefLook
         Sand = C("#3A7BFF"), Rock = C("#C8D0E0"), Coral = C("#FF6BCB"), Coral2 = C("#7CFC4D"), Algae = C("#7CFC4D"), Butter = C("#FF4D5E"),
         Sun = C("#F4F8FF"), SunEnergy = 1.4f, Ambient = C("#F4F8FF"), AmbientEnergy = 1.2f,
         Caustics = 0f, Rays = 0f, Menace = 1f, Saturation = 1.2f, Vignette = 0.1f, Fog = 0.05f, Lantern = 0.6f,
+    };
+
+    // (After Shallows: a palette made from it must come later in the file, where static fields are set in order.)
+    /// <summary>The Sunken Ruins (CROSSOVER.md §8): Greco-Roman marble gone grey-green, warm sand, terracotta and faded fresco blues.</summary>
+    public static readonly ReefLook Ruins = Shallows with
+    {
+        Name = "Sunken Ruins",
+        WaterShallow = C("#5E7E86"), WaterDeep = C("#3E5C66"), Murk = C("#17262C"),
+        Sand = C("#CDBF9E"), Rock = C("#B4AE9F"), Coral = C("#C9795A"), Coral2 = C("#7F98B8"), Algae = C("#8A9A5A"), Sponge = C("#D8A65A"), Butter = C("#E6C36A"),
+        Sun = C("#F2E6C8"), SunEnergy = 0.55f, Ambient = C("#5E7A80"), AmbientEnergy = 0.4f,
+        Caustics = 0.4f, Rays = 0.55f, Menace = 0.45f, Saturation = 0.95f, Vignette = 0.55f, Fog = 0.5f, Lantern = 1.45f,
+        FanA = C("#9A7FB0"), FanB = C("#C98A6A"), SoftCoral = C("#D98F78"), HardCoral = C("#E8D2A0"), Grass = C("#8AA060"),
     };
 
     /// <summary>Sets the reef globals the shaders read (colours converted to linear).</summary>
