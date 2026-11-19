@@ -25,6 +25,8 @@ public static class HerLightTuning
     /// with that many shots' light a second. Along its axis it clears the ink dots within BeamDots metres.
     /// </summary>
     public const int BeamShots = 6;
+    /// <summary>Her beam as a light to see by (PlaneOptions.BeamBurn in the crossover): this share of its burn reaches a creature.</summary>
+    public const float LightOnlyBurn = 0.2f;
     public const float BeamDots = 0.5f;
     public const float Dazzle = 0.8f, Rearm = 2f;
     /// <summary>Her light's reach on a cave's walls (× √ her glow stat): the ash within it, in sight of her, clears (AshTuning).</summary>
@@ -262,7 +264,7 @@ public sealed partial class PlaneWorld
                     }
                     continue;
                 }
-                n += worth * light;
+                n += worth * light * Options.BeamBurn;
                 // In the colour her pearls give that ray, and the prism stones it passed through (mixed on it with the others').
                 hue |= RayHue(beam) | HueAlong(beam.Position, at);
                 beamed = true;
@@ -310,7 +312,7 @@ public sealed partial class PlaneWorld
         }
         else g.BeamTime = 0f;
         // Electric Eel Tail: burned by an arc off what her beam burns, at half the beam's rate.
-        if (!beamed && _arced.Contains(kin)) n += HerLightTuning.BeamShots / 2f * BeamTick;
+        if (!beamed && _arced.Contains(kin)) n += HerLightTuning.BeamShots / 2f * BeamTick * Options.BeamBurn;
         // Fire Coral, Sea Nettle: it burns on a while out of her light.
         if (n == 0 && g.Afterglow > 0f && !Defeated) n = 1;
         if (n > 0f && g.Crit > 0f) n *= MathF.Max(Run.Loadout.Shot.CritMult, 1f);

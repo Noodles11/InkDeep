@@ -91,9 +91,10 @@ public sealed partial class PlaneWorld
         }
     }
 
-    /// <summary>Whether her light shows what a vault holds (within her aura's reach, nothing in the way).</summary>
+    /// <summary>Whether her light shows what a vault holds (within her aura's reach, or in her beam's light; nothing in the way).</summary>
     public bool Seen(PlaneVault vault) =>
-        Aura.Shining && Vector2.Distance(vault.Position, Aura.Position) < Aura.Range && LineOfSight(Aura.Position, vault.Position);
+        Aura.Shining && Vector2.Distance(vault.Position, Aura.Position) < Aura.Range && LineOfSight(Aura.Position, vault.Position)
+        || BeamOn && BeamLight(Beam, vault.Position, 0f, vault.Radius, vault) > 0f;
 
     /// <summary>Her beams fill the vaults they reach with light till they burst; a vault out of the beam settles back. Her dash bursts one too.</summary>
     void StepVaults()

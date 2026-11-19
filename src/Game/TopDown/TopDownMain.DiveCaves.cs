@@ -68,7 +68,7 @@ public partial class TopDownMain
     {
         var d = PlaneOptions.Default;
         bool calm = map.Labyrinth || map.Haven is not null;
-        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings && !calm, Vases = d.Vases && !calm, Adventure = d.Adventure, Shots = d.Shots, DiveCave = map.LeakCave };
+        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings && !calm, Vases = d.Vases && !calm, Adventure = d.Adventure, Shots = d.Shots, Glow = d.Glow, BeamBurn = d.BeamBurn, DiveCave = map.LeakCave };
     }
 
     /// <summary>In a haven (docs/DIVE.md §4): a reef's haven behind its mouth (or, for an old save, Lantern Bay).</summary>

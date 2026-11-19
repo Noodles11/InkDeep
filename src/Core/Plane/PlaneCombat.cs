@@ -371,7 +371,7 @@ public sealed partial class PlaneWorld
         // Clementine's shots, toward her aim while fire is held, shaped by her pearls. Firefly Squid pours them out as
         // one continuous surge instead (PlaneSurge.cs).
         bool aimed = p.Aim.LengthSquared() > 0.5f;
-        // (In the game her shots are off: her beam is her one attack. PlaneOptions.Shots.)
+        // (Her bubble shots, PlaneOptions.Shots: on in the game again since 0.57.0, her attack while her beam lights the way.)
         bool fire = input.Fire && Options.Shots;
         // String of Pearls (Sardine Run + Pearl Diver): no holding to charge — the stream fires as Sardine Run's does,
         // and each shot is a pearl charged as far as the stream has spun up.

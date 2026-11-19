@@ -147,8 +147,8 @@ progress is. The Altar in particular makes every start different, which is Isaac
 | | Now | Crossover | Why |
 |---|---|---|---|
 | Move | free swim, pulse-and-glide | **same** (`PlaneWorld`) | It already feels like a jellyfish, and twin-stick movement is what Isaac needs. |
-| Main attack | the beam, a held cone of light | **same beam**, plus a **tap = light bolt** (a short tear-like shot) | The beam is the game's identity. The tap gives Isaac's aim-and-fire rhythm and lets "tear" pearls (speed, range, homing) read clearly. |
-| Aura | always on; shows the corrupted | **same**; it also shows what is inside bubble vaults | Light reveals. |
+| Main attack | the beam, a held cone of light | **bubble shots** (built in 0.57.0, the shots from before 0.13.0); the **beam** mostly a light to see by (a fifth of its burn on creatures, all of it on a boss's pearl) | Shots give Isaac's aim-and-fire rhythm and let "tear" pearls (speed, range, homing) read clearly; the beam keeps the light's identity as the way she finds things. |
+| Aura | always on; shows the corrupted | **cut** (built in 0.57.0): her beam shows what the aura showed, the vaults' contents too | Light reveals, where she points it. |
 | Dash | ink dash, briefly untouchable | **same** | It covers Isaac's dodging. |
 | Glow off | hides her | **cut** for now | It works against a fight-and-go loop. It could come back as a pearl. |
 | Health | a continuous corruption meter (100) | **light pips** (6, in halves *(tune)*), refilled by healing orbs | Discrete hits make Isaac's and Spelunky's damage readable and fair. |

@@ -40,11 +40,22 @@ public sealed class PlaneOptions
     /// </summary>
     public bool DiveCave;
     /// <summary>
-    /// Her shots (PlaneInput.Fire: the thrown bubbles of light, the charged pearl, Firefly Squid's surge). Off in the game:
-    /// her beam is her one attack (docs/LIGHT-AND-GRAPH.md §5). On here by default, for what is still built on
-    /// shots (the sim's tests, an active pearl's own).
+    /// Her shots (PlaneInput.Fire: the thrown bubbles of light, the charged pearl, Firefly Squid's surge). On in the game
+    /// (since 0.57.0, as before 0.13.0): her attack, while her beam lights the way. On here by default too.
     /// </summary>
     public bool Shots = true;
+    /// <summary>
+    /// Her glow (her aura: the lamp in her bell shining all round her, LightTuning.AuraReach). Off in the crossover: her
+    /// beam is what lights the way (what a vault holds, the creatures in the dark, a charge stone), and the glow's toggle
+    /// does nothing there. On here by default, for what is built on it.
+    /// </summary>
+    public bool Glow = true;
+    /// <summary>
+    /// How much of her beam's burn reaches a creature (1 all of it). In the crossover her beam is her light, mostly for
+    /// seeing by (HerLightTuning.LightOnlyBurn): it still dazzles what it falls on and burns a little, and burns a boss's
+    /// pearl in full (lighting the pearl is how a boss is beaten); her bubble shots do the freeing.
+    /// </summary>
+    public float BeamBurn = 1f;
     /// <summary>The reef's bubble geysers (PlaneGeysers.cs): off (none are placed or spray); on only for their own tests.</summary>
     public bool Geysers;
 

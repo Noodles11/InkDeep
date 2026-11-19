@@ -46,6 +46,8 @@ public partial class TopDownMain : Node3D
     /// <summary>How lit her bell stays with her glow out (a faint shape for the player, no light for the reef).</summary>
     const float GlowOffLit = 0.12f;
     bool _dbgGlowOff;
+    /// <summary>Verification (--shoot): the auto-fire throws her bubble shots, not her beam.</summary>
+    bool _dbgShoot;
     float _dbgSealAt;
     /// <summary>The rims of the reef's holes, each in the colour of where it leads.</summary>
     HoleView _holes = null!;
@@ -422,6 +424,13 @@ public partial class TopDownMain : Node3D
 
     public override void _Ready()
     {
+        // Her bubble shots and her beam (docs/proposals/CROSSOVER.md §6): the shots are her attack again, as before
+        // 0.13.0; in the crossover her glow is gone and her beam is her light to see by, mostly (PlaneOptions).
+        PlaneOptions.Default = new PlaneOptions
+        {
+            Adventure = true, Shots = true, Glow = !Crossover.On,
+            BeamBurn = Crossover.On ? HerLightTuning.LightOnlyBurn : 1f,
+        };
         // The bundled fonts: Nunito is every screen's default (THEME-BIBLE §6.8).
         TitleStyle.InstallDefaultFont();
         // Her colour (data/clementine_color.cfg), for every shader and view that wears it.
@@ -582,6 +591,8 @@ public partial class TopDownMain : Node3D
             else if (arg == "--autopilot") _autopilot = true;
             else if (arg.StartsWith("--boss-hp=") && float.TryParse(Value("--boss-hp="), NumberStyles.Float, CultureInfo.InvariantCulture, out float bhp)) _bossHp = bhp;
             else if (arg == "--fire") _autoFire = true;
+            // (Verification: as --fire, with her bubble shots in place of her beam.)
+            else if (arg == "--shoot") _autoFire = _dbgShoot = true;
             else if (arg == "--dbg-shadow") _autoFire = _dbgShadow = true;
             else if (arg == "--dbg-sense") _autoFire = _dbgShadow = _dbgSense = true;
             else if (arg == "--dbg-paths") _autoFire = _dbgShadow = _dbgPaths = true;
@@ -728,7 +739,7 @@ public partial class TopDownMain : Node3D
         if (spec is null) return null;
         var d = PlaneOptions.Default;
         GD.Print($"Debug boss: {spec.Name} ({spec.Tier} {spec.Form}, {spec.Concept}, {spec.Theme}, {spec.Exposure}, {spec.Signature})");
-        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Shots = d.Shots, Boss = spec };
+        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Shots = d.Shots, Glow = d.Glow, BeamBurn = d.BeamBurn, Boss = spec };
     }
 
     /// <summary>
@@ -741,7 +752,7 @@ public partial class TopDownMain : Node3D
         if (!_map.HasBoss || _map.Rift || OctoShoots.Core.Run.Crossover.On || _jelly is not { } jelly || Dives.FolkBossOf(_id, jelly) is not { } folk || Folk.Get(folk) is not { } n
             || OctoShoots.Core.Bosses.FolkBosses.For(n.Id, n.Level, _map.Menace) is not { } spec) return null;
         var d = PlaneOptions.Default;
-        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Shots = d.Shots, Boss = spec };
+        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Shots = d.Shots, Glow = d.Glow, BeamBurn = d.BeamBurn, Boss = spec };
     }
 
     /// <summary>Saves the run as it stands at the start of this level (continuing puts her back here).</summary>
@@ -2950,6 +2961,9 @@ public partial class TopDownMain : Node3D
         Guard("showcase", () => StepShowcase(dt));
         // Her glow out: her bell all but dark (her light going out at the end has its own).
         if (!_dying) _bell.Lit = Mathf.MoveToward(_bell.Lit, _world.GlowOff ? GlowOffLit : 1f, dt * 5f);
+        // (No glow: her bell shines, but casts no light round her; her beam is her light. PlaneOptions.Glow.)
+        _bell.CastsLight = _world.Options.Glow;
+        RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_glow_on"), _world.Options.Glow ? 1f : 0f);
         Guard("surge", () => _surgeView.Sync(_world, dt));
         Guard("geysers", () => _geysers.Sync(_world, dt, _camera.Camera));
         _camera.SetBubbleLights(_combat.Lights, _combat.LightCount);
@@ -3093,7 +3107,7 @@ public partial class TopDownMain : Node3D
         int left = _world.Mobs.Count(m => m.Alive);
         _info.Text = $"{_id} · mobs {left}/{_world.Mobs.Count} · pearls {_run!.Items.Count}   attempt {_map.Attempt + 1}   pos {p.Position.X:0.0}, {p.Position.Y:0.0}   " +
                      $"{Engine.GetFramesPerSecond():0} FPS" +
-                     "\nWASD swim · Space dash · hold the left mouse or arrows to shine · Shift over a hole dives · Tab map · Esc pause · F1 debug menu · F3 debug map · R regenerate";
+                     "\nWASD swim · Space dash · hold the left mouse or arrows to shine · right mouse to shoot · Shift over a hole dives · Tab map · Esc pause · F1 debug menu · F3 debug map · R regenerate";
         Capture();
     }
 
@@ -4179,7 +4193,8 @@ public partial class TopDownMain : Node3D
         bool dive = Input.IsActionPressed(InputSetup.Dive);
         input.Dive = dive && !_diveLatched || _autoDive && _world.CanDive;
         _diveLatched = dive;
-        bool glow = Input.IsActionPressed(InputSetup.Glow);
+        // (Her glow's toggle: only where she has a glow, PlaneOptions.Glow.)
+        bool glow = _world.Options.Glow && InputMap.HasAction(InputSetup.Glow) && Input.IsActionPressed(InputSetup.Glow);
         input.ToggleGlow = glow && !_glowLatched
             // Verification (--dbg-glowoff): her glow put out a moment after she arrives.
             || _dbgGlowOff && _levelTime > 0.5f && !_world.GlowOff && (_dbgGlowOff = false) is false;
@@ -4190,30 +4205,34 @@ public partial class TopDownMain : Node3D
         if (InLabyrinth) input.UseActive = false;
         _activeLatched = use;
         if (AutoFire(ref input)) return input;
+        bool held = Input.IsActionPressed(InputSetup.Fire);
         bool shine = Input.IsActionPressed(InputSetup.Beam);
-        if (!shine) _fireBlocked = false;
+        if (!held && !shine) _fireBlocked = false;
         Vector2 aim = Input.GetVector(InputSetup.AimLeft, InputSetup.AimRight, InputSetup.AimUp, InputSetup.AimDown);
         if (_pad)
         {
-            // Controller: the right stick aims, the trigger shines her beam. Left alone, she aims the way she swims
-            // (standing still, the way she last aimed).
+            // Controller: the right stick aims, the trigger shines her beam, the bumper shoots. Left alone, she aims the
+            // way she swims (standing still, the way she last aimed).
             if (aim.LengthSquared() > 0.04f) _padAim = new System.Numerics.Vector2(aim.X, aim.Y);
             else if (stick.LengthSquared() > 0.04f) _padAim = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(stick.X, stick.Y));
             else if (_padAim.LengthSquared() > 1e-6f) _padAim = System.Numerics.Vector2.Normalize(_padAim);
             input.Aim = _padAim.LengthSquared() > 1e-6f ? System.Numerics.Vector2.Normalize(_padAim) : _world.Player.Aim;
+            input.Fire = held && !_fireBlocked;
             input.Beam = shine && !_fireBlocked;
         }
         else if (aim.LengthSquared() > 0f)
         {
-            // The aim keys (the arrows) aim and shine her beam at once.
+            // The aim keys (the arrows) aim and shine her beam at once (the shoot button still shoots).
             input.Aim = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(aim.X, aim.Y));
             input.Beam = true;
+            input.Fire = held && !_fireBlocked;
         }
         else
         {
-            // The mouse: her beam toward the pointer while its button is held.
+            // The mouse: her beam (left) and her bubble shots (right) toward the pointer while a button is held.
             var to = MouseOnBand() - _world.Player.Position;
             input.Aim = to.LengthSquared() > 1e-4f ? System.Numerics.Vector2.Normalize(to) : default;
+            input.Fire = held && !_fireBlocked;
             input.Beam = shine && !_fireBlocked;
         }
         return input;
@@ -4466,7 +4485,8 @@ public partial class TopDownMain : Node3D
             }
             _world.Player.Velocity = System.Numerics.Vector2.Zero;
             input.Aim = way;
-            input.Beam = !_dbgSense;
+            input.Beam = !_dbgSense && !_dbgShoot;
+            input.Fire = _dbgShoot;
             return true;
         }
         System.Numerics.Vector2? target = _dbgPrismSeal is { } aimed ? aimed.Emblem : _world.Boss is { Stage: BossStage.Fight } queen ? queen.Position
@@ -4485,7 +4505,7 @@ public partial class TopDownMain : Node3D
         input.Aim = target is { } at && System.Numerics.Vector2.DistanceSquared(at, from) > 1e-4f ? System.Numerics.Vector2.Normalize(at - from) : _world.Player.Aim;
         // With Pearl Diver, let go once the pearl is fully charged.
         input.Fire = !(_world.Run.Loadout.Shot.Charge && _world.Player.Charge >= PlaneCombatTuning.ChargeSeconds);
-        input.Beam = true;
+        input.Beam = !_dbgShoot;
         return true;
     }
 

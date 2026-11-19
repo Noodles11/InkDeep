@@ -52,16 +52,23 @@ the reef was never being called home. It was being kept.
 - **Moves** (DESIGN-TOPDOWN §2.2): free swimming on her plane; the **ink dash** (a burst, briefly untouchable, leaving a
   slowing ink cloud), and the **fast swim** while the dash is held.
 - **Her light** (LIGHT-AND-GRAPH §2):
-  - her **aura**, always on round her: it shows the corrupted near her and seals a leak she stays close to;
+  - her **aura**, always on round her: it shows the corrupted near her and seals a leak she stays close to. **Not in
+    the crossover** (since 0.57.0, `PlaneOptions.Glow`): no glow round her, her bell casts no light; her beam is her light;
   - her **beam**, a flashlight cone along her aim while the beam is held: it burns the corrupted, dazzles them, seals
     leaks, opens seals, clears ink and ash, charges stones and opens bosses, by how much of its light reaches. It is a
-    real light: rock, the seabed and every creature's body stop it and cast shadows (VISUAL-SHOWCASE);
-  - her **glow can be put out**: dark, she is hidden from the Leak's creatures and sees almost nothing.
+    real light: rock, the seabed and every creature's body stop it and cast shadows (VISUAL-SHOWCASE). In the
+    crossover it is mostly a light to see by: it shows what the glow showed (the creatures in the dark, what a bubble
+    vault holds), dazzles what it falls on and burns creatures at a fifth of its strength (`PlaneOptions.BeamBurn`,
+    `HerLightTuning.LightOnlyBurn`), but burns a boss's open pearl in full;
+  - her **bubble shots** (the right mouse button, the right bumper; back since 0.57.0, as before 0.13.0): thrown
+    bubbles of light that ease out, rest and merge, each a small lantern burning the corrupted it lights; her attack;
+  - her **glow can be put out**: dark, she is hidden from the Leak's creatures and sees almost nothing (not in the
+    crossover, which has no glow: its toggle has no default button).
 - **Her life is her light.** What hurts her corrupts her; her corruption meter is the minimap's bezel and the gauge on
   the HUD. Murklings drink her light. It comes back from cores (the light freed creatures leave), light orbs, light
   springs, healing pearls, havens and a sealed leak cave. Full of corruption, she dims and the dive ends (DIVE §2).
 - **Her active pearl** is used with its own button and recharges; she carries one at a time.
-- **Controls:** move, aim, beam, glow, dash, dive, active pearl, review pearls, pause. Every one can be rebound, on the
+- **Controls:** move, aim, beam, shoot, glow (unbound by default), dash, dive, active pearl, review pearls, pause. Every one can be rebound, on the
   keyboard and mouse and on a controller (`InputSetup`). Twin-stick aim on a controller.
 
 ## 4. The dive
@@ -357,4 +364,12 @@ the tests of the dive still test the dive.
     cells and the depth's palette); the war's creatures in the rosters (the ink creatures still come from the
     Blightroots); the vortices' colour in the ink look; the Ruins' treasure. Tull's, Kip's and Ottilie's fights are their
     folk fights as they were, not tuned for the crossover's arena.
+- **Her light and her shots (0.57.0):** her **glow is gone** in the crossover (`PlaneOptions.Glow`): no aura, her bell
+  casts no light round her (no bulb, no halo, no warm pool, no glow in the water: `BellView.CastsLight`, the post pass's
+  `her_glow_on`), and the glow's toggle has no default button. Her **beam is her light**: it shows the creatures in the
+  dark and what a bubble vault holds, dazzles, and burns creatures at a fifth (`HerLightTuning.LightOnlyBurn`), a boss's
+  open pearl in full. Her **bubble shots are back** as her attack (right mouse, right bumper; `--shoot` for
+  verification). In the ink look **her light is clean**: what her beam lights shows in its own colour, smooth, never
+  stepped or halftoned, coming in quickly at the beam's edge; outside it the washes and dots are as they were. (The
+  caves' outline is still traced in coral and magenta light where she lights it.)
 

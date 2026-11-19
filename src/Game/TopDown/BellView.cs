@@ -374,6 +374,11 @@ public partial class BellView : Node3D
     /// </summary>
     public bool Puppet { get; init; }
     public float Lit = 1f;
+    /// <summary>
+    /// Whether her bell casts its light round her (her glow: the bulb, its halo, the warm pool under her). False in the
+    /// crossover (PlaneOptions.Glow): her bell still shines, but her beam is her light.
+    /// </summary>
+    public bool CastsLight = true;
     Color? _ownGlow;
 
     /// <summary>A jelly's look on this bell and its strands only (not the shared colours every other view follows).</summary>
@@ -566,7 +571,7 @@ public partial class BellView : Node3D
         var at = GlobalPosition;
         _glowRadius = 3f * Mathf.Sqrt(Mathf.Max(glow, 0.1f));
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_glow"), new Vector4(at.X, at.Y, at.Z, _glowRadius));
-        RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_glow_strength"), (1f - DiveTurn) * (0.9f + 0.1f * _pulse));
+        RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_glow_strength"), CastsLight ? (1f - DiveTurn) * (0.9f + 0.1f * _pulse) : 0f);
     }
 
     float _glowRadius = 3f;
@@ -658,6 +663,7 @@ public partial class BellView : Node3D
         float lit = Mathf.Clamp(Lit, 0f, 1f), on = Puppet ? 1.35f : 1f;
         _light.LightEnergy *= Mathf.Lerp(0.03f, Puppet ? 1.6f * on : 1f, lit);
         _halo.LightEnergy *= lit * on * on;
+        _light.Visible = _halo.Visible = CastsLight || Puppet;
         _bellMaterial.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("glow"), Mathf.Lerp(0.28f, on, lit));
         _strandMaterial.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("glow"), Mathf.Lerp(0.2f, on, lit));
     }

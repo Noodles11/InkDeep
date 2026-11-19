@@ -618,7 +618,7 @@ public sealed partial class PlaneWorld
         var a = _aura!;
         a.Position = Player.Position;
         a.Range = LightTuning.AuraReach * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.Glow], 0.1f));
-        a.Active = !Defeated && !GlowOff;
+        a.Active = !Defeated && !GlowOff && Options.Glow;
     }
 
     /// <summary>

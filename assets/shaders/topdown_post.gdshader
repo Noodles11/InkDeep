@@ -32,6 +32,9 @@ global uniform float reef_fog;
 /// Clementine's bell in world space and her glow pool's radius; how strong her glow on the floor is (BellView).
 global uniform vec4 her_glow;
 global uniform float her_glow_strength;
+/// Her glow on (1) or gone (0, the crossover: PlaneOptions.Glow): her light round her on the reef and its veil cleared.
+/// Her beam's light (reef_show) is her light then.
+global uniform float her_glow_on;
 /// The depth's lantern (ReefLook.Lantern): how much her light carries against the dark.
 global uniform float her_lantern;
 
@@ -477,7 +480,7 @@ void fragment() {
 	// surface and what this pixel shows.
 	float column_in = clamp((sea_surface_y - (open_deep ? -40.0 : one_reef ? swim_level - seen : world.y)) / 20.0, 0.0, 1.5);
 	// What her own light falls on keeps its warmth: her light travels a few metres, not down from the surface.
-	float lit = open_deep ? 0.0 : her_clear(world);
+	float lit = open_deep ? 0.0 : her_clear(world) * her_glow_on;
 	column_in *= 1.0 - 0.55 * reef_showcase;
 	col *= mix(vec3(1.0), vec3(0.64, 0.9, 1.05), column_in * (1.0 - 0.6 * lit));
 	col = mix(col, reef_water_deep * 0.7, 0.13 * column_in);
@@ -598,7 +601,7 @@ void fragment() {
 	// (its own colour brightened, not a haze laid over it), fading as a lamp's light does.
 	col += her_tint * her_water(cam, ray, t0, open_deep ? t0 + 120.0 : t1, ign) * 0.15 * her_k;
 	if (!open_deep) {
-		float on = her_reach(world) * her_k;
+		float on = her_reach(world) * her_k * her_glow_on;
 		col = col * (1.0 + her_tint * on * (her_seat > 0.0 ? 0.42 : 0.6) * her_lantern) + her_tint * on * on * 0.05 * her_lantern;
 		vec2 seat = on_layer.xz - player_pos.xz;
 		col *= 1.0 - her_seat * exp(-dot(seat, seat) / 1.7);
@@ -680,16 +683,14 @@ void fragment() {
 		float dotted = length(fract(g) - 0.5) * 1.414;
 		float x0 = sqrt(il0) * 4.0;
 		float q0 = (floor(x0) + step(dotted, sqrt(smoothstep(0.45, 1.0, fract(x0))))) / 4.0;
-		float x = sqrt(il) * 4.0;
-		float q = (floor(x) + step(dotted, sqrt(smoothstep(0.45, 1.0, fract(x))))) / 4.0;
 		// Where she does not light it: the rock a wash of ash, the water and the floor under it near-black blue ink.
 		float rock = smoothstep(-0.3, 0.5, h);
 		vec3 ash = mix(INK * 2.0, ASH * 0.4, min(q0 * q0 * 1.5, 1.0));
 		vec3 deep = mix(INK_WATER, INK_WATER * 1.7 + ASH * 0.02, q0);
 		vec3 unlit = mix(deep, ash, rock);
-		// In her light (and what she has cleansed) its own colour, stepped a little.
-		vec3 tone = mix(col, col * (q * q / max(il, 1e-4)), 0.55);
-		vec3 inked = mix(unlit, tone, smoothstep(0.05, 0.6, shown));
+		// In her light (and what she has cleansed) its own colour, clean and smooth: her light is never put through the
+		// washes' steps or the halftone, and it comes in quickly at its edge (the ash's dots never catch its gradient).
+		vec3 inked = mix(unlit, col, smoothstep(0.0, 0.3, shown));
 		// The open deep sinks into the dark water; her glow in it still shows.
 		if (open_deep) inked = INK_WATER + col * smoothstep(0.06, 0.5, il);
 		// The brush's lines: the caves' outline ink where she does not light it, traced in coral and magenta light where

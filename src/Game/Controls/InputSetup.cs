@@ -24,6 +24,7 @@ public static class InputSetup
 	public const string AimLeft = "aim_left";
 	public const string AimRight = "aim_right";
 	public const string Beam = "beam";
+	public const string Fire = "fire";
 	public const string Glow = "toggle_glow";
 	public const string Dash = "dash";
 	public const string Dive = "dive";
@@ -59,7 +60,10 @@ public static class InputSetup
 		new(AimRight, "Aim right", "key:Right", "axis:RightX:+"),
 		new(Beam, "Shine the beam (hold)", "mouse:Left", "axis:TriggerRight:+"),
 		new(Dash, "Dash", "key:Space", "axis:TriggerLeft:+"),
-		new(Glow, "Glow on / off (dark, beam off: unseen)", "key:Ctrl", "button:RightShoulder"),
+		// Her bubble shots (the right mouse button, the right bumper), as before 0.13.0. (Her glow's toggle lost its
+		// buttons with her glow: the crossover has none, PlaneOptions.Glow. It may be bound by hand.)
+		new(Fire, "Shoot bubbles (hold)", "mouse:Right", "button:RightShoulder"),
+		new(Glow, "Glow on / off (dark, beam off: unseen)", "", ""),
 		new(Dive, "Dive down the shaft", "key:Shift", "button:X"),
 		new(Active, "Use the active pearl (first slot)", "key:F", "button:Y"),
 		new(Review, "Level map (hold)", "key:Tab", "button:Back"),
