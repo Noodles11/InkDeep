@@ -83,6 +83,18 @@ public partial class RelicView : Node3D
                 node.AddChild(bell);
                 break;
             }
+            case Treasures.OilLamp:
+            {
+                // A bronze oil lamp lying on the floor: its round flat body, its spout out to one side, a ring of a handle
+                // on the other, the hole for its oil in its top.
+                var lamp = new Node3D { Position = new Vector3(0f, floor + 0.2f, 0f) };
+                lamp.AddChild(new MeshInstance3D { Mesh = new SphereMesh { Radius = 0.42f, Height = 0.36f, RadialSegments = 20, Rings = 8 }, MaterialOverride = Bronze });
+                lamp.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.09f, BottomRadius = 0.14f, Height = 0.55f, RadialSegments = 10, Rings = 1 }, MaterialOverride = Bronze, Position = new Vector3(0.5f, 0.02f, 0f), Rotation = new Vector3(0f, 0f, Mathf.Pi / 2f) });
+                lamp.AddChild(new MeshInstance3D { Mesh = new TorusMesh { InnerRadius = 0.07f, OuterRadius = 0.13f, Rings = 12, RingSegments = 6 }, MaterialOverride = Bronze, Position = new Vector3(-0.48f, 0.05f, 0f), Rotation = new Vector3(Mathf.Pi / 2f, 0f, 0f) });
+                lamp.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.08f, BottomRadius = 0.08f, Height = 0.03f, RadialSegments = 10, Rings = 1 }, MaterialOverride = StoneDark, Position = new Vector3(0f, 0.18f, 0f) });
+                node.AddChild(lamp);
+                break;
+            }
             case Treasures.ShellUrn:
             {
                 var urn = new Node3D { Position = new Vector3(0f, lying ? floor + 0.45f : floor, 0f), Rotation = lying ? new Vector3(0f, 0f, Mathf.DegToRad(80f)) : Vector3.Zero };

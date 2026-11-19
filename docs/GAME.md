@@ -434,4 +434,19 @@ the tests of the dive still test the dive.
   (0.61.1) The wash kept as dark as the plain ink look (its tint a lean, not a lift). Every crossover level records the
   cells it was built from (`LevelMap.Cells`), and each biome's levels are checked to be built only from its own (and the
   room cell): no two biomes share a cell.
+- **Step 7, fourth part (0.62.0), the rest of the biomes' hazards and the Ruins' treasure** (`PlaneHazards.cs`):
+  - the Shipwreck's **rusted cannons** (four a level, against walls, a faint glow at the muzzle): anything that swims
+    across the line before one sets it off, her or a creature; 0.6 s later it booms (a shake) and fires a heavy ball at
+    7 m/s, 14 m out; the ball hits whatever it meets first, her (16) or a creature (40), and rests 4 s. Lure the
+    creatures across them;
+  - the Kelp Forest's **kelp curtains** (two a level, across the middle of side passages): a close row of tall strands,
+    a faint green glow along it; it stops her, her shots and her light, till her beam holds on it 0.6 s: then it parts
+    (its strands sink aside) for 3.5 s and closes again behind her (never on her);
+  - the Ruins' **amphorae** (its own pots, the breakable vases of old, holding shells) and a **light-locked door** on a
+    side passage (a seal her light opens, `TopDownGenerator.RuinsDoors`);
+  - the Ruins' treasure, the **Oil Lamp** (`Treasures.OilLamp`, a bronze temple lamp): her beam reaches a quarter
+    farther every run (`PlaneRun.BeamReach`).
+  - `--at=curtain` stands before a curtain (verification).
+  - Not done: urchin beds as a hazard of their own (urchins are the Kelp Forest's ambushers), the doors' own look (a seal
+    looks like the reef wall), and the war's ink creatures in the rosters.
 

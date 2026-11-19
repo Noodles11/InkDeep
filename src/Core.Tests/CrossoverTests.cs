@@ -426,10 +426,10 @@ public class CrossoverTests
         TreasureCatalog.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "treasures.json"))));
 
     [Fact]
-    public void The_treasures_load_one_to_a_depth_and_each_is_known()
+    public void The_treasures_load_one_to_a_biome_and_each_is_known()
     {
         var all = TreasureData.Value.All;
-        Assert.Equal(new[] { Treasures.PearlAltar, Treasures.SpareBell, Treasures.ShellUrn }, all.Select(t => t.Id));
+        Assert.Equal(new[] { Treasures.PearlAltar, Treasures.SpareBell, Treasures.ShellUrn, Treasures.OilLamp }, all.Select(t => t.Id));
         Assert.Equal(Treasures.PearlAltar, TreasureData.Value.AtDepth(1)?.Id);
         Assert.Throws<InvalidOperationException>(() => TreasureCatalog.FromJson(
             "{ \"treasures\": [ { \"id\": \"golden_fork\", \"title\": \"Fork\", \"depth\": 1, \"line\": \"a\", \"does\": \"b\" } ] }"));

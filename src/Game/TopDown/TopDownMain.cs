@@ -2193,6 +2193,8 @@ public partial class TopDownMain : Node3D
             "relic-on" => _world.Relics.Where(r => !r.InStartCave).Select(r => (System.Numerics.Vector2?)r.Position).FirstOrDefault(),
             // In front of the Ruins' first dart trap, in its line (it fires at her).
             "dart" => _world.DartTraps.Select(t => (System.Numerics.Vector2?)(t.Position + t.Facing * 5f)).FirstOrDefault(),
+            // Before the Kelp Forest's first curtain, facing it (with --fire her beam parts it).
+            "curtain" => _world.Curtains.Select(c => (System.Numerics.Vector2?)(c.Rock.Center - c.Rock.Facing * 4f)).FirstOrDefault(),
             "vault" => _world.Vaults.Select(v => (System.Numerics.Vector2?)(v.Position - v.Wall * 2.5f)).FirstOrDefault(),
             "shop" => _map.Caves.Where(c => _map.Pois[c.Poi].Kind == PoiKind.Shop).Select(c => (System.Numerics.Vector2?)(c.Mouth - c.Facing * 1.5f)).FirstOrDefault(),
             // Out along the shop's passage, facing its gateway.
@@ -2756,8 +2758,19 @@ public partial class TopDownMain : Node3D
                     _camera.Shake(0.25f * near);
                     _sfx.PlayPitched("sand_sink", 0.7f, -6f);
                 }
-                else if (e.Type == PlaneEventType.DartArmed) _sfx.PlayPitched("snap", 1.6f, -10f);
-                else if (e.Type == PlaneEventType.DartFired) _sfx.PlayPitched("dash", 1.8f, -8f);
+                else if (e.Type == PlaneEventType.DartArmed) _sfx.PlayPitched("snap", e.Size > 0f ? 0.8f : 1.6f, -10f);
+                else if (e.Type == PlaneEventType.DartFired)
+                {
+                    // (A cannon's boom: lower, and the view shakes a little.)
+                    if (e.Size > 0f)
+                    {
+                        _sfx.PlayPitched("sand_sink", 0.5f, -2f);
+                        _camera.Shake(0.18f);
+                    }
+                    else _sfx.PlayPitched("dash", 1.8f, -8f);
+                }
+                else if (e.Type == PlaneEventType.CurtainParted) _sfx.PlayPitched("merge", 0.7f, -8f);
+                else if (e.Type == PlaneEventType.CurtainClosed) _sfx.PlayPitched("merge", 0.5f, -14f);
                 // A treasure found (CROSSOVER.md §5.2): hers for good, kept on the jelly and saved at once.
                 else if (e.Type == PlaneEventType.TreasureFound && _world.LastTreasure is { } treasure) TreasureFound(treasure);
                 // The Pearl Altar's pearls she passed over fade.

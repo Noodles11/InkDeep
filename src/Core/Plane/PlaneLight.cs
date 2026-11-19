@@ -646,7 +646,7 @@ public sealed partial class PlaneWorld
         beam.Position = Player.Position;
         var aim = input.Aim.LengthSquared() > 1e-6f ? input.Aim : Player.Aim;
         if (aim.LengthSquared() > 1e-6f) beam.Direction = Vector2.Normalize(aim);
-        beam.Range = LightTuning.BeamReach * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.Glow], 0.1f)) * MathF.Sqrt(MathF.Max(RangeScale, 0.1f))
+        beam.Range = LightTuning.BeamReach * Run.BeamReach * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.Glow], 0.1f)) * MathF.Sqrt(MathF.Max(RangeScale, 0.1f))
             * (shape.Laser ? GreatLightTuning.LanceReach : 1f);
         // Her rhythms (PlaneRhythm.cs): focus narrows her beam. Her great lights (PlaneGreatLights.cs).
         StepRhythm(input.Beam && !Defeated, beam.Direction);

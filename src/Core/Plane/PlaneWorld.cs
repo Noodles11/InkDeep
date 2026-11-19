@@ -78,7 +78,7 @@ public sealed class PlaneInk
     public float MaxLife;
 }
 
-public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, MobDefeated, MobNoticed, PlayerHit, PlayerDefeated, Dived, DiveOpened, VaultBurst, TideRose, TideDissolved, ShrineGiven, ShrineDenied, TreasureFound, PearlFaded, DebrisWarned, DebrisLanded, DartArmed, DartFired, PufferSwells, NeedlesFired, PearlCollected, ShellCollected, HeartCollected, Purchased, CannotAfford, ShotPopped, BubbleFull,
+public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, MobDefeated, MobNoticed, PlayerHit, PlayerDefeated, Dived, DiveOpened, VaultBurst, TideRose, TideDissolved, ShrineGiven, ShrineDenied, TreasureFound, PearlFaded, DebrisWarned, DebrisLanded, DartArmed, DartFired, CurtainParted, CurtainClosed, PufferSwells, NeedlesFired, PearlCollected, ShellCollected, HeartCollected, Purchased, CannotAfford, ShotPopped, BubbleFull,
     ChargeFull, LightBurst, ShieldBlocked, ActiveUsed, ActiveNotReady, ActiveDenied,
     GeyserFizz, GeyserSpray, GeyserEnded, VaseHit, VaseBroken, FullBubbleFreed,
     BlightrootDrank, BlightrootInflate, GuardiansWoke, BlightrootPulse, BlightrootBurst, MurklingBud, MurklingEmerged, MurklingBurst, MurklingThrow, MurklingWindup, ThumpWindup, ThumpLeap, ThumpLand, ThumpRoll, ThumpBurst, Warded, WardenFreed, LashWindup, LashOut, LashCatch, LashSwallow, LashBite, LashStun, LashFreed, SealLit, SealOpened, SealClosed, FishStruck, FishTurned, FishFreed,
@@ -179,7 +179,8 @@ public sealed partial class PlaneWorld
         PlaceCrab();
         PlaceShells();
         PlaceBoss();
-        if (Options.Vases) PlaceVases();
+        // (The Sunken Ruins' amphorae: its own pots, CROSSOVER.md §8.)
+        if (Options.Vases || Map.Templated && Map.Biome == OctoShoots.Core.Run.Biome.SunkenRuins) PlaceVases();
         if (Map.Templated) PlaceVaults();
         PlaceSprings();
         PlaceChargeStones();

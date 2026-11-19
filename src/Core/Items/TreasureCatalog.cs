@@ -22,8 +22,10 @@ public sealed class TreasureDef
 /// <summary>The treasures the game knows how to give, and what they give.</summary>
 public static class Treasures
 {
-    public const string PearlAltar = "pearl_altar", SpareBell = "spare_bell", ShellUrn = "shell_urn";
-    public static readonly IReadOnlyList<string> Known = new[] { PearlAltar, SpareBell, ShellUrn };
+    public const string PearlAltar = "pearl_altar", SpareBell = "spare_bell", ShellUrn = "shell_urn", OilLamp = "oil_lamp";
+    public static readonly IReadOnlyList<string> Known = new[] { PearlAltar, SpareBell, ShellUrn, OilLamp };
+    /// <summary>The Oil Lamp's reach: her beam this many times as long.</summary>
+    public const float LampReach = 1.25f;
     /// <summary>The Pearl Altar's offer; the Shell Urn's shells; the Spare Bell's half pips (a whole pip).</summary>
     public const int AltarPearls = 3, UrnShells = 15, BellHalves = 2;
 }

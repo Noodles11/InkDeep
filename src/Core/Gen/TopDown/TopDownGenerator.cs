@@ -778,6 +778,8 @@ public static partial class TopDownGenerator
                 }
         }
         int paths = plan.Template?.Rules.PathSeals ?? 0;
+        // (The Sunken Ruins' light-locked doors, CROSSOVER.md §8: a sealed way her light opens, on a side passage.)
+        if (map.Templated && map.Biome == OctoShoots.Core.Run.Biome.SunkenRuins) paths = Math.Max(paths, RuinsDoors);
         var sides = map.Corridors.Where(c => c.Kind == CorridorKind.Side && !c.Roofed && c.Points.Count >= 6).ToList();
         for (int n = 0; n < paths && sides.Count > 0; n++)
         {
@@ -789,6 +791,9 @@ public static partial class TopDownGenerator
             AddSeal(map, p, Geo.Normalize(c.Points[k - 1] - c.Points[k + 1], Vector2.UnitY), c.HalfWidth, SealKind.Path);
         }
     }
+
+    /// <summary>How many light-locked doors a Ruins level has at least (path seals, on its side passages).</summary>
+    public const int RuinsDoors = 1;
 
     static void AddSeal(LevelMap map, Vector2 at, Vector2 facing, float halfWidth, SealKind kind) =>
         map.WeakRocks.Add(new WeakRock(at, halfWidth + SealPast, -1, facing, SealThick, kind));

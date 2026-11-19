@@ -5,7 +5,7 @@ namespace OctoShoots.Game;
 /// <summary>Which build this is, shown on the title screen (bump with each notable change).</summary>
 public static class GameVersion
 {
-    public const string Number = "0.61.1";
+    public const string Number = "0.62.0";
     /// <summary>The line of work this build comes from.</summary>
     public const string Line = "inkdeep-crossover";
 

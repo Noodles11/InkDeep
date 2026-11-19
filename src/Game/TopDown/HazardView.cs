@@ -31,6 +31,14 @@ public partial class HazardView : Node3D
     readonly List<Fall> _falls = new();
     readonly List<Trap> _traps = new();
     readonly List<MeshInstance3D> _darts = new();
+    /// <summary>The Kelp Forest's curtains: each its strands (and how far they stand, 1 shut, 0 parted) and its faint glow.</summary>
+    readonly List<(PlaneKelpCurtain Sim, Node3D Strands, StandardMaterial3D Glow, float Up)> _curtains = new();
+    static readonly SphereMesh BallMesh = new() { Radius = HazardTuning.BallRadius, Height = HazardTuning.BallRadius * 2f, RadialSegments = 12, Rings = 6 };
+    static readonly CylinderMesh DartMesh = new() { TopRadius = 0.035f, BottomRadius = 0.05f, Height = 0.6f, RadialSegments = 6, Rings = 1 };
+    static readonly StandardMaterial3D Iron = new() { AlbedoColor = new Color(0.22f, 0.2f, 0.19f), Metallic = 0.6f, Roughness = 0.55f };
+    static readonly StandardMaterial3D Rust = new() { AlbedoColor = new Color(0.45f, 0.22f, 0.12f), Roughness = 0.9f };
+    static readonly StandardMaterial3D KelpGreen = new() { AlbedoColor = new Color(0.32f, 0.42f, 0.18f), Roughness = 0.8f };
+    static readonly StandardMaterial3D BallGlow = new() { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, AlbedoColor = new Color(0.75f, 0.55f, 0.4f, 0.85f), Transparency = BaseMaterial3D.TransparencyEnum.Alpha };
     LevelMap? _map;
 
     static readonly StandardMaterial3D Wood = new() { AlbedoColor = new Color(0.36f, 0.25f, 0.16f), Roughness = 0.9f };
@@ -89,9 +97,19 @@ public partial class HazardView : Node3D
         // Darts.
         while (_darts.Count < world.Darts.Count)
         {
-            var m = new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.035f, BottomRadius = 0.05f, Height = 0.6f, RadialSegments = 6, Rings = 1 }, MaterialOverride = Bronze, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+            var m = new MeshInstance3D { Mesh = DartMesh, MaterialOverride = Bronze, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
             AddChild(m);
             _darts.Add(m);
+        }
+        // The curtains: their strands sink aside while parted, and stand again as they close.
+        for (int i = 0; i < _curtains.Count; i++)
+        {
+            var c = _curtains[i];
+            float up = Mathf.MoveToward(c.Up, c.Sim.Open ? 0f : 1f, (float)GetProcessDeltaTime() * (c.Sim.Open ? 4f : 1.5f));
+            c.Strands.Scale = new Vector3(1f, Mathf.Max(up, 0.05f), 1f);
+            float lit = Mathf.Clamp(c.Sim.Light / HazardTuning.CurtainBurn, 0f, 1f);
+            c.Glow.AlbedoColor = new Color(0.55f, 0.85f, 0.45f, (0.12f + 0.3f * lit) * up);
+            _curtains[i] = (c.Sim, c.Strands, c.Glow, up);
         }
         for (int i = 0; i < _darts.Count; i++)
         {
@@ -99,6 +117,8 @@ public partial class HazardView : Node3D
             _darts[i].Visible = on;
             if (!on) continue;
             var d = world.Darts[i];
+            _darts[i].Mesh = d.Ball ? BallMesh : DartMesh;
+            _darts[i].MaterialOverride = d.Ball ? BallGlow : Bronze;
             var way = new Vector3(d.Velocity.X, 0f, d.Velocity.Y).Normalized();
             _darts[i].Position = new Vector3(d.Position.X, LevelMap.SwimBand, d.Position.Y);
             _darts[i].Basis = new Basis(new Quaternion(Vector3.Up, way));
@@ -112,11 +132,26 @@ public partial class HazardView : Node3D
         _traps.Clear();
         _darts.Clear();
         _map = world.Map;
+        _curtains.Clear();
+        foreach (var c in world.Curtains) _curtains.Add(MakeCurtain(c));
         foreach (var t in world.DartTraps)
         {
             var root = new Node3D { Position = new Vector3(t.Position.X, LevelMap.SwimBand, t.Position.Y) };
             // (Its front, local −z, toward the water it faces.)
             root.Basis = new Basis(Vector3.Up, Mathf.Atan2(-t.Facing.X, -t.Facing.Y));
+            if (t.Cannon)
+            {
+                // A ship's cannon fallen against the rock, its rusted barrel toward the water on a broken carriage.
+                root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(0.9f, 0.35f, 1.1f) }, MaterialOverride = Rust, Position = new Vector3(0f, -0.25f, 0.3f) });
+                root.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.16f, BottomRadius = 0.24f, Height = 1.8f, RadialSegments = 14, Rings = 1 }, MaterialOverride = Iron, Rotation = new Vector3(-Mathf.Pi / 2f, 0f, 0f), Position = new Vector3(0f, 0f, -0.1f) });
+                var muzzle = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, Transparency = BaseMaterial3D.TransparencyEnum.Alpha, BlendMode = BaseMaterial3D.BlendModeEnum.Add, AlbedoTexture = Soft, AlbedoColor = new Color(1f, 1f, 1f, 0.3f) };
+                root.AddChild(new MeshInstance3D { Mesh = new PlaneMesh { Size = new Vector2(1.5f, 1.5f) }, MaterialOverride = muzzle, Position = new Vector3(0f, 0.5f, -1f), CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+                var flash = new OmniLight3D { LightColor = new Color(1f, 0.7f, 0.4f), LightEnergy = 0f, OmniRange = 3f, ShadowEnabled = false, Position = new Vector3(0f, 0.3f, -1.2f) };
+                root.AddChild(flash);
+                AddChild(root);
+                _traps.Add(new Trap { Sim = t, Glint = flash, Mouth = muzzle });
+                continue;
+            }
             // A carved face of pale stone pressed into the wall, its slot toward the water.
             root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(0.9f, 1.1f, 0.5f) }, MaterialOverride = Stone, Position = new Vector3(0f, 0f, 0.15f) });
             root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(0.26f, 0.14f, 0.1f) }, MaterialOverride = Slot, Position = new Vector3(0f, 0.15f, -0.12f) });
@@ -128,6 +163,40 @@ public partial class HazardView : Node3D
             AddChild(root);
             _traps.Add(new Trap { Sim = t, Glint = glint, Mouth = mouth });
         }
+    }
+
+    /// <summary>A kelp curtain: a close row of tall strands across its passage, a faint green glow along it (seen in the dark).</summary>
+    (PlaneKelpCurtain, Node3D, StandardMaterial3D, float) MakeCurtain(PlaneKelpCurtain c)
+    {
+        var r = c.Rock;
+        var across = new Vector3(-r.Facing.Y, 0f, r.Facing.X);
+        var mid = new Vector3(r.Center.X, 0f, r.Center.Y);
+        float floor = _map!.HeightAt(r.Center);
+        // (Its node on the seabed: the strands stand from it, and shrink back down to it as they part.)
+        var strands = new Node3D { Position = mid + Vector3.Up * floor };
+        var rng = new RandomNumberGenerator { Seed = (ulong)(r.Center.X * 1000f + r.Center.Y) };
+        for (float t = -r.Radius; t <= r.Radius; t += 0.32f)
+        {
+            float h = LevelMap.SwimBand - floor + 1.2f + rng.Randf() * 0.8f;
+            var at = across * t + new Vector3(r.Facing.X, 0f, r.Facing.Y) * rng.RandfRange(-0.3f, 0.3f);
+            strands.AddChild(new MeshInstance3D
+            {
+                Mesh = new BoxMesh { Size = new Vector3(0.06f, h, 0.22f) }, MaterialOverride = KelpGreen,
+                Position = at + Vector3.Up * (h * 0.5f), Rotation = new Vector3(rng.RandfRange(-0.15f, 0.15f), rng.Randf() * Mathf.Tau, rng.RandfRange(-0.15f, 0.15f)),
+            });
+        }
+        // (Scaled from the floor up: its strands stand on the seabed.)
+        var holder = new Node3D { Position = new Vector3(0f, 0f, 0f) };
+        AddChild(holder);
+        holder.AddChild(strands);
+        var glow = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, Transparency = BaseMaterial3D.TransparencyEnum.Alpha, BlendMode = BaseMaterial3D.BlendModeEnum.Add, AlbedoTexture = Soft, AlbedoColor = new Color(0.55f, 0.85f, 0.45f, 0.12f) };
+        var band = new MeshInstance3D
+        {
+            Mesh = new PlaneMesh { Size = new Vector2(r.Radius * 2.2f, 1.6f) }, MaterialOverride = glow, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            Position = mid + Vector3.Up * (LevelMap.SwimBand + 0.1f), Basis = new Basis(Vector3.Up, Mathf.Atan2(-across.Z, across.X)),
+        };
+        AddChild(band);
+        return (c, strands, glow, 1f);
     }
 
     Fall MakeFall(LevelMap map, PlaneDebris d)

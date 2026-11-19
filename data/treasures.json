@@ -14,6 +14,9 @@
       "does": "She starts every run with one more light pip." },
     { "id": "shell_urn", "title": "Shell Urn", "biome": "Shipwreck Graveyard", "depth": 2,
       "line": "A sealed urn from a wreck's hold, heavy with shells.",
-      "does": "She starts every run with 15 shells." }
+      "does": "She starts every run with 15 shells." },
+    { "id": "oil_lamp", "title": "Oil Lamp", "biome": "Sunken Ruins", "depth": 3,
+      "line": "A bronze lamp from a temple's niche, its oil long gone, its wick still waiting.",
+      "does": "Her beam reaches a quarter farther every run." }
   ]
 }

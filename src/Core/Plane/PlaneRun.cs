@@ -91,6 +91,9 @@ public sealed class PlaneRun
     /// <summary>Health beyond her loadout's for the run (the Spare Bell's pip).</summary>
     public float ExtraHp { get; set; }
 
+    /// <summary>Her beam's reach for the run, × (the Oil Lamp's, Treasures.LampReach; 1 without it).</summary>
+    public float BeamReach { get; set; } = 1f;
+
     /// <summary>The treasures (data/treasures.json), and those she has found (the jelly's, and any found this run).</summary>
     public OctoShoots.Core.Items.TreasureCatalog? TreasureCatalog { get; set; }
     public HashSet<string> Treasures { get; } = new();
@@ -107,6 +110,7 @@ public sealed class PlaneRun
         Treasures.UnionWith(found);
         StartCave = startCave;
         ExtraHp = Treasures.Contains(OctoShoots.Core.Items.Treasures.SpareBell) ? OctoShoots.Core.Items.Treasures.BellHalves * LightPips.Half : 0f;
+        BeamReach = Treasures.Contains(OctoShoots.Core.Items.Treasures.OilLamp) ? OctoShoots.Core.Items.Treasures.LampReach : 1f;
         Hp = MaxHp;
     }
 

@@ -16,9 +16,9 @@ public class HazardTests
     static readonly Lazy<ItemCatalog> Catalog = new(() =>
         ItemCatalog.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "items.json"))));
 
-    static PlaneWorld World(int shownDepth, int branch)
+    static PlaneWorld World(int shownDepth, int branch, int level = 2)
     {
-        var id = new LevelId(1, shownDepth + LevelPlan.Tutorial, 2) { Branch = branch };
+        var id = new LevelId(1, shownDepth + LevelPlan.Tutorial, level) { Branch = branch };
         var map = TopDownGenerator.Generate(new RunStreams(TestLevels.Seed), id, crossover: true);
         var w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), new PlaneOptions { Adventure = true });
         w.Murklings.Clear();
@@ -96,5 +96,68 @@ public class HazardTests
         }
         Assert.True(fired);
         Assert.True(w.Player.Hp < before);
+    }
+
+    [Fact]
+    public void The_Shipwreck_s_cannons_fire_at_a_creature_crossing_their_line_and_the_ball_strikes_it()
+    {
+        var w = World(2, 1);
+        Assert.NotEmpty(w.DartTraps);
+        Assert.All(w.DartTraps, t => Assert.True(t.Cannon));
+        var gun = w.DartTraps[0];
+        gun.Rest = 0f;
+        // (She is far off: only the creature crosses its line.)
+        var spot = gun.Position + gun.Facing * 6f;
+        var mob = new PlaneMob { Position = spot, Home = spot, Rng = new Rng(1), FireTimer = 99f, Hp = 1000f };
+        w.Mobs.Add(mob);
+        float hp = mob.Hp;
+        bool fired = false;
+        for (int i = 0; i < 180 && mob.Hp >= hp; i++)
+        {
+            mob.Position = spot;
+            mob.Velocity = Vector2.Zero;
+            w.Player.Position = w.Player.PrevPosition = w.Map.Start.Position;
+            w.Step(default);
+            fired |= w.Events.Exists(e => e.Type == PlaneEventType.DartFired);
+        }
+        Assert.True(fired);
+        Assert.True(mob.Hp < hp);
+    }
+
+    [Fact]
+    public void A_kelp_curtain_stops_her_till_her_beam_parts_it_and_it_closes_again()
+    {
+        PlaneWorld? w = null;
+        for (int level = 1; level <= 4 && (w is null || w.Curtains.Count == 0); level++) w = World(2, 0, level);
+        Assert.NotEmpty(w!.Curtains);
+        var c = w.Curtains[0];
+        Assert.False(w.Clear(c.Rock.Center, 0.3f));
+        var at = c.Rock.Center - c.Rock.Facing * 3f;
+        for (int i = 0; i < 90 && !c.Open; i++)
+        {
+            w.Player.Position = w.Player.PrevPosition = at;
+            w.Player.Hp = w.Run.MaxHp;
+            w.Step(new PlaneInput { Beam = true, Aim = c.Rock.Facing });
+        }
+        Assert.True(c.Open);
+        Assert.True(w.Clear(c.Rock.Center, 0.3f));
+        for (int i = 0; i < 60 * 5 && c.Open; i++)
+        {
+            w.Player.Position = w.Player.PrevPosition = at - c.Rock.Facing * 3f;
+            w.Step(default);
+        }
+        Assert.False(c.Open);
+        Assert.False(w.Clear(c.Rock.Center, 0.3f));
+    }
+
+    [Fact]
+    public void The_Ruins_have_amphorae_to_break_and_a_light_locked_door()
+    {
+        var w = World(3, 0);
+        Assert.NotEmpty(w.Vases);
+        Assert.Empty(World(2, 1).Vases);
+        bool door = false;
+        for (int level = 1; level <= 4 && !door; level++) door = World(3, 0, level).Seals.Exists(x => x.Kind == SealKind.Path);
+        Assert.True(door);
     }
 }

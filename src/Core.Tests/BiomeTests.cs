@@ -118,7 +118,11 @@ public class BiomeTests
         Assert.Equal(Treasures.PearlAltar, data.InBiome(Biome.SunlitReef)?.Id);
         Assert.Equal(Treasures.SpareBell, data.InBiome(Biome.KelpForest)?.Id);
         Assert.Equal(Treasures.ShellUrn, data.InBiome(Biome.Shipwreck)?.Id);
-        Assert.Null(data.InBiome(Biome.SunkenRuins));
+        Assert.Equal(Treasures.OilLamp, data.InBiome(Biome.SunkenRuins)?.Id);
+        // (The Oil Lamp's reach is hers for every run once found.)
+        var run = new OctoShoots.Core.Plane.PlaneRun(ItemCatalog.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "items.json"))), new Tuning());
+        run.BeginWithTreasures(new[] { Treasures.OilLamp });
+        Assert.Equal(Treasures.LampReach, run.BeamReach);
         Assert.Throws<InvalidOperationException>(() => TreasureCatalog.FromJson(
             "{ \"treasures\": [ { \"id\": \"pearl_altar\", \"title\": \"A\", \"biome\": \"The Moon\", \"depth\": 1, \"line\": \"a\", \"does\": \"b\" } ] }"));
     }
