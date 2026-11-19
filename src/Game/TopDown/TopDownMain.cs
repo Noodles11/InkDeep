@@ -1528,7 +1528,7 @@ public partial class TopDownMain : Node3D
             ResetRunTotals();
             _reefs.Clear();
             _announced.Clear();
-            _run = new PlaneRun(_catalog, _tuning);
+            _run = new PlaneRun(_catalog, _tuning) { Pips = OctoShoots.Core.Run.Crossover.On };
             // Her earned achievements are the run's unlocks (the profile's own set: one earned mid-run applies at once).
             _run.Unlocked = _recorder.Profile.Achievements;
             _achievements = new PlaneAchievements(_recorder.Profile, _customSeed);
@@ -2111,6 +2111,9 @@ public partial class TopDownMain : Node3D
             // Close in front of the boss (captures of its body).
             "boss-near" => _map.HasBoss ? _world.ArenaCenter + new System.Numerics.Vector2(0f, 6.5f) : null,
             // Out from the first bubble vault, facing it (--dbg-vault shines at it).
+            // By the light shrine, and on it (it gives its pearl).
+            "shrine" => _world.Stands.Where(t => t.Kind == StandKind.Shrine).Select(t => (System.Numerics.Vector2?)(t.Position + new System.Numerics.Vector2(0f, 3f))).FirstOrDefault(),
+            "shrine-on" => _world.Stands.Where(t => t.Kind == StandKind.Shrine).Select(t => (System.Numerics.Vector2?)t.Position).FirstOrDefault(),
             "vault" => _world.Vaults.Select(v => (System.Numerics.Vector2?)(v.Position - v.Wall * 2.5f)).FirstOrDefault(),
             "shop" => _map.Caves.Where(c => _map.Pois[c.Poi].Kind == PoiKind.Shop).Select(c => (System.Numerics.Vector2?)(c.Mouth - c.Facing * 1.5f)).FirstOrDefault(),
             // Out along the shop's passage, facing its gateway.
@@ -2656,6 +2659,13 @@ public partial class TopDownMain : Node3D
                     _hud.CollectShell(shownAt / HudScale, across / HudScale, lie, Math.Max(1, (int)e.Size));
                 }
                 else if (e.Type == PlaneEventType.CannotAfford) Say("Not enough shells");
+                // A light shrine (docs/proposals/CROSSOVER.md §5): her light given for its pearl, or too little to give.
+                else if (e.Type == PlaneEventType.ShrineDenied) Say("Too little light to give");
+                else if (e.Type == PlaneEventType.ShrineGiven)
+                {
+                    _sfx.PlayPitched("bell_ring", 0.7f, -6f);
+                    _combat.LightBurst(e.Position, 2f);
+                }
                 else if (e.Type == PlaneEventType.PlayerDrained)
                 {
                     _damage.Show(e);

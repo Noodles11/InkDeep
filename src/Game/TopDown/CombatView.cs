@@ -201,6 +201,21 @@ public partial class CombatView : Node3D
     /// A small price tag hanging on a string below and to the side of the item: a cream card with a hole, the number,
     /// and a shell drawn on it.
     /// </summary>
+    /// <summary>The light shrine's stone: an old weathered pillar of pale stone, a shallow bowl on top where the pearl rests.</summary>
+    Node3D ShrineStone(System.Numerics.Vector2 at)
+    {
+        var node = new Node3D { Position = new Vector3(at.X, 0f, at.Y) };
+        float floor = -1f;
+        var stone = new StandardMaterial3D { AlbedoColor = new Color(0.72f, 0.69f, 0.62f), Roughness = 0.92f };
+        float height = LevelMap.SwimBand - 0.55f - floor;
+        node.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.42f, BottomRadius = 0.6f, Height = height, RadialSegments = 9, Rings = 2 }, MaterialOverride = stone, Position = new Vector3(0f, floor + height * 0.5f, 0f) });
+        node.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.7f, BottomRadius = 0.45f, Height = 0.22f, RadialSegments = 12, Rings = 1 }, MaterialOverride = stone, Position = new Vector3(0f, floor + height + 0.08f, 0f) });
+        _shrines.Add(node);
+        return node;
+    }
+
+    readonly List<Node3D> _shrines = new();
+
     static Node3D PriceTag(string price)
     {
         var tag = new Node3D { Visible = false };
@@ -285,19 +300,21 @@ public partial class CombatView : Node3D
             sh.Halo.QueueFree();
         }
         foreach (var st in _stands) st.QueueFree();
+        foreach (var st in _shrines) st.QueueFree();
+        _shrines.Clear();
         foreach (var h in _hearts) h.QueueFree();
         _hearts.Clear();
         _shells.Clear();
         _stands.Clear();
         _prices.Clear();
         _shops.Clear();
-        _shops.AddRange(world.Map.Pois.Where(p => p.Kind is PoiKind.Shop or PoiKind.CrabDeal));
+        _shops.AddRange(world.Map.Pois.Where(p => p.Kind is PoiKind.Shop or PoiKind.CrabDeal or PoiKind.Shrine));
         // The shop's goods float on their own (a clam room's pearl hangs still instead): pearls in their colours, the top-up a light
         // orb (as the creatures leave). Each hangs a little price tag on a string (its price and a shell), shown only while she is inside the shop.
         foreach (var stand in world.Stands)
         {
             var node = new Node3D { Position = new Vector3(stand.Position.X, LevelMap.SwimBand, stand.Position.Y) };
-            if (stand.Kind is StandKind.Pearl or StandKind.Deal)
+            if (stand.Kind is StandKind.Pearl or StandKind.Deal or StandKind.Shrine)
             {
                 Color a = new(1f, 0.95f, 0.85f), b = new(0.8f, 0.85f, 1f);
                 if (catalog is not null && catalog.TryGet(stand.ItemId, out var item) && item.Pearl is { } look)
@@ -318,7 +335,10 @@ public partial class CombatView : Node3D
                 node.AddChild(LightOrb(1.5f));
             }
             if (stand.Kind == StandKind.Pearl && fresh?.Contains(stand.ItemId) == true) node.AddChild(NewChip());
-            var tag = PriceTag(stand.Kind == StandKind.Deal ? $"-{Mathf.RoundToInt(CrabTuning.Cut * 100f)}% HP" : stand.Price.ToString());
+            // A light shrine: its old stone under the pearl (CROSSOVER.md §5), and what it asks is her light, not shells.
+            if (stand.Kind == StandKind.Shrine) AddChild(ShrineStone(stand.Position));
+            var tag = PriceTag(stand.Kind == StandKind.Deal ? $"-{Mathf.RoundToInt(CrabTuning.Cut * 100f)}% HP"
+                : stand.Kind == StandKind.Shrine ? $"{stand.Price / 2} light" : stand.Price.ToString());
             node.AddChild(tag);
             _prices.Add(tag);
             AddChild(node);

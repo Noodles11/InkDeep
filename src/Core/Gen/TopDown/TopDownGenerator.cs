@@ -557,6 +557,7 @@ public static partial class TopDownGenerator
         // A haven (docs/DIVE.md §4): a mouth at the end of its spur, into a small safe sub-level.
         for (int i = 0; i < plan.Havens; i++) kinds.Add(PoiKind.Haven);
         for (int i = 0; i < plan.Caches; i++) kinds.Add(PoiKind.ShellCache);
+        for (int i = 0; i < plan.Shrines; i++) kinds.Add(PoiKind.Shrine);
         if (kinds.Count > 0)
         {
             PoiKind earlyKind = kinds.Contains(PoiKind.Haven) ? PoiKind.Haven

@@ -40,6 +40,33 @@ public sealed class PlaneRun
     /// <summary>The open reef's active slots (docs/archive/RPG-PROPOSAL.md §5.2): three, each its own button.</summary>
     public const int SlotCount = 3;
 
+    /// <summary>Her health counts in light pips (LightPips, docs/proposals/CROSSOVER.md §6): the crossover's runs.</summary>
+    public bool Pips { get; set; }
+
+    /// <summary>
+    /// The pearls a place offers (CROSSOVER.md §7, pools by place): of those she may be offered and none of
+    /// <paramref name="lying"/>, the ones of the place's pool ("treasure" a clam's, "shop", "secret" a bubble vault's,
+    /// with the plainer treasures; "shrine" the finest, quality 3 and up); every one she may be offered if the pool has
+    /// none left.
+    /// </summary>
+    public List<string> Offer(string place, IEnumerable<string> lying)
+    {
+        var held = lying.ToHashSet();
+        var all = PortedPearls.Where(id => CanOffer(id) && !held.Contains(id)).ToList();
+        if (Catalog is null) return all;
+        bool In(string id, System.Func<ItemDef, bool> rule) => Catalog.TryGet(id, out var item) && rule(item);
+        var pool = place switch
+        {
+            "shrine" => all.Where(id => In(id, i => i.Quality >= 3)).ToList(),
+            "secret" => all.Where(id => In(id, i => i.Pools.Contains("secret") || i.Quality <= 2)).ToList(),
+            _ => all.Where(id => In(id, i => i.Pools.Contains(place))).ToList(),
+        };
+        return pool.Count > 0 ? pool : all;
+    }
+
+    /// <summary>A pearl's quality (0–4; 2 if unknown).</summary>
+    public int QualityOf(string id) => Catalog is not null && Catalog.TryGet(id, out var item) ? item.Quality : 2;
+
     public PlaneRun(ItemCatalog? catalog, Tuning tuning)
     {
         Catalog = catalog;

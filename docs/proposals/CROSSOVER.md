@@ -160,7 +160,9 @@ the largest finished system in the repo and it already works like Isaac's items.
 
 **Changes:**
 
-- **Pools by place:** treasure pearl (clam), shop, secret, deal, shrine, boss and the Altar's pool. `ItemPools`
+- **Pools by place:** treasure pearl (clam), shop, secret, deal, shrine, boss and the Altar's pool. *(Built for the
+  clam, shop, bubble vault and shrine in 0.52.0. The light shrine, as built: a fine pearl, quality 3 and up, given for
+  two pips of her current light, never her last; GAME.md §14.)* `ItemPools`
   already has pools; they get re-tagged.
 - **Boost or alter:** every pearl does one or both. *Boosts* are the plain stat pearls (`PlaneStatSheet`). *Alters*
   change how the beam behaves. Each pearl's card says which.
@@ -340,7 +342,7 @@ Each step ends with a build that runs and passing tests.
 2. **Template caves** (begun in 0.50.0: GAME.md §14; 10 cells and a room so far, each used in its eight ways):
    the cell walk, sockets, an ASCII template reader, chunks, the erosion pass; 30 Sunlit Reef templates with mob and
    POI marks; the dive clock. *First playable: endless Sunlit Reef levels.* *(3 weeks)*
-3. **Pickups, pips and places** (begun in 0.51.0: shell worths, bubble vaults, shops; GAME.md §14): shell worths, healing orbs, bubble vaults, light pips; shop, clam, deal, shrine,
+3. **Pickups, pips and places** (built in 0.51.0–0.52.0 but for the active's charge by freeing; GAME.md §14): shell worths, healing orbs, bubble vaults, light pips; shop, clam, deal, shrine,
    secret as POI marks; pools by place; the HUD. *(2 weeks)*
 4. **The boss level:** the arena template, the rising current, dissolving creatures, the vortex; Queen Clam moved in.
    *A full first depth.* *(2 weeks)*

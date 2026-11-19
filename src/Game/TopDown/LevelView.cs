@@ -91,6 +91,7 @@ public partial class LevelView : Node3D
         PoiKind.CrabDeal => new Color(0.95f, 0.4f, 0.3f),      // crab red (no beacon)
         PoiKind.Exit => new Color(1f, 0.55f, 0.15f),           // orange (the Crack, the way down)
         PoiKind.ShellCache => new Color(0.3f, 0.9f, 0.85f),    // teal (the treasure pool's colour)
+        PoiKind.Shrine => new Color(1f, 0.92f, 0.72f),         // her warm light
         _ => new Color(0.95f, 0.95f, 0.95f),                   // the start: white
     };
 
@@ -1538,6 +1539,7 @@ public partial class LevelView : Node3D
         PoiKind.TreasureCave => "Clam room",
         PoiKind.CurseDen => "Curse den",
         PoiKind.CrabDeal => "Crab's Deal",
+        PoiKind.Shrine => "Light shrine",
         PoiKind.Exit or PoiKind.Hole => "Blue hole",
         _ => kind.ToString(),
     };

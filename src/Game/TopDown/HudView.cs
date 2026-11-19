@@ -76,6 +76,10 @@ public partial class HudView : Control
 
     bool _adventure;
     float _health = 1f, _healthShown = 1f, _xpShare, _charge = 1f, _hurt;
+    /// <summary>Her light in pips (PlaneRun.Pips): her half pips, the most she holds, and a flash as one is lost.</summary>
+    bool _pips;
+    int _halves = 12, _maxHalves = 12;
+    float _pipLost;
     bool _xpFull, _shellsSeen;
     int _xpLevel = 1;
     ItemDef? _active;
@@ -302,6 +306,13 @@ public partial class HudView : Control
             }
             _health = health;
             _healthShown = Mathf.MoveToward(_healthShown, _health, dt * 0.8f);
+            // Her light in pips (docs/proposals/CROSSOVER.md §6): beads of light down her first arm.
+            _pips = world.Run.Pips;
+            int halves = OctoShoots.Core.Plane.LightPips.Halves(world.Player.Hp);
+            if (halves < _halves) _pipLost = 1f;
+            _halves = halves;
+            _maxHalves = OctoShoots.Core.Plane.LightPips.MaxHalves(world.Run.MaxHp);
+            _pipLost = Mathf.MoveToward(_pipLost, 0f, dt * 2f);
             _hurt = Mathf.MoveToward(_hurt, 0f, dt * 2.5f);
             _xpFull = world.Run.Points > 0 && !OctoShoots.Core.Run.Crossover.On;
             _xpShare = _xpFull ? 1f : Mathf.Clamp(world.Run.Xp / (float)Mathf.Max(world.Run.XpNeeded, 1), 0f, 1f);
@@ -469,6 +480,49 @@ public partial class HudView : Control
         _bellLook.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("points"), _xpFull ? 1f : 0f);
     }
 
+    /// <summary>
+    /// Her light pips (docs/proposals/CROSSOVER.md §6): beads of her warm light strung down her first arm, a half
+    /// pip a lit half bead; the empty ones dark glass. The last pip breathes when it is all she has; the arm flashes as
+    /// one is lost.
+    /// </summary>
+    void DrawPips()
+    {
+        int pips = Mathf.Max(1, (_maxHalves + 1) / 2);
+        const int N = 30;
+        for (int k = 0; k < N; k++)
+        {
+            float f0 = k / (float)N, f1 = (k + 1f) / N;
+            DrawLine(ArmAt(0, f0), ArmAt(0, f1), new Color(0f, 0f, 0f, 0.42f), 4f, true);
+            DrawLine(ArmAt(0, f0), ArmAt(0, f1), new Color(0.3f, 0.26f, 0.2f, 0.5f), 2f, true);
+        }
+        var light = new Color(1f, 0.88f, 0.62f);
+        bool last = _halves <= 2;
+        float breath = last ? 0.5f + 0.5f * Mathf.Sin(_time * 5f) : 0f;
+        for (int k = 0; k < pips; k++)
+        {
+            var c = ArmAt(0, (k + 0.9f) / (pips + 0.4f));
+            float r = 7.5f;
+            DrawCircle(c, r + 2f, new Color(0f, 0f, 0f, 0.5f));
+            DrawCircle(c, r, new Color(0.06f, 0.06f, 0.08f, 0.85f));
+            int lit = Mathf.Clamp(_halves - 2 * k, 0, 2);
+            var fill = light.Lerp(Colors.White, 0.35f * breath);
+            if (lit == 2) DrawCircle(c, r - 1f, fill);
+            else if (lit == 1)
+            {
+                // The half bead: lit on the side toward her bell.
+                var half = new Vector2[17];
+                for (int j = 0; j <= 16; j++)
+                {
+                    float a = Mathf.Pi + Mathf.Pi * j / 16f;
+                    half[j] = c + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * (r - 1f);
+                }
+                DrawColoredPolygon(half, fill);
+            }
+            if (lit > 0) DrawCircle(c + new Vector2(-2f, -2.5f), 1.6f, new Color(1f, 1f, 1f, 0.75f));
+            DrawArc(c, r, 0f, Mathf.Tau, 20, new Color(1f, 0.9f, 0.7f, 0.35f + 0.5f * _pipLost), 1.2f, true);
+        }
+    }
+
     /// <summary>How long a frayed piece of health's arm takes to drift off and fade.</summary>
     const float FrayTime = 0.7f;
 
@@ -482,8 +536,12 @@ public partial class HudView : Control
         float pulse = 0.5f + 0.5f * Mathf.Sin(_time * 4f);
         bool low = _healthShown < 0.25f;
         var health = low ? new Color(1f, 0.88f, 0.62f).Lerp(new Color(1f, 0.42f, 0.58f), 0.4f + 0.4f * pulse) : new Color(1f, 0.88f, 0.62f);
-        Arm(0, _healthShown, health, _hurt, low ? 1f : 0f);
-        foreach (var (from, to, age) in _frays) Fray(0, from, to, age / FrayTime, health);
+        if (_pips) DrawPips();
+        else
+        {
+            Arm(0, _healthShown, health, _hurt, low ? 1f : 0f);
+            foreach (var (from, to, age) in _frays) Fray(0, from, to, age / FrayTime, health);
+        }
         if (_active is not null)
         {
             var pearl = OctoShoots.Game.Fx.PearlMaterials.GlowColor(_active);

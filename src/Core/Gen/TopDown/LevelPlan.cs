@@ -81,6 +81,8 @@ public sealed class LevelPlan
     /// a boss's (those keep the grown cave until their own steps of the build).
     /// </summary>
     public bool Templated { get; private set; }
+    /// <summary>A template level's light shrine (CROSSOVER.md §5), 0 or 1.</summary>
+    public int Shrines { get; private set; }
     /// <summary>The level above was a boss level: she arrives on its arena's floor.</summary>
     public bool EntryFromArena { get; init; }
     /// <summary>
@@ -99,7 +101,7 @@ public sealed class LevelPlan
     public int Floor { get; init; } = 1;
     public int Floors { get; init; } = 1;
 
-    public int Places => Treasures + Secrets + Curses + Shops + Caches + Crabs + Havens + (HasBoss ? 1 : 0);
+    public int Places => Treasures + Secrets + Curses + Shops + Caches + Crabs + Havens + Shrines + (HasBoss ? 1 : 0);
     /// <summary>The level's template (docs/archive/LEVEL-TEMPLATES-PROPOSAL.md): null in the tutorial.</summary>
     public LevelTemplate? Template { get; init; }
 
@@ -149,11 +151,17 @@ public sealed class LevelPlan
         if (plan.Templated && plan.Shops == 0 && id.Level >= 2 && plan.Places < LevelStocking.MaxPlaces
             && new RunStreams(seed).Plan(id).Stream("crossover shop").NextFloat() < CrossoverShop)
             plan.Shops = 1;
+        // Its light shrine, the same way.
+        if (plan.Templated && plan.Places < LevelStocking.MaxPlaces
+            && new RunStreams(seed).Plan(id).Stream("crossover shrine").NextFloat() < CrossoverShrine)
+            plan.Shrines = 1;
         return plan;
     }
 
     /// <summary>How often a template level from its second row on holds a shop.</summary>
     public const float CrossoverShop = 0.45f;
+    /// <summary>How often a template level holds a light shrine.</summary>
+    public const float CrossoverShrine = 0.35f;
 
     static LevelPlan DivePlan(SeedCode seed, LevelId id, float luck)
     {

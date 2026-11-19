@@ -265,4 +265,86 @@ public class CrossoverTests
         int lying = w.Shells.Skip(shells).Sum(sh => sh.Value);
         Assert.True(lying + w.Run.Shells >= worth, $"{lying} lying + {w.Run.Shells} taken, of {worth}");
     }
+
+    [Fact]
+    public void Light_pips_count_her_light_in_halves()
+    {
+        Assert.Equal(12, LightPips.MaxHalves(100f));
+        Assert.Equal(12, LightPips.Halves(100f));
+        Assert.Equal(12, LightPips.Halves(100f - 0.5f));
+        Assert.Equal(11, LightPips.Halves(100f - LightPips.Half - 0.5f));
+        Assert.Equal(1, LightPips.HitHalves(3f));
+        Assert.Equal(2, LightPips.HitHalves(24f));
+        Assert.Equal(LightPips.HitMost, LightPips.HitHalves(500f));
+        Assert.Equal(10 * LightPips.Half, LightPips.Add(95f, -2, 100f), 3);
+        Assert.Equal(100f, LightPips.Add(95f, 4, 100f));
+    }
+
+    static PlaneWorld PipWorld(LevelMap map)
+    {
+        var run = new PlaneRun(Catalog.Value, new Tuning()) { Pips = true };
+        return new PlaneWorld(map, new Tuning(), run);
+    }
+
+    [Fact]
+    public void In_pips_a_hit_takes_whole_halves_and_an_orb_gives_back_a_pip()
+    {
+        var w = PipWorld(Templated.Value[0]);
+        float full = w.Player.Hp;
+        Assert.True(w.DebugHurt(5f));
+        Assert.Equal(LightPips.MaxHalves(full) - 1, LightPips.Halves(w.Player.Hp));
+        Assert.Equal(0f, w.Player.Hp % LightPips.Half, 2);
+        int before = LightPips.Halves(w.Player.Hp);
+        w.Player.HurtTimer = 0f;
+        Assert.True(w.DebugHurt(1000f));
+        Assert.Equal(before - LightPips.HitMost, LightPips.Halves(w.Player.Hp));
+        // An orb where she floats: a whole pip back.
+        before = LightPips.Halves(w.Player.Hp);
+        w.Hearts.Add(new PlaneHeart { Position = w.Player.Position });
+        w.Step(default);
+        Assert.Equal(before + LightPips.OrbHalves, LightPips.Halves(w.Player.Hp));
+    }
+
+    [Fact]
+    public void Pools_by_place_offer_the_place_s_pearls()
+    {
+        var run = new PlaneRun(Catalog.Value, new Tuning());
+        var none = Array.Empty<string>();
+        Assert.All(run.Offer("shrine", none), id => Assert.True(run.QualityOf(id) >= 3, id));
+        Assert.All(run.Offer("shop", none), id => Assert.Contains("shop", Catalog.Value.Items.First(i => i.Id == id).Pools));
+        Assert.All(run.Offer("secret", none), id => Assert.True(run.QualityOf(id) <= 2 || Catalog.Value.Items.First(i => i.Id == id).Pools.Contains("secret"), id));
+        Assert.True(run.Offer("shop", none).Count < run.Offer("treasure", none).Count);
+        Assert.Equal(50, PlaneEconomyTuning.PriceOf(0));
+        Assert.Equal(150, PlaneEconomyTuning.PriceOf(4));
+    }
+
+    [Fact]
+    public void A_light_shrine_gives_a_fine_pearl_for_two_pips_and_never_her_last_light()
+    {
+        var plan = Ids.Concat(Ids.Select(i => i with { Cycle = 2 })).Select(id => LevelPlan.For(TestLevels.Seed, id, crossover: true)).First(p => p.Shrines == 1);
+        var map = TopDownGenerator.Generate(new RunStreams(TestLevels.Seed), plan.Id, crossover: true);
+        var poi = Assert.Single(map.Pois, p => p.Kind == PoiKind.Shrine);
+        Assert.True(LevelValidator.DistanceAt(LevelValidator.Distances(map, map.Start.Position), poi.Position) < float.PositiveInfinity);
+
+        // Too little light: it is refused.
+        var low = PipWorld(map);
+        var stand = Assert.Single(low.Stands, s => s.Kind == StandKind.Shrine);
+        Assert.True(low.Run.QualityOf(stand.ItemId) >= 3);
+        low.Player.Hp = LightPips.ShrineHalves * LightPips.Half;
+        low.Player.Position = low.Player.PrevPosition = stand.Position;
+        low.Step(default);
+        Assert.Contains(low.Events, e => e.Type == PlaneEventType.ShrineDenied);
+        Assert.False(stand.Sold);
+
+        // Enough: two pips given, the pearl taken.
+        var w = PipWorld(map);
+        stand = w.Stands.Single(s => s.Kind == StandKind.Shrine);
+        int halves = LightPips.Halves(w.Player.Hp);
+        w.Player.Position = w.Player.PrevPosition = stand.Position;
+        w.Step(default);
+        Assert.Contains(w.Events, e => e.Type == PlaneEventType.ShrineGiven);
+        Assert.True(stand.Sold);
+        Assert.Equal(halves - LightPips.ShrineHalves, LightPips.Halves(w.Player.Hp));
+        Assert.Contains(w.Pearls, q => q.ItemId == stand.ItemId);
+    }
 }

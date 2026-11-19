@@ -261,5 +261,21 @@ the tests of the dive still test the dive.
     away from the wall. It is fixed to the rock. `--at=vault --dbg-vault` shines at one (verification).
   - **Shops:** with no havens, a template level from its second row on holds a shop 45% of the time
     (`LevelPlan.CrossoverShop`), in a room cell like a treasure clam, with the shop's stands as before.
-  - Still to come in step 3: light pips, healing orbs giving back a pip, the shrine, pools by place and quality.
+- **Step 3, second part (0.52.0), light pips, pools by place, the light shrine:**
+  - **Light pips** (`LightPips`, `PlaneRun.Pips`, on for the crossover's runs): her health counts in half pips of
+    100/12, so 6 pips at the start (more as pearls raise her most). A hit takes whole half pips, one to four by how
+    hard it was after the menace (`HitHalves`: one per 12), so hits read and count; a drain (a murkling clinging, the
+    curse's dark) still drinks steadily, and her pips show it rounded up. A healing orb gives back a whole pip, the
+    shop's top-up two. On the HUD the pips are beads of her warm light strung down her first arm, a half pip a lit
+    half bead, the empty ones dark; the last pip breathes, and the arm flashes as one is lost.
+  - **Pools by place** (`PlaneRun.Offer`): on a template level a clam offers from the treasure pool, a shop from
+    the shop pool (its pearl priced by quality, 50 + 25 a quality step: 50 to 150 shells), a bubble vault from the
+    secret pool with the plainer treasures (quality 2 and under), a light shrine the finest (quality 3 and up). A
+    pool with nothing left falls back to every pearl she may be offered.
+  - **The light shrine** (`PoiKind.Shrine`, `StandKind.Shrine`; the proposal named it but not what it does, so this
+    is a first design): an old pale stone on a POI mark of a template level (35% of them, `LevelPlan.CrossoverShrine`),
+    a fine pearl resting on it. Touching it gives two pips of her light for the pearl, which she begins to absorb; it
+    never takes her last light (with two pips or less it refuses: "Too little light to give"). It differs from the
+    Crab Deal, which cuts her most health. `--at=shrine` / `--at=shrine-on` (verification).
+  - Step 3 is now built but for the active pearl charging by freeing creatures (§6), which comes with the rosters.
 

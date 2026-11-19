@@ -84,7 +84,7 @@ public sealed partial class PlaneWorld
             if (rng.NextFloat() < VaultTuning.OrbChance) vault.Orbs = 1;
             if (rng.NextFloat() < VaultTuning.PearlChance)
             {
-                var offer = PlaneRun.PortedPearls.Where(id => Run.CanOffer(id) && Pearls.All(q => q.ItemId != id)).ToList();
+                var offer = Run.Offer("secret", Pearls.Select(q => q.ItemId));
                 if (offer.Count > 0) vault.PearlId = Run.Pick(offer, rng);
             }
             Vaults.Add(vault);

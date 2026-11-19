@@ -274,7 +274,9 @@ public sealed partial class PlaneWorld
         foreach (var poi in Map.Pois)
         {
             if (poi.Kind != PoiKind.TreasureCave) continue;
-            var offer = PlaneRun.PortedPearls.Where(id => Run.CanOffer(id) && Pearls.All(q => q.ItemId != id)).ToList();
+            // (A template level's clam offers from the treasure pool: CROSSOVER.md §7.)
+            var offer = Map.Templated ? Run.Offer("treasure", Pearls.Select(q => q.ItemId))
+                : PlaneRun.PortedPearls.Where(id => Run.CanOffer(id) && Pearls.All(q => q.ItemId != id)).ToList();
             if (offer.Count == 0) break;
             Pearls.Add(new PlanePearl { ItemId = Run.Pick(offer, rng), Position = poi.Position });
         }
@@ -718,6 +720,8 @@ public sealed partial class PlaneWorld
         }
         if (p.DashInvulnerableTimer > 0f || p.HurtTimer > 0f) return false;
         damage *= HurtScale;
+        // In light pips (LightPips): a hit takes whole half pips.
+        if (Run.Pips) damage = p.Hp - LightPips.Add(p.Hp, -LightPips.HitHalves(damage), Run.MaxHp);
         p.Hp -= damage;
         Stats.DamageTaken += damage;
         p.HurtTimer = PlaneCombatTuning.PlayerHurtGrace;
@@ -726,6 +730,9 @@ public sealed partial class PlaneWorld
         SpendLastLight();
         return true;
     }
+
+    /// <summary>Tests: a hit on her of this damage (before the menace), as a creature's.</summary>
+    public bool DebugHurt(float damage) => HurtPlayer(damage, Vector2.UnitX, DamageSource.None);
 
     /// <summary>How much harder what hurts her is at this level's Menace.</summary>
     public float HurtScale => 1f + PlaneCombatTuning.HurtPerMenace * Menace;

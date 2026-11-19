@@ -30,6 +30,8 @@ public static class PlaneEconomyTuning
     public const int PearlPrice = 100, HealthPrice = 15;
     public const float HealthAmount = 25f;
     public const float PearlOffered = 0.5f;
+    /// <summary>A template level's shop prices a pearl by its quality (0–4): 50 to 150 shells.</summary>
+    public static int PriceOf(int quality) => 50 + 25 * Math.Clamp(quality, 0, 4);
     /// <summary>The shop's stand slots, left to right: the pearl, the heart, and a third kept for wares to come.</summary>
     public const int PearlSlot = 0, HeartSlot = 1, Slots = 3;
     /// <summary>A stand sells when she touches it.</summary>
@@ -55,7 +57,8 @@ public sealed class PlaneHeart
     public bool Taken;
 }
 
-public enum StandKind { Pearl, Health, Deal }
+/// <summary>A stand's kind: a pearl or a top-up for shells, a Crab Deal's pearl, a light shrine's pearl for her light.</summary>
+public enum StandKind { Pearl, Health, Deal, Shrine }
 
 /// <summary>Something for sale in the shop: touch it with enough shells to buy it.</summary>
 public sealed class ShopStand
@@ -152,10 +155,16 @@ public sealed partial class PlaneWorld
         Vector2 facing = shop.Cave >= 0 ? Map.Caves[shop.Cave].Facing : Vector2.UnitY;
         Vector2 side = new(-facing.Y, facing.X);
         var rng = new Rng(Map.Seed ^ 0x5409UL ^ ((ulong)Map.Level << 28) ^ ((ulong)Map.Depth << 36) ^ ((ulong)Map.Attempt << 50));
-        var offer = PlaneRun.PortedPearls.Where(id => Run.CanOffer(id) && Pearls.All(q => q.ItemId != id)).ToList();
+        // (A template level's shop offers from the shop pool, priced by quality: CROSSOVER.md §7.)
+        var offer = Map.Templated ? Run.Offer("shop", Pearls.Select(q => q.ItemId))
+            : PlaneRun.PortedPearls.Where(id => Run.CanOffer(id) && Pearls.All(q => q.ItemId != id)).ToList();
         Vector2 Slot(int i) => shop.Position + side * ((i - (PlaneEconomyTuning.Slots - 1) * 0.5f) * 2.4f) - facing * 0.8f;
         if (offer.Count > 0 && rng.NextFloat() < PlaneEconomyTuning.PearlOffered)
-            Stands.Add(new ShopStand { Kind = StandKind.Pearl, ItemId = Run.Pick(offer, rng), Price = PlaneEconomyTuning.PearlPrice, Position = Slot(PlaneEconomyTuning.PearlSlot) });
+        {
+            string id = Run.Pick(offer, rng);
+            int price = Map.Templated ? PlaneEconomyTuning.PriceOf(Run.QualityOf(id)) : PlaneEconomyTuning.PearlPrice;
+            Stands.Add(new ShopStand { Kind = StandKind.Pearl, ItemId = id, Price = price, Position = Slot(PlaneEconomyTuning.PearlSlot) });
+        }
         Stands.Add(new ShopStand { Kind = StandKind.Health, Price = PlaneEconomyTuning.HealthPrice, Position = Slot(PlaneEconomyTuning.HeartSlot) });
     }
 
@@ -167,6 +176,21 @@ public sealed partial class PlaneWorld
     {
         var kind = Map.Templated ? ShellWorth.Roll(_drops, richness, Map.Menace) : ShellKind.Cowrie;
         return new PlaneShell { Position = at, Velocity = velocity, Kind = kind, Value = ShellWorth.Of(kind) };
+    }
+
+    /// <summary>
+    /// Each light shrine (CROSSOVER.md §5): an old stone in open water holding one of the finest pearls (the shrine's
+    /// pool, quality 3 and up), given for two pips of her light (LightPips.ShrineHalves); never her last light.
+    /// </summary>
+    void PlaceShrines()
+    {
+        var rng = new Rng(Map.Seed ^ 0x5481AEUL ^ ((ulong)Map.Level << 28) ^ ((ulong)Map.Depth << 36) ^ ((ulong)Map.Attempt << 50));
+        foreach (var poi in Map.Pois.Where(p => p.Kind == PoiKind.Shrine))
+        {
+            var offer = Run.Offer("shrine", Pearls.Select(q => q.ItemId).Concat(Stands.Select(s => s.ItemId)));
+            if (offer.Count == 0) continue;
+            Stands.Add(new ShopStand { Kind = StandKind.Shrine, ItemId = Run.Pick(offer, rng), Price = LightPips.ShrineHalves, Position = poi.Position });
+        }
     }
 
     /// <summary>A defeated mob leaves shells, flung a little way.</summary>
@@ -229,7 +253,8 @@ public sealed partial class PlaneWorld
             else heart.Velocity = Vector2.Zero;
             if (!hurt || d > Radius + PlaneEconomyTuning.HeartReach) continue;
             heart.Taken = true;
-            p.Hp = MathF.Min(p.Hp + PlaneEconomyTuning.HeartHeal, Run.MaxHp);
+            // (In light pips, a whole pip.)
+            p.Hp = Run.Pips ? LightPips.Add(p.Hp, LightPips.OrbHalves, Run.MaxHp) : MathF.Min(p.Hp + PlaneEconomyTuning.HeartHeal, Run.MaxHp);
             hurt = p.Hp < Run.MaxHp;
             Events.Add(new PlaneEvent(PlaneEventType.HeartCollected, heart.Position, Vector2.Zero));
         }
@@ -243,6 +268,25 @@ public sealed partial class PlaneWorld
             var stand = Stands[i];
             if (stand.Kind == StandKind.Deal || stand.Sold || Vector2.Distance(stand.Position, p.Position) > Radius + PlaneEconomyTuning.StandReach) continue;
             near = i;
+            // A light shrine asks her light, never all of it.
+            if (stand.Kind == StandKind.Shrine)
+            {
+                float cost = stand.Price * LightPips.Half;
+                if (p.Hp <= cost + 0.01f)
+                {
+                    if (_denied != i) Events.Add(new PlaneEvent(PlaneEventType.ShrineDenied, stand.Position, Vector2.Zero));
+                    _denied = i;
+                    continue;
+                }
+                p.Hp = Run.Pips ? LightPips.Add(p.Hp, -stand.Price, Run.MaxHp) : p.Hp - cost;
+                Run.Hp = p.Hp;
+                stand.Sold = true;
+                var given = new PlanePearl { ItemId = stand.ItemId, Position = p.Position };
+                Pearls.Add(given);
+                BeginRitual(given);
+                Events.Add(new PlaneEvent(PlaneEventType.ShrineGiven, stand.Position, Vector2.Zero, cost));
+                continue;
+            }
             // A top-up is only sold to someone hurt.
             if (stand.Kind == StandKind.Health && p.Hp >= Run.MaxHp) continue;
             if (Run.Shells < stand.Price)
@@ -254,7 +298,7 @@ public sealed partial class PlaneWorld
             Run.Shells -= stand.Price;
             Stats.ShellsSpent += stand.Price;
             stand.Sold = true;
-            if (stand.Kind == StandKind.Health) p.Hp = MathF.Min(p.Hp + PlaneEconomyTuning.HealthAmount, Run.MaxHp);
+            if (stand.Kind == StandKind.Health) p.Hp = Run.Pips ? LightPips.Add(p.Hp, LightPips.ShopHalves, Run.MaxHp) : MathF.Min(p.Hp + PlaneEconomyTuning.HealthAmount, Run.MaxHp);
             // A bought pearl begins its ritual by her, like a found one.
             else
             {
