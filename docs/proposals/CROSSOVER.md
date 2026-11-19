@@ -349,7 +349,7 @@ Each step ends with a build that runs and passing tests.
 4. **The boss level** (built in 0.53.0: GAME.md §14; the current not drawn yet): the arena template, the rising current, dissolving creatures, the vortex; Queen Clam moved in.
    *A full first depth.* *(2 weeks)*
 5. **Treasures** (built in 0.54.0: GAME.md §14; depths 2 and 3 stand in for their biomes): `TreasureCatalog`, the start cave, the Pearl Altar, the first three treasures. *(1 week)*
-6. **The ink look:** outline, halftone, paper grain, her sunset gradient, the neon edges of cleansed things.
+6. **The ink look** (built in 0.55.0: GAME.md §14; her glow's sunset, not her bell's colours; no interface frames yet): outline, halftone, paper grain, her sunset gradient, the neon edges of cleansed things.
    *(2 weeks)*
 7. **Depths 2–3:** Kelp Forest or Shipwreck, then Sunken Ruins: templates, rosters, Tull, Kip and Ottilie moved
    in, the first branch. *A short full run.* *(4–5 weeks)*

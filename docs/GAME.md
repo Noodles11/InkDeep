@@ -314,4 +314,19 @@ the tests of the dive still test the dive.
   light pip for the run (`PlaneRun.ExtraHp`). A run continued from a save keeps the bell's pip but has no start cave.
   Not done: the guarded and light-puzzle hiding places (a relic lies in a side cell for now), the other treasures of
   §5.2, and treasures on the title screen's jelly card.
+- **Step 6 (0.55.0), the ink look** (CROSSOVER.md §12): a stage at the end of the water pass (`topdown_post`'s
+  `ink_look`, `CameraRig.SetInk`), on for crossover runs (`--no-ink` shows the painted look to compare). It works on
+  what is drawn before that pass (the reef, the rock, the floor's things); Clementine, her shots and the particles,
+  drawn after it, keep their own look. Outside her light the world is **flat washes**: the rock in ash greys, the water
+  and the floor under it near-black blue ink, the light stepped into four tones with a **halftone** (a 45° dot screen)
+  at each step's soft edge, so a shadow is a flat fill, never a gradient. **Brush lines** in ink: the caves' outline
+  where the rock rises through her plane (its weight wavering along it, fixed to the rock so it never crawls, with
+  dry-brush gaps), a lighter floor contour a few metres down, and a line round whatever lies at her plane. In **her
+  light** (and what she has cleansed) the world keeps its colour, stepped a little, and the caves' outline is traced
+  in **coral and magenta light**; only the rock's is (the terrain's height from the sun's map tells it apart): a
+  creature or a boss in her light keeps its ink line, never a neon one. Her glow in the water is a **sunset**: white at
+  her, gold, hot coral, a magenta rim at the edge of her reach. The **paper's grain** (a fine tooth, fibres, a sheet's
+  unevenness) lies over the whole picture, her included, at 7% (`Fisheye.InkGrain`). This uses magenta as the warm end
+  of her light, the accent CROSSOVER.md §12 allows on this branch. Not done: her bell's own colours, the cyan of the
+  deep biomes' machines, and the interface's ink frames.
 

@@ -11,13 +11,20 @@ namespace OctoShoots.Game.Fx;
 public partial class Fisheye : CanvasLayer
 {
     public const float Strength = 0.08f;
+    /// <summary>The ink look's paper grain over the whole picture (docs/proposals/CROSSOVER.md §12).</summary>
+    public const float InkGrain = 0.07f;
+
+    ShaderMaterial? _material;
+
+    /// <summary>The paper's grain over the picture: the ink look's, or none.</summary>
+    public void SetGrain(bool on) => _material?.SetShaderParameter(SN.Of("grain"), on ? InkGrain : 0f);
 
     public override void _Ready()
     {
         Layer = -1;
         var rect = new ColorRect { MouseFilter = Control.MouseFilterEnum.Ignore };
         rect.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        var material = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/fisheye.gdshader") };
+        var material = _material = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/fisheye.gdshader") };
         material.SetShaderParameter(SN.Of("strength"), Strength);
         rect.Material = material;
         AddChild(rect);

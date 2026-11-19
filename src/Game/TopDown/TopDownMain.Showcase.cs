@@ -40,6 +40,8 @@ public partial class TopDownMain
     {
         _showcase = IsShowcase;
         _camera.SetShowcase(_showcase);
+        _camera.SetInk(InkLook);
+        _fisheye.SetGrain(InkLook);
         ShowcaseOn = _showcase;
         _wake = _showcase ? LeaksSealedShare : 0f;
         _waveRadius = 0f;

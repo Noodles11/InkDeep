@@ -125,6 +125,12 @@ public partial class CameraRig : Node3D
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("her_seat"), on ? HerSeat : 0f);
     }
 
+    /// <summary>
+    /// The crossover's ink look (docs/proposals/CROSSOVER.md §12, topdown_post's ink_look): flat washes of ash and ink
+    /// with halftone edges, brush lines, near-black water, her light a sunset, what she shows traced in coral and magenta.
+    /// </summary>
+    public void SetInk(bool on) => _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ink_look"), on ? 1f : 0f);
+
     public void SetReducedMotion(bool reduced) => _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("wobble"), reduced ? 0f : 1f);
 
     /// <summary>Light bubbles: the halos her bubbles and their pop blooms cast on the swim layer (x, z, radius, strength).</summary>

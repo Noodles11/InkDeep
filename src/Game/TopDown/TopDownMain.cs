@@ -69,6 +69,9 @@ public partial class TopDownMain : Node3D
     /// <summary>The treasures (data/treasures.json, docs/proposals/CROSSOVER.md §5.2).</summary>
     TreasureCatalog? _treasureData;
     RelicView _relics = null!;
+    OctoShoots.Game.Fx.Fisheye _fisheye = null!;
+    /// <summary>The crossover's ink look (docs/proposals/CROSSOVER.md §12); --no-ink shows the painted look for comparison.</summary>
+    bool InkLook => OctoShoots.Core.Run.Crossover.On && !OS.GetCmdlineUserArgs().Contains("--no-ink");
     /// <summary>(--treasures=pearl_altar,…: these found already, for the run.)</summary>
     string[] _dbgTreasures = Array.Empty<string>();
     PlaneAchievements _achievements = null!;
@@ -1111,7 +1114,7 @@ public partial class TopDownMain : Node3D
     void BuildUi()
     {
         // The view bent slightly toward its edges, over the whole 3D picture, under everything drawn on the screen.
-        AddChild(new OctoShoots.Game.Fx.Fisheye());
+        AddChild(_fisheye = new OctoShoots.Game.Fx.Fisheye());
         // The curse den's dark: over the reef, under the HUD.
         var darkLayer = new CanvasLayer { Layer = 1 };
         AddChild(darkLayer);

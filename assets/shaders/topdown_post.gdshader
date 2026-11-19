@@ -127,6 +127,18 @@ uniform vec4 hole = vec4(0.0);
 // plane — a zoom blur drawn in toward its middle — that fades: world x, z, age (0 → 1), radius (m).
 uniform vec4 blurs[4];
 uniform int blur_count = 0;
+// The crossover's ink look (docs/proposals/CROSSOVER.md §12, CameraRig.SetInk), 0 off .. 1: the world in flat washes
+// of ash and ink with a halftone at the soft edge of each step, bold brush lines round the rock and what lies at her
+// plane, the unlit water near-black blue; her light a sunset (white, gold, hot coral, a magenta rim), and what it shows
+// or has cleansed keeps its colour, its lines traced in coral and magenta light. (The paper's grain lies over all of
+// it: fisheye.gdshader's grain.)
+uniform float ink_look = 0.0;
+// Ink, ash, the unlit water and the traced light's two ends.
+const vec3 INK = vec3(0.012, 0.014, 0.024);
+const vec3 ASH = vec3(0.6, 0.59, 0.56);
+const vec3 INK_WATER = vec3(0.012, 0.022, 0.05);
+const vec3 NEON_CORAL = vec3(1.0, 0.45, 0.36);
+const vec3 NEON_MAGENTA = vec3(0.95, 0.26, 0.66);
 // Her light and the warm tint of her glow (HerColor.cs, data/clementine_color.cfg).
 global uniform vec3 her_light;
 global uniform vec3 her_warm;
@@ -263,6 +275,35 @@ float art_outline(vec2 uv, vec2 frag, mat4 inv_projection, mat4 inv_view, vec2 v
 		step_m = max(step_m, abs(zk - zc));
 	}
 	return smoothstep(0.2, 0.45, step_m) * (0.82 + 0.18 * value_noise(frag * 0.3));
+}
+
+// Her light's sunset (the ink look): by how far out of her reach a point lies (0 at her, 1 at its edge), white at the
+// core, through gold and hot coral to a magenta rim.
+vec3 ink_sunset(float r) {
+	vec3 c = mix(vec3(1.0, 0.97, 0.92), vec3(1.0, 0.76, 0.34), smoothstep(0.04, 0.28, r));
+	c = mix(c, vec3(1.0, 0.44, 0.34), smoothstep(0.3, 0.6, r));
+	return mix(c, vec3(0.9, 0.24, 0.62), smoothstep(0.62, 0.95, r));
+}
+
+// The brush's lines (the ink look), 0..1 each: x where the rock rises through her plane (the caves' own outline, its
+// weight wavering along it as a loaded brush's does, anchored to the rock so it never crawls) and, lighter, a floor
+// contour a few metres down; y wherever the depth breaks round what lies at her plane (art_outline: the creatures, the
+// bosses, the pots, the stones).
+vec2 ink_line(float h, vec2 wp, vec2 uv, vec2 frag, mat4 ip, mat4 iv, vec2 viewport) {
+	float weight = 1.1 + 2.4 * value_noise(wp * 0.22) * (0.6 + 0.4 * value_noise(wp * 1.7 + 7.0));
+	float dh = max(fwidth(h), 1e-4);
+	float rim = 1.0 - smoothstep(weight * 0.5, weight * 0.5 + 1.0, abs(h - 0.35) / dh);
+	// (The rock's alone: what stands well above the terrain there, a boss's shell, a creature, rises through her plane too,
+	// and is outlined as what it is, below. The sun's map holds the terrain's height, SunMap.)
+	if (sun_has_shadow > 0.5) {
+		vec2 suv = sun_plane(vec3(wp.x - world_origin.x, h + swim_level, wp.y - world_origin.y)) / reef_extent;
+		if (suv.x > 0.0 && suv.y > 0.0 && suv.x < 1.0 && suv.y < 1.0)
+			rim *= 1.0 - smoothstep(0.9, 1.6, h + swim_level - texture(sun_shadow, suv).r);
+	}
+	float floor_line = (1.0 - smoothstep(0.3, 1.1, abs(h + 2.4) / dh)) * 0.2;
+	// (Dry-brush gaps: here and there the line thins out.)
+	float dry = smoothstep(0.12, 0.3, value_noise(wp * 0.6 + 31.0));
+	return vec2(max(rim * dry, floor_line), art_outline(uv, frag, ip, iv, viewport) * 0.9);
 }
 
 void fragment() {
@@ -549,6 +590,9 @@ void fragment() {
 	float glow_boost = reef_art == 6 ? 1.35 : 1.0;
 	vec3 her_tint = reef_art == 6 ? mix(her_warm, vec3(1.0), 0.4) : mix(her_warm, vec3(0.95, 0.97, 1.0), 0.55 * reef_showcase);
 	float her_k = reef_art == 6 ? 0.55 : 1.0;
+	// (The ink look: her light a sunset, by how far from her each point of her plane lies.)
+	if (ink_look > 0.0 && her_light_at.w > 0.0)
+		her_tint = mix(her_tint, ink_sunset(distance(on_layer.xz, her_light_at.xz) / her_light_at.w), ink_look);
 	col += her_tint * her_inscatter(cam, ray, t0, open_deep ? t0 + 120.0 : t1, ign) * her_k;
 	// Her light: a faint glow in the water all round her, and where it falls on the reef a warm lift of what is there
 	// (its own colour brightened, not a haze laid over it), fading as a lamp's light does.
@@ -624,6 +668,41 @@ void fragment() {
 		float wash = value_noise(FRAGCOORD.xy * 0.006) * 0.6 + value_noise(FRAGCOORD.xy * 0.02 + 9.0) * 0.4;
 		col *= 0.955 + 0.05 * tooth + 0.06 * (wash - 0.5);
 	}
+	// The ink look (CROSSOVER.md §12): laid over the graded world, before the vignette.
+	if (ink_look > 0.0) {
+		vec2 wp = world.xz + world_origin;
+		float il = max(dot(col, vec3(0.299, 0.587, 0.114)), 0.0);
+		// Its light as it was before the unlit reef was dimmed: the wash's value.
+		float il0 = min(il / max(mix(unlit_dim, 1.0, shown), 0.05), 1.0);
+		// Flat washes: the light stepped into four tones, each step's soft edge a halftone (a 45° dot screen whose dots
+		// grow as the edge goes on), so a shadow is a flat fill with dots at its edge, never a gradient.
+		vec2 g = mat2(vec2(0.7071, 0.7071), vec2(-0.7071, 0.7071)) * FRAGCOORD.xy / 5.0;
+		float dotted = length(fract(g) - 0.5) * 1.414;
+		float x0 = sqrt(il0) * 4.0;
+		float q0 = (floor(x0) + step(dotted, sqrt(smoothstep(0.45, 1.0, fract(x0))))) / 4.0;
+		float x = sqrt(il) * 4.0;
+		float q = (floor(x) + step(dotted, sqrt(smoothstep(0.45, 1.0, fract(x))))) / 4.0;
+		// Where she does not light it: the rock a wash of ash, the water and the floor under it near-black blue ink.
+		float rock = smoothstep(-0.3, 0.5, h);
+		vec3 ash = mix(INK * 2.0, ASH * 0.4, min(q0 * q0 * 1.5, 1.0));
+		vec3 deep = mix(INK_WATER, INK_WATER * 1.7 + ASH * 0.02, q0);
+		vec3 unlit = mix(deep, ash, rock);
+		// In her light (and what she has cleansed) its own colour, stepped a little.
+		vec3 tone = mix(col, col * (q * q / max(il, 1e-4)), 0.55);
+		vec3 inked = mix(unlit, tone, smoothstep(0.05, 0.6, shown));
+		// The open deep sinks into the dark water; her glow in it still shows.
+		if (open_deep) inked = INK_WATER + col * smoothstep(0.06, 0.5, il);
+		// The brush's lines: the caves' outline ink where she does not light it, traced in coral and magenta light where
+		// she does; round what lies at her plane always ink (the corruption's creatures are never traced in light).
+		vec2 lines = open_deep ? vec2(0.0) : ink_line(h, wp, uv, FRAGCOORD.xy, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX, VIEWPORT_SIZE);
+		float traced = smoothstep(0.15, 0.7, shown);
+		vec3 neon = mix(NEON_CORAL, NEON_MAGENTA, value_noise(wp * 0.15 + 3.0));
+		inked = mix(inked, INK, lines.x * (1.0 - traced) * 0.95);
+		inked = mix(inked, neon * 1.1, lines.x * traced * 0.8);
+		inked = mix(inked, INK, lines.y * 0.95);
+		col = mix(col, inked, ink_look);
+	}
+
 	// Vignette, oval to the screen, tinted by the deep water; heavier as the depths darken (and for the drawn look's
 	// contrast).
 	vec2 d = (uv - 0.5) * vec2(VIEWPORT_SIZE.x / VIEWPORT_SIZE.y, 1.0);
