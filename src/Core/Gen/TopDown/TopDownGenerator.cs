@@ -301,12 +301,12 @@ public static partial class TopDownGenerator
                 Seed = streams.Seed.Value, Id = id, Attempt = attempt, HasBoss = plan.HasBoss, Rift = plan.Rift, Menace = plan.Menace,
                 EntryFromArena = plan.EntryFromArena,
                 Template = plan.Template, Luck = luck, LeakCave = plan.LeakCave, Floor = plan.Floor, Floors = plan.Floors,
-                AreaScale = plan.AreaScale, Templated = plan.Templated,
+                AreaScale = plan.AreaScale, Templated = plan.Templated, Biome = plan.Biome,
             };
             Array.Fill(map.Heights, -PathDepth);
             // The wall tops come from the reef prototype's terrain for this text (the run's first try: the seed itself).
             string text = id == LevelId.First && attempt == 0 ? streams.Seed.ToString()
-                : $"{streams.Seed} {id.Cycle}-{id.Depth}-{id.Level}{(id.Lane > 0 ? $"-L{id.Lane}" : "")}-{attempt}";
+                : $"{streams.Seed} {id.Cycle}-{id.Depth}-{id.Level}{(id.Lane > 0 ? $"-L{id.Lane}" : "")}{(id.Branch > 0 ? $"-B{id.Branch}" : "")}-{attempt}";
             string? problem = Build(map, streams, plan, attempt, cosmeticSalt, text) ?? LevelValidator.Validate(map);
             log?.Invoke($"Top-down level {id} attempt {attempt + 1}: {problem ?? "ok"}");
             if (problem is null)
@@ -457,6 +457,8 @@ public static partial class TopDownGenerator
         else
         {
             CutShaft(map, Stage("shaft"));
+            // At a branch (CROSSOVER.md §8) the arena's Crack is two vortices, one to each biome below.
+            if (map.Templated && map.HasBoss && plan.Exits.Count == 2) SplitCrack(map);
             LeadHoles(map, plan.Exits, plan.ExitKinds);
         }
         ClampHeights(map);
@@ -1500,6 +1502,20 @@ public static partial class TopDownGenerator
     }
 
     /// <summary>
+    /// A branch's Crack (docs/proposals/CROSSOVER.md §4, §8): the fissure across the arena is two vortices end to end,
+    /// each half of it a hole of its own (inside the same shaft, so both open with the boss's freeing: IsCrack);
+    /// LeadHoles sends the left one to the first biome below and the right one to the second.
+    /// </summary>
+    static void SplitCrack(LevelMap map)
+    {
+        var s = map.Shaft;
+        float half = s.HalfLength * 0.5f;
+        map.Holes.Clear();
+        foreach (float side in new[] { -1f, 1f })
+            map.Holes.Add(new MapHole { Shaft = new Shaft(s.Center + s.Axis * (side * half), s.Axis, half, s.HalfWidth) });
+    }
+
+    /// <summary>
     /// Where each hole leads: the holes left to right across the map take the exits left to right across the rows below
     /// (the order the plan keeps them in).
     /// </summary>
@@ -2118,7 +2134,9 @@ public static partial class TopDownGenerator
     static void PlaceKelp(LevelMap map, Rng rng)
     {
         float rim = LevelMap.RimWidth + 4f;
-        int beds = map.Id.Depth == 2 ? KelpDepthMin + rng.Int(KelpDepthMax - KelpDepthMin + 1) : KelpBedsMin + rng.Int(KelpBedsMax - KelpBedsMin + 1);
+        // (The crossover's Kelp Forest is the kelp's own biome; its other biomes have the common few beds.)
+        bool forest = map.Templated ? map.Biome == OctoShoots.Core.Run.Biome.KelpForest : map.Id.Depth == 2;
+        int beds = forest ? KelpDepthMin + rng.Int(KelpDepthMax - KelpDepthMin + 1) : KelpBedsMin + rng.Int(KelpBedsMax - KelpBedsMin + 1);
         var rock = Chamfer(map.Samples, i => map.Heights[i] > LevelMap.BlockHeight - 0.2f);
         PlaceKelpIn(map, rng, rock, (uint)(rng.NextU64() >> 32), new Vector2(rim), new Vector2(map.Size - rim), beds, 600);
     }
@@ -2385,6 +2403,9 @@ public static partial class TopDownGenerator
     /// </summary>
     static void PlaceMarkedSpawns(LevelMap map, Rng rng, float menace)
     {
+        // The biome's roster fills each tag (CROSSOVER.md §9).
+        var roster = OctoShoots.Core.Run.Biomes.Roster(map.Biome);
+        EnemyKind Pick(EnemyKind[] kinds) => kinds.Length == 1 ? kinds[0] : kinds[rng.Int(kinds.Length)];
         float budget = 1f + 0.8f * MathF.Min(menace, 3f);
         int Scaled(int n) => Math.Max(1, (int)MathF.Round(n * budget));
         float taken = MathF.Min(0.55f + 0.15f * MathF.Min(menace, 3f), 0.95f);
@@ -2396,11 +2417,11 @@ public static partial class TopDownGenerator
             if (Vector2.Distance(at, map.Start.Position) < map.Start.Radius + 6f) continue;
             switch (tag)
             {
-                case MobTag.Lone: Add(SpawnRole.Den, Swimmers[rng.Int(Swimmers.Length)], 1, at); break;
-                case MobTag.Pack: Add(SpawnRole.Den, Swimmers[rng.Int(Swimmers.Length)], Scaled(2 + rng.Int(2)), at); break;
-                case MobTag.Thrower: Add(SpawnRole.Den, EnemyKind.Pufferling, 1, at); break;
-                case MobTag.Ambusher: Add(SpawnRole.Ambush, rng.NextFloat() < 0.5f ? EnemyKind.SeaUrchin : EnemyKind.Moray, 1, at); break;
-                case MobTag.Guard: Add(SpawnRole.Guardian, Swimmers[rng.Int(Swimmers.Length)], Scaled(2), at); break;
+                case MobTag.Lone: Add(SpawnRole.Den, Pick(roster.Lone), 1, at); break;
+                case MobTag.Pack: Add(SpawnRole.Den, Pick(roster.Pack), Scaled(2 + rng.Int(2)), at); break;
+                case MobTag.Thrower: Add(SpawnRole.Den, Pick(roster.Thrower), 1, at); break;
+                case MobTag.Ambusher: Add(SpawnRole.Ambush, Pick(roster.Ambusher), 1, at); break;
+                case MobTag.Guard: Add(SpawnRole.Guardian, Pick(roster.Guard), Scaled(2), at); break;
             }
         }
         for (int pi = 0; pi < map.Pois.Count; pi++)
@@ -2408,7 +2429,7 @@ public static partial class TopDownGenerator
             var poi = map.Pois[pi];
             Vector2 mouth = poi.Cave >= 0 ? map.Caves[poi.Cave].Mouth + map.Caves[poi.Cave].Facing * 4f : poi.Position;
             if (poi.Kind is PoiKind.TreasureCave or PoiKind.ShellCache)
-                Add(SpawnRole.Guardian, Swimmers[rng.Int(Swimmers.Length)], Scaled(2 + rng.Int(2)), poi.Kind == PoiKind.TreasureCave ? mouth : poi.Position, pi);
+                Add(SpawnRole.Guardian, Pick(roster.Guard), Scaled(2 + rng.Int(2)), poi.Kind == PoiKind.TreasureCave ? mouth : poi.Position, pi);
         }
     }
 }

@@ -30,6 +30,13 @@ public readonly record struct LevelId(int Cycle, int Depth, int Level)
     /// <summary>A haven (docs/DIVE.md §4): Lantern Bay's water, a reef of the graph of its own kind (Run.ReefKind.Haven).</summary>
     public bool Haven { get; init; }
 
+    /// <summary>
+    /// The crossover's branch (docs/proposals/CROSSOVER.md §8, Run.Biomes): at a depth that branches, which of its two
+    /// biomes she chose at the arena above (0 the first, 1 the second), kept for the whole depth. The dive's graph
+    /// ignores it (its reefs are the same either way); the run's streams do not, so each branch is a reef of its own.
+    /// </summary>
+    public int Branch { get; init; }
+
     public override string ToString() => Haven ? $"A haven · Depth {ShownDepth}"
         : Cycle > 1 ? $"Cycle {Cycle} · Depth {ShownDepth} · Level {Level}" : $"Depth {ShownDepth} · Level {Level}";
 }
@@ -93,8 +100,10 @@ public sealed class LevelPlan
     /// </summary>
     public float Menace { get; init; }
     /// <summary>Where each of its holes leads (Run.DiveGraph), in the graph's order, and what each of those reefs is.</summary>
-    public IReadOnlyList<LevelId> Exits { get; init; } = Array.Empty<LevelId>();
-    public IReadOnlyList<ReefKind> ExitKinds { get; init; } = Array.Empty<ReefKind>();
+    public IReadOnlyList<LevelId> Exits { get; private set; } = Array.Empty<LevelId>();
+    public IReadOnlyList<ReefKind> ExitKinds { get; private set; } = Array.Empty<ReefKind>();
+    /// <summary>The crossover's biome (Run.Biomes): what its cells, its creatures and its boss are.</summary>
+    public Biome Biome { get; private set; }
     /// <summary>Its own kind in the graph.</summary>
     public ReefKind Kind { get; init; }
     /// <summary>A leak cave (LevelMap.LeakCave): no way down, one leak where it would be.</summary>
@@ -148,6 +157,15 @@ public sealed class LevelPlan
         // (A secret room's labyrinth is a second layer: the crossover has none, CROSSOVER.md §3.)
         plan.Secrets = 0;
         plan.Templated = !id.IsTutorial && !plan.LeakCave;
+        // Its biome and where it leads (CROSSOVER.md §8): the next row of its depth, or from a boss's arena the next
+        // depth, one way for each biome below.
+        plan.Biome = Biomes.Of(plan.Id);
+        if (!id.IsTutorial)
+        {
+            plan.Exits = Biomes.Exits(seed, plan.Id);
+            var graph = DiveGraph.Of(seed);
+            plan.ExitKinds = plan.Exits.Select(graph.KindOf).ToArray();
+        }
         // Its depth's treasure (CROSSOVER.md §5.2): hidden on one of the depth's levels between its first and its boss's,
         // chosen by the depth's own stream; it pushes out a shell cache or the Crab Deal if the level is full.
         if (plan.Templated && !plan.HasBoss && id.Level == RelicLevel(seed, id))
@@ -248,7 +266,7 @@ public sealed class LevelPlan
         var exits = graph.ExitsOf(id).OrderBy(e => graph.Node(e).X).ToList();
         return new LevelPlan
         {
-            Id = node.Id,
+            Id = node.Id with { Branch = id.Branch },
             Kind = node.Kind,
             Exits = exits.ToArray(),
             ExitKinds = exits.Select(graph.KindOf).ToArray(),

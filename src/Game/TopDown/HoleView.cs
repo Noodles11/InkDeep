@@ -18,6 +18,21 @@ public static class ReefKinds
         _ => new Color(0.72f, 0.88f, 1f),                    // a plain reef: pale water
     };
 
+    /// <summary>
+    /// A crossover biome's colour on the vortex that leads to it (docs/proposals/CROSSOVER.md §4, §8): the kelp's green,
+    /// the wreck's rust, the ruins' marble, the reef's turquoise.
+    /// </summary>
+    public static Color Colour(Biome biome) => biome switch
+    {
+        Biome.KelpForest => new Color(0.5f, 0.9f, 0.38f),
+        Biome.Shipwreck => new Color(1f, 0.58f, 0.26f),
+        Biome.SunkenRuins => new Color(0.92f, 0.88f, 0.78f),
+        _ => new Color(0.45f, 0.92f, 0.9f),
+    };
+
+    /// <summary>Whether a hole is one of a branch's two vortices (CROSSOVER.md §8): it shows the biome it leads to.</summary>
+    public static bool Branching(LevelMap map, int hole) => map.Templated && map.HasBoss && map.Holes.Count > 1 && hole >= 0 && hole < map.Holes.Count;
+
     /// <summary>What lies down a hole, as the dive prompt says it.</summary>
     public static string Below(ReefKind kind) => kind switch
     {
@@ -48,6 +63,8 @@ public static class ReefKinds
 public partial class HoleView : Node3D
 {
     const float Lift = 0.35f, OpenEnergy = 1.1f;
+    /// <summary>A branch's vortex (CROSSOVER.md §8): its glow in the biome's colour, stronger and wider than a hole's rim, so the two ways read apart.</summary>
+    const float BranchEnergy = 3.2f, BranchRange = 9f;
     /// <summary>The emblem: how far over its rim's ring it lies, how wide against the hole (at least EmblemLeast m), and how strong its light at most.</summary>
     const float EmblemLift = 0.05f, EmblemSize = 1.3f, EmblemLeast = 1.1f, EmblemAlpha = 0.42f;
     readonly List<(MeshInstance3D Quad, StandardMaterial3D Material)> _emblems = new();
@@ -134,11 +151,16 @@ public partial class HoleView : Node3D
             float want = world.HoleOpen(i) ? 1f : 0f;
             // (As it was, on arriving; then eased.)
             _open[i] = _open[i] < 0f ? want : Mathf.MoveToward(_open[i], want, dt * 0.8f);
-            var colour = ReefKinds.Colour(world.Map.Holes[i].Kind);
+            bool branch = ReefKinds.Branching(world.Map, i);
+            var colour = branch ? ReefKinds.Colour(Biomes.Of(world.Map.Holes[i].To)) : ReefKinds.Colour(world.Map.Holes[i].Kind);
             material.AlbedoColor = new Color(colour, 0.8f * breathe * _open[i]);
-            glow.LightEnergy = OpenEnergy * breathe * _open[i];
+            glow.LightEnergy = OpenEnergy * breathe * _open[i] * (branch ? BranchEnergy : 1f);
+            if (branch) glow.OmniRange = BranchRange;
+            glow.LightColor = colour;
             bool crack = world.IsCrack(i);
-            ring.Visible = glow.Visible = !crack && _open[i] > 0.01f;
+            ring.Visible = !crack && _open[i] > 0.01f;
+            // (A branch's two vortices each glow in the colour of the biome below; the Crack's own light is the rest.)
+            glow.Visible = (!crack || branch) && _open[i] > 0.01f;
             // Its emblem shows as it opens, breathing a little out of step with its rim.
             var (quad, sign) = _emblems[i];
             float pulse = 0.88f + 0.12f * Mathf.Sin(_time * 1.6f + i * 1.3f);

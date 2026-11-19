@@ -15,9 +15,14 @@ public static class BossRoster
     /// roster (docs/proposals/CROSSOVER.md §8), the Sunlit Reef's boss Queen Clam; the deeper ones Drippus Prime until
     /// their own bosses move in.
     /// </summary>
-    public static BossSpec For(ulong runSeed, int cycle, int depth, bool crossover = false)
+    public static BossSpec For(ulong runSeed, int cycle, int depth, bool crossover = false, OctoShoots.Core.Run.Biome biome = OctoShoots.Core.Run.Biome.SunlitReef)
     {
-        var spec = crossover && depth == 1 ? BossGenerator.QueenClam(runSeed, cycle, depth) : BossGenerator.DrippusPrime(runSeed, cycle, depth);
+        // (The crossover's deeper biomes: the neighbour the Leak made their boss, Run.Biomes.BossFolk, at its depth's
+        // Menace as every boss of the roster. Freed, she is the crossover's reward and nobody's neighbour: no home to go to.)
+        float menace = OctoShoots.Core.Gen.TopDown.LevelPlan.MenaceOf(new OctoShoots.Core.Gen.TopDown.LevelId(cycle, depth + OctoShoots.Core.Gen.TopDown.LevelPlan.Tutorial, 1));
+        var spec = crossover && OctoShoots.Core.Run.Biomes.BossFolk(biome) is { } folk && FolkBosses.For(folk, 1, menace) is { } made ? made
+            : crossover && depth == 1 ? BossGenerator.QueenClam(runSeed, cycle, depth) : BossGenerator.DrippusPrime(runSeed, cycle, depth);
+        if (crossover) spec.Folk = null;
         spec.Hp *= 1f + HpGrowth * spec.Menace;
         return spec;
     }

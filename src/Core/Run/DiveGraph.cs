@@ -104,7 +104,7 @@ public sealed class DiveGraph
     }
 
     /// <summary>The reef's id as the graph has it (a haven's marked).</summary>
-    public LevelId Resolve(LevelId id) => Node(id).Id;
+    public LevelId Resolve(LevelId id) => Node(id).Id with { Branch = id.Branch };
 
     /// <summary>A row of a depth, left to right.</summary>
     public IReadOnlyList<DiveNode> Row(int cycle, int depth, int row)

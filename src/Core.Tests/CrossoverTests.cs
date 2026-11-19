@@ -65,7 +65,9 @@ public class CrossoverTests
             Assert.Equal(dive.Crabs, cross.Crabs);
             Assert.True(cross.Shops >= dive.Shops);
             Assert.Equal(dive.Caches, cross.Caches);
-            Assert.Equal(dive.Exits, cross.Exits);
+            // (Its way on is the crossover's route, Biomes: one of the dive's exits, her branch carried or chosen.)
+            Assert.Equal(Biomes.Exits(TestLevels.Seed, id), cross.Exits);
+            Assert.All(cross.Exits, e => Assert.Contains(e with { Branch = 0 }, dive.Exits));
             Assert.Equal(dive.Menace, cross.Menace);
         }
     }

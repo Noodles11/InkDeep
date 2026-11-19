@@ -46,7 +46,7 @@ public sealed partial class PlaneWorld
         int depth = Map.Depth - LevelPlan.Tutorial;
         foreach (var poi in Map.Pois.Where(p => p.Kind == PoiKind.Relic))
         {
-            string? id = Run.TreasureCatalog?.AtDepth(depth)?.Id;
+            string? id = (Map.Templated ? Run.TreasureCatalog?.InBiome(Map.Biome) : Run.TreasureCatalog?.AtDepth(depth))?.Id;
             if (id is not null && !Run.Treasures.Contains(id))
             {
                 Relics.Add(new PlaneRelic { Id = id, Position = poi.Position });

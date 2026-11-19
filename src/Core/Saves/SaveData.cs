@@ -227,6 +227,8 @@ public sealed class SuspendedRun
     public int Level { get; set; } = 1;
     /// <summary>Its reef across that row of the dive's graph (Run.DiveGraph; an older save's: lane 0).</summary>
     public int Lane { get; set; }
+    /// <summary>The crossover's branch she took at the arena above (LevelId.Branch; an older save's: 0).</summary>
+    public int Branch { get; set; }
     /// <summary>That reef is a haven (docs/DIVE.md §4).</summary>
     public bool Haven { get; set; }
     /// <summary>The reefs of the dive's graph she has been on, each "cycle/depth/row/lane" (the chart's).</summary>
@@ -239,7 +241,7 @@ public sealed class SuspendedRun
     public OctoShoots.Core.Gen.TopDown.LevelId Reef()
     {
         int depth = Math.Clamp(Depth, OctoShoots.Core.Gen.TopDown.LevelPlan.Tutorial, OctoShoots.Core.Gen.TopDown.LevelPlan.Depths);
-        var id = new OctoShoots.Core.Gen.TopDown.LevelId(Math.Max(1, Cycle), depth, Math.Clamp(Level, 1, OctoShoots.Core.Run.DiveGraph.RowsOf(depth))) { Lane = Math.Max(0, Lane) };
+        var id = new OctoShoots.Core.Gen.TopDown.LevelId(Math.Max(1, Cycle), depth, Math.Clamp(Level, 1, OctoShoots.Core.Run.DiveGraph.RowsOf(depth))) { Lane = Math.Max(0, Lane), Branch = Math.Clamp(Branch, 0, 1) };
         return OctoShoots.Core.Run.SeedCode.TryParse(Seed, out var seed) ? OctoShoots.Core.Run.DiveGraph.Of(seed).Resolve(id) : id;
     }
 

@@ -384,6 +384,8 @@ public sealed class LevelMap
     /// shaft and no holes, since she may dive anywhere once the dive clock has run (DiveClock).
     /// </summary>
     public bool Templated;
+    /// <summary>The crossover's biome (Run.Biomes, LevelPlan.Biome): its creatures, its kelp, its look.</summary>
+    public OctoShoots.Core.Run.Biome Biome;
     /// <summary>A template level's mob marks (where its roster puts a creature), in open water.</summary>
     public List<(Vector2 At, MobTag Tag)> MobMarks = new();
     /// <summary>A template level's POI marks no place took: spots where a place could stand, in open water.</summary>

@@ -51,17 +51,21 @@ public sealed class TreasureCatalog
     /// <summary>The treasure hidden on the depth's levels (as the player counts depths), or null.</summary>
     public TreasureDef? AtDepth(int depth) => All.FirstOrDefault(t => t.Depth == depth);
 
-    /// <summary>Reads the file and checks it: ids unique and known (Treasures.Known), depths from 1, one treasure a depth.</summary>
+    /// <summary>The treasure hidden in a biome's levels (the crossover's: two biomes share a depth at a branch), or null.</summary>
+    public TreasureDef? InBiome(OctoShoots.Core.Run.Biome biome) => All.FirstOrDefault(t => OctoShoots.Core.Run.Biomes.Parse(t.Biome) == biome);
+
+    /// <summary>Reads the file and checks it: ids unique and known (Treasures.Known), depths from 1, each in a known biome, one treasure a biome.</summary>
     public static TreasureCatalog FromJson(string json)
     {
         var model = JsonSerializer.Deserialize<FileModel>(json, ItemCatalog.Json) ?? throw new InvalidOperationException("treasures.json is empty");
         var problems = new List<string>();
         foreach (var dup in model.Treasures.GroupBy(t => t.Id).Where(g => g.Count() > 1)) problems.Add($"treasure {dup.Key} listed twice");
-        foreach (var dup in model.Treasures.GroupBy(t => t.Depth).Where(g => g.Count() > 1)) problems.Add($"two treasures at depth {dup.Key}");
+        foreach (var dup in model.Treasures.GroupBy(t => t.Biome.ToLowerInvariant()).Where(g => g.Count() > 1)) problems.Add($"two treasures in {dup.Key}");
         foreach (var t in model.Treasures)
         {
             if (!Treasures.Known.Contains(t.Id)) problems.Add($"{t.Id}: the game does not know this treasure");
             if (t.Depth < 1) problems.Add($"{t.Id}: depth must be 1 or more");
+            if (OctoShoots.Core.Run.Biomes.Parse(t.Biome) is null) problems.Add($"{t.Id}: no biome called '{t.Biome}'");
             if (string.IsNullOrWhiteSpace(t.Title) || string.IsNullOrWhiteSpace(t.Line) || string.IsNullOrWhiteSpace(t.Does)) problems.Add($"{t.Id}: title, line and does are required");
         }
         if (problems.Count > 0) throw new InvalidOperationException("treasures.json: " + string.Join("; ", problems));

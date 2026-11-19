@@ -43,7 +43,9 @@ public sealed class RunStreams
     /// <summary>The reef director's schedule of world events on a level (currents, …).</summary>
     public Rng Events(LevelId id) => _root.Stream($"events/{Key(id)}");
     /// <summary>A reef's part of a stream's name: its cycle, depth and row, and its lane past the first.</summary>
-    static string Key(LevelId id) => id.Lane == 0 ? $"{id.Cycle}/{id.Depth}/{id.Level}" : $"{id.Cycle}/{id.Depth}/{id.Level}/lane{id.Lane}";
+    static string Key(LevelId id) => (id.Lane == 0 ? $"{id.Cycle}/{id.Depth}/{id.Level}" : $"{id.Cycle}/{id.Depth}/{id.Level}/lane{id.Lane}")
+        // (The crossover's branch past the first: Biomes.)
+        + (id.Branch == 0 ? "" : $"/branch{id.Branch}");
     public Rng Snacks() => _root.Stream("snacks");
     public Rng EnemyAi() => _root.Stream("enemyAI");
     public Rng Combat() => _root.Stream("combat");

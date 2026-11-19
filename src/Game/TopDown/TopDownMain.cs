@@ -565,6 +565,8 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--level=") && int.TryParse(Value("--level="), out int l)) _id = _id with { Level = Math.Clamp(l, 1, 5) };
             // Verification: the reef across that row of the dive's graph (from 0 at the left).
             else if (arg.StartsWith("--lane=") && int.TryParse(Value("--lane="), out int lane)) _id = _id with { Lane = Math.Max(0, lane) };
+            // (The crossover's branch, Biomes: --depth=3 --branch=1 is the Shipwreck Graveyard.)
+            else if (arg.StartsWith("--branch=") && int.TryParse(Value("--branch="), out int branch)) _id = _id with { Branch = Math.Clamp(branch, 0, 1) };
             // Verification: the haven before that level (docs/DIVE.md §4).
             else if (arg == "--dbg-haven") _id = _id with { Haven = true };
             // Verification: that many seconds into a dive's leak cave, she is taken back out of it (docs/DIVE.md §6).
@@ -735,8 +737,8 @@ public partial class TopDownMain : Node3D
     /// </summary>
     PlaneOptions? DiveBoss()
     {
-        // (The crossover's first depth is Queen Clam's, CROSSOVER.md §8: no neighbour waits there.)
-        if (!_map.HasBoss || _map.Rift || OctoShoots.Core.Run.Crossover.On && _id.ShownDepth == 1 || _jelly is not { } jelly || Dives.FolkBossOf(_id, jelly) is not { } folk || Folk.Get(folk) is not { } n
+        // (The crossover's bosses are its biomes', CROSSOVER.md §8: BossRoster's, no neighbour waiting.)
+        if (!_map.HasBoss || _map.Rift || OctoShoots.Core.Run.Crossover.On || _jelly is not { } jelly || Dives.FolkBossOf(_id, jelly) is not { } folk || Folk.Get(folk) is not { } n
             || OctoShoots.Core.Bosses.FolkBosses.For(n.Id, n.Level, _map.Menace) is not { } spec) return null;
         var d = PlaneOptions.Default;
         return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Shots = d.Shots, Boss = spec };
@@ -765,6 +767,7 @@ public partial class TopDownMain : Node3D
             Depth = _id.Depth,
             Level = _id.Level,
             Lane = _id.Lane,
+            Branch = _id.Branch,
             Haven = _id.Haven,
             Reefs = _reefs.Select(SuspendedRun.ReefKey).ToList(),
             Items = _run.Items.ToList(),
@@ -956,7 +959,7 @@ public partial class TopDownMain : Node3D
         // A jelly's dive keeps the moment on her (docs/DIVE.md §1); in a leak cave, the level's start is what is kept.
         if (InDiveCave) return;
         if (!_persist || _debugRun || (_jelly is { } diver ? diver.Dive : GameSave.Current.Run) is not { } saved) return;
-        if (saved.Cycle != _id.Cycle || saved.Depth != _id.Depth || saved.Level != _id.Level || saved.Lane != _id.Lane) return;
+        if (saved.Cycle != _id.Cycle || saved.Depth != _id.Depth || saved.Level != _id.Level || saved.Lane != _id.Lane || saved.Branch != _id.Branch) return;
         saved.State = Moment();
         if (saved.State is null) return;
         saved.Elapsed = _elapsed;
@@ -1782,8 +1785,10 @@ public partial class TopDownMain : Node3D
         if (InHavenPlace) return ("A haven", "Safe water: rest, trade, and bank what you carry");
         if (InLabyrinth) return ("A secret labyrinth", "Its reward lies at its heart");
         if (InDiveCave) return ("A leak cave", "Its water stings till its leak is sealed");
-        string title = _map.Template is { Name.Length: > 0 } template ? template.Name : _id.Level == 1 ? ReefLook.For(_id.Depth).Name : $"Level {_id.Level}";
-        return (title, _id.Level == 1 ? $"{ReefLook.For(_id.Depth).Name} · {_id}" : _id.ToString());
+        // (A crossover level's place is its biome, CROSSOVER.md §8.)
+        string place = _map.Templated ? Biomes.Name(_map.Biome) : ReefLook.For(_id.Depth).Name;
+        string title = _map.Template is { Name.Length: > 0 } template ? template.Name : _id.Level == 1 ? place : $"Level {_id.Level}";
+        return (title, _id.Level == 1 ? $"{place} · {_id}" : _id.ToString());
     }
 
     /// <summary>

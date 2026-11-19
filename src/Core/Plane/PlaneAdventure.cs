@@ -421,7 +421,7 @@ public sealed partial class PlaneWorld
     }
 
     /// <summary>Whether a hole of the reef (by index) is a boss arena's Crack (the Exit's own, on a boss level).</summary>
-    public bool IsCrack(int hole) => Map.HasBoss && hole >= 0 && hole < Map.Holes.Count && Vector2.Distance(Map.Holes[hole].Shaft.Center, Map.Shaft.Center) < 0.5f;
+    public bool IsCrack(int hole) => Map.HasBoss && hole >= 0 && hole < Map.Holes.Count && Map.Shaft.Contains(Map.Holes[hole].Shaft.Center);
 
     /// <summary>
     /// Whether a hole of the reef (by index in Map.Holes) is open to dive down: its leak sealed (one sealed is enough for

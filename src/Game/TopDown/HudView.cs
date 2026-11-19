@@ -4,6 +4,7 @@ using System.Linq;
 using Godot;
 using OctoShoots.Core.Items;
 using OctoShoots.Core.Plane;
+using OctoShoots.Core.Run;
 
 namespace OctoShoots.Game.TopDown;
 
@@ -372,7 +373,8 @@ public partial class HudView : Control
             _promptReady = world.CanDive;
             // (Where the hole leads: its rim's kind, said.)
             int hole = world.HoleUnder;
-            string below = hole >= 0 && hole < world.Map.Holes.Count && world.Map.Holes[hole].To != default ? $" · {ReefKinds.Below(world.Map.Holes[hole].Kind)}" : "";
+            string below = ReefKinds.Branching(world.Map, hole) ? $" · the {Biomes.Name(Biomes.Of(world.Map.Holes[hole].To))} below"
+                : hole >= 0 && hole < world.Map.Holes.Count && world.Map.Holes[hole].To != default ? $" · {ReefKinds.Below(world.Map.Holes[hole].Kind)}" : "";
             _prompt = world.CanDive ? $"dive{below}" : !world.HoleOpen(hole) ? (world.IsCrack(hole) ? "The Crack is sealed" : "Seal the leak over it to open the way") : "Not while fighting";
         }
         _promptShown = Mathf.MoveToward(_promptShown, over ? 1f : 0f, dt * 4f);

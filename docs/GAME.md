@@ -298,8 +298,8 @@ the tests of the dive still test the dive.
   branches (step 7).
 - **Step 5 (0.54.0), treasures:** the treasures are listed in `data/treasures.json` (`TreasureCatalog`, checked on
   load like the achievements: ids unique and known to the game, `Treasures.Known`, one a depth). The first three:
-  the **Pearl Altar** (depth 1, the Sunlit Reef), the **Spare Bell** (depth 2) and the **Shell Urn** (depth 3); depths 2
-  and 3 stand in for the Kelp Forest and the Shipwreck Graveyard until those are built (step 7). Each depth hides its
+  the **Pearl Altar** (depth 1, the Sunlit Reef), the **Spare Bell** (the Kelp Forest) and the **Shell Urn** (the
+  Shipwreck Graveyard; since step 7 both of depth 2, one for each branch, found by biome). Each depth hides its
   treasure on one of its levels from the second to the one before the boss's (`LevelPlan.RelicLevel`, from the
   depth's own stream): a **relic place** (`PoiKind.Relic`) on the POI mark farthest from the walk's own cells. It
   pushes out a shell cache or the Crab Deal if the level is full; it is never named under the minimap and never shown
@@ -329,4 +329,32 @@ the tests of the dive still test the dive.
   unevenness) lies over the whole picture, her included, at 7% (`Fisheye.InkGrain`). This uses magenta as the warm end
   of her light, the accent CROSSOVER.md §12 allows on this branch. Not done: her bell's own colours, the cyan of the
   deep biomes' machines, and the interface's ink frames.
+- **Step 7, first part (0.56.0), the route, the first branch, bosses and rosters by biome** (CROSSOVER.md §8–10):
+  - **Biomes** (`Run.Biome`, `Biomes.Of`): depth 1 is the **Sunlit Reef**; depth 2 the **Kelp Forest** or the
+    **Shipwreck Graveyard**; depth 3 the **Sunken Ruins** (and the depths below it too, until step 8 builds theirs).
+    Every crossover level carries its biome (`LevelPlan.Biome`, `LevelMap.Biome`), and its name is the place's name
+    on arriving.
+  - **The first branch:** Queen Clam's arena opens **two ways down**: the Crack across it is two vortices end to end
+    (`TopDownGenerator.SplitCrack`), both opening when she is freed; the prompt over each names the biome below ("dive ·
+    the Kelp Forest below"), and each glows in that biome's colour (green, rust; only in the painted look so far: the ink
+    look keeps colour only in her light). The way she takes is kept down the whole depth (`LevelId.Branch`, saved with a
+    run, `SuspendedRun.Branch`); the two branches are different levels (their own streams), and both bosses' arenas
+    lead on to the Ruins. The crossover's way on is its own route (`Biomes.Exits`): an ordinary level's next is the
+    graph's first exit with her branch kept, a boss's the next depth's first level, once or one way for each biome below.
+  - **Bosses by biome** (`BossRoster.For(…, biome)`): the neighbours the Leak made move in as the biomes' bosses,
+    **Sleepy Old Tull** (the Kelp Forest), **Nine-Fin Kip** (the Shipwreck Graveyard) and **Many-Armed Ottilie** (the
+    Sunken Ruins), each with her corrupted pearl as before, at her depth's Menace; in the crossover she is nobody's
+    neighbour (freeing her sends no one home: the folk's homes are shelved).
+  - **Rosters by biome** (`Biomes.Roster`): each mob mark's tag takes the biome's own creatures: the Sunlit Reef's
+    the common reef's; the Kelp Forest's barracuda, moon jellies and nudibranchs, its urchins in wait; the Shipwreck's
+    morays and crabs in its holds; the Ruins' morays in its walls. A place's guardians come from the roster too. The
+    Kelp Forest has the kelp's dense beds (the Sunlit Reef now the common few).
+  - **Treasures by biome** (`TreasureCatalog.InBiome`): a biome's levels hide its own treasure, so the Spare Bell lies
+    in the Kelp Forest and the Shell Urn in the Shipwreck Graveyard, both at depth 2; the Ruins have none yet.
+    `data/treasures.json` is checked for known biomes, one treasure a biome.
+  - `--branch=1` (with `--depth=`) starts on the second branch (verification).
+  - Not done: the biomes' own cell templates, chunks, hazards and looks (every biome still uses the Sunlit Reef's
+    cells and the depth's palette); the war's creatures in the rosters (the ink creatures still come from the
+    Blightroots); the vortices' colour in the ink look; the Ruins' treasure. Tull's, Kip's and Ottilie's fights are their
+    folk fights as they were, not tuned for the crossover's arena.
 
