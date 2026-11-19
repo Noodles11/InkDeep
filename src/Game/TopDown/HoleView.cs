@@ -27,6 +27,9 @@ public static class ReefKinds
         Biome.KelpForest => new Color(0.5f, 0.9f, 0.38f),
         Biome.Shipwreck => new Color(1f, 0.58f, 0.26f),
         Biome.SunkenRuins => new Color(0.92f, 0.88f, 0.78f),
+        Biome.AlienWreckage => new Color(0.35f, 0.9f, 1f),
+        Biome.DrownedTemple => new Color(0.4f, 0.85f, 0.6f),
+        Biome.Atlantis => new Color(1f, 0.82f, 0.35f),
         _ => new Color(0.45f, 0.92f, 0.9f),
     };
 

@@ -457,4 +457,14 @@ the tests of the dive still test the dive.
   - `--at=curtain` stands before a curtain (verification).
   - Not done: urchin beds as a hazard of their own (urchins are the Kelp Forest's ambushers), the doors' own look (a seal
     looks like the reef wall), and the war's ink creatures in the rosters.
-
+- **Step 8, first part (0.64.0), depths 4 and 5:** the **Sunken Ruins'** arena branches again (`Biomes.WaysBelow`), to
+  the **Alien Wreckage** (4a) or the **Drowned Temple** (4b); both lead on to **Atlantis** (depth 5, and the depths below
+  it till the Crack is built). Each has five cells of its own (`CaveTemplates.AlienWreckage`, `DrownedTemple`,
+  `Atlantis`: hexagonal halls, conduit runs and pods; a cenote's stepped court, a causeway, an altar court, a shrine's
+  stair; an agora round its fountain, an avenue, a palace's corner, a gate, a sanctum), its chunks, its roster, its look
+  (`ReefLook.AlienWreck`, `Temple`, `AtlantisLook`: dark glass and cold cyan; carved grey-green stone, jade and ochre;
+  gold-veined marble and orichalcum) and its ink's tint (cyan, orange, violet), its vortex's colour, its gardens; the
+  Temple and Atlantis take the Ruins' stone things. Their bosses: **Bubbles** in the Alien Wreckage, **Fennel** in the
+  Drowned Temple; Atlantis's machine-fused beast is still to come (Drippus Prime stands in). Not done: their hazards
+  (conduits that carry her beam, field pulses, rolling boulders, pressure plates, glyph doors, Atlantis's machines),
+  the Alien Wreckage's own things, the Crack, the keystone pieces, new jellies.

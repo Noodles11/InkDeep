@@ -1654,6 +1654,14 @@ public partial class LevelView : Node3D
                 foot = new[] { FloraKind.TubeSponge, FloraKind.BarrelSponge };
                 grow = 0.3f;
                 break;
+            case OctoShoots.Core.Run.Biome.AlienWreckage:
+                // (The wreck's dark glass grows little: a few sponges, a fan.)
+                top = new[] { FloraKind.TubeSponge, FloraKind.SeaFan };
+                foot = new[] { FloraKind.TubeSponge };
+                grow = 0.25f;
+                break;
+            case OctoShoots.Core.Run.Biome.DrownedTemple:
+            case OctoShoots.Core.Run.Biome.Atlantis:
             case OctoShoots.Core.Run.Biome.SunkenRuins:
                 top = new[] { FloraKind.TurtleGrass, FloraKind.SeaFan, FloraKind.TubeSponge };
                 foot = new[] { FloraKind.TurtleGrass, FloraKind.BrainCoral };

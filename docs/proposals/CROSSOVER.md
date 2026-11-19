@@ -355,7 +355,8 @@ Each step ends with a build that runs and passing tests.
    biomes' cells and looks in 0.59.0, their dressing and hazards in 0.60.0–0.62.0, the Ruins' Oil Lamp; the war's
    creatures in the rosters still to come): Kelp Forest or Shipwreck, then Sunken Ruins: templates, rosters, Tull,
    Kip and Ottilie moved in, the first branch. *A short full run.* *(4–5 weeks)*
-8. **Depths 4–5 and the end:** Alien Wreckage, Drowned Temple, Atlantis, the Crack, the keystone pieces, new jellies.
+8. **Depths 4–5 and the end** (begun in 0.64.0: GAME.md §14; the route, the second branch, the three biomes' cells,
+   looks and rosters, Bubbles and Fennel moved in): Alien Wreckage, Drowned Temple, Atlantis, the Crack, the keystone pieces, new jellies.
    *(5–6 weeks)*
 
 Steps 1–4 give a game you can play and show in about two months.

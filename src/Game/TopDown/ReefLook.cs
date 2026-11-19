@@ -117,6 +117,9 @@ public sealed record ReefLook
             {
                 OctoShoots.Core.Run.Biome.KelpForest => Kelp,
                 OctoShoots.Core.Run.Biome.Shipwreck => Galleon,
+                OctoShoots.Core.Run.Biome.AlienWreckage => AlienWreck,
+                OctoShoots.Core.Run.Biome.DrownedTemple => Temple,
+                OctoShoots.Core.Run.Biome.Atlantis => AtlantisLook,
                 _ => Ruins,
             };
             var look = (Painted ? Blend(For(depth), own, BiomeShare) : own) with { Name = OctoShoots.Core.Run.Biomes.Name(biome) };
@@ -297,6 +300,39 @@ public sealed record ReefLook
         Sun = C("#F2E6C8"), SunEnergy = 0.55f, Ambient = C("#5E7A80"), AmbientEnergy = 0.4f,
         Caustics = 0.4f, Rays = 0.55f, Menace = 0.45f, Saturation = 0.95f, Vignette = 0.55f, Fog = 0.5f, Lantern = 1.45f,
         FanA = C("#9A7FB0"), FanB = C("#C98A6A"), SoftCoral = C("#D98F78"), HardCoral = C("#E8D2A0"), Grass = C("#8AA060"),
+    };
+
+    /// <summary>The Alien Wreckage (CROSSOVER.md §8): dark glass and black alloy, cold cyan light in its dead conduits.</summary>
+    public static readonly ReefLook AlienWreck = Shallows with
+    {
+        Name = "Alien Wreckage",
+        WaterShallow = C("#22304A"), WaterDeep = C("#141E30"), Murk = C("#060A12"),
+        Sand = C("#3A404C"), Rock = C("#2C303A"), Coral = C("#2FD8E0"), Coral2 = C("#5A7AA8"), Algae = C("#3A6A70"), Sponge = C("#7FE7FF"), Butter = C("#B8F4FF"),
+        Sun = C("#9AB8E0"), SunEnergy = 0.3f, Ambient = C("#304060"), AmbientEnergy = 0.4f,
+        Caustics = 0f, Rays = 0.2f, Menace = 0.6f, Saturation = 0.9f, Vignette = 0.65f, Fog = 0.6f, Lantern = 1.8f,
+        FanA = C("#3A8AA0"), FanB = C("#6A5AA8"), SoftCoral = C("#5AC8D8"), HardCoral = C("#8AA0C0"), Grass = C("#2E5A60"),
+    };
+
+    /// <summary>The Drowned Temple: a flooded cenote temple of carved grey-green stone, jade and old ochre paint.</summary>
+    public static readonly ReefLook Temple = Shallows with
+    {
+        Name = "Drowned Temple",
+        WaterShallow = C("#3E5E52"), WaterDeep = C("#2A443A"), Murk = C("#0F1C17"),
+        Sand = C("#A89A72"), Rock = C("#8A8670"), Coral = C("#4FA88A"), Coral2 = C("#C87A4A"), Algae = C("#6E8A4A"), Sponge = C("#D8A05A"), Butter = C("#E6C36A"),
+        Sun = C("#E8E0B8"), SunEnergy = 0.45f, Ambient = C("#4A6A5A"), AmbientEnergy = 0.4f,
+        Caustics = 0.3f, Rays = 0.5f, Menace = 0.6f, Saturation = 0.95f, Vignette = 0.6f, Fog = 0.55f, Lantern = 1.6f,
+        FanA = C("#5AA080"), FanB = C("#C88A5A"), SoftCoral = C("#7AC0A0"), HardCoral = C("#D8C090"), Grass = C("#6A8A50"),
+    };
+
+    /// <summary>Atlantis: gold-veined marble and orichalcum, its light-machines dead, a violet deep round it.</summary>
+    public static readonly ReefLook AtlantisLook = Shallows with
+    {
+        Name = "Atlantis",
+        WaterShallow = C("#3A4C70"), WaterDeep = C("#243454"), Murk = C("#0C1426"),
+        Sand = C("#C8B888"), Rock = C("#D4CAB0"), Coral = C("#E8B840"), Coral2 = C("#9A7FD0"), Algae = C("#7A8A6A"), Sponge = C("#F0C860"), Butter = C("#FFD25E"),
+        Sun = C("#F0E4C8"), SunEnergy = 0.4f, Ambient = C("#4A5A80"), AmbientEnergy = 0.42f,
+        Caustics = 0.2f, Rays = 0.4f, Menace = 0.75f, Saturation = 1f, Vignette = 0.62f, Fog = 0.55f, Lantern = 1.7f,
+        FanA = C("#9A7FD0"), FanB = C("#E8B840"), SoftCoral = C("#C8A0E0"), HardCoral = C("#F0D890"), Grass = C("#7A8A6A"),
     };
 
     /// <summary>Sets the reef globals the shaders read (colours converted to linear).</summary>

@@ -133,7 +133,8 @@ public partial class CameraRig : Node3D
 
     /// <summary>
     /// The ink look's biome (topdown_post's ink_tint): the colour its muted reef is washed in, dark (the Sunlit Reef blue,
-    /// the Kelp Forest green, the Shipwreck red, the Ruins yellow). Its pattern is the reef's in every biome.
+    /// the Kelp Forest green, the Shipwreck red, the Ruins yellow, the Alien Wreckage cyan, the Drowned Temple orange,
+    /// Atlantis violet). Its pattern is the reef's in every biome.
     /// </summary>
     public void SetInkBiome(OctoShoots.Core.Run.Biome biome)
     {
@@ -142,6 +143,9 @@ public partial class CameraRig : Node3D
             OctoShoots.Core.Run.Biome.KelpForest => new Vector3(0.3f, 0.72f, 0.38f),
             OctoShoots.Core.Run.Biome.Shipwreck => new Vector3(0.82f, 0.28f, 0.22f),
             OctoShoots.Core.Run.Biome.SunkenRuins => new Vector3(0.86f, 0.72f, 0.32f),
+            OctoShoots.Core.Run.Biome.AlienWreckage => new Vector3(0.22f, 0.78f, 0.86f),
+            OctoShoots.Core.Run.Biome.DrownedTemple => new Vector3(0.9f, 0.48f, 0.22f),
+            OctoShoots.Core.Run.Biome.Atlantis => new Vector3(0.6f, 0.42f, 0.92f),
             _ => new Vector3(0.32f, 0.5f, 0.85f),
         };
         _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ink_tint"), tint);

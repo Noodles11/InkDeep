@@ -7,7 +7,7 @@ using OctoShoots.Core.Gen.TopDown;
 namespace OctoShoots.Core.Run;
 
 /// <summary>The crossover's biomes (docs/proposals/CROSSOVER.md §8): one a depth, two at a branch.</summary>
-public enum Biome { SunlitReef, KelpForest, Shipwreck, SunkenRuins }
+public enum Biome { SunlitReef, KelpForest, Shipwreck, SunkenRuins, AlienWreckage, DrownedTemple, Atlantis }
 
 /// <summary>A biome's creatures, by the mob mark's tag they fill (MobTag).</summary>
 public sealed record Roster(EnemyKind[] Lone, EnemyKind[] Pack, EnemyKind[] Thrower, EnemyKind[] Ambusher, EnemyKind[] Guard);
@@ -16,8 +16,9 @@ public sealed record Roster(EnemyKind[] Lone, EnemyKind[] Pack, EnemyKind[] Thro
 /// The crossover's route (docs/proposals/CROSSOVER.md §8): which biome a level is, where each level leads, and which
 /// boss waits in a biome's arena. Depth 1 is the Sunlit Reef; its boss's arena opens two vortices, to the Kelp Forest
 /// (branch 0) or the Shipwreck Graveyard (branch 1), and the branch she took holds for the whole depth
-/// (<see cref="LevelId.Branch"/>); both lead on to the Sunken Ruins. Deeper depths are the Ruins until their own biomes
-/// are built (step 8).
+/// (<see cref="LevelId.Branch"/>); both lead on to the Sunken Ruins (depth 3), whose arena branches again, to the Alien
+/// Wreckage (4a) or the Drowned Temple (4b); both lead on to Atlantis (depth 5, and the depths below it till the Crack
+/// is built).
 /// </summary>
 public static class Biomes
 {
@@ -27,6 +28,9 @@ public static class Biomes
         Biome.KelpForest => "Kelp Forest",
         Biome.Shipwreck => "Shipwreck Graveyard",
         Biome.SunkenRuins => "Sunken Ruins",
+        Biome.AlienWreckage => "Alien Wreckage",
+        Biome.DrownedTemple => "Drowned Temple",
+        Biome.Atlantis => "Atlantis",
         _ => "Sunlit Reef",
     };
 
@@ -35,11 +39,13 @@ public static class Biomes
     {
         <= 1 => Biome.SunlitReef,
         2 => id.Branch == 1 ? Biome.Shipwreck : Biome.KelpForest,
-        _ => Biome.SunkenRuins,
+        3 => Biome.SunkenRuins,
+        4 => id.Branch == 1 ? Biome.DrownedTemple : Biome.AlienWreckage,
+        _ => Biome.Atlantis,
     };
 
-    /// <summary>How many ways a depth's boss arena opens down (2 at a branch: the first depth's, to depth 2a or 2b).</summary>
-    public static int WaysBelow(int shownDepth) => shownDepth == 1 ? 2 : 1;
+    /// <summary>How many ways a depth's boss arena opens down (2 at a branch: the first depth's, to 2a or 2b; the third's, to 4a or 4b).</summary>
+    public static int WaysBelow(int shownDepth) => shownDepth is 1 or 3 ? 2 : 1;
 
     /// <summary>
     /// Where a crossover level leads, in the order of its holes left to right: an ordinary level to the next row of its
@@ -60,6 +66,9 @@ public static class Biomes
         Biome.KelpForest => "tull",
         Biome.Shipwreck => "kip",
         Biome.SunkenRuins => "ottilie",
+        Biome.AlienWreckage => "bubbles",
+        Biome.DrownedTemple => "fennel",
+        // (Atlantis: its machine-fused beast is still to come; Drippus Prime stands in.)
         _ => null,
     };
 
@@ -82,6 +91,26 @@ public static class Biomes
             Thrower: new[] { EnemyKind.Pufferling },
             Ambusher: new[] { EnemyKind.Moray, EnemyKind.Crabby },
             Guard: new[] { EnemyKind.Crabby, EnemyKind.Barracuda }),
+        // The Alien Wreckage's moon jellies drift in its cold light, morays lie in its conduits; the Drowned Temple's
+        // nudibranchs creep its carved stone; Atlantis has all the deep's hunters.
+        Biome.AlienWreckage => new Roster(
+            Lone: new[] { EnemyKind.Barracuda },
+            Pack: new[] { EnemyKind.MoonJelly },
+            Thrower: new[] { EnemyKind.Pufferling },
+            Ambusher: new[] { EnemyKind.Moray },
+            Guard: new[] { EnemyKind.MoonJelly, EnemyKind.Crabby }),
+        Biome.DrownedTemple => new Roster(
+            Lone: new[] { EnemyKind.SpanishDancer },
+            Pack: new[] { EnemyKind.SpanishDancer, EnemyKind.MoonJelly },
+            Thrower: new[] { EnemyKind.Pufferling },
+            Ambusher: new[] { EnemyKind.SeaUrchin, EnemyKind.Moray },
+            Guard: new[] { EnemyKind.Crabby, EnemyKind.Barracuda }),
+        Biome.Atlantis => new Roster(
+            Lone: new[] { EnemyKind.Barracuda, EnemyKind.SpanishDancer },
+            Pack: new[] { EnemyKind.Pufferling, EnemyKind.MoonJelly },
+            Thrower: new[] { EnemyKind.Pufferling },
+            Ambusher: new[] { EnemyKind.Moray, EnemyKind.SeaUrchin },
+            Guard: new[] { EnemyKind.Barracuda, EnemyKind.Crabby }),
         Biome.SunkenRuins => new Roster(
             Lone: new[] { EnemyKind.Barracuda, EnemyKind.SpanishDancer },
             Pack: new[] { EnemyKind.MoonJelly },

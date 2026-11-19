@@ -21,7 +21,8 @@ public partial class BiomePropView : Node3D
     {
         foreach (Node n in GetChildren()) n.QueueFree();
         _sets.Clear();
-        if (!map.Templated || map.Biome is not (Biome.Shipwreck or Biome.SunkenRuins)) return;
+        // (The Drowned Temple's and Atlantis's stone is the Ruins' kind: their drums, blocks, amphorae, walls and arches.)
+        if (!map.Templated || map.Biome is not (Biome.Shipwreck or Biome.SunkenRuins or Biome.DrownedTemple or Biome.Atlantis)) return;
         uint seed = unchecked((uint)(map.Seed ^ (map.Seed >> 32)) ^ (uint)(map.Level * 4241 + map.Depth * 52711 + map.Id.Branch * 977) ^ 0x7B1D9Fu);
         float Hash(float x, float y, int k)
         {

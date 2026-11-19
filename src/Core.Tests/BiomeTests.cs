@@ -29,6 +29,13 @@ public class BiomeTests
         Assert.Equal(Biome.KelpForest, Biomes.Of(At(2, 1)));
         Assert.Equal(Biome.Shipwreck, Biomes.Of(At(2, 1, branch: 1)));
         Assert.Equal(Biome.SunkenRuins, Biomes.Of(At(3, 2)));
+        Assert.Equal(Biome.AlienWreckage, Biomes.Of(At(4, 1)));
+        Assert.Equal(Biome.DrownedTemple, Biomes.Of(At(4, 1, branch: 1)));
+        Assert.Equal(Biome.Atlantis, Biomes.Of(At(5, 3)));
+        // The Ruins' arena branches again, to the Alien Wreckage and the Drowned Temple; both go on to Atlantis.
+        var below = Biomes.Exits(TestLevels.Seed, At(3, LevelStocking.LevelsPerDepth));
+        Assert.Equal(new[] { Biome.AlienWreckage, Biome.DrownedTemple }, below.Select(Biomes.Of));
+        Assert.Equal(Biome.Atlantis, Biomes.Of(Assert.Single(Biomes.Exits(TestLevels.Seed, At(4, LevelStocking.LevelsPerDepth, branch: 1)))));
     }
 
     [Fact]
@@ -87,6 +94,8 @@ public class BiomeTests
     [InlineData(Biome.KelpForest, 2, "Tull")]
     [InlineData(Biome.Shipwreck, 2, "Kip")]
     [InlineData(Biome.SunkenRuins, 3, "Ottilie")]
+    [InlineData(Biome.AlienWreckage, 4, "Dragonet")]
+    [InlineData(Biome.DrownedTemple, 4, "Fennel")]
     public void Each_biome_s_boss_holds_a_corrupted_pearl(Biome biome, int depth, string name)
     {
         var spec = BossRoster.For(TestLevels.Seed.Value, 1, depth, crossover: true, biome: biome);
@@ -131,6 +140,9 @@ public class BiomeTests
     [InlineData(Biome.KelpForest)]
     [InlineData(Biome.Shipwreck)]
     [InlineData(Biome.SunkenRuins)]
+    [InlineData(Biome.AlienWreckage)]
+    [InlineData(Biome.DrownedTemple)]
+    [InlineData(Biome.Atlantis)]
     public void Each_biome_has_its_own_cell_for_every_way_a_cell_can_open(Biome biome)
     {
         var cells = CaveTemplates.VariantsOf(biome);
@@ -159,6 +171,9 @@ public class BiomeTests
     [InlineData(2, 0)]
     [InlineData(2, 1)]
     [InlineData(3, 0)]
+    [InlineData(4, 0)]
+    [InlineData(4, 1)]
+    [InlineData(5, 0)]
     public void Every_level_of_a_biome_is_built_only_from_that_biome_s_own_cells(int shownDepth, int branch)
     {
         var biome = Biomes.Of(At(shownDepth, 1, branch));
