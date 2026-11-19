@@ -52,6 +52,8 @@ public partial class HudView : Control
         public float Side, Age;
         /// <summary>Its size on the screen as it set off (pixels across), and how it was turned (seen from the camera).</summary>
         public float Size;
+        /// <summary>What it is worth: it counts in when it lands.</summary>
+        public int Worth = 1;
         public Quaternion Lie;
         public MeshInstance3D Mesh = null!;
     }
@@ -375,6 +377,17 @@ public partial class HudView : Control
         DrawArc(BellAt, r, 0f, Mathf.Tau, 72, new Color(1f, 0.95f, 0.82f, 0.18f + 0.22f * breath), 7f, true);
     }
 
+    /// <summary>What the shells still in flight are worth (not counted yet).</summary>
+    int InFlight
+    {
+        get
+        {
+            int n = 0;
+            foreach (var f in _flights) n += f.Worth;
+            return n;
+        }
+    }
+
     /// <summary>She is diving: no prompt.</summary>
     public bool Diving { get; set; }
 
@@ -382,11 +395,11 @@ public partial class HudView : Control
     /// A shell was just collected at that point of the screen, this many pixels across, turned so (as the camera sees it;
     /// null: any way): it flies itself to the counter.
     /// </summary>
-    public void CollectShell(Vector2 from, float size, Quaternion? lie)
+    public void CollectShell(Vector2 from, float size, Quaternion? lie, int worth = 1)
     {
         // Alternate the arcs' bow, so a handful taken at once fans out instead of stacking up.
         var start = lie ?? new Basis(new Vector3(GD.Randf(), GD.Randf(), GD.Randf()).Normalized() + Vector3.Up * 0.01f, GD.Randf() * Mathf.Tau).GetRotationQuaternion();
-        _flights.Add(new Flight { From = from, Side = _side * (0.7f + 0.3f * GD.Randf()), Size = Mathf.Max(size, 8f), Lie = start, Mesh = ShellMesh() });
+        _flights.Add(new Flight { From = from, Side = _side * (0.7f + 0.3f * GD.Randf()), Size = Mathf.Max(size, 8f), Lie = start, Mesh = ShellMesh(), Worth = Mathf.Max(worth, 1) });
         _side = -_side;
     }
 
@@ -495,7 +508,7 @@ public partial class HudView : Control
             var at = ShellIcon;
             if (k2 > 0.01f) DrawCircle(at, 14f * (1f + 0.35f * k2), new Color(1f, 0.8f, 0.55f, 0.4f * k2));
             if (_ring > 0.01f) DrawArc(at, 12f * (1.3f + 2.2f * (1f - _ring)), 0f, Mathf.Tau, 40, new Color(1f, 0.92f, 0.7f, 0.8f * _ring * _ring), 2.5f * _ring + 0.5f, true);
-            string count = Mathf.Max(_shells - _flights.Count, 0).ToString();
+            string count = Mathf.Max(_shells - InFlight, 0).ToString();
             int fs = (int)(19f * (1f + 0.3f * k2));
             Outlined(font, at + new Vector2(16f, 7f + 2f * k2), count, fs, new Color(1f, 0.9f, 0.8f).Lerp(new Color(1f, 1f, 0.75f), k2));
         }
@@ -652,7 +665,7 @@ public partial class HudView : Control
             var col = new Color(1f, 0.9f, 0.8f).Lerp(new Color(1f, 1f, 0.75f), k2);
             if (_ring > 0.01f) DrawArc(c, size * (1.3f + 2.2f * (1f - _ring)), 0f, Mathf.Tau, 40, new Color(1f, 0.92f, 0.7f, 0.8f * _ring * _ring), 2.5f * _ring + 0.5f, true);
             // Shells still in flight are not counted yet.
-            int shown = Mathf.Max(_shells - _flights.Count, 0);
+            int shown = Mathf.Max(_shells - InFlight, 0);
             Outlined(font, c + new Vector2(26f, 8f + 3f * k2), shown.ToString(), fontSize, col);
         }
 

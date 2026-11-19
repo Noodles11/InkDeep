@@ -21,6 +21,17 @@ public partial class CombatView : Node3D
     readonly Dictionary<PlaneShell, (MeshInstance3D Mesh, Basis Lie, Vector3 Spin, float Phase, MeshInstance3D Halo)> _shells = new();
     /// <summary>A shell's size on the plane (across, metres).</summary>
     public const float ShellSize = 0.62f;
+    /// <summary>
+    /// A shell's size by its worth (docs/proposals/CROSSOVER.md §5.1): a cowrie small, a nautilus large and brighter.
+    /// (One shell model for all four for now; each kind its own model comes with the ink look.)
+    /// </summary>
+    public static float ShellScale(ShellKind kind) => kind switch
+    {
+        ShellKind.Cowrie => 0.75f,
+        ShellKind.Scallop => 1f,
+        ShellKind.Conch => 1.3f,
+        _ => 1.65f,
+    };
     /// <summary>The soft glow round a shell lying in the reef (its radius).</summary>
     const float ShellHalo = 0.75f;
     /// <summary>Hearts dropped by freed mobs: a small red heart and its glow each, pooled.</summary>
@@ -1245,13 +1256,13 @@ void fragment() {
         foreach (var sh in world.Shells)
         {
             if (_shells.ContainsKey(sh)) continue;
-            var m = new MeshInstance3D { Mesh = OctoShoots.Game.Fx.NautilusShell.Mesh, MaterialOverride = OctoShoots.Game.Fx.NautilusShell.Material, CastShadow = GeometryInstance3D.ShadowCastingSetting.On, Scale = Vector3.One * ShellSize };
+            var m = new MeshInstance3D { Mesh = OctoShoots.Game.Fx.NautilusShell.Mesh, MaterialOverride = OctoShoots.Game.Fx.NautilusShell.Material, CastShadow = GeometryInstance3D.ShadowCastingSetting.On, Scale = Vector3.One * ShellSize * ShellScale(sh.Kind) };
             float phase = GD.Randf() * Mathf.Tau;
             // Lying in the reef it shimmers (a sweep of light over it, a breathing sheen) inside a soft pearly glow.
             m.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("shimmer"), 1f);
             m.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("shimmer_seed"), phase / Mathf.Tau);
             AddChild(m);
-            var halo = new MeshInstance3D { Mesh = _haloQuad, MaterialOverride = _halo, Scale = Vector3.One * ShellHalo, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+            var halo = new MeshInstance3D { Mesh = _haloQuad, MaterialOverride = _halo, Scale = Vector3.One * ShellHalo * ShellScale(sh.Kind), CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
             halo.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("color"), new Vector3(1f, 0.95f, 0.85f));
             AddChild(halo);
             var lie = Basis.FromEuler(new Vector3(GD.Randf(), GD.Randf(), GD.Randf()) * Mathf.Tau);
@@ -1267,9 +1278,11 @@ void fragment() {
         foreach (var (sh, view) in _shells)
         {
             view.Mesh.Position = new Vector3(sh.Position.X, LevelMap.SwimBand - 0.25f + 0.08f * Mathf.Sin(_time * 2.2f + view.Phase), sh.Position.Y);
-            view.Mesh.Basis = (new Basis(view.Spin, 0.35f * _time + view.Phase) * view.Lie).Scaled(Vector3.One * ShellSize);
+            view.Mesh.Basis = (new Basis(view.Spin, 0.35f * _time + view.Phase) * view.Lie).Scaled(Vector3.One * ShellSize * ShellScale(sh.Kind));
             view.Halo.Position = view.Mesh.Position;
-            view.Halo.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("strength"), 0.27f + 0.12f * Mathf.Sin(_time * 2.6f + view.Phase));
+            // (The rarer the shell, the brighter its glow.)
+            float rare = 1f + 0.35f * (int)sh.Kind;
+            view.Halo.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("strength"), (0.27f + 0.12f * Mathf.Sin(_time * 2.6f + view.Phase)) * rare);
         }
         // Light orbs (the sim's hearts): a bubble with her light inside, breathing gently where they fell.
         while (_hearts.Count < world.Hearts.Count)

@@ -63,7 +63,7 @@ public class CrossoverTests
             Assert.Equal(dive.Treasures, cross.Treasures);
             Assert.Equal(0, cross.Secrets);
             Assert.Equal(dive.Crabs, cross.Crabs);
-            Assert.Equal(dive.Shops, cross.Shops);
+            Assert.True(cross.Shops >= dive.Shops);
             Assert.Equal(dive.Caches, cross.Caches);
             Assert.Equal(dive.Exits, cross.Exits);
             Assert.Equal(dive.Menace, cross.Menace);
@@ -185,5 +185,84 @@ public class CrossoverTests
         Assert.True(DiveClock.Open(120f));
         Assert.Equal(0.5f, DiveClock.Progress(60f));
         Assert.Equal(1f, DiveClock.Progress(500f));
+    }
+
+    [Fact]
+    public void Shells_are_worth_more_the_rarer_and_rich_finds_hold_rarer_ones()
+    {
+        Assert.Equal(new[] { 1, 3, 8, 25 }, Enum.GetValues<ShellKind>().Select(ShellWorth.Of));
+        foreach (var kind in Enum.GetValues<ShellKind>())
+        {
+            Assert.Equal(kind, ShellWorth.KindOf(ShellWorth.Of(kind)));
+            Assert.Equal(kind, ShellWorth.KindOf(ShellWorth.Of(kind) + 1));
+        }
+        float Mean(int richness, float menace)
+        {
+            var rng = new Rng(7);
+            return Enumerable.Range(0, 4000).Average(_ => (float)ShellWorth.Of(ShellWorth.Roll(rng, richness, menace)));
+        }
+        Assert.True(Mean(ShellWorth.Freed, 0f) < Mean(ShellWorth.Pot, 0f));
+        Assert.True(Mean(ShellWorth.Pot, 0f) < Mean(ShellWorth.Cache, 0f));
+        Assert.True(Mean(ShellWorth.Cache, 0f) < Mean(ShellWorth.Vault, 0f));
+        Assert.True(Mean(ShellWorth.Vault, 0f) < Mean(ShellWorth.Vault, 1f));
+    }
+
+    [Fact]
+    public void Some_template_levels_hold_a_shop_in_a_room_cell()
+    {
+        var plans = Ids.Select(id => LevelPlan.For(TestLevels.Seed, id, crossover: true)).Where(p => p.Templated).ToList();
+        Assert.Contains(plans, p => p.Shops == 1);
+        Assert.All(plans, p => Assert.True(p.Places <= LevelStocking.MaxPlaces));
+        var id = plans.First(p => p.Shops == 1).Id;
+        var map = TopDownGenerator.Generate(new RunStreams(TestLevels.Seed), id, crossover: true);
+        var shop = Assert.Single(map.Pois, p => p.Kind == PoiKind.Shop);
+        Assert.True(shop.Cave >= 0, "the shop has no cave");
+    }
+
+    [Fact]
+    public void Bubble_vaults_hang_against_the_rock_and_hold_shells()
+    {
+        int vaults = 0;
+        foreach (var map in Templated.Value)
+        {
+            Assert.NotEmpty(map.VaultMarks);
+            var w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()));
+            vaults += w.Vaults.Count;
+            foreach (var v in w.Vaults)
+            {
+                Assert.True(map.IsOpen(v.Position), $"{map.Id}: a vault in the rock");
+                Assert.False(map.IsOpen(v.Position + v.Wall * (v.Radius + 0.6f)), $"{map.Id}: a vault at {v.Position} hangs against no rock");
+                Assert.InRange(v.Shells.Count, VaultTuning.ShellsMin, VaultTuning.ShellsMax);
+                Assert.True(Vector2.Distance(v.Position, map.Start.Position) >= VaultTuning.StartClear - VaultTuning.WallSearch);
+            }
+        }
+        Assert.True(vaults > Templated.Value.Length, $"only {vaults} vaults on {Templated.Value.Length} levels");
+    }
+
+    [Fact]
+    public void Her_beam_bursts_a_vault_and_what_it_held_tumbles_out()
+    {
+        var map = Templated.Value.First(m => new PlaneWorld(m, new Tuning()).Vaults.Count > 0);
+        var w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()));
+        var vault = w.Vaults[0];
+        // She floats a little way off it, out from its rock, and shines at it.
+        var at = vault.Position - vault.Wall * 2.5f;
+        Assert.True(map.IsOpen(at));
+        int shells = w.Shells.Count;
+        w.Run.Shells = 0;
+        bool burst = false;
+        for (int i = 0; i < 300 && !burst; i++)
+        {
+            w.Player.Position = w.Player.PrevPosition = at;
+            w.Player.Velocity = Vector2.Zero;
+            w.Step(new PlaneInput { Aim = vault.Wall, Fire = true, Beam = true });
+            burst = w.Events.Any(e => e.Type == PlaneEventType.VaultBurst);
+        }
+        Assert.True(burst, "the beam never burst it");
+        Assert.True(vault.Burst);
+        // (Its shells lie out of it, or have already drifted to her.)
+        int worth = vault.Shells.Sum(ShellWorth.Of);
+        int lying = w.Shells.Skip(shells).Sum(sh => sh.Value);
+        Assert.True(lying + w.Run.Shells >= worth, $"{lying} lying + {w.Run.Shells} taken, of {worth}");
     }
 }

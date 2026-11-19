@@ -248,4 +248,18 @@ the tests of the dive still test the dive.
   two minutes; when it is full a soft chime and a message say so, the prompt shows for a few seconds and the ring
   breathes. The level below is shown under her only once she dives. `--dbg-diveclock=s` starts each level's clock
   that far on (verification).
+- **Step 3, first part (0.51.0), shells, bubble vaults, shops:**
+  - **Shells by worth** (`ShellKind`, `ShellWorth`): cowrie 1, scallop 3, conch 8, nautilus 25. On a template level
+    each shell of a find is rolled by the find's richness (a freed creature's, a pot's, a cache's, a vault's) and the
+    depth (the menace), so the rarer shells lie deeper and better hidden; elsewhere every shell is a cowrie, as before.
+    A shell's size and glow grow with its worth (one shell model for all four until the ink look); the counter counts
+    each in by its worth as it lands.
+  - **Bubble vaults** (`PlaneVault`, `VaultView`): templates carry vault marks by their walls (`v`, `LevelMap.VaultMarks`);
+    a level takes most of them (at most 6), each a big air bubble snug against its rock holding 2–4 shells (rolled
+    as a vault's), a healing orb 40% of the time and a pearl 8%. What it holds shows inside it only in her aura; her
+    beam fills it with her light till it bursts (about a second), and her dash bursts it too; its contents tumble out
+    away from the wall. It is fixed to the rock. `--at=vault --dbg-vault` shines at one (verification).
+  - **Shops:** with no havens, a template level from its second row on holds a shop 45% of the time
+    (`LevelPlan.CrossoverShop`), in a room cell like a treasure clam, with the shop's stands as before.
+  - Still to come in step 3: light pips, healing orbs giving back a pip, the shrine, pools by place and quality.
 

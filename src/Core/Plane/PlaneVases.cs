@@ -180,7 +180,7 @@ public sealed partial class PlaneWorld
         }
         if (roll >= VaseTuning.HeartChance + VaseTuning.ShellChance) return;
         int count = VaseTuning.ShellsMin + _vaseRng.Int(VaseTuning.ShellsMax - VaseTuning.ShellsMin + 1);
-        for (int i = 0; i < count; i++) Shells.Add(new PlaneShell { Position = vase.Position, Velocity = Fling(2f, 4f) });
+        for (int i = 0; i < count; i++) Shells.Add(FoundShell(vase.Position, ShellWorth.Pot, Fling(2f, 4f)));
     }
 
     /// <summary>Ink Sac: a blast breaks every pot it reaches.</summary>

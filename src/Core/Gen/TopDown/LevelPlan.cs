@@ -72,7 +72,7 @@ public sealed class LevelPlan
     public int Secrets { get; private set; }
     public int Crabs { get; init; }
     public int Curses { get; private set; }
-    public int Shops { get; init; }
+    public int Shops { get; private set; }
     /// <summary>Ways into a haven (docs/DIVE.md §4), 0 or 1.</summary>
     public int Havens { get; private set; }
     public int Caches { get; init; }
@@ -144,8 +144,16 @@ public sealed class LevelPlan
         // (A secret room's labyrinth is a second layer: the crossover has none, CROSSOVER.md §3.)
         plan.Secrets = 0;
         plan.Templated = !id.IsTutorial && !plan.HasBoss && !plan.LeakCave;
+        // Its shop (CROSSOVER.md §5): with no havens, a template level from its second row on may hold one in a room cell,
+        // rolled on a stream of its own so nothing else of the plan changes.
+        if (plan.Templated && plan.Shops == 0 && id.Level >= 2 && plan.Places < LevelStocking.MaxPlaces
+            && new RunStreams(seed).Plan(id).Stream("crossover shop").NextFloat() < CrossoverShop)
+            plan.Shops = 1;
         return plan;
     }
+
+    /// <summary>How often a template level from its second row on holds a shop.</summary>
+    public const float CrossoverShop = 0.45f;
 
     static LevelPlan DivePlan(SeedCode seed, LevelId id, float luck)
     {

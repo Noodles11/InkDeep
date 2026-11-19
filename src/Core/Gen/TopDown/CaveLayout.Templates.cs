@@ -18,6 +18,8 @@ public sealed partial class CaveLayout
     /// <summary>Its mob marks (where the roster puts a creature) and its POI marks not taken by a place, all in open water.</summary>
     public readonly List<(Vector2 At, MobTag Tag)> MobMarks = new();
     public readonly List<Vector2> PoiMarks = new();
+    /// <summary>Its bubble vaults' marks (CROSSOVER.md §5.1), in open water by a wall.</summary>
+    public readonly List<Vector2> VaultMarks = new();
 
     /// <summary>The grid: Cells × Cells cells of CaveTemplates.Cell metres, centred in the level's square.</summary>
     public const int Cells = 5;
@@ -166,6 +168,7 @@ public sealed partial class CaveLayout
         var roomAt = new Dictionary<int, Vector2>();
         var mobs = new List<(Vector2 At, MobTag Tag)>();
         var spots = new List<Vector2>();
+        var vaults = new List<Vector2>();
         for (int i = 0; i < C * C; i++)
         {
             if (use[i] == Use.None) continue;
@@ -190,6 +193,7 @@ public sealed partial class CaveLayout
                 raw[(oy + y) * NN + ox + x] = CaveTemplates.Water(c) && c != 'R';
                 if (CaveTemplates.TagOf(c) is { } tag) mobs.Add((p, tag));
                 else if (c == '*') spots.Add(p);
+                else if (c == 'v') vaults.Add(p);
                 else if (c == 'R') roomAt[i] = p;
             }
         }
@@ -344,6 +348,7 @@ public sealed partial class CaveLayout
 
         g.MobMarks.AddRange(mobs.Where(m => keep[g.Index(m.At)]));
         g.PoiMarks.AddRange(marks);
+        g.VaultMarks.AddRange(vaults.Where(p => keep[g.Index(p)]));
         g.PathToExit = g.Geodesic(g.Start.At)[g.Index(g.Exit.At)];
         if (!float.IsFinite(g.PathToExit) || g.PathToExit < MinPath) return (null, $"the far side is {g.PathToExit:0} m from the start along the water");
         return (g, null);

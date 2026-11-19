@@ -78,7 +78,7 @@ public sealed class PlaneInk
     public float MaxLife;
 }
 
-public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, MobDefeated, MobNoticed, PlayerHit, PlayerDefeated, Dived, DiveOpened, PufferSwells, NeedlesFired, PearlCollected, ShellCollected, HeartCollected, Purchased, CannotAfford, ShotPopped, BubbleFull,
+public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, MobDefeated, MobNoticed, PlayerHit, PlayerDefeated, Dived, DiveOpened, VaultBurst, PufferSwells, NeedlesFired, PearlCollected, ShellCollected, HeartCollected, Purchased, CannotAfford, ShotPopped, BubbleFull,
     ChargeFull, LightBurst, ShieldBlocked, ActiveUsed, ActiveNotReady, ActiveDenied,
     GeyserFizz, GeyserSpray, GeyserEnded, VaseHit, VaseBroken, FullBubbleFreed,
     BlightrootDrank, BlightrootInflate, GuardiansWoke, BlightrootPulse, BlightrootBurst, MurklingBud, MurklingEmerged, MurklingBurst, MurklingThrow, MurklingWindup, ThumpWindup, ThumpLeap, ThumpLand, ThumpRoll, ThumpBurst, Warded, WardenFreed, LashWindup, LashOut, LashCatch, LashSwallow, LashBite, LashStun, LashFreed, SealLit, SealOpened, SealClosed, FishStruck, FishTurned, FishFreed,
@@ -176,6 +176,7 @@ public sealed partial class PlaneWorld
         PlaceShells();
         PlaceBoss();
         if (Options.Vases) PlaceVases();
+        if (Map.Templated) PlaceVaults();
         PlaceSprings();
         PlaceChargeStones();
         PlaceSeals();
@@ -313,6 +314,7 @@ public sealed partial class PlaneWorld
 
         StepReef();
         StepVases();
+        StepVaults();
         StepSeals();
 
         foreach (var c in Clouds) c.Life -= Dt;

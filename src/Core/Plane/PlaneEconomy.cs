@@ -41,6 +41,8 @@ public sealed class PlaneShell
 {
     public Vector2 Position;
     public Vector2 Velocity;
+    /// <summary>Which shell, and what it is worth (ShellWorth): a cowrie, 1, unless rolled.</summary>
+    public ShellKind Kind;
     public int Value = 1;
     public bool Taken;
 }
@@ -134,7 +136,7 @@ public sealed partial class PlaneWorld
             {
                 float a = _drops.Range(0f, MathF.Tau), r = _drops.Range(0.8f, MathF.Min(3f, poi.Radius - 1f));
                 var at = poi.Position + new Vector2(MathF.Cos(a), MathF.Sin(a)) * r;
-                Shells.Add(new PlaneShell { Position = Clear(at, 0.2f) ? at : poi.Position });
+                Shells.Add(FoundShell(Clear(at, 0.2f) ? at : poi.Position, ShellWorth.Cache, Vector2.Zero));
             }
         }
     }
@@ -155,6 +157,16 @@ public sealed partial class PlaneWorld
         if (offer.Count > 0 && rng.NextFloat() < PlaneEconomyTuning.PearlOffered)
             Stands.Add(new ShopStand { Kind = StandKind.Pearl, ItemId = Run.Pick(offer, rng), Price = PlaneEconomyTuning.PearlPrice, Position = Slot(PlaneEconomyTuning.PearlSlot) });
         Stands.Add(new ShopStand { Kind = StandKind.Health, Price = PlaneEconomyTuning.HealthPrice, Position = Slot(PlaneEconomyTuning.HeartSlot) });
+    }
+
+    /// <summary>
+    /// A shell of a find (ShellWorth.Roll) at a point, flung a little way: on a template level its worth rolled by the
+    /// find's richness and the depth; elsewhere a cowrie worth one.
+    /// </summary>
+    PlaneShell FoundShell(Vector2 at, int richness, Vector2 velocity)
+    {
+        var kind = Map.Templated ? ShellWorth.Roll(_drops, richness, Map.Menace) : ShellKind.Cowrie;
+        return new PlaneShell { Position = at, Velocity = velocity, Kind = kind, Value = ShellWorth.Of(kind) };
     }
 
     /// <summary>A defeated mob leaves shells, flung a little way.</summary>
@@ -199,7 +211,8 @@ public sealed partial class PlaneWorld
             int value = shell.Value + (lucky > 0f && _drops.NextFloat() < lucky ? 1 : 0);
             Run.Shells += value;
             Stats.ShellsCollected += value;
-            for (int i = 0; i < value; i++) Events.Add(new PlaneEvent(PlaneEventType.ShellCollected, shell.Position, Vector2.Zero));
+            // (One event a shell, its worth as its size: the game flies the shell itself to the counter.)
+            Events.Add(new PlaneEvent(PlaneEventType.ShellCollected, shell.Position, Vector2.Zero, value));
         }
         Shells.RemoveAll(s => s.Taken);
 

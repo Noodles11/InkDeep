@@ -63,6 +63,7 @@ public partial class TopDownMain : Node3D
     readonly List<float> _holeOpen = new();
     AbyssView _abyss = null!;
     VaseView _vases = null!;
+    VaultView _vaults = null!;
     /// <summary>Achievements: their data, what earns them on this run, and the banner that announces them (§8).</summary>
     AchievementCatalog? _achievementData;
     PlaneAchievements _achievements = null!;
@@ -326,6 +327,8 @@ public partial class TopDownMain : Node3D
     bool _dbgExit;
     /// <summary>Verification (--dbg-diveclock=s): each level's clock starts this far on (DiveClock), so the dive opens sooner.</summary>
     float _dbgDiveClock;
+    /// <summary>Verification (--dbg-vault): she shines at the nearest bubble vault.</summary>
+    bool _dbgVault;
     /// <summary>Verification (--dbg-loose=id): that pearl lies loose on the reef a few metres from her at the start.</summary>
     string? _dbgLoose;
     /// <summary>
@@ -464,6 +467,8 @@ public partial class TopDownMain : Node3D
         AddChild(_abyss);
         _vases = new VaseView();
         AddChild(_vases);
+        _vaults = new VaultView();
+        AddChild(_vaults);
         _boss = new BossView();
         AddChild(_boss);
         _puffers = new PufferlingView();
@@ -584,6 +589,7 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--dbg-bud=")) _dbgBud = Value("--dbg-bud=");
             else if (arg == "--dbg-ward") _dbgWard = true;
             else if (arg == "--dbg-exit") _dbgExit = true;
+            else if (arg == "--dbg-vault") _dbgVault = true;
             else if (arg.StartsWith("--dbg-diveclock=") && float.TryParse(Value("--dbg-diveclock="), NumberStyles.Float, CultureInfo.InvariantCulture, out float dc)) _dbgDiveClock = dc;
             else if (arg.StartsWith("--dbg-loose=")) _dbgLoose = Value("--dbg-loose=");
             else if (arg == "--dbg-prism") _dbgPrism = true;
@@ -1646,6 +1652,7 @@ public partial class TopDownMain : Node3D
         _kelp.Build(map, LookOf(map));
         _abyss.Build(map, LookOf(map));
         _vases.Show(_world);
+        _vaults.Show(_world);
         _puffers.Show(_world);
         _reefFish.Show(_world);
         _curseDen.Show(_world);
@@ -2103,6 +2110,8 @@ public partial class TopDownMain : Node3D
             "arena" => _map.HasBoss ? _world.ArenaCenter + new System.Numerics.Vector2(0f, _world.ArenaRadius * 0.55f) : null,
             // Close in front of the boss (captures of its body).
             "boss-near" => _map.HasBoss ? _world.ArenaCenter + new System.Numerics.Vector2(0f, 6.5f) : null,
+            // Out from the first bubble vault, facing it (--dbg-vault shines at it).
+            "vault" => _world.Vaults.Select(v => (System.Numerics.Vector2?)(v.Position - v.Wall * 2.5f)).FirstOrDefault(),
             "shop" => _map.Caves.Where(c => _map.Pois[c.Poi].Kind == PoiKind.Shop).Select(c => (System.Numerics.Vector2?)(c.Mouth - c.Facing * 1.5f)).FirstOrDefault(),
             // Out along the shop's passage, facing its gateway.
             // Inside a Crab Deal room, its fake wall already down.
@@ -2641,10 +2650,10 @@ public partial class TopDownMain : Node3D
                     var view = GetViewport().GetVisibleRect().Size;
                     var at3 = new Vector3(e.Position.X, LevelMap.SwimBand, e.Position.Y);
                     var shownAt = OctoShoots.Game.Fx.Fisheye.Shown(cam.UnprojectPosition(at3), view);
-                    float across = (OctoShoots.Game.Fx.Fisheye.Shown(cam.UnprojectPosition(at3 + cam.GlobalBasis.X * CombatView.ShellSize), view) - shownAt).Length();
+                    float across = (OctoShoots.Game.Fx.Fisheye.Shown(cam.UnprojectPosition(at3 + cam.GlobalBasis.X * CombatView.ShellSize * CombatView.ShellScale(ShellWorth.KindOf((int)e.Size))), view) - shownAt).Length();
                     Quaternion? lie = _combat.ShellLie(e.Position) is { } basis ? (cam.GlobalBasis.Orthonormalized().Inverse() * basis).GetRotationQuaternion() : null;
                     // (In the HUD's own units: it is scaled with the window.)
-                    _hud.CollectShell(shownAt / HudScale, across / HudScale, lie);
+                    _hud.CollectShell(shownAt / HudScale, across / HudScale, lie, Math.Max(1, (int)e.Size));
                 }
                 else if (e.Type == PlaneEventType.CannotAfford) Say("Not enough shells");
                 else if (e.Type == PlaneEventType.PlayerDrained)
@@ -2759,6 +2768,13 @@ public partial class TopDownMain : Node3D
                 }
                 else if (e.Type == PlaneEventType.ShieldBlocked) _bell.ShieldRipple();
                 else if (e.Type == PlaneEventType.VaseHit) _vases.Hit(_world, e.Position, e.Direction);
+                // A bubble vault bursts (docs/proposals/CROSSOVER.md §5.1): a pop, and what it held tumbles out.
+                else if (e.Type == PlaneEventType.VaultBurst)
+                {
+                    _vaults.Burst(new Vector2(e.Position.X, e.Position.Y), e.Size);
+                    _sfx.PlayAt("pop", new Vector3(e.Position.X, LevelMap.SwimBand, e.Position.Y), -2f, 0.1f);
+                    _haptics.Pulse(0.3f, 0.4f, 0.15f);
+                }
                 else if (e.Type == PlaneEventType.VaseBroken)
                 {
                     _vases.Break(_world, e.Position, e.Direction);
@@ -2873,6 +2889,7 @@ public partial class TopDownMain : Node3D
         Guard("currents", () => _currents.Sync(_world, dt, _camera));
         Guard("abyss", () => _abyss.Sync(_world, dt));
         Guard("vases", () => _vases.Sync(dt));
+        Guard("vaults", () => _vaults.Sync(_world, dt));
         Guard("pufferlings", () => _puffers.Sync(_world, dt));
         Guard("reef fish", () => _reefFish.Sync(_world, dt));
         Guard("corruption", () => SyncCorruption(dt, alpha));
@@ -3143,7 +3160,7 @@ public partial class TopDownMain : Node3D
     /// </summary>
     IEnumerable<Node> LevelLife => new Node[]
     {
-        _crab, _combat, _puffers, _reefFish, _curseDen, _clamRooms, _geysers, _boss, _damage, _currents, _vases, _abyss,
+        _crab, _combat, _puffers, _reefFish, _curseDen, _clamRooms, _geysers, _boss, _damage, _currents, _vases, _vaults, _abyss,
         _kelp, _chargeStones, _prismStones, _cores, _lamps, _motes, _seals, _surgeView, _blight, _ash, _adventure, _springs, _portals,
         _mirrorView, _fanView, _vapour,
     };
@@ -4050,6 +4067,13 @@ public partial class TopDownMain : Node3D
         if (_dbgSteer is { } steerTo && !(_dbgSteerFight && _world.Boss is not { Stage: BossStage.Fight }))
         {
             input.Move = new System.Numerics.Vector2(steerTo.X, steerTo.Y);
+            return input;
+        }
+        // Verification (--dbg-vault): she holds still and, after a moment, shines at the nearest bubble vault till it bursts.
+        if (_dbgVault && _world.Vaults.Where(v => !v.Burst).OrderBy(v => System.Numerics.Vector2.Distance(v.Position, _world.Player.Position)).FirstOrDefault() is { } vault)
+        {
+            input.Aim = System.Numerics.Vector2.Normalize(vault.Position - _world.Player.Position);
+            input.Fire = input.Beam = _frame > 45;
             return input;
         }
         if (_autopilot && _route.Count > 0)

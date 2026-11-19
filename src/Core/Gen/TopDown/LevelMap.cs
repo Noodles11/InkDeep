@@ -387,6 +387,8 @@ public sealed class LevelMap
     public List<(Vector2 At, MobTag Tag)> MobMarks = new();
     /// <summary>A template level's POI marks no place took: spots where a place could stand, in open water.</summary>
     public List<Vector2> PoiMarks = new();
+    /// <summary>A template level's bubble vaults' marks (CROSSOVER.md §5.1): in open water, by a wall.</summary>
+    public List<Vector2> VaultMarks = new();
     /// <summary>A leak cave's level (what its leak is worth, how strong its creatures are); 0 elsewhere.</summary>
     public int CaveLevel;
     /// <summary>A leak cave's floor (from 1) and how many it has; its floors above the last end in a hole down (a shaft).</summary>
