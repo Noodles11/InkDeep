@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Collections.Generic;
 using Godot;
 using OctoShoots.Core.Gen.TopDown;
@@ -70,6 +71,8 @@ public partial class BiomePropView : Node3D
                 }
             }
         }
+        int pieces = Pieces(map, wreck, wood, oldWood, iron, marble, Hash);
+        if (OS.GetCmdlineUserArgs().Length > 0) GD.Print($"Biome props: {pieces} larger pieces, {_sets.Values.Sum(v => v.At.Count)} parts in all");
         foreach (var (mesh, material, list) in _sets.Values)
         {
             var mm = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = mesh, InstanceCount = list.Count };
@@ -80,6 +83,96 @@ public partial class BiomePropView : Node3D
 
     /// <summary>The things' size against a real one's: a little larger, so they read from her camera's height.</summary>
     const float Big = 1.5f;
+
+    /// <summary>
+    /// The larger pieces, a few a level on the open seabed under her plane (so she swims over them), far apart: in the
+    /// Shipwreck a broken hull section (its keel, its ribs curving up on both sides, a few planks still on them) and a
+    /// fallen mast with its yard; in the Ruins a crumbled building wall (a run of cut blocks, broken down unevenly, some
+    /// fallen beside it) and a fallen arch (two column stumps and its lintel). Some walls stand on the rock tops too.
+    /// </summary>
+    int Pieces(LevelMap map, bool wreck, Material wood, Material oldWood, Material iron, Material marble, System.Func<float, float, int, float> hash)
+    {
+        var placed = new List<System.Numerics.Vector2>();
+        const float step = 6f, apart = 13f;
+        for (float y = LevelMap.RimWidth + 4f; y < map.Size - LevelMap.RimWidth - 4f; y += step)
+        for (float x = LevelMap.RimWidth + 4f; x < map.Size - LevelMap.RimWidth - 4f; x += step)
+        {
+            var p = new System.Numerics.Vector2(x + hash(x, y, 21) * step, y + hash(x, y, 22) * step);
+            if (hash(x, y, 23) > 0.35f || placed.Exists(q => System.Numerics.Vector2.Distance(q, p) < apart)) continue;
+            if (map.InShaft(p, 5f) || System.Numerics.Vector2.Distance(p, map.Start.Position) < map.Start.Radius + 5f) continue;
+            if (map.Pois.Exists(q => System.Numerics.Vector2.Distance(q.Position, p) < q.Radius + 4f)) continue;
+            float h = map.HeightAt(p);
+            bool top = h > 0.8f && map.Gradient(p).Length() < 0.6f;
+            // (On the floor: under her plane, and the ground round it all floor.)
+            bool floor = h < -1.3f;
+            for (int i = 0; i < 8 && floor; i++)
+            {
+                float a = i * Mathf.Tau / 8f;
+                floor = map.HeightAt(p + new System.Numerics.Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 2.6f) < -0.9f;
+            }
+            if (!floor && !(top && !wreck)) continue;
+            placed.Add(p);
+            var at = new Vector3(p.X, h, p.Y);
+            // (A piece on a shallow floor is laid lower, so it never stands up through her plane.)
+            float room = top ? 2f : Mathf.Clamp((LevelMap.SwimBand - 0.3f - h) / 1.6f, 0.45f, 1f);
+            var turn = new Basis(Vector3.Up, hash(x, y, 24) * Mathf.Tau).Scaled(new Vector3(1f, room, 1f));
+            Vector3 On(float ax, float ay, float az) => at + turn * new Vector3(ax, ay, az);
+            if (wreck && hash(x, y, 25) < 0.6f)
+            {
+                // A hull section: its keel, ribs up both sides, leaning out, and planks along them.
+                float lean = 0.45f;
+                Add("keel", Box(6.4f, 0.32f, 0.42f), oldWood, new Transform3D(turn, On(0f, 0.16f, 0f)));
+                for (int k = 0; k < 7; k++)
+                {
+                    float rx = -2.7f + k * 0.9f;
+                    float tall = 1.1f + 0.5f * hash(x + k, y, 26);
+                    foreach (float side in new[] { -1f, 1f })
+                    {
+                        var rib = turn * new Basis(Vector3.Right, side * lean);
+                        Add("rib", Box(0.16f, 1f, 0.22f), wood, new Transform3D(rib.Scaled(new Vector3(1f, tall, 1f)), On(rx, tall * 0.45f, side * (0.35f + tall * 0.2f))));
+                    }
+                }
+                for (int k = 0; k < 3; k++)
+                {
+                    float side = k % 2 == 0 ? 1f : -1f, len = 2.4f + 2.6f * hash(x, y + k, 27);
+                    var plank = turn * new Basis(Vector3.Right, side * lean);
+                    Add("hullplank", Box(1f, 0.08f, 0.3f), oldWood, new Transform3D(plank * Basis.FromScale(new Vector3(len, 1f, 1f)), On(-2f + len * 0.5f, 0.35f + 0.3f * k, side * 0.6f)));
+                }
+            }
+            else if (wreck)
+            {
+                // A fallen mast, its yard still across it near the top, an iron band round it.
+                Add("mast", Cyl(0.2f, 0.26f, 7.5f), oldWood, new Transform3D(turn * new Basis(Vector3.Forward, Mathf.Pi / 2f), On(0f, 0.24f, 0f)));
+                Add("yard", Cyl(0.12f, 0.12f, 4.2f), wood, new Transform3D(turn * new Basis(Vector3.Right, Mathf.Pi / 2f), On(2.6f, 0.45f, 0f)));
+                Add("band", Cyl(0.29f, 0.29f, 0.18f), iron, new Transform3D(turn * new Basis(Vector3.Forward, Mathf.Pi / 2f), On(-1.2f, 0.24f, 0f)));
+            }
+            else if (hash(x, y, 25) < 0.65f || top)
+            {
+                // A crumbled wall: a run of cut blocks, two or three courses where it still stands, broken down to one at
+                // its ends, a few blocks fallen beside it.
+                int blocks = 5 + (int)(hash(x, y, 28) * 4f);
+                for (int k = 0; k < blocks; k++)
+                {
+                    float bx = (k - blocks * 0.5f) * 1.05f;
+                    float edge = Mathf.Min(k, blocks - 1 - k);
+                    int courses = 1 + (int)Mathf.Min(edge, 2f * hash(x + k, y, 29) + 1f);
+                    for (int c = 0; c < courses; c++)
+                        Add("wallblock", Box(1f, 0.55f, 0.7f), marble, new Transform3D(turn * new Basis(Vector3.Up, (hash(x + k, y + c, 30) - 0.5f) * 0.12f), On(bx + (c % 2) * 0.5f, 0.28f + c * 0.56f, 0f)));
+                    if (hash(x + k, y, 31) < 0.3f)
+                        Add("fallen", Box(1f, 0.55f, 0.7f), marble, new Transform3D(turn * new Basis(Vector3.Up, hash(x + k, y, 32) * 1.2f), On(bx + 0.3f, 0.28f, 1.2f + hash(x + k, y, 33))));
+                }
+            }
+            else
+            {
+                // A fallen arch: two column stumps, and its lintel lying across where it fell.
+                // (One stump mesh a metre tall, each scaled to its own height.)
+                Add("stump", Cyl(0.5f, 0.55f, 1f), marble, new Transform3D(turn * Basis.FromScale(new Vector3(1f, 1.4f, 1f)), On(-1.8f, 0.7f, 0f)));
+                Add("stump", Cyl(0.5f, 0.55f, 1f), marble, new Transform3D(turn * Basis.FromScale(new Vector3(1f, 0.8f, 1f)), On(1.8f, 0.4f, 0f)));
+                Add("lintel", Box(4.4f, 0.6f, 0.8f), marble, new Transform3D(turn * new Basis(Vector3.Up, 0.35f), On(0.4f, 0.3f, 1.3f)));
+            }
+        }
+        return placed.Count;
+    }
 
     void Add(string key, Mesh mesh, Material material, Transform3D at)
     {

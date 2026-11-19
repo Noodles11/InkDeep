@@ -423,14 +423,22 @@ the tests of the dive still test the dive.
   - Not done: kelp walls her beam burns through, urchin beds as a hazard of their own, the Shipwreck's cannons that
     fire when a creature passes, amphorae to break, light-locked doors; the biomes' rock itself (its shapes and its
     surface are still the reef's); the Ruins' treasure.
-- **The biomes' ink (0.61.0):** in the ink look each biome's muted reef (out of her light) is washed in its own colour,
-  always dark, never quite black (`CameraRig.SetInkBiome`, topdown_post's `ink_tint`): the Sunlit Reef blue, the Kelp
-  Forest green, the Shipwreck red, the Ruins yellow; its water leans the same way. Each has its own pattern
-  (`ink_pattern`), fixed to the reef so it never crawls: a **halftone screen** at the soft edge of each tone (the reef's
-  45° dots, the kelp's steep lines, the wreck's grain-wavering lines, the ruins' squares, `ink_screen`) and a **motif**
-  drawn darker into its unlit rock and faintly on its floor (`ink_motif`): the reef's scattered polyps, the kelp's
-  wavering strands, the wreck's planks with their seams, butt joints and grain, the ruins' mosaic with its grout and a
-  tile gone here and there. Her light shows the reef in its own colours over all of it.
+- **The biomes' ink (0.61.0, 0.63.0):** in the ink look each biome's muted reef (out of her light) is washed in its own
+  colour, always dark, never quite black (`CameraRig.SetInkBiome`, topdown_post's `ink_tint`): the Sunlit Reef blue, the
+  Kelp Forest green, the Shipwreck red, the Ruins yellow; its water leans the same way. Every biome has the reef's own
+  pattern, fixed to the reef so it never crawls: a 45° dot screen at the soft edge of each tone (`ink_screen`) and
+  scattered polyps drawn darker into its unlit rock (`ink_motif`). (0.61.0 tried a pattern a biome; 0.63.0 went back to
+  the one.) Her light shows the reef in its own colours over all of it.
+- **Relief and things on the reef (0.63.0):** the unlit rock has **relief** (`ink_relief`, from the reef's surface height
+  in the sun's map): its slopes lit from the north-west and shaded away from it, crests lighter, the hollow at a wall's
+  foot darker on the rock and on the floor before it, the higher rock a little lighter, and a fine grain of stone through
+  it all; so the walls stand up out of the floor. **What stands on the floor or the rock** (higher than the terrain under
+  it by half a metre: the biomes' things, kelp, sponges and fans) is washed as rock is, and outlined in ink out of her
+  light (`art_outline_in`), so it reads in the dark. **Larger pieces** (`BiomePropView.Pieces`), a few a level, far
+  apart, on the open seabed under her plane: the Shipwreck's broken hull sections (a keel, ribs curving up both sides,
+  planks on them) and fallen masts with their yards; the Ruins' crumbled building walls (runs of cut blocks broken down
+  unevenly, some fallen beside them, on the floor and on the rock tops) and fallen arches (two column stumps and a
+  lintel). Known: a straight seam in the terrain at the edge of some levels shows as a dark band.
   (0.61.1) The wash kept as dark as the plain ink look (its tint a lean, not a lift). Every crossover level records the
   cells it was built from (`LevelMap.Cells`), and each biome's levels are checked to be built only from its own (and the
   room cell): no two biomes share a cell.
