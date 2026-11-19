@@ -60,6 +60,8 @@ public partial class CombatView : Node3D
     const float HaloRadius = 0.8f, HaloMin = 0.16f, HaloMax = 0.4f;
     /// <summary>Their light on the swim layer: radius in metres (never past 3, merged or not), strength as a share of hers.</summary>
     const float GroundRadius = 1.5f, GroundStrength = 0.35f;
+    /// <summary>A light's strongest on the water (its share of her halo): high enough that a harder shot shines more.</summary>
+    const float LightMax = 0.7f;
     /// <summary>Halos past this distance from her are off screen and not sent.</summary>
     const float LightReach = 25f;
     public const int MaxLights = 16;
@@ -678,7 +680,7 @@ void fragment() {
         foreach (var (at, strength, radius) in _candidates.Where(c => c.Strength > 0.005f && System.Numerics.Vector2.Distance(c.At, her) <= LightReach).OrderByDescending(c => c.Strength))
         {
             if (count == MaxLights) break;
-            Lights[count++] = new Vector4(at.X, at.Y, radius, Mathf.Min(strength, HaloMax));
+            Lights[count++] = new Vector4(at.X, at.Y, radius, Mathf.Min(strength, LightMax));
         }
         LightCount = count;
     }

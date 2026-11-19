@@ -21,6 +21,9 @@ public partial class VaultView : Node3D
         public MeshInstance3D Bubble = null!;
         public Node3D Inside = null!;
         public float Seen, Phase;
+        /// <summary>How lit it is shown (0 in the dark), eased; its own faint light.</summary>
+        public float Lit;
+        public OmniLight3D Glow = null!;
     }
 
     sealed class Pop
@@ -35,6 +38,8 @@ public partial class VaultView : Node3D
     ShaderMaterial _bubble = null!;
     StandardMaterial3D _pearl = null!, _orb = null!;
     float _time;
+    /// <summary>A vault's own faint light (pale, cold), enough to show it from afar in the dark.</summary>
+    const float OwnGlow = 0.35f, OwnGlowRange = 2.6f;
 
     public override void _Ready()
     {
@@ -63,8 +68,10 @@ public partial class VaultView : Node3D
             root.AddChild(bubble);
             var inside = Contents(sim);
             root.AddChild(inside);
+            var glow = new OmniLight3D { LightColor = new Color(0.7f, 0.86f, 0.95f), LightEnergy = OwnGlow, OmniRange = OwnGlowRange, OmniAttenuation = 1.4f, ShadowEnabled = false, LightSpecular = 0f };
+            root.AddChild(glow);
             AddChild(root);
-            _vaults.Add(new Vault { Sim = sim, Root = root, Bubble = bubble, Inside = inside, Phase = seed });
+            _vaults.Add(new Vault { Sim = sim, Root = root, Bubble = bubble, Inside = inside, Phase = seed, Glow = glow });
         }
     }
 
@@ -101,7 +108,11 @@ public partial class VaultView : Node3D
         _pops.Add(new Pop { Mesh = mesh, Radius = radius });
     }
 
-    public void Sync(PlaneWorld world, float dt)
+    /// <summary>
+    /// Each frame. A vault lies in the water under her plane: out of her light (her beam, her shots' light, a moment
+    /// after either: LightMemory) it sinks into the dark, but for a faint pale light of its own that shows it from afar.
+    /// </summary>
+    public void Sync(PlaneWorld world, float dt, LightMemory? memory = null)
     {
         _time += dt;
         foreach (var v in _vaults)
@@ -121,6 +132,10 @@ public partial class VaultView : Node3D
             v.Bubble.SetInstanceShaderParameter(SN.Of("lantern"), 0.15f + 0.85f * fill);
             v.Bubble.SetInstanceShaderParameter(SN.Of("warmth"), fill);
             v.Bubble.SetInstanceShaderParameter(SN.Of("wobble"), 0.5f + 1.2f * fill);
+            float lit = Mathf.Max(world.Seen(v.Sim) ? 1f : 0f, memory?.At(v.Sim.Position) ?? 1f);
+            v.Lit = Mathf.MoveToward(v.Lit, Mathf.Max(lit, fill), dt * 4f);
+            v.Bubble.SetInstanceShaderParameter(SN.Of("dark"), 1f - v.Lit);
+            v.Glow.LightEnergy = OwnGlow * (0.8f + 0.2f * Mathf.Sin(_time * 1.1f + v.Phase)) * (1f - 0.6f * v.Lit);
             // What it holds shows in her light, fading in and out.
             v.Seen = Mathf.MoveToward(v.Seen, world.Seen(v.Sim) ? 1f : 0f, dt * 3f);
             v.Inside.Visible = v.Seen > 0.05f;

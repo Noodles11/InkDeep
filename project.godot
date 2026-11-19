@@ -195,6 +195,14 @@ her_glow_on={
 "type": "float",
 "value": 1.0
 }
+her_after={
+"type": "sampler2D",
+"value": ""
+}
+her_after_rect={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
 her_burn0={
 "type": "vec4",
 "value": Vector4(0, -1000, 0, 0)

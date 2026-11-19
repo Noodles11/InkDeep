@@ -20,6 +20,9 @@ instance uniform float wobble = 0.0;
 instance uniform vec4 hole = vec4(0.0, 1.0, 0.0, 0.0);
 instance uniform float lantern = 0.0;
 instance uniform float warmth = 0.0;
+// In the dark (a bubble vault out of her light, VaultView): 1 its film all but unseen, only a faint pale light of its
+// own left (as the water under her plane swallows what she does not light); 0 as it is.
+instance uniform float dark = 0.0;
 uniform float base_light = 0.0;
 // Her light (HerColor.cs, data/clementine_color.cfg).
 global uniform vec3 her_light;
@@ -78,4 +81,9 @@ void fragment() {
 	}
 	ALBEDO = mix(ALBEDO, vec3(1.0, 1.0, 0.97), torn_rim * 0.85);
 	ALPHA = max(ALPHA, torn_rim * 0.9 * fade);
+	// In the dark: the film sinks into the water, its rim a faint cold-white line of its own light.
+	if (dark > 0.0) {
+		ALBEDO = mix(ALBEDO, vec3(0.62, 0.78, 0.86) * (0.25 + 0.5 * rim), dark);
+		ALPHA *= mix(1.0, 0.18 + 0.4 * rim, dark);
+	}
 }

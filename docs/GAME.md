@@ -372,4 +372,16 @@ the tests of the dive still test the dive.
   verification). In the ink look **her light is clean**: what her beam lights shows in its own colour, smooth, never
   stepped or halftoned, coming in quickly at the beam's edge; outside it the washes and dots are as they were. (The
   caves' outline is still traced in coral and magenta light where she lights it.)
+- **Her light's afterimage, her shots' light, the vaults in the dark (0.58.0):**
+  - **The afterimage** (`LightMemory`): where her beam and her shots' light have fallen, the reef keeps its colour
+    for 0.6 s after the light has moved on, then fades back to the muted ash over 1.6 s. A grid of half-metre cells
+    over the level, each the light it last had and how long ago, traced as the post pass draws her beam (its fan to
+    where it stops, cut by rock) and her shots' light; the post pass takes the larger of it and her light now
+    (`her_after`, `her_after_rect`).
+  - **Her shots' light** shows the reef round them in its colour, as her beam does: the harder a shot hits, the wider
+    and stronger (their lights' cap raised, `CombatView.LightMax`, so a hard shot outshines a plain one).
+  - **Bubble vaults lie in the water's dark**: out of her light (her beam, her shots', their afterimage) a vault's film
+    all but sinks from sight (`plane_bubble`'s `dark`), only a faint cold-white rim and a faint pale light of its own
+    (`VaultView.OwnGlow`) showing it from afar; lit, it shows as before, and what it holds.
+  - `--dbg-sweep` turns the auto-fire's aim round her (verification of the afterimage).
 

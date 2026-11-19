@@ -48,6 +48,8 @@ public partial class TopDownMain : Node3D
     bool _dbgGlowOff;
     /// <summary>Verification (--shoot): the auto-fire throws her bubble shots, not her beam.</summary>
     bool _dbgShoot;
+    /// <summary>Verification (--dbg-sweep): the auto-fire's aim turns round her (LightMemory's afterimage).</summary>
+    bool _dbgSweep;
     float _dbgSealAt;
     /// <summary>The rims of the reef's holes, each in the colour of where it leads.</summary>
     HoleView _holes = null!;
@@ -165,6 +167,8 @@ public partial class TopDownMain : Node3D
     BellView _bell = null!;
     /// <summary>Where her light reaches over the reef (light_field.gdshaderinc reads it): redone as she moves.</summary>
     readonly OctoShoots.Game.Fx.HorizonMap _lantern = new();
+    /// <summary>Her light's afterimage (LightMemory): where her beam and her shots' light have just been.</summary>
+    readonly LightMemory _memory = new();
     CameraRig _camera = null!;
     DebugMapOverlay _debugMap = null!;
     MinimapView _minimap = null!;
@@ -593,6 +597,8 @@ public partial class TopDownMain : Node3D
             else if (arg == "--fire") _autoFire = true;
             // (Verification: as --fire, with her bubble shots in place of her beam.)
             else if (arg == "--shoot") _autoFire = _dbgShoot = true;
+            // (Verification: as --fire, her aim turning slowly round her, so her light's afterimage shows.)
+            else if (arg == "--dbg-sweep") _autoFire = _dbgSweep = true;
             else if (arg == "--dbg-shadow") _autoFire = _dbgShadow = true;
             else if (arg == "--dbg-sense") _autoFire = _dbgShadow = _dbgSense = true;
             else if (arg == "--dbg-paths") _autoFire = _dbgShadow = _dbgPaths = true;
@@ -2967,6 +2973,8 @@ public partial class TopDownMain : Node3D
         Guard("surge", () => _surgeView.Sync(_world, dt));
         Guard("geysers", () => _geysers.Sync(_world, dt, _camera.Camera));
         _camera.SetBubbleLights(_combat.Lights, _combat.LightCount);
+        // Her light's afterimage (the ink look): where it has just been keeps its colour a moment.
+        if (InkLook) _memory.Step(_world, _combat.Lights, _combat.LightCount);
         // The water she pushes against as she sets off, turns or dashes.
         {
             var pl = _world.Player;
@@ -2982,7 +2990,7 @@ public partial class TopDownMain : Node3D
         Guard("currents", () => _currents.Sync(_world, dt, _camera));
         Guard("abyss", () => _abyss.Sync(_world, dt));
         Guard("vases", () => _vases.Sync(dt));
-        Guard("vaults", () => _vaults.Sync(_world, dt));
+        Guard("vaults", () => _vaults.Sync(_world, dt, _memory));
         Guard("relics", () => _relics.Sync(_world, dt, _combat));
         Guard("pufferlings", () => _puffers.Sync(_world, dt));
         Guard("reef fish", () => _reefFish.Sync(_world, dt));
@@ -4503,6 +4511,7 @@ public partial class TopDownMain : Node3D
               ?? _world.Vases.Where(v => !v.Broken).OrderBy(v => System.Numerics.Vector2.Distance(v.Position, from)).Select(v => (System.Numerics.Vector2?)v.Position).FirstOrDefault();
         // Nothing to shoot at: straight ahead, the way she faces.
         input.Aim = target is { } at && System.Numerics.Vector2.DistanceSquared(at, from) > 1e-4f ? System.Numerics.Vector2.Normalize(at - from) : _world.Player.Aim;
+        if (_dbgSweep) input.Aim = new System.Numerics.Vector2(Mathf.Cos(_world.Time * 1.4f), Mathf.Sin(_world.Time * 1.4f));
         // With Pearl Diver, let go once the pearl is fully charged.
         input.Fire = !(_world.Run.Loadout.Shot.Charge && _world.Player.Charge >= PlaneCombatTuning.ChargeSeconds);
         input.Beam = !_dbgShoot;

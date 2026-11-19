@@ -35,6 +35,10 @@ global uniform float her_glow_strength;
 /// Her glow on (1) or gone (0, the crossover: PlaneOptions.Glow): her light round her on the reef and its veil cleared.
 /// Her beam's light (reef_show) is her light then.
 global uniform float her_glow_on;
+/// Her light's afterimage (LightMemory): over the level (her_after_rect: its corner and size in world xz), how much her
+/// light still shows each point (R), a moment after it has moved on.
+global uniform sampler2D her_after : filter_linear, repeat_disable;
+global uniform vec4 her_after_rect;
 /// The depth's lantern (ReefLook.Lantern): how much her light carries against the dark.
 global uniform float her_lantern;
 
@@ -609,10 +613,15 @@ void fragment() {
 	// Her bubbles carry light: each a small halo of its own on the same layer, the same depth-darkness scaling as hers
 	// (subtle in the bright Shallows, glorious in the deep).
 	float bubbles = 0.0;
+	// (In the ink look her bubbles' light shows the reef round them as her beam's does, the harder the shot the wider
+	// and the more: LightMemory.ShotShown.)
+	float shot_shown = 0.0;
 	for (int i = 0; i < bubble_count; i++) {
 		vec4 b = bubble_lights[i];
 		vec2 ob = on_layer.xz - b.xy;
-		bubbles += exp(-dot(ob, ob) / (b.z * b.z)) * b.w;
+		float e = exp(-dot(ob, ob) / (b.z * b.z));
+		bubbles += e * b.w;
+		shot_shown = max(shot_shown, exp(-dot(ob, ob) / (b.z * b.z * 1.6)) * clamp(b.w * 2.4, 0.0, 1.0));
 	}
 	col += bubble_color * bubbles * halo_strength * glow_boost * glow_boost * (0.35 + 0.65 * fog) * (1.0 - smoothstep(0.0, 4.0, above)) * (0.6 + 0.8 * reef_menace);
 	// The clam rooms' light, each in its pearl's colour: lifting what lies in them toward it, and a haze of it in the
@@ -632,6 +641,11 @@ void fragment() {
 	// Grade: the depth's saturation; shadows cooled toward the water, highlights a touch of sun. Outside her light (her
 	// glow and her beam, and what the sealed leaks have woken) the reef keeps little of its colour and some of its light.
 	float shown = open_deep ? 0.0 : max(max(lit, reef_show(world, CAMERA_POSITION_WORLD)), pearl_shown * 0.9);
+	// (The ink look: her shots' light, and the afterimage of where her light has just been.)
+	if (ink_look > 0.0 && !open_deep) {
+		float after = her_after_rect.z > 0.0 ? texture(her_after, (world.xz - her_after_rect.xy) / her_after_rect.zw).r : 0.0;
+		shown = max(shown, max(shot_shown, after) * ink_look);
+	}
 	col *= mix(unlit_dim, 1.0, shown);
 	float luma = dot(col, vec3(0.299, 0.587, 0.114));
 	// (Its values drawn together where she does not light it: darks lifted a little, lights held down.)
