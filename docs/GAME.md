@@ -374,7 +374,7 @@ the tests of the dive still test the dive.
   caves' outline is still traced in coral and magenta light where she lights it.)
 - **Her light's afterimage, her shots' light, the vaults in the dark (0.58.0):**
   - **The afterimage** (`LightMemory`): where her beam and her shots' light have fallen, the reef keeps its colour
-    for 0.6 s after the light has moved on, then fades back to the muted ash over 1.6 s. A grid of half-metre cells
+    for 0.3 s after the light has moved on, then fades back to the muted ash over 1.3 s, its edge softened over about a metre. A grid of quarter-metre cells
     over the level, each the light it last had and how long ago, traced as the post pass draws her beam (its fan to
     where it stops, cut by rock) and her shots' light; the post pass takes the larger of it and her light now
     (`her_after`, `her_after_rect`).
@@ -384,4 +384,5 @@ the tests of the dive still test the dive.
     all but sinks from sight (`plane_bubble`'s `dark`), only a faint cold-white rim and a faint pale light of its own
     (`VaultView.OwnGlow`) showing it from afar; lit, it shows as before, and what it holds.
   - `--dbg-sweep` turns the auto-fire's aim round her (verification of the afterimage).
+  - (0.58.1) Her beam lights its cone alone, right up to her bell: no lit disc round her (reef_show's `rs_beam`).
 

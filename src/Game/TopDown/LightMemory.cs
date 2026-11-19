@@ -16,7 +16,7 @@ namespace OctoShoots.Game.TopDown;
 public sealed class LightMemory
 {
     /// <summary>A cell's side (metres); how long a lit cell holds its colour, and how long it then takes to fade.</summary>
-    public const float Cell = 0.5f, Hold = 0.6f, Fade = 1.6f;
+    public const float Cell = 0.25f, Hold = 0.3f, Fade = 1.3f;
 
     int _n;
     float[] _peak = Array.Empty<float>(), _age = Array.Empty<float>();
@@ -76,7 +76,7 @@ public sealed class LightMemory
                 float d = to.Length();
                 if (d >= reach) return 0f;
                 float angle = d < 1e-3f ? 0f : MathF.Acos(Math.Clamp(System.Numerics.Vector2.Dot(to / d, aim), -1f, 1f));
-                float cone = d < 0.8f ? 1f : 1f - Mathf.SmoothStep(half * 0.6f, half * 1.1f, angle);
+                float cone = (1f - Mathf.SmoothStep(half * 0.6f, half * 1.1f, angle)) * Mathf.SmoothStep(0.15f, 0.9f, d);
                 if (cone <= 0f) return 0f;
                 float fall = MathF.Pow(1f - d / reach, 0.9f) * (1f - Mathf.SmoothStep(reach * 0.55f, reach, d));
                 return fall <= 0.02f || !world.LineOfSight(from, p) ? 0f : cone * fall;

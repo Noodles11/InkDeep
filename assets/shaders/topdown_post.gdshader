@@ -643,7 +643,15 @@ void fragment() {
 	float shown = open_deep ? 0.0 : max(max(lit, reef_show(world, CAMERA_POSITION_WORLD)), pearl_shown * 0.9);
 	// (The ink look: her shots' light, and the afterimage of where her light has just been.)
 	if (ink_look > 0.0 && !open_deep) {
-		float after = her_after_rect.z > 0.0 ? texture(her_after, (world.xz - her_after_rect.xy) / her_after_rect.zw).r : 0.0;
+		float after = 0.0;
+		if (her_after_rect.z > 0.0) {
+			// (Softened over about a metre, so its edge is a smooth fall, never the grid's cells.)
+			vec2 a = (world.xz - her_after_rect.xy) / her_after_rect.zw, t = 0.45 / her_after_rect.zw;
+			after = texture(her_after, a).r * 0.36
+				+ (texture(her_after, a + vec2(t.x, 0.0)).r + texture(her_after, a - vec2(t.x, 0.0)).r
+				+ texture(her_after, a + vec2(0.0, t.y)).r + texture(her_after, a - vec2(0.0, t.y)).r) * 0.16;
+			after = smoothstep(0.0, 1.0, after);
+		}
 		shown = max(shown, max(shot_shown, after) * ink_look);
 	}
 	col *= mix(unlit_dim, 1.0, shown);
