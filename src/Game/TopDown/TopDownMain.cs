@@ -73,6 +73,9 @@ public partial class TopDownMain : Node3D
     /// <summary>The treasures (data/treasures.json, docs/proposals/CROSSOVER.md §5.2).</summary>
     TreasureCatalog? _treasureData;
     RelicView _relics = null!;
+    /// <summary>The biomes' hazards and their own things (CROSSOVER.md §8).</summary>
+    HazardView _hazards = null!;
+    BiomePropView _props = null!;
     OctoShoots.Game.Fx.Fisheye _fisheye = null!;
     /// <summary>The crossover's ink look (docs/proposals/CROSSOVER.md §12); --no-ink shows the painted look for comparison.</summary>
     bool InkLook => OctoShoots.Core.Run.Crossover.On && !OS.GetCmdlineUserArgs().Contains("--no-ink");
@@ -493,6 +496,10 @@ public partial class TopDownMain : Node3D
         AddChild(_vaults);
         _relics = new RelicView();
         AddChild(_relics);
+        _hazards = new HazardView();
+        AddChild(_hazards);
+        _props = new BiomePropView();
+        AddChild(_props);
         _boss = new BossView();
         AddChild(_boss);
         _puffers = new PufferlingView();
@@ -1718,6 +1725,7 @@ public partial class TopDownMain : Node3D
         _vases.Show(_world);
         _vaults.Show(_world);
         _relics.Show(_world);
+        _props.Show(_map, ReefLook.Of(_map.Id));
         _puffers.Show(_world);
         _reefFish.Show(_world);
         _curseDen.Show(_world);
@@ -2183,6 +2191,8 @@ public partial class TopDownMain : Node3D
             "shrine-on" => _world.Stands.Where(t => t.Kind == StandKind.Shrine).Select(t => (System.Numerics.Vector2?)t.Position).FirstOrDefault(),
             "relic" => _world.Relics.Where(r => !r.InStartCave).Select(r => (System.Numerics.Vector2?)(r.Position + new System.Numerics.Vector2(0f, 3f))).FirstOrDefault(),
             "relic-on" => _world.Relics.Where(r => !r.InStartCave).Select(r => (System.Numerics.Vector2?)r.Position).FirstOrDefault(),
+            // In front of the Ruins' first dart trap, in its line (it fires at her).
+            "dart" => _world.DartTraps.Select(t => (System.Numerics.Vector2?)(t.Position + t.Facing * 5f)).FirstOrDefault(),
             "vault" => _world.Vaults.Select(v => (System.Numerics.Vector2?)(v.Position - v.Wall * 2.5f)).FirstOrDefault(),
             "shop" => _map.Caves.Where(c => _map.Pois[c.Poi].Kind == PoiKind.Shop).Select(c => (System.Numerics.Vector2?)(c.Mouth - c.Facing * 1.5f)).FirstOrDefault(),
             // Out along the shop's passage, facing its gateway.
@@ -2739,6 +2749,15 @@ public partial class TopDownMain : Node3D
                 else if (e.Type == PlaneEventType.CannotAfford) Say("Not enough shells");
                 // A light shrine (docs/proposals/CROSSOVER.md §5): her light given for its pearl, or too little to give.
                 else if (e.Type == PlaneEventType.ShrineDenied) Say("Too little light to give");
+                // The biomes' hazards (PlaneHazards.cs): a timber landing, a dart trap's click and its shot.
+                else if (e.Type == PlaneEventType.DebrisLanded)
+                {
+                    float near = 1f - Mathf.Clamp(System.Numerics.Vector2.Distance(e.Position, _world.Player.Position) / 14f, 0f, 1f);
+                    _camera.Shake(0.25f * near);
+                    _sfx.PlayPitched("sand_sink", 0.7f, -6f);
+                }
+                else if (e.Type == PlaneEventType.DartArmed) _sfx.PlayPitched("snap", 1.6f, -10f);
+                else if (e.Type == PlaneEventType.DartFired) _sfx.PlayPitched("dash", 1.8f, -8f);
                 // A treasure found (CROSSOVER.md §5.2): hers for good, kept on the jelly and saved at once.
                 else if (e.Type == PlaneEventType.TreasureFound && _world.LastTreasure is { } treasure) TreasureFound(treasure);
                 // The Pearl Altar's pearls she passed over fade.
@@ -2992,6 +3011,7 @@ public partial class TopDownMain : Node3D
         Guard("vases", () => _vases.Sync(dt));
         Guard("vaults", () => _vaults.Sync(_world, dt, _memory));
         Guard("relics", () => _relics.Sync(_world, dt, _combat));
+        Guard("hazards", () => _hazards.Sync(_world));
         Guard("pufferlings", () => _puffers.Sync(_world, dt));
         Guard("reef fish", () => _reefFish.Sync(_world, dt));
         Guard("corruption", () => SyncCorruption(dt, alpha));

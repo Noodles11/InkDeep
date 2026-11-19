@@ -78,7 +78,7 @@ public sealed class PlaneInk
     public float MaxLife;
 }
 
-public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, MobDefeated, MobNoticed, PlayerHit, PlayerDefeated, Dived, DiveOpened, VaultBurst, TideRose, TideDissolved, ShrineGiven, ShrineDenied, TreasureFound, PearlFaded, PufferSwells, NeedlesFired, PearlCollected, ShellCollected, HeartCollected, Purchased, CannotAfford, ShotPopped, BubbleFull,
+public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, MobDefeated, MobNoticed, PlayerHit, PlayerDefeated, Dived, DiveOpened, VaultBurst, TideRose, TideDissolved, ShrineGiven, ShrineDenied, TreasureFound, PearlFaded, DebrisWarned, DebrisLanded, DartArmed, DartFired, PufferSwells, NeedlesFired, PearlCollected, ShellCollected, HeartCollected, Purchased, CannotAfford, ShotPopped, BubbleFull,
     ChargeFull, LightBurst, ShieldBlocked, ActiveUsed, ActiveNotReady, ActiveDenied,
     GeyserFizz, GeyserSpray, GeyserEnded, VaseHit, VaseBroken, FullBubbleFreed,
     BlightrootDrank, BlightrootInflate, GuardiansWoke, BlightrootPulse, BlightrootBurst, MurklingBud, MurklingEmerged, MurklingBurst, MurklingThrow, MurklingWindup, ThumpWindup, ThumpLeap, ThumpLand, ThumpRoll, ThumpBurst, Warded, WardenFreed, LashWindup, LashOut, LashCatch, LashSwallow, LashBite, LashStun, LashFreed, SealLit, SealOpened, SealClosed, FishStruck, FishTurned, FishFreed,
@@ -126,7 +126,7 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     ChargeStoneLit }
 
 /// <summary>What hurt Clementine (the killing blow names what ended a run; saved by number, so Gloomvine stays though nothing deals it now).</summary>
-public enum DamageSource { None, PufferNeedle, PufferSpines, BossPearl, RoyalPearl, BossSnap, BossContact, Murkling, MurkShot, Gloomvine, Blightroot, Blotter, Thumpsquirt, Lashjaw, Curse, Hearthguard, Leak, LeakWater }
+public enum DamageSource { None, PufferNeedle, PufferSpines, BossPearl, RoyalPearl, BossSnap, BossContact, Murkling, MurkShot, Gloomvine, Blightroot, Blotter, Thumpsquirt, Lashjaw, Curse, Hearthguard, Leak, LeakWater, Debris, Dart }
 
 /// <summary>
 /// Direction: for ShotPopped, the unit direction from the bubble's centre to where its film gave way. Size: a popped
@@ -170,6 +170,7 @@ public sealed partial class PlaneWorld
         PlaceReefFish();
         PlacePearls();
         PlaceRelics();
+        PlaceHazards();
         PlaceStartCave();
         bool adventure = Options.Adventure;
         PlaceCurse();
@@ -241,7 +242,8 @@ public sealed partial class PlaneWorld
         }
         bool hasInput = wishLen > 0.01f;
         Vector2 wishDir = hasInput ? wish / wishLen : Vector2.Zero;
-        float cruise = CruiseSpeed * (p.SlowTimer > 0f ? PlaneBossTuning.SlowFactor : 1f);
+        // (A kelp bed's tangle slows her: PlaneHazards.cs.)
+        float cruise = CruiseSpeed * (p.SlowTimer > 0f ? PlaneBossTuning.SlowFactor : 1f) * (Tangled ? HazardTuning.Tangle : 1f);
         p.SlowTimer -= Dt;
 
         p.DashCooldownTimer -= Dt;
@@ -321,6 +323,7 @@ public sealed partial class PlaneWorld
         StepVases();
         StepVaults();
         StepRelics();
+        StepHazards();
         StepSeals();
 
         foreach (var c in Clouds) c.Life -= Dt;

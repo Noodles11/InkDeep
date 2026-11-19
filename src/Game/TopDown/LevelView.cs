@@ -1638,6 +1638,28 @@ public partial class LevelView : Node3D
         }
         FloraKind[] top = { FloraKind.SeaRod, FloraKind.TubeSponge, FloraKind.Staghorn, FloraKind.SeaFan, FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Elkhorn };
         FloraKind[] foot = { FloraKind.TubeSponge, FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Staghorn, FloraKind.BarrelSponge };
+        // The crossover's biomes (CROSSOVER.md §8) grow their own: the Kelp Forest sea grass and a few sponges under its
+        // kelp, no reef corals; the Shipwreck's timbers and the Ruins' stone only a thin growth of sponges and fans and
+        // sea grass (their own things are BiomePropView's).
+        float grow = 1f;
+        switch (map.Templated ? map.Biome : OctoShoots.Core.Run.Biome.SunlitReef)
+        {
+            case OctoShoots.Core.Run.Biome.KelpForest:
+                top = new[] { FloraKind.TurtleGrass, FloraKind.TurtleGrass, FloraKind.TubeSponge, FloraKind.SeaRod };
+                foot = new[] { FloraKind.TurtleGrass, FloraKind.TubeSponge };
+                grow = 0.8f;
+                break;
+            case OctoShoots.Core.Run.Biome.Shipwreck:
+                top = new[] { FloraKind.TubeSponge, FloraKind.SeaFan, FloraKind.BarrelSponge };
+                foot = new[] { FloraKind.TubeSponge, FloraKind.BarrelSponge };
+                grow = 0.3f;
+                break;
+            case OctoShoots.Core.Run.Biome.SunkenRuins:
+                top = new[] { FloraKind.TurtleGrass, FloraKind.SeaFan, FloraKind.TubeSponge };
+                foot = new[] { FloraKind.TurtleGrass, FloraKind.BrainCoral };
+                grow = 0.4f;
+                break;
+        }
         const float step = 1.05f;
         for (float y = LevelMap.RimWidth + 1f; y < map.Size - LevelMap.RimWidth - 1f; y += step)
         for (float x = LevelMap.RimWidth + 1f; x < map.Size - LevelMap.RimWidth - 1f; x += step)
@@ -1654,7 +1676,7 @@ public partial class LevelView : Node3D
             if (h > 0.6f && slope < 1.3f)
             {
                 // A wall's top or a ledge.
-                if (r > 0.8f * Mathf.SmoothStep(-0.3f, 0.15f, patch)) continue;
+                if (r > 0.8f * grow * Mathf.SmoothStep(-0.3f, 0.15f, patch)) continue;
                 kind = top[(int)(Hash(x, y, 4) * top.Length) % top.Length];
                 scale = 1.8f + 1.6f * Hash(x, y, 5);
             }
@@ -1667,7 +1689,7 @@ public partial class LevelView : Node3D
                     float a = i * Mathf.Tau / 6f;
                     foots = map.HeightAt(p + new System.Numerics.Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 1.8f) > 0.2f;
                 }
-                if (!foots || r > 0.55f * Mathf.SmoothStep(-0.2f, 0.25f, patch)) continue;
+                if (!foots || r > 0.55f * grow * Mathf.SmoothStep(-0.2f, 0.25f, patch)) continue;
                 kind = foot[(int)(Hash(x, y, 4) * foot.Length) % foot.Length];
                 scale = 1.1f + 1.1f * Hash(x, y, 5);
             }

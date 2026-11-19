@@ -400,7 +400,27 @@ the tests of the dive still test the dive.
     the level's environment, its flora, the dive's look from one to the next, and the map.
   - A pickup placed along a template level's straight two-point corridor no longer divides by zero
     (`PlacePickups`), and a failed attempt is logged with its reason.
-  - Not done: the biomes' own rock and dressing (every biome still wears the reef's coral, sand and sea grass), their
-    hazards (kelp walls her beam burns through, tangles, urchin beds, falling debris, cannons, dart traps, amphorae,
-    light-locked doors), and the Ruins' treasure.
+  - Not done (then): the biomes' own dressing and hazards (the third part, below), and the Ruins' treasure.
+- **Step 7, third part (0.60.0), the biomes' dressing and hazards:**
+  - **Gardens by biome** (`LevelView.Gardens`): the Kelp Forest grows sea grass and a few sponges under its kelp, no
+    reef corals; the Shipwreck and the Ruins only a thin growth of sponges, fans and sea grass (a third and two fifths of
+    the reef's).
+  - **Their own things** (`BiomePropView`, for the look only): the Shipwreck's planks, barrels, crates and now and then a
+    rusted cannon, on its floor and its wall tops; the Ruins' standing column drums, fallen columns, cut blocks and
+    amphorae lying on their sides. A scatter from the level's seed, off the start, the ways down and the places; drawn in
+    the scene, so the ink look greys them out of her light like the reef.
+  - **Hazards** (`PlaneHazards.cs`, `HazardTuning`), one a biome, none in a boss's arena, none the corruption's (her
+    light does nothing to them):
+    - the Kelp Forest's **tangles**: inside a kelp bed (within 85% of its radius) she swims at 60% of her pace;
+    - the Shipwreck's **falling debris**: every 3.5–6.5 s a timber falls from the wreck above where she is heading
+      (her velocity a second on, up to 3 m astray); its shadow and a pale ring show for 1.3 s, then it lands across her
+      plane (a thud, a small shake) and sinks; under it (within 1.2 m) she is hit (14, before the menace);
+    - the Ruins' **dart traps**: six a level, set in walls (a carved stone face, its mouth a faint pale glow) facing a
+      clear run of water; when she crosses one's line (within 0.9 m of it, up to 11 m out, in its sight) it clicks,
+      glints warm and 0.35 s later fires a bronze dart at 12 m/s down its line (10 on a hit), then rests 2.5 s.
+  - The traps' mouths, the darts and the debris ring are drawn after the ink pass with a faint light of their own, so a
+    hazard shows in the dark as a vault does. `--at=dart` stands in front of a trap (verification).
+  - Not done: kelp walls her beam burns through, urchin beds as a hazard of their own, the Shipwreck's cannons that
+    fire when a creature passes, amphorae to break, light-locked doors; the biomes' rock itself (its shapes and its
+    surface are still the reef's); the Ruins' treasure.
 
