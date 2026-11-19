@@ -1,0 +1,19 @@
+{
+  // Treasures (docs/proposals/CROSSOVER.md §5.2): real old objects, one lying hidden on a level of its depth. Picking
+  // one up keeps it for the jelly for good, and from then on it waits in the start cave at the start of every run.
+  //   depth: the depth (as the player counts it) whose levels hide it, one level of that depth chosen by the seed;
+  //   biome: the biome it belongs to (depths 2 and 3 stand in for Kelp Forest and the Shipwreck Graveyard until they are
+  //   built, step 7); line: what the banner says when she finds it; does: what it does each run (the pause menu).
+  // Checked on load: ids unique and known to the game (Treasures.Known), one treasure a depth.
+  "treasures": [
+    { "id": "pearl_altar", "title": "Pearl Altar", "biome": "Sunlit Reef", "depth": 1,
+      "line": "A worn stone with three hollows, each the size of a pearl.",
+      "does": "At the start of every run it offers three pearls: she takes one." },
+    { "id": "spare_bell", "title": "Spare Bell", "biome": "Kelp Forest", "depth": 2,
+      "line": "A ship's bell gone green, still ringing faintly when the water moves.",
+      "does": "She starts every run with one more light pip." },
+    { "id": "shell_urn", "title": "Shell Urn", "biome": "Shipwreck Graveyard", "depth": 3,
+      "line": "A sealed urn from a wreck's hold, heavy with shells.",
+      "does": "She starts every run with 15 shells." }
+  ]
+}

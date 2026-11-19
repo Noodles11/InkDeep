@@ -66,6 +66,11 @@ public partial class TopDownMain : Node3D
     VaultView _vaults = null!;
     /// <summary>Achievements: their data, what earns them on this run, and the banner that announces them (§8).</summary>
     AchievementCatalog? _achievementData;
+    /// <summary>The treasures (data/treasures.json, docs/proposals/CROSSOVER.md §5.2).</summary>
+    TreasureCatalog? _treasureData;
+    RelicView _relics = null!;
+    /// <summary>(--treasures=pearl_altar,…: these found already, for the run.)</summary>
+    string[] _dbgTreasures = Array.Empty<string>();
     PlaneAchievements _achievements = null!;
     PearlBanner _pearlBanner = null!;
     PearlHint _pearlHint = null!;
@@ -426,6 +431,7 @@ public partial class TopDownMain : Node3D
         _tuning = SettingsStore.LoadTuning();
         _catalog = LoadCatalog();
         _achievementData = LoadAchievements(_catalog);
+        _treasureData = LoadTreasures();
         // Keep the GPU cool: the frame-rate cap from the view options (60 by default; captures run uncapped).
         var view = _view = SettingsStore.LoadView();
         ViewOptions.Shadows = view.LightShadows && System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--dbg-noshadow") < 0;
@@ -469,6 +475,8 @@ public partial class TopDownMain : Node3D
         AddChild(_vases);
         _vaults = new VaultView();
         AddChild(_vaults);
+        _relics = new RelicView();
+        AddChild(_relics);
         _boss = new BossView();
         AddChild(_boss);
         _puffers = new PufferlingView();
@@ -622,6 +630,7 @@ public partial class TopDownMain : Node3D
             else if (arg == "--paused") _startPaused = true;
             else if (arg == "--dbg-requests") _dbgRequests = true;
             else if (arg.StartsWith("--dbg-freed=")) _dbgFreed = Value("--dbg-freed=").Split(',', StringSplitOptions.RemoveEmptyEntries);
+            else if (arg.StartsWith("--treasures=")) _dbgTreasures = Value("--treasures=").Split(',', StringSplitOptions.RemoveEmptyEntries);
             else if (arg.StartsWith("--dbg-look=") && Value("--dbg-look=").Split(',') is { Length: 4 } tried)
                 _dbgLook = new JellyLook { Gonads = tried[0], Glow = tried[1], Arms = tried[2], Tips = tried[3] };
             else if (arg == "--dbg-burn") _dbgBurn = true;
@@ -1274,6 +1283,33 @@ public partial class TopDownMain : Node3D
         box.AddChild(_info);
     }
 
+    static TreasureCatalog? LoadTreasures()
+    {
+        try
+        {
+            using var file = FileAccess.Open("res://data/treasures.json", FileAccess.ModeFlags.Read);
+            return TreasureCatalog.FromJson(file.GetAsText());
+        }
+        catch (Exception e)
+        {
+            GD.PushError($"No treasures: {e.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// She found a treasure: its banner, and it is the jelly's for good (saved at once), waiting in the start cave of
+    /// every run from the next on.
+    /// </summary>
+    void TreasureFound(string id)
+    {
+        _sfx.PlayPitched("bell_ring", 0.85f, -3f);
+        if (_treasureData is not null && _treasureData.TryGet(id, out var def))
+            _achievementBanner.Enqueue(new AchievementDef { Id = def.Id, Title = def.Title, Line = def.Line, Tone = "candy", Hint = def.Does }, null, "TREASURE");
+        if (_jelly is { } jelly && jelly.Treasures.Add(id) && _persist) GameSave.Write();
+        Say("From now on it waits at the start of every run");
+    }
+
     static AchievementCatalog? LoadAchievements(ItemCatalog? items)
     {
         if (items is null) return null;
@@ -1542,6 +1578,10 @@ public partial class TopDownMain : Node3D
                     if (_catalog?.Contains(id) == true) _run.Add(id);
             foreach (string id in _startPearls)
                 if (_catalog?.Contains(id) == true) _run.Add(id);
+            // Her treasures (docs/proposals/CROSSOVER.md §5.2): the Spare Bell's pip; a new run's start cave holds the rest.
+            _run.TreasureCatalog = _treasureData;
+            var found = (_jelly?.Treasures ?? new HashSet<string>()).Concat(_dbgTreasures).ToList();
+            _run.BeginWithTreasures(found, startCave: _resume is null);
             if (_startHp is { } hp) _run.Hp = hp;
             _startHp = null;
             if (_startXp > 0) _run.Gain(_startXp);
@@ -1654,6 +1694,7 @@ public partial class TopDownMain : Node3D
         _abyss.Build(map, LookOf(map));
         _vases.Show(_world);
         _vaults.Show(_world);
+        _relics.Show(_world);
         _puffers.Show(_world);
         _reefFish.Show(_world);
         _curseDen.Show(_world);
@@ -2115,6 +2156,8 @@ public partial class TopDownMain : Node3D
             // By the light shrine, and on it (it gives its pearl).
             "shrine" => _world.Stands.Where(t => t.Kind == StandKind.Shrine).Select(t => (System.Numerics.Vector2?)(t.Position + new System.Numerics.Vector2(0f, 3f))).FirstOrDefault(),
             "shrine-on" => _world.Stands.Where(t => t.Kind == StandKind.Shrine).Select(t => (System.Numerics.Vector2?)t.Position).FirstOrDefault(),
+            "relic" => _world.Relics.Where(r => !r.InStartCave).Select(r => (System.Numerics.Vector2?)(r.Position + new System.Numerics.Vector2(0f, 3f))).FirstOrDefault(),
+            "relic-on" => _world.Relics.Where(r => !r.InStartCave).Select(r => (System.Numerics.Vector2?)r.Position).FirstOrDefault(),
             "vault" => _world.Vaults.Select(v => (System.Numerics.Vector2?)(v.Position - v.Wall * 2.5f)).FirstOrDefault(),
             "shop" => _map.Caves.Where(c => _map.Pois[c.Poi].Kind == PoiKind.Shop).Select(c => (System.Numerics.Vector2?)(c.Mouth - c.Facing * 1.5f)).FirstOrDefault(),
             // Out along the shop's passage, facing its gateway.
@@ -2671,6 +2714,14 @@ public partial class TopDownMain : Node3D
                 else if (e.Type == PlaneEventType.CannotAfford) Say("Not enough shells");
                 // A light shrine (docs/proposals/CROSSOVER.md §5): her light given for its pearl, or too little to give.
                 else if (e.Type == PlaneEventType.ShrineDenied) Say("Too little light to give");
+                // A treasure found (CROSSOVER.md §5.2): hers for good, kept on the jelly and saved at once.
+                else if (e.Type == PlaneEventType.TreasureFound && _world.LastTreasure is { } treasure) TreasureFound(treasure);
+                // The Pearl Altar's pearls she passed over fade.
+                else if (e.Type == PlaneEventType.PearlFaded)
+                {
+                    _combat.LightBurst(e.Position, 0.6f);
+                    _sfx.PlayPitched("merge", 0.55f, -12f);
+                }
                 else if (e.Type == PlaneEventType.ShrineGiven)
                 {
                     _sfx.PlayPitched("bell_ring", 0.7f, -6f);
@@ -2910,6 +2961,7 @@ public partial class TopDownMain : Node3D
         Guard("abyss", () => _abyss.Sync(_world, dt));
         Guard("vases", () => _vases.Sync(dt));
         Guard("vaults", () => _vaults.Sync(_world, dt));
+        Guard("relics", () => _relics.Sync(_world, dt, _combat));
         Guard("pufferlings", () => _puffers.Sync(_world, dt));
         Guard("reef fish", () => _reefFish.Sync(_world, dt));
         Guard("corruption", () => SyncCorruption(dt, alpha));
@@ -3019,8 +3071,8 @@ public partial class TopDownMain : Node3D
         // Entering a place names it under the minimap.
         var inside = _map.Pois.Where(poi => System.Numerics.Vector2.Distance(poi.Position, p.Position) <= poi.Radius + 1.5f)
             .OrderBy(poi => System.Numerics.Vector2.Distance(poi.Position, p.Position)).FirstOrDefault();
-        // The start needs no name under the map.
-        bool named = inside is not null && inside.Kind != PoiKind.Start;
+        // The start needs no name under the map, and a treasure's hiding place keeps its secret.
+        bool named = inside is not null && inside.Kind is not (PoiKind.Start or PoiKind.Relic);
         // (A leak cave's dead end is its leak: named in the leak's purple, as its asterisk on the maps.)
         var placeColour = !named ? Colors.White : inside!.Kind == PoiKind.Exit && _map.LeakCave ? new Color(0.72f, 0.36f, 1f) : LevelView.PoiColor(inside!.Kind);
         _minimap.ShowPlace(named ? LevelView.PlaceName(_map, inside!.Kind) : null, placeColour);
@@ -3180,7 +3232,7 @@ public partial class TopDownMain : Node3D
     /// </summary>
     IEnumerable<Node> LevelLife => new Node[]
     {
-        _crab, _combat, _puffers, _reefFish, _curseDen, _clamRooms, _geysers, _boss, _damage, _currents, _vases, _vaults, _abyss,
+        _crab, _combat, _puffers, _reefFish, _curseDen, _clamRooms, _geysers, _boss, _damage, _currents, _vases, _vaults, _relics, _abyss,
         _kelp, _chargeStones, _prismStones, _cores, _lamps, _motes, _seals, _surgeView, _blight, _ash, _adventure, _springs, _portals,
         _mirrorView, _fanView, _vapour,
     };

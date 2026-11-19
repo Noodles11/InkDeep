@@ -58,6 +58,8 @@ public sealed class PlaneRun
         var pool = place switch
         {
             "shrine" => all.Where(id => In(id, i => i.Quality >= 3)).ToList(),
+            // (The Pearl Altar's: any pearl of quality 1 to 3.)
+            "altar" => all.Where(id => In(id, i => i.Quality is >= 1 and <= 3)).ToList(),
             "secret" => all.Where(id => In(id, i => i.Pools.Contains("secret") || i.Quality <= 2)).ToList(),
             _ => all.Where(id => In(id, i => i.Pools.Contains(place))).ToList(),
         };
@@ -84,7 +86,29 @@ public sealed class PlaneRun
     public int Shells { get; set; }
     public LevelId Level { get; set; } = LevelId.First;
 
-    public float MaxHp => Loadout.Stats.MaxHp * System.MathF.Pow(1f - CrabTuning.Cut, ArmCuts);
+    public float MaxHp => (Loadout.Stats.MaxHp + ExtraHp) * System.MathF.Pow(1f - CrabTuning.Cut, ArmCuts);
+
+    /// <summary>Health beyond her loadout's for the run (the Spare Bell's pip).</summary>
+    public float ExtraHp { get; set; }
+
+    /// <summary>The treasures (data/treasures.json), and those she has found (the jelly's, and any found this run).</summary>
+    public OctoShoots.Core.Items.TreasureCatalog? TreasureCatalog { get; set; }
+    public HashSet<string> Treasures { get; } = new();
+
+    /// <summary>The run's first template level is still to be made: its start holds the treasures she has (PlaneWorld.PlaceStartCave).</summary>
+    public bool StartCave { get; set; }
+
+    /// <summary>
+    /// A new run starts with her treasures (CROSSOVER.md §5.2): these found, the start cave waiting, the Spare Bell's
+    /// pip hers. (The Pearl Altar and the Shell Urn give theirs in the start cave.)
+    /// </summary>
+    public void BeginWithTreasures(IEnumerable<string> found, bool startCave = true)
+    {
+        Treasures.UnionWith(found);
+        StartCave = startCave;
+        ExtraHp = Treasures.Contains(OctoShoots.Core.Items.Treasures.SpareBell) ? OctoShoots.Core.Items.Treasures.BellHalves * LightPips.Half : 0f;
+        Hp = MaxHp;
+    }
 
     /// <summary>The deals she has struck: each cut a share of her max HP off for the rest of the run.</summary>
     public int ArmCuts { get; set; }

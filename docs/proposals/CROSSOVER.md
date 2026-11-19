@@ -136,6 +136,8 @@ cave.
 - A treasure appears in a level only until it is found; after that its POI rolls an ordinary reward.
 - Some treasures could later be **upgraded** by finding a second copy deeper (the Altar offering 4 pearls).
 - They are saved on the jelly (`Jelly`, `SaveData`), as achievements and freed folk are now.
+- *(Built in 0.54.0 for the first three, GAME.md §14: a found treasure's place holds a pearl from the secret pool;
+  the start cave is the start of the run's first template level.)*
 
 **Why.** It gives every run a reason to explore beyond the two-minute dive: the treasures are where the permanent
 progress is. The Altar in particular makes every start different, which is Isaac's best quality.
@@ -346,7 +348,7 @@ Each step ends with a build that runs and passing tests.
    secret as POI marks; pools by place; the HUD. *(2 weeks)*
 4. **The boss level** (built in 0.53.0: GAME.md §14; the current not drawn yet): the arena template, the rising current, dissolving creatures, the vortex; Queen Clam moved in.
    *A full first depth.* *(2 weeks)*
-5. **Treasures:** `TreasureCatalog`, the start cave, the Pearl Altar, the first three treasures. *(1 week)*
+5. **Treasures** (built in 0.54.0: GAME.md §14; depths 2 and 3 stand in for their biomes): `TreasureCatalog`, the start cave, the Pearl Altar, the first three treasures. *(1 week)*
 6. **The ink look:** outline, halftone, paper grain, her sunset gradient, the neon edges of cleansed things.
    *(2 weeks)*
 7. **Depths 2–3:** Kelp Forest or Shipwreck, then Sunken Ruins: templates, rosters, Tull, Kip and Ottilie moved

@@ -239,6 +239,8 @@ public sealed class PlanePearl
     public bool Absorbing => Ritual >= 0f && !Taken;
     /// <summary>Bought from the crab: the claw takes its price when it is absorbed.</summary>
     public bool Deal;
+    /// <summary>One of a choice (the Pearl Altar's, CROSSOVER.md §5.2): touching one fades the others of the same choice; 0 none.</summary>
+    public int Choice;
 }
 
 /// <summary>
@@ -579,6 +581,7 @@ public sealed partial class PlaneWorld
     {
         pearl.Ritual = 0f;
         Events.Add(new PlaneEvent(PlaneEventType.PearlTouched, pearl.Position, Vector2.Zero));
+        ChoiceMade(pearl);
     }
 
     void StepRituals()

@@ -296,4 +296,22 @@ the tests of the dive still test the dive.
   depth plays through: four template levels with the dive clock, then her arena, then the next depth. Not done: the
   current is not drawn yet (only what it carries moves), and the second vortex at a branch waits for the depths'
   branches (step 7).
+- **Step 5 (0.54.0), treasures:** the treasures are listed in `data/treasures.json` (`TreasureCatalog`, checked on
+  load like the achievements: ids unique and known to the game, `Treasures.Known`, one a depth). The first three:
+  the **Pearl Altar** (depth 1, the Sunlit Reef), the **Spare Bell** (depth 2) and the **Shell Urn** (depth 3); depths 2
+  and 3 stand in for the Kelp Forest and the Shipwreck Graveyard until those are built (step 7). Each depth hides its
+  treasure on one of its levels from the second to the one before the boss's (`LevelPlan.RelicLevel`, from the
+  depth's own stream): a **relic place** (`PoiKind.Relic`) on the POI mark farthest from the walk's own cells. It
+  pushes out a shell cache or the Crab Deal if the level is full; it is never named under the minimap and never shown
+  by the Brass Compass. There the treasure lies as the real old object (a worn stone block with three hollows, a
+  ship's bronze bell gone dull green, a sealed clay urn), glinting now and then with a small warm light. She takes it
+  by touching it: its banner ("Treasure", what it does every run), and it is the **jelly's for good**
+  (`Jelly.Treasures`, saved at once). Once she has it, its place holds a pearl from the secret pool instead. From the
+  next run on, the treasures she has wait in the **start cave**, round where the run's first template level starts
+  (`PlaneRun.BeginWithTreasures`, `PlaneWorld.PlaceStartCave`): the **Pearl Altar** offers three pearls of quality 1
+  to 3 on the altar ("altar" pool); touching one fades the other two (`PlanePearl.Choice`). The **Shell Urn** lies on
+  its side with 15 shells spilled before it (a conch, two scallops, a cowrie). The **Spare Bell** gives her one more
+  light pip for the run (`PlaneRun.ExtraHp`). A run continued from a save keeps the bell's pip but has no start cave.
+  Not done: the guarded and light-puzzle hiding places (a relic lies in a side cell for now), the other treasures of
+  §5.2, and treasures on the title screen's jelly card.
 

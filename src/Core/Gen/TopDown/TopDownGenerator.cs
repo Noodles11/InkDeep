@@ -559,6 +559,8 @@ public static partial class TopDownGenerator
         for (int i = 0; i < plan.Havens; i++) kinds.Add(PoiKind.Haven);
         for (int i = 0; i < plan.Caches; i++) kinds.Add(PoiKind.ShellCache);
         for (int i = 0; i < plan.Shrines; i++) kinds.Add(PoiKind.Shrine);
+        // (The relic first: it takes the mark farthest from the walk.)
+        for (int i = 0; i < plan.Relics; i++) kinds.Insert(0, PoiKind.Relic);
         if (kinds.Count > 0)
         {
             PoiKind earlyKind = kinds.Contains(PoiKind.Haven) ? PoiKind.Haven

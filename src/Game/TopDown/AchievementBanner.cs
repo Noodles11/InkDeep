@@ -24,7 +24,7 @@ public partial class AchievementBanner : Control
     const float StubIn = 0.82f, StubTime = 0.43f, StubTextIn = 1f, StubTextStep = 0.08f, GlintAt = 1.2f;
     const float HoldFrom = 1.45f, HoldTo = 5.2f, ShortHoldTo = HoldFrom + 3f, ExitTime = 0.75f, CardFade = 0.34f, Gap = 0.3f;
 
-    sealed record Entry(AchievementDef Def, ItemDef? Pearl);
+    sealed record Entry(AchievementDef Def, ItemDef? Pearl, string Eyebrow = "ACHIEVEMENT");
 
     readonly Queue<Entry> _queue = new();
     Entry? _current;
@@ -63,7 +63,7 @@ public partial class AchievementBanner : Control
     }
 
     /// <summary>Queues a banner for an achievement and the pearl it unlocked.</summary>
-    public void Enqueue(AchievementDef def, ItemDef? pearl) => _queue.Enqueue(new Entry(def, pearl));
+    public void Enqueue(AchievementDef def, ItemDef? pearl, string eyebrow = "ACHIEVEMENT") => _queue.Enqueue(new Entry(def, pearl, eyebrow));
 
     /// <summary>Advances the banner by game time (not called while paused or under a splash, so it waits).</summary>
     public void Step(float dt)
@@ -267,8 +267,8 @@ public partial class AchievementBanner : Control
                 var at = c + new Vector2(28f - 60f * (1f - eb), 38f);
                 // Skewed −12° as it starts, upright as it lands.
                 DrawSetTransformMatrix(card * new Transform2D(0f, Vector2.One, -0.21f * (1f - eb), at));
-                DrawString(bold, Vector2.Zero, "ACHIEVEMENT", HorizontalAlignment.Left, -1, 15, A(TitleStyle.Coral, eb));
-                float w = bold.GetStringSize("ACHIEVEMENT", HorizontalAlignment.Left, -1, 15).X;
+                DrawString(bold, Vector2.Zero, e.Eyebrow, HorizontalAlignment.Left, -1, 15, A(TitleStyle.Coral, eb));
+                float w = bold.GetStringSize(e.Eyebrow, HorizontalAlignment.Left, -1, 15).X;
                 var d = new Vector2(w + 14f, -6f);
                 DrawColoredPolygon(new[] { d + new Vector2(0f, -6f), d + new Vector2(6f, 0f), d + new Vector2(0f, 6f), d + new Vector2(-6f, 0f) }, A(TitleStyle.Mint, eb));
                 DrawSetTransformMatrix(card);
@@ -351,6 +351,17 @@ public partial class AchievementBanner : Control
     /// <summary>The stub: the socket with turning pastel rays behind it, the NEW PEARL chip, and the pearl's lines.</summary>
     void DrawStub(Vector2 c, float t, Func<Color, float, Color> A, Font bold, Font font, Entry e)
     {
+        // A treasure's banner: no pearl, but what it does on every run from now on (its def's hint).
+        if (e.Pearl is null)
+        {
+            float tx = Main + Seam + 20f;
+            float TLine(int n) => ReducedMotion ? 1f : EaseOut(Clamp01((t - StubTextIn - n * StubTextStep) / 0.3f));
+            var tchip = new Rect2(c + new Vector2(tx, 20f), new Vector2(92f, 22f));
+            DrawRoundRect(tchip, 11f, A(TitleStyle.Mint, TLine(0)));
+            DrawString(bold, tchip.Position + new Vector2(10f, 16f), "EVERY RUN", HorizontalAlignment.Left, -1, 12, A(Colors.White, TLine(0)));
+            DrawMultilineString(font, c + new Vector2(tx, 72f + 6f * (1f - TLine(1))), e.Def.Hint, HorizontalAlignment.Left, W - tx - 14f, 15, 4, A(TitleStyle.Ink, TLine(1)));
+            return;
+        }
         var socket = c + new Vector2(Main + Seam + 64f, H * 0.5f);
         Color[] rays = { new(1f, 0.85f, 0.9f), new(0.8f, 1f, 0.92f), new(1f, 0.96f, 0.8f), new(0.85f, 0.9f, 1f) };
         for (int i = 0; i < 12; i++)

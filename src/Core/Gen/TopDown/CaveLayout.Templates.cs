@@ -402,7 +402,11 @@ public sealed partial class CaveLayout
                 && g.Places.All(o => Vector2.Distance(o.At, p) >= PlaceRules.Between(o.Kind, kind))
                 && (kind != PoiKind.ShellCache || Along(p, g.Start.At, g.Exit.At) is >= 0.3f and <= 0.7f)).ToList();
             if (options.Count == 0) continue;
-            var at = options[rng.Int(options.Count)];
+            // A relic hides (CROSSOVER.md §5.2): the mark farthest from the walk's own cells.
+            var walk = g.Chambers.Where(c => !c.Room && c.Role is Role.Start or Role.Main or Role.Exit).Select(c => c.At).ToList();
+            var at = kind == PoiKind.Relic && walk.Count > 0
+                ? options.OrderByDescending(p => walk.Min(w => Vector2.Distance(w, p))).First()
+                : options[rng.Int(options.Count)];
             marks.Remove(at);
             g.Places.Add(new Place { Kind = kind, At = at, Radius = radius(kind) });
         }

@@ -70,12 +70,12 @@ public sealed class LevelPlan
     public bool Rift { get; init; }
     public int Treasures { get; init; }
     public int Secrets { get; private set; }
-    public int Crabs { get; init; }
+    public int Crabs { get; private set; }
     public int Curses { get; private set; }
     public int Shops { get; private set; }
     /// <summary>Ways into a haven (docs/DIVE.md §4), 0 or 1.</summary>
     public int Havens { get; private set; }
-    public int Caches { get; init; }
+    public int Caches { get; private set; }
     /// <summary>
     /// A crossover level built from cell templates (docs/proposals/CROSSOVER.md §2): every level but the tutorial's (a
     /// boss's ends in its arena, §4).
@@ -83,6 +83,8 @@ public sealed class LevelPlan
     public bool Templated { get; private set; }
     /// <summary>A template level's light shrine (CROSSOVER.md §5), 0 or 1.</summary>
     public int Shrines { get; private set; }
+    /// <summary>A template level's relic place (CROSSOVER.md §5.2), 0 or 1: its depth's treasure hides on one level of the depth.</summary>
+    public int Relics { get; private set; }
     /// <summary>The level above was a boss level: she arrives on its arena's floor.</summary>
     public bool EntryFromArena { get; init; }
     /// <summary>
@@ -101,7 +103,7 @@ public sealed class LevelPlan
     public int Floor { get; init; } = 1;
     public int Floors { get; init; } = 1;
 
-    public int Places => Treasures + Secrets + Curses + Shops + Caches + Crabs + Havens + Shrines + (HasBoss ? 1 : 0);
+    public int Places => Treasures + Secrets + Curses + Shops + Caches + Crabs + Havens + Shrines + Relics + (HasBoss ? 1 : 0);
     /// <summary>The level's template (docs/archive/LEVEL-TEMPLATES-PROPOSAL.md): null in the tutorial.</summary>
     public LevelTemplate? Template { get; init; }
 
@@ -146,6 +148,14 @@ public sealed class LevelPlan
         // (A secret room's labyrinth is a second layer: the crossover has none, CROSSOVER.md §3.)
         plan.Secrets = 0;
         plan.Templated = !id.IsTutorial && !plan.LeakCave;
+        // Its depth's treasure (CROSSOVER.md §5.2): hidden on one of the depth's levels between its first and its boss's,
+        // chosen by the depth's own stream; it pushes out a shell cache or the Crab Deal if the level is full.
+        if (plan.Templated && !plan.HasBoss && id.Level == RelicLevel(seed, id))
+        {
+            plan.Relics = 1;
+            if (plan.Places > LevelStocking.MaxPlaces && plan.Caches > 0) plan.Caches--;
+            if (plan.Places > LevelStocking.MaxPlaces && plan.Crabs > 0) plan.Crabs--;
+        }
         // Its shop (CROSSOVER.md §5): with no havens, a template level from its second row on may hold one in a room cell,
         // rolled on a stream of its own so nothing else of the plan changes.
         if (plan.Templated && plan.Shops == 0 && id.Level >= 2 && plan.Places < LevelStocking.MaxPlaces
@@ -157,6 +167,10 @@ public sealed class LevelPlan
             plan.Shrines = 1;
         return plan;
     }
+
+    /// <summary>The level of its depth that hides the depth's treasure: one from the second to the one before the boss's.</summary>
+    public static int RelicLevel(SeedCode seed, LevelId id) =>
+        2 + new RunStreams(seed).Plan(id with { Level = 1, Lane = 0 }).Stream("crossover relic").Int(Math.Max(1, LevelStocking.LevelsPerDepth - 2));
 
     /// <summary>How often a template level from its second row on holds a shop.</summary>
     public const float CrossoverShop = 0.45f;

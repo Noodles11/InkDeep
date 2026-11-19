@@ -419,4 +419,96 @@ public class CrossoverTests
         Assert.True(w.Boss.MaxHp > max);
         Assert.True(w.Boss.MaxHp <= max * (1f + TideTuning.FeedMost) + 0.01f);
     }
+
+    static readonly Lazy<TreasureCatalog> TreasureData = new(() =>
+        TreasureCatalog.FromJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "treasures.json"))));
+
+    [Fact]
+    public void The_treasures_load_one_to_a_depth_and_each_is_known()
+    {
+        var all = TreasureData.Value.All;
+        Assert.Equal(new[] { Treasures.PearlAltar, Treasures.SpareBell, Treasures.ShellUrn }, all.Select(t => t.Id));
+        Assert.Equal(Treasures.PearlAltar, TreasureData.Value.AtDepth(1)?.Id);
+        Assert.Throws<InvalidOperationException>(() => TreasureCatalog.FromJson(
+            "{ \"treasures\": [ { \"id\": \"golden_fork\", \"title\": \"Fork\", \"depth\": 1, \"line\": \"a\", \"does\": \"b\" } ] }"));
+    }
+
+    [Fact]
+    public void Each_depth_hides_its_treasure_on_one_level_far_from_the_walk()
+    {
+        foreach (var seed in new[] { TestLevels.Seed, SeedCode.Parse("REEF22XY") })
+        for (int depth = LevelPlan.Tutorial + 1; depth < LevelPlan.Depths; depth++)
+        {
+            var levels = Enumerable.Range(1, LevelStocking.LevelsPerDepth)
+                .Where(level => LevelPlan.For(seed, new LevelId(1, depth, level), crossover: true).Relics == 1).ToList();
+            int only = Assert.Single(levels);
+            Assert.InRange(only, 2, LevelStocking.LevelsPerDepth - 1);
+        }
+        var id = new LevelId(1, LevelPlan.Tutorial + 1, LevelPlan.RelicLevel(TestLevels.Seed, new LevelId(1, LevelPlan.Tutorial + 1, 1)));
+        var map = TopDownGenerator.Generate(new RunStreams(TestLevels.Seed), id, crossover: true);
+        var relic = Assert.Single(map.Pois, p => p.Kind == PoiKind.Relic);
+        Assert.True(float.IsFinite(LevelValidator.DistanceAt(LevelValidator.Distances(map, map.Start.Position), relic.Position)));
+        Assert.True(Vector2.Distance(relic.Position, map.Start.Position) >= PlaceRules.FromStart);
+    }
+
+    static LevelMap RelicMap() => TopDownGenerator.Generate(new RunStreams(TestLevels.Seed),
+        new LevelId(1, LevelPlan.Tutorial + 1, LevelPlan.RelicLevel(TestLevels.Seed, new LevelId(1, LevelPlan.Tutorial + 1, 1))), crossover: true);
+
+    [Fact]
+    public void She_finds_a_treasure_by_touching_it_and_once_found_its_place_holds_a_pearl()
+    {
+        var map = RelicMap();
+        var run = new PlaneRun(Catalog.Value, new Tuning()) { TreasureCatalog = TreasureData.Value };
+        var w = new PlaneWorld(map, new Tuning(), run);
+        var relic = Assert.Single(w.Relics);
+        Assert.Equal(Treasures.PearlAltar, relic.Id);
+        w.Player.Position = w.Player.PrevPosition = relic.Position;
+        w.Step(default);
+        Assert.True(relic.Taken);
+        Assert.Contains(w.Events, e => e.Type == PlaneEventType.TreasureFound);
+        Assert.Equal(Treasures.PearlAltar, w.LastTreasure);
+        Assert.Contains(Treasures.PearlAltar, run.Treasures);
+
+        // Found already: the place rolls a pearl instead.
+        var again = new PlaneRun(Catalog.Value, new Tuning()) { TreasureCatalog = TreasureData.Value };
+        again.Treasures.Add(Treasures.PearlAltar);
+        var w2 = new PlaneWorld(map, new Tuning(), again);
+        Assert.Empty(w2.Relics);
+        Assert.Contains(w2.Pearls, q => q.Position == relic.Position);
+    }
+
+    [Fact]
+    public void The_start_cave_holds_her_treasures_the_altar_offers_three_pearls_and_she_takes_one()
+    {
+        var map = TopDownGenerator.Generate(new RunStreams(TestLevels.Seed), LevelId.FirstRun, crossover: true);
+        var bare = new PlaneRun(Catalog.Value, new Tuning()) { Pips = true };
+        var run = new PlaneRun(Catalog.Value, new Tuning()) { Pips = true, TreasureCatalog = TreasureData.Value };
+        run.BeginWithTreasures(Treasures.Known);
+        // The Spare Bell: one more pip.
+        Assert.Equal(LightPips.MaxHalves(bare.MaxHp) + Treasures.BellHalves, LightPips.MaxHalves(run.MaxHp));
+        Assert.Equal(run.MaxHp, run.Hp);
+
+        var w = new PlaneWorld(map, new Tuning(), run);
+        Assert.False(run.StartCave);
+        Assert.Equal(Treasures.Known.OrderBy(x => x), w.Relics.Where(r => r.InStartCave).Select(r => r.Id).OrderBy(x => x));
+        // The Shell Urn's fifteen shells, spilled.
+        Assert.Equal(Treasures.UrnShells, w.Shells.Where(s => Vector2.Distance(s.Position, map.Start.Position) < 10f).Sum(s => s.Value));
+        var offer = w.Pearls.Where(q => q.Choice == 1).ToList();
+        Assert.Equal(Treasures.AltarPearls, offer.Count);
+        Assert.Equal(Treasures.AltarPearls, offer.Select(q => q.ItemId).Distinct().Count());
+        Assert.All(offer, q => Assert.True(map.IsOpen(q.Position)));
+
+        // She takes one: the others fade, and it is hers.
+        w.Player.Position = w.Player.PrevPosition = offer[0].Position;
+        for (int i = 0; i < 200; i++) w.Step(default);
+        Assert.Contains(offer[0].ItemId, run.Items);
+        Assert.All(offer.Skip(1), q => Assert.True(q.Taken));
+        Assert.DoesNotContain(offer[1].ItemId, run.Items);
+        Assert.DoesNotContain(offer[2].ItemId, run.Items);
+
+        // Without treasures, or on a later level, the start is bare.
+        var plain = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()) { TreasureCatalog = TreasureData.Value });
+        Assert.Empty(plain.Relics);
+        Assert.DoesNotContain(plain.Pearls, q => q.Choice != 0);
+    }
 }

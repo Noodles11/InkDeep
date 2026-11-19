@@ -14,8 +14,8 @@ namespace OctoShoots.Core.Gen.TopDown;
 /// </summary>
 /// <summary>A level's places. LeakCave: a leak cave's mouth in the rock (docs/DIVE.md §6), where a curse den once was.
 /// Hole: one of a reef's further holes down (docs/LIGHT-AND-GRAPH.md §6.3), a sunken chamber as its Exit's.</summary>
-/// <summary>A place's kind. Shrine: the crossover's light shrine (docs/proposals/CROSSOVER.md §5), on a POI mark.</summary>
-public enum PoiKind { Start, ShellCache, Exit, Shop, Secret, CurseDen, TreasureCave, CrabDeal, LeakCave, Hole, Haven, Shrine }
+/// <summary>A place's kind. Shrine: the crossover's light shrine (docs/proposals/CROSSOVER.md §5), on a POI mark. Relic: where its depth's treasure lies hidden (§5.2), on the POI mark farthest from the walk.</summary>
+public enum PoiKind { Start, ShellCache, Exit, Shop, Secret, CurseDen, TreasureCave, CrabDeal, LeakCave, Hole, Haven, Shrine, Relic }
 
 public sealed class Poi
 {

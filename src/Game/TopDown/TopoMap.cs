@@ -306,7 +306,7 @@ public partial class TopoMap : Control
         for (int i = 0; i < map.Pois.Count; i++)
         {
             var poi = map.Pois[i];
-            bool shown = Visited.Contains(i) || Landmarks && poi.Kind is not (PoiKind.Secret or PoiKind.CrabDeal);
+            bool shown = Visited.Contains(i) || Landmarks && poi.Kind is not (PoiKind.Secret or PoiKind.CrabDeal or PoiKind.Relic);
             if (!shown) continue;
             Vector2 p = P(poi.Position);
             // A leak cave's dead end is its leak, not a way down: the leak's purple asterisk.

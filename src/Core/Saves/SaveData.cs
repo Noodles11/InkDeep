@@ -41,6 +41,8 @@ public sealed class Jelly
     /// <summary>An older save's active pearls: merged into her pearls as she next dives.</summary>
     public List<string> Actives { get; set; } = new();
     public HashSet<string> Freed { get; set; } = new();
+    /// <summary>The treasures she has found (docs/proposals/CROSSOVER.md §5.2): kept for good, waiting at the start of every run.</summary>
+    public HashSet<string> Treasures { get; set; } = new();
     /// <summary>Her progress through each freed neighbour's key quest chain (Chains): the step she is on, and how far along it.</summary>
     public Dictionary<string, List<int>> Chains { get; set; } = new();
     /// <summary>Her world's seed code: every leak cave is grown from it.</summary>
