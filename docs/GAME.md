@@ -232,4 +232,20 @@ the tests of the dive still test the dive.
   requests, mirror or folk homes to reach). Skill points are shelved: no level-up message, no pulse on her bell or the
   HUD, and the pause menu has no Level up, Requests or Chart tab. Still to shelve: experience itself, and the hole
   rims that name a curse den's reef (the dive graph goes in step 2).
+- **Step 2 (0.50.0), template caves and the dive clock:** every level but the tutorial's and a boss's is built from
+  cell templates (`LevelPlan.Templated`, `CaveLayout.FromTemplates`, `CaveTemplates`): a 5 × 5 grid of 18 m cells
+  (18, not the proposal's 22, so the grid fits inside the level's rim), a Spelunky walk from one row to the far one,
+  side cells up to two deep and the odd loop, the whole grid turned or mirrored any of eight ways. Each used cell takes
+  a template that opens where it is joined (sockets 6 m wide in the middle of a side), turned and mirrored, its chunk
+  slots filled at random; then the rock edges are eroded with noise, and the generator's own stages (walls, passes,
+  arches, decoration) build on it. Ten Sunlit Reef cells and one room cell so far. A room cell holds a place that
+  lives in a cave (a treasure clam, a Crab Deal) behind a short spur; an open place (a shell cache) takes a POI mark;
+  a place that finds neither is left out. Mob marks fill the spawn table by tag (lone, pack, thrower, ambusher,
+  guard), and the marks are kept on the map (`LevelMap.MobMarks`, `PoiMarks`) for the rosters and places of later
+  steps; the ink creatures still come from the corruption's Blightroots as before. No secret rooms (a labyrinth is a
+  second layer). A template level has no shaft and no holes: after **2 minutes** on it (`DiveClock`) she may dive
+  anywhere, and nothing else is asked (not even that no fight is on). A ring round her bell on the HUD fills over the
+  two minutes; when it is full a soft chime and a message say so, the prompt shows for a few seconds and the ring
+  breathes. The level below is shown under her only once she dives. `--dbg-diveclock=s` starts each level's clock
+  that far on (verification).
 

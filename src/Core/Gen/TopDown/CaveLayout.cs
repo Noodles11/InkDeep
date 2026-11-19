@@ -13,7 +13,7 @@ namespace OctoShoots.Core.Gen.TopDown;
 /// passes.) Special rooms take dead-end chambers left as rock:
 /// their branch tunnel ends at the room's mouth, and the generator hollows the cave out behind it.
 /// </summary>
-public sealed class CaveLayout
+public sealed partial class CaveLayout
 {
     /// <summary>Its square (metres a side) and grid points a side: a seeded level's, or a hand-drawn map's own.</summary>
     readonly int N;

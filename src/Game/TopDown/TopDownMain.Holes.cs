@@ -32,11 +32,20 @@ public partial class TopDownMain
     {
         _holeShapes.Clear();
         _belowHole = _diveHole = -1;
+        _diveAt = null;
         StartNextHoleShape();
     }
 
+    /// <summary>
+    /// A hole's middle. A template level has no holes (docs/proposals/CROSSOVER.md §3): she dives where she is, so its one
+    /// way down is wherever she began her dive (before that, where she is).
+    /// </summary>
     System.Numerics.Vector2 HoleCenter(int hole) =>
-        hole >= 0 && hole < _map.Holes.Count ? _map.Holes[hole].Shaft.Center : _map.Exit.Position;
+        _map.Templated ? _diveAt ?? _world?.Player.Position ?? _map.Start.Position
+        : hole >= 0 && hole < _map.Holes.Count ? _map.Holes[hole].Shaft.Center : _map.Exit.Position;
+
+    /// <summary>Where she began her dive on a template level (null: she has not).</summary>
+    System.Numerics.Vector2? _diveAt;
 
     /// <summary>Where a hole leads (a map without its list of holes: the graph's first exit).</summary>
     LevelId DestinationOf(int hole) =>
@@ -86,6 +95,8 @@ public partial class TopDownMain
     {
         if (InDiveCave) return;
         StartNextHoleShape();
+        // A template level shows the level below only once she dives, under where she is (it has no hole to show it through).
+        if (_map.Templated && _diveHole < 0) return;
         int want = _diveHole >= 0 ? _diveHole : NearestHole();
         if (want == _belowHole) return;
         if (_belowHole >= 0 && _diveHole < 0

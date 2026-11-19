@@ -69,13 +69,18 @@ public sealed class LevelPlan
     /// <summary>The tutorial's last level: its arena holds no boss, and the Crack in it stands open (with HasBoss).</summary>
     public bool Rift { get; init; }
     public int Treasures { get; init; }
-    public int Secrets { get; init; }
+    public int Secrets { get; private set; }
     public int Crabs { get; init; }
     public int Curses { get; private set; }
     public int Shops { get; init; }
     /// <summary>Ways into a haven (docs/DIVE.md §4), 0 or 1.</summary>
     public int Havens { get; private set; }
     public int Caches { get; init; }
+    /// <summary>
+    /// A crossover level built from cell templates (docs/proposals/CROSSOVER.md §2): every level but the tutorial's and
+    /// a boss's (those keep the grown cave until their own steps of the build).
+    /// </summary>
+    public bool Templated { get; private set; }
     /// <summary>The level above was a boss level: she arrives on its arena's floor.</summary>
     public bool EntryFromArena { get; init; }
     /// <summary>
@@ -126,17 +131,19 @@ public sealed class LevelPlan
 
     /// <param name="luck">Her luck (LuckTuning): a chance of a clam room on a level without one.</param>
     /// <param name="crossover">
-    /// The crossover's rules (docs/proposals/CROSSOVER.md §11, Run.Crossover): no havens, no leak caves or curse dens.
+    /// The crossover's rules (docs/proposals/CROSSOVER.md §11, Run.Crossover): no havens, no leak caves or curse dens,
+    /// no secret rooms, and its levels (but the tutorial's and a boss's) built from cell templates (Templated).
     /// Everything else is rolled exactly as the dive rolls it, from the same streams.
     /// </param>
     public static LevelPlan For(SeedCode seed, LevelId id, float luck = 0f, bool crossover = false)
     {
         var plan = DivePlan(seed, id, luck);
-        if (crossover)
-        {
-            plan.Havens = 0;
-            plan.Curses = 0;
-        }
+        if (!crossover) return plan;
+        plan.Havens = 0;
+        plan.Curses = 0;
+        // (A secret room's labyrinth is a second layer: the crossover has none, CROSSOVER.md §3.)
+        plan.Secrets = 0;
+        plan.Templated = !id.IsTutorial && !plan.HasBoss && !plan.LeakCave;
         return plan;
     }
 

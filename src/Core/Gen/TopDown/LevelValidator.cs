@@ -65,7 +65,8 @@ public static class LevelValidator
         }
         // One place sits early, unless the shell cache (which keeps to the middle of the way) is the level's only place.
         var early = others.Where(p => p.Early).ToList();
-        if (others.Any(p => p.Kind != PoiKind.ShellCache) && (early.Count != 1 || Vector2.Distance(early[0].Position, start.Position) > CaveLayout.EarlyMax)) return $"{early.Count} early POIs (want exactly one, {CaveLayout.FromStart:0}–{CaveLayout.EarlyMax:0} m from the start)";
+        // (A template level has no early place: CROSSOVER.md §2, every place can be skipped.)
+        if (!map.Templated && others.Any(p => p.Kind != PoiKind.ShellCache) && (early.Count != 1 || Vector2.Distance(early[0].Position, start.Position) > CaveLayout.EarlyMax)) return $"{early.Count} early POIs (want exactly one, {CaveLayout.FromStart:0}–{CaveLayout.EarlyMax:0} m from the start)";
 
         // Tunnels: a room's spur stays short, a pass narrow, and nothing on a tunnel's middle above the swim level.
         foreach (var spur in map.Corridors.Where(c => c.Kind == CorridorKind.Spur))
@@ -75,7 +76,8 @@ public static class LevelValidator
         if (flat is not null) return flat;
 
         // Topography: the shaft is the only deep water (the deepest point of the level lies in it).
-        if (!map.LeakCave && !map.InShaft(DeepestPoint(map), 1f)) return "the shaft is not the deepest point";
+        // (A template level has no shaft: she dives anywhere, DiveClock.)
+        if (!map.LeakCave && !map.Templated && !map.InShaft(DeepestPoint(map), 1f)) return "the shaft is not the deepest point";
         float peak = InteriorPeak(map);
         if (peak is < 3f or > 14f) return $"highest peak {peak:0.0} m (want 3–14 m)";
 

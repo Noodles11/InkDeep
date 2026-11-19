@@ -281,6 +281,8 @@ inside a reef (a secret, a shop, a shell cache, a Crab Deal on one reef of a dep
 
 ### 6.3 Holes and choosing
 
+*(On the crossover branch a template level has no holes: she dives anywhere once its dive clock has run, GAME.md §14.)*
+
 - **Opening the holes**: a reef has a hole for each of its exits: its Exit's chamber, and further chambers sunk the same
   way (`PoiKind.Hole`), far from the start and the exit and 28 m apart. Sealing the reef's leak (on a boss's reef,
   freeing the boss) opens them all at once.

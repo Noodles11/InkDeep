@@ -378,6 +378,15 @@ public sealed class LevelMap
     /// comes down into a deeper floor's start from above.
     /// </summary>
     public bool LeakCave;
+    /// <summary>
+    /// A crossover level built from cell templates (docs/proposals/CROSSOVER.md §2, CaveLayout.FromTemplates): it has no
+    /// shaft and no holes, since she may dive anywhere once the dive clock has run (DiveClock).
+    /// </summary>
+    public bool Templated;
+    /// <summary>A template level's mob marks (where its roster puts a creature), in open water.</summary>
+    public List<(Vector2 At, MobTag Tag)> MobMarks = new();
+    /// <summary>A template level's POI marks no place took: spots where a place could stand, in open water.</summary>
+    public List<Vector2> PoiMarks = new();
     /// <summary>A leak cave's level (what its leak is worth, how strong its creatures are); 0 elsewhere.</summary>
     public int CaveLevel;
     /// <summary>A leak cave's floor (from 1) and how many it has; its floors above the last end in a hole down (a shaft).</summary>

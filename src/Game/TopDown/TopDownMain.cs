@@ -324,6 +324,8 @@ public partial class TopDownMain : Node3D
     int _dbgLeaks;
     /// <summary>Verification (--dbg-exit): the way down is open from the start.</summary>
     bool _dbgExit;
+    /// <summary>Verification (--dbg-diveclock=s): each level's clock starts this far on (DiveClock), so the dive opens sooner.</summary>
+    float _dbgDiveClock;
     /// <summary>Verification (--dbg-loose=id): that pearl lies loose on the reef a few metres from her at the start.</summary>
     string? _dbgLoose;
     /// <summary>
@@ -582,6 +584,7 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--dbg-bud=")) _dbgBud = Value("--dbg-bud=");
             else if (arg == "--dbg-ward") _dbgWard = true;
             else if (arg == "--dbg-exit") _dbgExit = true;
+            else if (arg.StartsWith("--dbg-diveclock=") && float.TryParse(Value("--dbg-diveclock="), NumberStyles.Float, CultureInfo.InvariantCulture, out float dc)) _dbgDiveClock = dc;
             else if (arg.StartsWith("--dbg-loose=")) _dbgLoose = Value("--dbg-loose=");
             else if (arg == "--dbg-prism") _dbgPrism = true;
             else if (arg.StartsWith("--dbg-moment=")) _dbgMoment = float.Parse(Value("--dbg-moment="), CultureInfo.InvariantCulture);
@@ -1570,6 +1573,7 @@ public partial class TopDownMain : Node3D
         // Waking in a haven (Lantern Bay): she is healed whole.
         if (map.InHaven(arriveAt ?? map.Start.Position)) _run.Hp = _run.MaxHp;
         _world = new PlaneWorld(_map, _tuning, _run, InDiveCave ? DiveCaveOptions(_map) : DebugBoss() ?? DiveBoss());
+        if (_dbgDiveClock > 0f) _world.DebugClockTo(_dbgDiveClock);
         ShowMouths();
         if (_captureDir is not null)
             foreach (var door in map.Way is { } way ? map.Mouths.Append(way) : map.Mouths) GD.Print($"Ride door at {door.At} into {door.Into}");
@@ -2576,6 +2580,12 @@ public partial class TopDownMain : Node3D
                 CorruptionEvent(e);
                 CurseEvent(e);
                 if (e.Type == PlaneEventType.Dived) dived = true;
+                // The dive clock has run (docs/proposals/CROSSOVER.md §3): a soft chime, and the way down is anywhere.
+                else if (e.Type == PlaneEventType.DiveOpened)
+                {
+                    _sfx.PlayPitched("bell_ring", 1.5f, -12f);
+                    Say("The deep opens: dive whenever you like");
+                }
                 // A dive's leak cave sealed: the Leak's pull turns, an upwelling where the leak was carries her up and out.
                 else if (e.Type == PlaneEventType.LeakSealed && InDiveCave) _portals.Upwell(_map.Exit.Position);
                 else if (e.Type == PlaneEventType.PlayerDefeated) dived = false;
@@ -3004,6 +3014,8 @@ public partial class TopDownMain : Node3D
         OctoShoots.Game.Fx.SunMap.Enable(false);
         _diveTime = 0f;
         _diveFrom = _world.Player.Position;
+        // (A template level: down where she is.)
+        if (_map.Templated) _diveAt = _diveFrom;
         // Down the hole she is over (the first, if she is somehow over none).
         _diveHole = Math.Max(0, _world.HoleUnder);
         var next = _diveTo = DestinationOf(_diveHole);

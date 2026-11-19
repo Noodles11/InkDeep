@@ -83,6 +83,8 @@ later haven, and from then on her depth's boss is the Leak's own, Drippus Prime.
 
 ## 6. Leak caves
 
+*(Shelved by the crossover: its levels have none, GAME.md §14.)*
+
 The curse dens are leak caves now: where a level's curse den would be, at the end of its spur, a mouth is cut in the
 rock (`PoiKind.LeakCave`, `TopDownGenerator.CutLeakMouths`, `LevelMap.Mouths`), weeping the Leak's ink. It leads into
 a cave of its own, half a level's water (`DiveCaveTuning.Area`, `CaveLayout`'s area scale), a little meaner than its

@@ -29,7 +29,8 @@ this world, and finally Atlantis. She never goes back up.
 **Replaces** the cave generator (`CaveLayout`: chambers grown and joined by tunnels) with a **Spelunky-style template
 grid**, laid out so the result still reads as one irregular cave.
 
-**The grid** *(tune)*: a level is a grid of 5 × 5 cells, each 22 × 22 m, about the 110 m of today's reefs.
+**The grid** *(tune)*: a level is a grid of 5 × 5 cells, each 18 × 18 m (built: 22 m cells did not fit inside the
+level's rim), centred in today's 110 m reef.
 
 1. **The path.** A random walk picks a chain of cells from the start cell to the far side, as Spelunky's path does.
    Side cells hang off it, up to two deep, and now and then a loop closes. The cells left over are solid rock, so the
@@ -336,8 +337,9 @@ Each step ends with a build that runs and passing tests.
 
 1. **Strip** (begun in 0.49.0: GAME.md §14): shelve §11's systems and the leaks behind a flag; remove the views in §14's "Remove" row; set the
    camera to orthographic. *(about 1 week)*
-2. **Template caves:** the cell walk, sockets, an ASCII template reader, chunks, the erosion pass; 30 Sunlit Reef
-   templates with mob and POI marks; the dive clock. *First playable: endless Sunlit Reef levels.* *(3 weeks)*
+2. **Template caves** (begun in 0.50.0: GAME.md §14; 10 cells and a room so far, each used in its eight ways):
+   the cell walk, sockets, an ASCII template reader, chunks, the erosion pass; 30 Sunlit Reef templates with mob and
+   POI marks; the dive clock. *First playable: endless Sunlit Reef levels.* *(3 weeks)*
 3. **Pickups, pips and places:** shell worths, healing orbs, bubble vaults, light pips; shop, clam, deal, shrine,
    secret as POI marks; pools by place; the HUD. *(2 weeks)*
 4. **The boss level:** the arena template, the rising current, dissolving creatures, the vortex; Queen Clam moved in.

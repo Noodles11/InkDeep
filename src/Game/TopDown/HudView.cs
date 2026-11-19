@@ -253,6 +253,9 @@ public partial class HudView : Control
     int _bossCrust;
     bool _bossFight;
     string _prompt = "";
+    /// <summary>The dive clock run so far, 0 → 1 (−1: a level without one), and how long its prompt shows once it has run.</summary>
+    float _diveClock = -1f;
+    const float DivePromptLinger = 6f;
     bool _promptReady;
     float _promptShown;
 
@@ -334,9 +337,19 @@ public partial class HudView : Control
             }
         }
         SyncShells(dt);
+        // A template level's dive clock (docs/proposals/CROSSOVER.md §3): the ring round her bell, and once it has run,
+        // the prompt for a few seconds.
+        bool templated = world.Map.Templated;
+        _diveClock = templated ? OctoShoots.Core.Plane.DiveClock.Progress(world.Time) : -1f;
         // Over the shaft: how to dive, or why not yet.
-        bool over = world.OverShaft && !world.Defeated && !Diving;
-        if (over)
+        bool over = templated ? world.CanDive && !Diving && world.Time < OctoShoots.Core.Plane.DiveClock.Seconds + DivePromptLinger
+            : world.OverShaft && !world.Defeated && !Diving;
+        if (over && templated)
+        {
+            _promptReady = true;
+            _prompt = "dive";
+        }
+        else if (over)
         {
             _promptReady = world.CanDive;
             // (Where the hole leads: its rim's kind, said.)
@@ -346,6 +359,20 @@ public partial class HudView : Control
         }
         _promptShown = Mathf.MoveToward(_promptShown, over ? 1f : 0f, dt * 4f);
         QueueRedraw();
+    }
+
+    /// <summary>
+    /// The dive clock (docs/proposals/CROSSOVER.md §3): a ring round her bell, filling with her warm light from the top
+    /// over the two minutes; once full it breathes, the way down open.
+    /// </summary>
+    void DrawDiveClock()
+    {
+        float r = BellRadius + 9f;
+        DrawArc(BellAt, r, 0f, Mathf.Tau, 72, new Color(0.02f, 0.03f, 0.05f, 0.45f), 5f, true);
+        if (_diveClock > 0f) DrawArc(BellAt, r, -Mathf.Pi * 0.5f, -Mathf.Pi * 0.5f + Mathf.Tau * _diveClock, 72, new Color(1f, 0.86f, 0.58f, 0.85f), 3f, true);
+        if (_diveClock < 1f) return;
+        float breath = 0.5f + 0.5f * Mathf.Sin(Time.GetTicksMsec() * 0.003f);
+        DrawArc(BellAt, r, 0f, Mathf.Tau, 72, new Color(1f, 0.95f, 0.82f, 0.18f + 0.22f * breath), 7f, true);
     }
 
     /// <summary>She is diving: no prompt.</summary>
@@ -611,6 +638,7 @@ public partial class HudView : Control
         }
 
         if (_adventure) DrawGauge(font);
+        if (_diveClock >= 0f && !Diving) DrawDiveClock();
         // Shells, bottom left (her pearls circle her bell instead: PearlOrbitView): brightens and swells with each one
         // collected.
         else

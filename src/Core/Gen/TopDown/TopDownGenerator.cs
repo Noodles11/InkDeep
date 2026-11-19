@@ -301,7 +301,7 @@ public static partial class TopDownGenerator
                 Seed = streams.Seed.Value, Id = id, Attempt = attempt, HasBoss = plan.HasBoss, Rift = plan.Rift, Menace = plan.Menace,
                 EntryFromArena = plan.EntryFromArena,
                 Template = plan.Template, Luck = luck, LeakCave = plan.LeakCave, Floor = plan.Floor, Floors = plan.Floors,
-                AreaScale = plan.AreaScale,
+                AreaScale = plan.AreaScale, Templated = plan.Templated,
             };
             Array.Fill(map.Heights, -PathDepth);
             // The wall tops come from the reef prototype's terrain for this text (the run's first try: the seed itself).
@@ -451,7 +451,8 @@ public static partial class TopDownGenerator
         FlattenSeabed(map);
         SoftenSlopes(map, Stage("slopes"), strata);
         // A leak cave's deepest floor has no way down: its leak lies where the shaft would be (a floor above it, a hole).
-        if (map.LeakCave && !map.HoleDown) map.Shaft = NoShaft;
+        // A template level has none either: she dives anywhere once its clock has run (DiveClock).
+        if ((map.LeakCave && !map.HoleDown) || map.Templated) map.Shaft = NoShaft;
         else
         {
             CutShaft(map, Stage("shaft"));
@@ -467,7 +468,8 @@ public static partial class TopDownGenerator
         Decorate(map, Stage("cosmetic" + cosmeticSalt), noiseSeed, strata);
         PlaceKelp(map, Stage("kelp"));
         PlacePickups(map, Stage("pickups"));
-        PlaceSpawns(map, Stage("spawns"), plan.Menace);
+        if (map.Templated) PlaceMarkedSpawns(map, Stage("spawns"), plan.Menace);
+        else PlaceSpawns(map, Stage("spawns"), plan.Menace);
         ClearSeals(map);
         // (Nothing grown in a secret room's mouth.)
         foreach (var door in map.Mouths) ClearAround(map, door.At + door.Into * 1.5f, 4f);
@@ -565,9 +567,14 @@ public static partial class TopDownGenerator
         // Its further holes down (one for each exit past the first: the Exit's), never the early place.
         for (int i = 1; i < plan.Exits.Count; i++) kinds.Add(PoiKind.Hole);
 
-        var (cave, why) = CaveLayout.Build(rng, plan.HasBoss, plan.EntryFromArena, kinds, RadiusOf, plan.Template?.Layout, plan.AreaScale);
+        // A template level (docs/proposals/CROSSOVER.md §2): its cells, and the places its rooms and POI marks can hold.
+        var (cave, why) = plan.Templated
+            ? CaveLayout.FromTemplates(rng, kinds.Where(k => k is not (PoiKind.Hole or PoiKind.Secret or PoiKind.LeakCave or PoiKind.Haven or PoiKind.CurseDen)).ToList(), RadiusOf)
+            : CaveLayout.Build(rng, plan.HasBoss, plan.EntryFromArena, kinds, RadiusOf, plan.Template?.Layout, plan.AreaScale);
         open = cave?.Open ?? Array.Empty<bool>();
         if (cave is null) return why;
+        map.MobMarks.AddRange(cave.MobMarks);
+        map.PoiMarks.AddRange(cave.PoiMarks);
         RecordCave(map, cave, plan.EntryFromArena ? ArenaRadius : StartRadius, plan.HasBoss ? ArenaRadius : StartRadius, spurDirs);
         return null;
     }
@@ -2363,6 +2370,40 @@ public static partial class TopDownGenerator
                     break;
                 // (A secret room is a labyrinth of its own, with nothing in it: GenerateLabyrinth.)
             }
+        }
+    }
+
+    /// <summary>
+    /// A template level's spawn table (docs/proposals/CROSSOVER.md §2): its mob marks, each taken by chance (more often
+    /// the deeper the menace) and filled by its tag; the guardians of its places as a grown level's. Its creatures are
+    /// placed once and do not come back.
+    /// </summary>
+    static void PlaceMarkedSpawns(LevelMap map, Rng rng, float menace)
+    {
+        float budget = 1f + 0.8f * MathF.Min(menace, 3f);
+        int Scaled(int n) => Math.Max(1, (int)MathF.Round(n * budget));
+        float taken = MathF.Min(0.55f + 0.15f * MathF.Min(menace, 3f), 0.95f);
+        void Add(SpawnRole role, EnemyKind kind, int count, Vector2 at, int poi = -1) =>
+            map.Spawns.Add(new SpawnEntry { Role = role, Kind = kind, Class = ClassOf(kind), Count = count, Position = at, Poi = poi });
+        foreach (var (at, tag) in map.MobMarks)
+        {
+            if (rng.NextFloat() >= taken) continue;
+            if (Vector2.Distance(at, map.Start.Position) < map.Start.Radius + 6f) continue;
+            switch (tag)
+            {
+                case MobTag.Lone: Add(SpawnRole.Den, Swimmers[rng.Int(Swimmers.Length)], 1, at); break;
+                case MobTag.Pack: Add(SpawnRole.Den, Swimmers[rng.Int(Swimmers.Length)], Scaled(2 + rng.Int(2)), at); break;
+                case MobTag.Thrower: Add(SpawnRole.Den, EnemyKind.Pufferling, 1, at); break;
+                case MobTag.Ambusher: Add(SpawnRole.Ambush, rng.NextFloat() < 0.5f ? EnemyKind.SeaUrchin : EnemyKind.Moray, 1, at); break;
+                case MobTag.Guard: Add(SpawnRole.Guardian, Swimmers[rng.Int(Swimmers.Length)], Scaled(2), at); break;
+            }
+        }
+        for (int pi = 0; pi < map.Pois.Count; pi++)
+        {
+            var poi = map.Pois[pi];
+            Vector2 mouth = poi.Cave >= 0 ? map.Caves[poi.Cave].Mouth + map.Caves[poi.Cave].Facing * 4f : poi.Position;
+            if (poi.Kind is PoiKind.TreasureCave or PoiKind.ShellCache)
+                Add(SpawnRole.Guardian, Swimmers[rng.Int(Swimmers.Length)], Scaled(2 + rng.Int(2)), poi.Kind == PoiKind.TreasureCave ? mouth : poi.Position, pi);
         }
     }
 }

@@ -78,7 +78,7 @@ public sealed class PlaneInk
     public float MaxLife;
 }
 
-public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, MobDefeated, MobNoticed, PlayerHit, PlayerDefeated, Dived, PufferSwells, NeedlesFired, PearlCollected, ShellCollected, HeartCollected, Purchased, CannotAfford, ShotPopped, BubbleFull,
+public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, MobDefeated, MobNoticed, PlayerHit, PlayerDefeated, Dived, DiveOpened, PufferSwells, NeedlesFired, PearlCollected, ShellCollected, HeartCollected, Purchased, CannotAfford, ShotPopped, BubbleFull,
     ChargeFull, LightBurst, ShieldBlocked, ActiveUsed, ActiveNotReady, ActiveDenied,
     GeyserFizz, GeyserSpray, GeyserEnded, VaseHit, VaseBroken, FullBubbleFreed,
     BlightrootDrank, BlightrootInflate, GuardiansWoke, BlightrootPulse, BlightrootBurst, MurklingBud, MurklingEmerged, MurklingBurst, MurklingThrow, MurklingWindup, ThumpWindup, ThumpLeap, ThumpLand, ThumpRoll, ThumpBurst, Warded, WardenFreed, LashWindup, LashOut, LashCatch, LashSwallow, LashBite, LashStun, LashFreed, SealLit, SealOpened, SealClosed, FishStruck, FishTurned, FishFreed,
@@ -192,6 +192,9 @@ public sealed partial class PlaneWorld
     public long Tick { get; private set; }
     /// <summary>Time on this level (s), from when it was entered.</summary>
     public float Time => Tick * Dt;
+
+    /// <summary>Verification: the level's clock moved on to so many seconds (the dive clock, DiveClock), as if she had waited.</summary>
+    public void DebugClockTo(float seconds) => Tick = Math.Max(Tick, (long)(seconds / Dt));
     /// <summary>The reef director: world events on their own timers (§4.7), whether she is near or not.</summary>
     public ReefDirector Director { get; }
     public PlaneBody Player { get; } = new();
