@@ -423,4 +423,12 @@ the tests of the dive still test the dive.
   - Not done: kelp walls her beam burns through, urchin beds as a hazard of their own, the Shipwreck's cannons that
     fire when a creature passes, amphorae to break, light-locked doors; the biomes' rock itself (its shapes and its
     surface are still the reef's); the Ruins' treasure.
+- **The biomes' ink (0.61.0):** in the ink look each biome's muted reef (out of her light) is washed in its own colour,
+  always dark, never quite black (`CameraRig.SetInkBiome`, topdown_post's `ink_tint`): the Sunlit Reef blue, the Kelp
+  Forest green, the Shipwreck red, the Ruins yellow; its water leans the same way. Each has its own pattern
+  (`ink_pattern`), fixed to the reef so it never crawls: a **halftone screen** at the soft edge of each tone (the reef's
+  45° dots, the kelp's steep lines, the wreck's grain-wavering lines, the ruins' squares, `ink_screen`) and a **motif**
+  drawn darker into its unlit rock and faintly on its floor (`ink_motif`): the reef's scattered polyps, the kelp's
+  wavering strands, the wreck's planks with their seams, butt joints and grain, the ruins' mosaic with its grout and a
+  tile gone here and there. Her light shows the reef in its own colours over all of it.
 

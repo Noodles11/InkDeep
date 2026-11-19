@@ -131,6 +131,23 @@ public partial class CameraRig : Node3D
     /// </summary>
     public void SetInk(bool on) => _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ink_look"), on ? 1f : 0f);
 
+    /// <summary>
+    /// The ink look's biome (topdown_post's ink_tint, ink_pattern): the colour its muted reef is washed in, dark (the
+    /// Sunlit Reef blue, the Kelp Forest green, the Shipwreck red, the Ruins yellow), and its pattern.
+    /// </summary>
+    public void SetInkBiome(OctoShoots.Core.Run.Biome biome)
+    {
+        var (tint, pattern) = biome switch
+        {
+            OctoShoots.Core.Run.Biome.KelpForest => (new Vector3(0.3f, 0.72f, 0.38f), 1),
+            OctoShoots.Core.Run.Biome.Shipwreck => (new Vector3(0.82f, 0.28f, 0.22f), 2),
+            OctoShoots.Core.Run.Biome.SunkenRuins => (new Vector3(0.86f, 0.72f, 0.32f), 3),
+            _ => (new Vector3(0.32f, 0.5f, 0.85f), 0),
+        };
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ink_tint"), tint);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ink_pattern"), pattern);
+    }
+
     public void SetReducedMotion(bool reduced) => _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("wobble"), reduced ? 0f : 1f);
 
     /// <summary>Light bubbles: the halos her bubbles and their pop blooms cast on the swim layer (x, z, radius, strength).</summary>

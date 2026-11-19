@@ -140,6 +140,11 @@ uniform int blur_count = 0;
 // or has cleansed keeps its colour, its lines traced in coral and magenta light. (The paper's grain lies over all of
 // it: fisheye.gdshader's grain.)
 uniform float ink_look = 0.0;
+// The biome's own ink (CameraRig.SetInkBiome): the colour its muted reef is washed in, always dark (the Sunlit Reef
+// blue, the Kelp Forest green, the Shipwreck red, the Ruins yellow), and its pattern (ink_screen, ink_motif): 0 the
+// reef's polyps and dot screen, 1 the kelp's strands, 2 the wreck's planks and grain, 3 the ruins' mosaic.
+uniform vec3 ink_tint = vec3(0.32, 0.5, 0.85);
+uniform int ink_pattern = 0;
 // Ink, ash, the unlit water and the traced light's two ends.
 const vec3 INK = vec3(0.012, 0.014, 0.024);
 const vec3 ASH = vec3(0.6, 0.59, 0.56);
@@ -311,6 +316,51 @@ vec2 ink_line(float h, vec2 wp, vec2 uv, vec2 frag, mat4 ip, mat4 iv, vec2 viewp
 	// (Dry-brush gaps: here and there the line thins out.)
 	float dry = smoothstep(0.12, 0.3, value_noise(wp * 0.6 + 31.0));
 	return vec2(max(rim * dry, floor_line), art_outline(uv, frag, ip, iv, viewport) * 0.9);
+}
+
+// The biome's halftone screen (the ink look), fixed to the world (about 0.22 m a cell), 0..1 the threshold field its
+// dots or lines grow by: the reef's 45° dots, the kelp's steep lines, the wreck's grain-wavering lines, the ruins' squares.
+float ink_screen(vec2 wp) {
+	vec2 p = wp * 4.5;
+	if (ink_pattern == 1) {
+		vec2 r = mat2(vec2(0.26, 0.966), vec2(-0.966, 0.26)) * p;
+		return abs(fract(r.x) - 0.5) * 2.0;
+	}
+	if (ink_pattern == 2) return abs(fract(p.y + value_noise(p * 0.12) * 0.7) - 0.5) * 2.0;
+	if (ink_pattern == 3) {
+		vec2 f = abs(fract(p) - 0.5) * 2.0;
+		return max(f.x, f.y);
+	}
+	vec2 g = mat2(vec2(0.7071, 0.7071), vec2(-0.7071, 0.7071)) * p;
+	return length(fract(g) - 0.5) * 1.414;
+}
+
+// The biome's motif on its unlit rock (the ink look), 0..1 where it marks it: the reef's scattered polyps, the kelp's
+// wavering strands, the wreck's planks (their seams, butt joints and grain), the ruins' mosaic (grout, a tile gone).
+float ink_motif(vec2 wp) {
+	if (ink_pattern == 1) {
+		float x = wp.x * 0.9 + sin(wp.y * 0.55 + value_noise(wp * 0.25) * 3.0) * 0.4;
+		return (1.0 - smoothstep(0.05, 0.12, abs(fract(x) - 0.5))) * smoothstep(0.25, 0.6, value_noise(wp * vec2(0.4, 0.12) + 5.0));
+	}
+	if (ink_pattern == 2) {
+		float v = wp.y / 0.55, row = floor(v);
+		float seam = 1.0 - smoothstep(0.02, 0.05, abs(fract(v + 0.5) - 0.5) * 0.55);
+		float u = (wp.x + hash12(vec2(row, 7.0)) * 2.4) / 2.4;
+		float joint = 1.0 - smoothstep(0.02, 0.05, abs(fract(u + 0.5) - 0.5) * 2.4);
+		float grain = smoothstep(0.58, 0.72, value_noise(vec2(wp.x * 0.7, wp.y * 11.0))) * 0.55;
+		return max(max(seam, joint), grain);
+	}
+	if (ink_pattern == 3) {
+		vec2 t = wp / 0.7;
+		vec2 d = abs(fract(t + 0.5) - 0.5) * 0.7;
+		float grout = 1.0 - smoothstep(0.02, 0.05, min(d.x, d.y));
+		float gone = step(0.9, hash12(floor(t) + 3.0)) * 0.6;
+		return max(grout, gone);
+	}
+	vec2 c = floor(wp / 0.9);
+	vec2 j = vec2(hash12(c), hash12(c + 17.0));
+	float dd = length(fract(wp / 0.9) - (0.2 + 0.6 * j)) * 0.9;
+	return (1.0 - smoothstep(0.08, 0.14, dd)) * step(0.35, hash12(c + 41.0));
 }
 
 void fragment() {
@@ -701,14 +751,20 @@ void fragment() {
 		float il0 = min(il / max(mix(unlit_dim, 1.0, shown), 0.05), 1.0);
 		// Flat washes: the light stepped into four tones, each step's soft edge a halftone (a 45° dot screen whose dots
 		// grow as the edge goes on), so a shadow is a flat fill with dots at its edge, never a gradient.
-		vec2 g = mat2(vec2(0.7071, 0.7071), vec2(-0.7071, 0.7071)) * FRAGCOORD.xy / 5.0;
-		float dotted = length(fract(g) - 0.5) * 1.414;
+		// (The biome's own screen, fixed to the reef: ink_screen.)
+		float dotted = ink_screen(wp);
 		float x0 = sqrt(il0) * 4.0;
 		float q0 = (floor(x0) + step(dotted, sqrt(smoothstep(0.45, 1.0, fract(x0))))) / 4.0;
 		// Where she does not light it: the rock a wash of ash, the water and the floor under it near-black blue ink.
 		float rock = smoothstep(-0.3, 0.5, h);
-		vec3 ash = mix(INK * 2.0, ASH * 0.4, min(q0 * q0 * 1.5, 1.0));
-		vec3 deep = mix(INK_WATER, INK_WATER * 1.7 + ASH * 0.02, q0);
+		// (Washed in the biome's colour, always dark; its motif drawn darker into the rock, faintly on the floor.)
+		vec3 wash = mix(ASH * 0.4, ink_tint * 0.42, 0.7);
+		// (Never all the way to black: the biome's colour shows even on its darkest rock.)
+		vec3 ash = mix(INK * 2.0 + ink_tint * 0.05, wash, clamp(0.3 + q0 * q0 * 1.3, 0.0, 1.0));
+		ash *= 1.0 - 0.4 * ink_motif(wp);
+		vec3 water = mix(INK_WATER, ink_tint * 0.08, 0.6);
+		vec3 deep = mix(water, water * 1.7 + ink_tint * 0.03, q0);
+		deep *= 1.0 - 0.15 * ink_motif(wp * 0.8 + 11.0);
 		vec3 unlit = mix(deep, ash, rock);
 		// In her light (and what she has cleansed) its own colour, clean and smooth: her light is never put through the
 		// washes' steps or the halftone, and it comes in quickly at its edge (the ash's dots never catch its gradient).
