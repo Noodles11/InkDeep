@@ -581,6 +581,7 @@ public static partial class TopDownGenerator
         open = cave?.Open ?? Array.Empty<bool>();
         if (cave is null) return why;
         map.MobMarks.AddRange(cave.MobMarks);
+        map.Cells.AddRange(cave.CellNames);
         map.PoiMarks.AddRange(cave.PoiMarks);
         map.VaultMarks.AddRange(cave.VaultMarks);
         RecordCave(map, cave, plan.EntryFromArena ? ArenaRadius : StartRadius, plan.HasBoss ? ArenaRadius : StartRadius, spurDirs);

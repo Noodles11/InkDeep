@@ -17,6 +17,8 @@ public sealed partial class CaveLayout
 {
     /// <summary>Its mob marks (where the roster puts a creature) and its POI marks not taken by a place, all in open water.</summary>
     public readonly List<(Vector2 At, MobTag Tag)> MobMarks = new();
+    /// <summary>The cells it was built from, by name (each the biome's own, or a room cell), in the grid's order.</summary>
+    public readonly List<string> CellNames = new();
     public readonly List<Vector2> PoiMarks = new();
     /// <summary>Its bubble vaults' marks (CROSSOVER.md §5.1), in open water by a wall.</summary>
     public readonly List<Vector2> VaultMarks = new();
@@ -204,6 +206,7 @@ public sealed partial class CaveLayout
             if (pool.Count == 0 && use[i] != Use.Room) pool = CaveTemplates.SunlitVariants.Where(v => v.Openings == opens).ToList();
             if (pool.Count == 0) return (null, $"no cave template opens {opens}");
             var v = pool[rng.Int(pool.Count)];
+            g.CellNames.Add(v.Name);
             var cell = (char[,])v.Grid.Clone();
             foreach (var (sx, sy) in v.Slots)
             {

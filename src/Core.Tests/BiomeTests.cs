@@ -150,6 +150,28 @@ public class BiomeTests
             }
     }
 
+    [Theory]
+    [InlineData(1, 0)]
+    [InlineData(2, 0)]
+    [InlineData(2, 1)]
+    [InlineData(3, 0)]
+    public void Every_level_of_a_biome_is_built_only_from_that_biome_s_own_cells(int shownDepth, int branch)
+    {
+        var biome = Biomes.Of(At(shownDepth, 1, branch));
+        var own = CaveTemplates.VariantsOf(biome).Select(v => v.Name).ToHashSet();
+        var rooms = CaveTemplates.RoomVariants.Select(v => v.Name).ToHashSet();
+        foreach (var seed in new[] { TestLevels.Seed, SeedCode.FromValue(0xC0FFEEUL), SeedCode.FromValue(0xBEEF42UL) })
+            for (int level = 1; level <= LevelStocking.LevelsPerDepth; level++)
+            {
+                var map = TopDownGenerator.Generate(new RunStreams(seed), At(shownDepth, level, branch), crossover: true);
+                Assert.NotEmpty(map.Cells);
+                Assert.All(map.Cells, name => Assert.True(own.Contains(name) || rooms.Contains(name), $"{biome} level {level} uses the cell '{name}'"));
+            }
+        // (And no two biomes share a cell.)
+        foreach (var other in Enum.GetValues<Biome>().Where(b => b != biome))
+            Assert.Empty(own.Intersect(CaveTemplates.VariantsOf(other).Select(v => v.Name)));
+    }
+
     [Fact]
     public void A_saved_run_keeps_its_branch()
     {

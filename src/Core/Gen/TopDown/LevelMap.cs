@@ -388,6 +388,8 @@ public sealed class LevelMap
     public OctoShoots.Core.Run.Biome Biome;
     /// <summary>A template level's mob marks (where its roster puts a creature), in open water.</summary>
     public List<(Vector2 At, MobTag Tag)> MobMarks = new();
+    /// <summary>A template level's cells, by name (CaveLayout.CellNames): its biome's own (CaveTemplates.VariantsOf), and its room cells.</summary>
+    public List<string> Cells = new();
     /// <summary>A template level's POI marks no place took: spots where a place could stand, in open water.</summary>
     public List<Vector2> PoiMarks = new();
     /// <summary>A template level's bubble vaults' marks (CROSSOVER.md §5.1): in open water, by a wall.</summary>

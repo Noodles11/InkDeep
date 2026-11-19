@@ -431,4 +431,7 @@ the tests of the dive still test the dive.
   drawn darker into its unlit rock and faintly on its floor (`ink_motif`): the reef's scattered polyps, the kelp's
   wavering strands, the wreck's planks with their seams, butt joints and grain, the ruins' mosaic with its grout and a
   tile gone here and there. Her light shows the reef in its own colours over all of it.
+  (0.61.1) The wash kept as dark as the plain ink look (its tint a lean, not a lift). Every crossover level records the
+  cells it was built from (`LevelMap.Cells`), and each biome's levels are checked to be built only from its own (and the
+  room cell): no two biomes share a cell.
 

@@ -759,10 +759,9 @@ void fragment() {
 		float rock = smoothstep(-0.3, 0.5, h);
 		// (Washed in the biome's colour, always dark; its motif drawn darker into the rock, faintly on the floor.)
 		vec3 wash = mix(ASH * 0.4, ink_tint * 0.42, 0.7);
-		// (Never all the way to black: the biome's colour shows even on its darkest rock.)
-		vec3 ash = mix(INK * 2.0 + ink_tint * 0.05, wash, clamp(0.3 + q0 * q0 * 1.3, 0.0, 1.0));
+		vec3 ash = mix(INK * 2.0 + ink_tint * 0.02, wash, min(q0 * q0 * 1.5, 1.0));
 		ash *= 1.0 - 0.4 * ink_motif(wp);
-		vec3 water = mix(INK_WATER, ink_tint * 0.08, 0.6);
+		vec3 water = mix(INK_WATER, ink_tint * 0.07, 0.35);
 		vec3 deep = mix(water, water * 1.7 + ink_tint * 0.03, q0);
 		deep *= 1.0 - 0.15 * ink_motif(wp * 0.8 + 11.0);
 		vec3 unlit = mix(deep, ash, rock);
