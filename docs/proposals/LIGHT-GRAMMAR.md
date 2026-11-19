@@ -229,8 +229,7 @@ Every word gets a sim test (`BeamPearlTests`) and a capture; every step ends wit
 
 - **Too much light.** Conservation (§2) and the ray cap are the guard; the first tuning pass after step 2 checks that
   a full lattice build clears a level no more than about twice as fast as a plain beam.
-- **Colour against the art rules.** CLAUDE.md asks for no accent colours in the UI for damage or healing. This is not
-  UI: it is her light, tinted, and corruption stays ink. Ember is a warm red-gold, Frost a pale blue-white, Bloom a
+- **Colour against the art rules.** CLAUDE.md now allows any colour; the corruption itself stays ink. Ember is a warm red-gold, Frost a pale blue-white, Bloom a
   soft sea-green: tints of her light, never neon.
 - **Readability.** Coloured, forking light could undo the readability pass. Born rays are fainter than her own beam,
   and the unlit reef stays grey, so colour appears only where her light is.

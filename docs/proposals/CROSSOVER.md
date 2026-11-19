@@ -277,9 +277,9 @@ The game's two forces keep their roles; the crossover gives each a sharper, more
 
 - *Kept:* creatures look real; ink belongs to the corruption and drains colour; she outshines everything but a
   cleansing burst; no faces, no cut-ins.
-- *Changed:* CLAUDE.md's "avoid other accent colours" allows **two** accents on this branch, **magenta** (the warm
-  end of her light, and the edges of what she cleansed) and **cyan** (cold, old light: alien and Atlantean
-  machines). Neither is ever used for the corruption, damage or healing.
+- *Changed:* CLAUDE.md no longer limits accent colours: any colour is allowed. The ink look uses **magenta** (the
+  warm end of her light, and the edges of what she cleansed) and **cyan** (cold, old light: alien and Atlantean
+  machines); the corruption's own bodies and projectiles stay ink.
 
 **How.** The shaders in `assets/shaders` already include a watercolour study (`ArtLook.Watercolour`) and the painted
 Blue Hollow look. The ink look adds an outline pass (depth and normal edges), a posterised light ramp with a

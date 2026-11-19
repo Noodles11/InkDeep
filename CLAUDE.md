@@ -14,7 +14,8 @@ superseded designs (history only, never rules).
 - **Two forces, two looks.** Light is Clementine's: warm gold to white, bright and alive. Corruption is ink: black,
   glossy, light-drinking, and it drains colour out of the world (grey, ashen) rather than painting it. Anything that
   belongs to the corruption (its creatures' bodies, their projectiles, meters, stains) uses the ink look. Anything
-  that cleanses uses light. Avoid other accent colours (no red/green UI for damage or healing).
+  that cleanses uses light. Beyond that, any colour is allowed: accents, UI colours and tints of her light are free to
+  use where they help.
 - **Clementine stays the warm light in the scene.** Nothing else should out-glow her except a moment of cleansing
   (a burst, a freed creature).
 - **No boss cut-in, no faces in play.** Bosses are met in their arena alone.
