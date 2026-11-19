@@ -278,4 +278,22 @@ the tests of the dive still test the dive.
     never takes her last light (with two pips or less it refuses: "Too little light to give"). It differs from the
     Crab Deal, which cuts her most health. `--at=shrine` / `--at=shrine-on` (verification).
   - Step 3 is now built but for the active pearl charging by freeing creatures (§6), which comes with the rosters.
+- **Step 4 (0.53.0), the boss level:** a boss level is a template level too (`LevelPlan.Templated` now holds for
+  every crossover level but the tutorial's). Its walk ends in the **arena**: the 2 × 2 block of the last two rows
+  round where the walk would end, carved as one round cave (`CaveLayout.ArenaRadius`, 15 m, its wall wavering a
+  little) with a doorway to each cell joined to it; the walk's cells past where it first enters the block are left
+  out. The generator's own boss stages work on it unchanged: the sealed boss walls across each doorway, the Crack in
+  the middle. Its clock opens no dive: when it has run, **the current rises** (`PlaneTide.cs`, `TideTuning`): the
+  water flows toward the arena from everywhere along the level's own ways (down the distance through the water to
+  the arena's middle), 1 m/s at first and 0.5 m/s more every 5 s, to 9 (faster than she swims within about a
+  minute). It carries her, the free-swimming creatures (murklings not budding or clinging, mobs, Thumpsquirts,
+  Blotters), the reef's fish, shells, orbs, freed light, loose pearls and ink clouds; rooted things stay. Inside the
+  arena it is still. A creature it brings within 3 m of the arena's rim **dissolves into ink** there (a dark bloom
+  and a gurgle) and adds 4% of the boss's own light to its corruption, to at most 60% more; a fish just leaves. It
+  stops when the boss is freed; the Crack then opens as before and is the way down (the **vortex**, restyled with the
+  ink look). The HUD's ring turns to a swirl of ink once the current runs, and she is told ("The current rises").
+  **Queen Clam** is the first depth's boss (`BossRoster.For(…, crossover)`; no neighbour waits there), so the first
+  depth plays through: four template levels with the dive clock, then her arena, then the next depth. Not done: the
+  current is not drawn yet (only what it carries moves), and the second vortex at a branch waits for the depths'
+  branches (step 7).
 

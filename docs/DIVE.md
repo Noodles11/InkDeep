@@ -76,6 +76,8 @@ into the mouth at the end of its spur, left by its way out, back out of the mout
 
 ## 5. Folk as the depths' bosses
 
+*(On the crossover branch no neighbour waits at Depth 1: its boss is Queen Clam, GAME.md §14.)*
+
 The dive has five depths below the tutorial, and each one's boss (on its fifth level) is a neighbour as the Leak made
 her (`Dives.FolkBossOf`, `TopDownMain.DiveBoss`, `FolkBosses`): Depth 1 Grandmother Tull, Depth 2 Kip, Depth 3 Fennel,
 Depth 4 Ottilie, Depth 5 Bubbles, each at her own level. Freeing her saves her as freed at once, unlocks her for every

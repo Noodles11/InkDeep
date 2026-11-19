@@ -35,25 +35,29 @@ public sealed partial class CaveLayout
     /// <summary>The erosion (metres): two octaves of noise on the signed distance to the rock.</summary>
     const float Erode = 1.5f, ErodeFine = 0.6f;
 
+    /// <summary>The boss's arena (CROSSOVER.md §4): a round cave this wide in a 2 × 2 block of cells, its doorways this wide.</summary>
+    public const float ArenaRadius = 15f, ArenaDoor = 6f;
+
     /// <summary>
     /// One template cave for the level, or why none could be made. <paramref name="kinds"/> are the plan's places:
     /// those that live in a cave take a room cell, the rest a POI mark; one that finds no room or mark is left out.
+    /// <paramref name="boss"/>: a boss level, whose walk ends in the boss's arena (its exit), a 2 × 2 block of cells.
     /// </summary>
-    public static (CaveLayout? Layout, string? Why) FromTemplates(Rng rng, IReadOnlyList<PoiKind> kinds, Func<PoiKind, float> radius)
+    public static (CaveLayout? Layout, string? Why) FromTemplates(Rng rng, IReadOnlyList<PoiKind> kinds, Func<PoiKind, float> radius, bool boss = false)
     {
         string why = "no layout";
         for (int t = 0; t < TemplateTries; t++)
         {
-            var (g, w) = TryTemplates(rng, kinds, radius);
+            var (g, w) = TryTemplates(rng, kinds, radius, boss);
             if (g is not null) return (g, null);
             why = w!;
         }
         return (null, why);
     }
 
-    enum Use { None, Path, Side, Room }
+    enum Use { None, Path, Side, Room, Arena }
 
-    static (CaveLayout? Layout, string? Why) TryTemplates(Rng rng, IReadOnlyList<PoiKind> kinds, Func<PoiKind, float> radius)
+    static (CaveLayout? Layout, string? Why) TryTemplates(Rng rng, IReadOnlyList<PoiKind> kinds, Func<PoiKind, float> radius, bool boss)
     {
         const int C = Cells, CS = CaveTemplates.Cell;
         var use = new Use[C * C];
@@ -92,12 +96,31 @@ public sealed partial class CaveLayout
         foreach (int i in path) use[i] = Use.Path;
         int start = path[0], exit = path[^1];
 
+        // 1b. A boss level's arena: the 2 × 2 block of the last two rows round where the walk ends. The walk stops where it
+        // first enters the block (the cells it would have gone on through are left out), and the block is one room.
+        var arena = new List<int>();
+        if (boss)
+        {
+            int ex = exit % C;
+            int x0 = ex == 0 ? 0 : ex == C - 1 ? C - 2 : ex - rng.Int(2);
+            arena.AddRange(new[] { (C - 2) * C + x0, (C - 2) * C + x0 + 1, (C - 1) * C + x0, (C - 1) * C + x0 + 1 });
+            int enter = path.FindIndex(arena.Contains);
+            for (int k = enter + 1; k < path.Count; k++)
+                if (!arena.Contains(path[k])) use[path[k]] = Use.None;
+            links.RemoveWhere(l => use[l.A] == Use.None || use[l.B] == Use.None);
+            // (Within the block it is one room: no links between its own cells.)
+            links.RemoveWhere(l => arena.Contains(l.A) && arena.Contains(l.B));
+            path = path.Take(enter + 1).ToList();
+            foreach (int i in arena) use[i] = Use.Arena;
+            exit = path[^1];
+        }
+
         // 2. Side cells, up to two deep, until the level holds about its water.
         float goal = Area * rng.Range(0.92f, 1.04f);
-        for (int misses = 0; use.Count(u => u is Use.Path or Use.Side) * CellWater < goal && misses < 200;)
+        for (int misses = 0; use.Count(u => u is Use.Path or Use.Side or Use.Arena) * CellWater < goal && misses < 200;)
         {
             bool offPath = rng.NextFloat() < RouteParent;
-            var parents = Enumerable.Range(0, C * C).Where(i => use[i] == Use.Path || (!offPath && use[i] == Use.Side && depth[i] < BranchDepth)).ToList();
+            var parents = Enumerable.Range(0, C * C).Where(i => (use[i] == Use.Path && !arena.Contains(i)) || (!offPath && use[i] == Use.Side && depth[i] < BranchDepth)).ToList();
             int parent = parents[rng.Int(parents.Count)];
             var free = Around(parent).Where(n => use[n] == Use.None).ToList();
             if (free.Count == 0)
@@ -115,6 +138,9 @@ public sealed partial class CaveLayout
         int way = rng.Int(8);
         (int X, int Y) At(int i) => CaveTemplates.Way(i % C, i / C, C, way);
         Vector2 Middle(int i) => new(GridOrigin + At(i).X * CS + CS / 2f, GridOrigin + At(i).Y * CS + CS / 2f);
+        // The far end: the arena's middle on a boss level, else the last cell of the walk.
+        Vector2 arenaAt = arena.Count > 0 ? arena.Aggregate(Vector2.Zero, (s, i) => s + Middle(i)) / arena.Count : Vector2.Zero;
+        Vector2 FarEnd() => boss ? arenaAt : Middle(exit);
 
         // 4. Rooms: a cell of rock off the cave holding a place in its own cave, apart from the start, the exit and each other.
         var rooms = new List<(int Cell, int Parent, PoiKind Kind)>();
@@ -124,7 +150,7 @@ public sealed partial class CaveLayout
             for (int i = 0; i < C * C; i++)
             {
                 if (use[i] != Use.None || Around(i).Any(n => use[n] == Use.Room)) continue;
-                if (Vector2.Distance(Middle(i), Middle(start)) < PlaceRules.FromStart + 6f || Vector2.Distance(Middle(i), Middle(exit)) < PlaceRules.FromExit + 6f) continue;
+                if (Vector2.Distance(Middle(i), Middle(start)) < PlaceRules.FromStart + 6f || Vector2.Distance(Middle(i), FarEnd()) < PlaceRules.FromExit + 6f + (boss ? ArenaRadius : 0f)) continue;
                 if (rooms.Any(r => Vector2.Distance(Middle(r.Cell), Middle(i)) < 25f)) continue;
                 foreach (int n in Around(i))
                     if (use[n] is Use.Path or Use.Side) options.Add((i, n));
@@ -171,7 +197,7 @@ public sealed partial class CaveLayout
         var vaults = new List<Vector2>();
         for (int i = 0; i < C * C; i++)
         {
-            if (use[i] == Use.None) continue;
+            if (use[i] is Use.None or Use.Arena) continue;
             int opens = OpeningsOf(i);
             var pool = (use[i] == Use.Room ? CaveTemplates.RoomVariants : CaveTemplates.SunlitVariants).Where(v => v.Openings == opens).ToList();
             if (pool.Count == 0) return (null, $"no cave template opens {opens}");
@@ -195,6 +221,34 @@ public sealed partial class CaveLayout
                 else if (c == '*') spots.Add(p);
                 else if (c == 'v') vaults.Add(p);
                 else if (c == 'R') roomAt[i] = p;
+            }
+        }
+
+        // 6b. The arena: a round cave in its block, a doorway out to each cell joined to it, the wall wavering a little.
+        if (boss)
+        {
+            for (int y = 0; y < NN; y++)
+            for (int x = 0; x < NN; x++)
+            {
+                var p = new Vector2(x, y) - arenaAt;
+                float a = MathF.Atan2(p.Y, p.X);
+                if (p.Length() < ArenaRadius * (1f + 0.04f * MathF.Sin(3f * a + 1.3f) + 0.03f * MathF.Sin(5f * a))) raw[y * NN + x] = true;
+            }
+            foreach (var (a, b) in links)
+            {
+                int inside = arena.Contains(a) ? a : arena.Contains(b) ? b : -1;
+                if (inside < 0) continue;
+                int outside = inside == a ? b : a;
+                var door = (Middle(inside) + Middle(outside)) * 0.5f;
+                var inward = Vector2.Normalize(arenaAt - door);
+                var across = new Vector2(-inward.Y, inward.X);
+                for (float t = -0.5f; t <= ArenaRadius; t += 0.5f)
+                for (float s = -ArenaDoor / 2f; s <= ArenaDoor / 2f; s += 0.5f)
+                {
+                    var q = door + inward * t + across * s;
+                    int qx = (int)MathF.Round(q.X), qy = (int)MathF.Round(q.Y);
+                    if (qx >= 0 && qy >= 0 && qx < NN && qy < NN) raw[qy * NN + qx] = true;
+                }
             }
         }
 
@@ -253,6 +307,7 @@ public sealed partial class CaveLayout
             if (best < 2f) return (null, "a cave cell eroded shut");
             anchor[i] = (at, best);
         }
+        if (boss && !open[g.Index(arenaAt)]) return (null, "the arena eroded shut");
 
         // What joins the start.
         g.Open = open;
@@ -283,19 +338,28 @@ public sealed partial class CaveLayout
         g.Open = keep;
         g.OpenArea = area;
         if (anchor.Values.Any(a => !keep[g.Index(a.At)])) return (null, "a cave cell cut off by the erosion");
+        if (boss && !keep[g.Index(arenaAt)]) return (null, "the arena cut off by the erosion");
         if (area < g.Lo || area > g.Hi) return (null, $"cave water {area} m² (want {g.Lo:0}–{g.Hi:0})");
 
         // 9. The chambers and the tunnels between them.
         var chamberOf = new Dictionary<int, Chamber>();
         foreach (var (i, a) in anchor)
         {
-            var role = i == start ? Role.Start : i == exit ? Role.Exit : use[i] == Use.Path ? Role.Main : Role.Branch;
+            var role = i == start ? Role.Start : i == exit && !boss ? Role.Exit : use[i] == Use.Path ? Role.Main : Role.Branch;
             var chamber = new Chamber { At = a.At, R = Math.Clamp(a.Clear, 3.5f, 9f), Role = role, Depth = depth[i] };
             chamberOf[i] = chamber;
             g.Chambers.Add(chamber);
         }
         g.Start = chamberOf[start];
-        g.Exit = chamberOf[exit];
+        if (boss)
+        {
+            // The arena: one chamber for its whole block, the exit.
+            var hall = new Chamber { At = arenaAt, R = ArenaRadius, Role = Role.Exit };
+            g.Chambers.Add(hall);
+            foreach (int i in arena) chamberOf[i] = hall;
+            g.Exit = hall;
+        }
+        else g.Exit = chamberOf[exit];
         var clearKept = Chamfer(keep, false);
         foreach (var (a, b) in links)
         {
@@ -304,7 +368,7 @@ public sealed partial class CaveLayout
             if (line is null) return (null, "two joined cells not joined by water");
             chamberOf[a].Links.Add(chamberOf[b]);
             chamberOf[b].Links.Add(chamberOf[a]);
-            bool main = use[a] == Use.Path && use[b] == Use.Path;
+            bool main = (use[a] is Use.Path or Use.Arena) && (use[b] is Use.Path or Use.Arena);
             g.Tunnels.Add(new Tunnel { A = chamberOf[a], B = chamberOf[b], Kind = main ? CorridorKind.Main : CorridorKind.Side, Points = line.Value.Points, Width = Math.Clamp(2f * line.Value.Least, 4.2f, 9f) });
         }
 

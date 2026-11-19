@@ -77,8 +77,8 @@ public sealed class LevelPlan
     public int Havens { get; private set; }
     public int Caches { get; init; }
     /// <summary>
-    /// A crossover level built from cell templates (docs/proposals/CROSSOVER.md §2): every level but the tutorial's and
-    /// a boss's (those keep the grown cave until their own steps of the build).
+    /// A crossover level built from cell templates (docs/proposals/CROSSOVER.md §2): every level but the tutorial's (a
+    /// boss's ends in its arena, §4).
     /// </summary>
     public bool Templated { get; private set; }
     /// <summary>A template level's light shrine (CROSSOVER.md §5), 0 or 1.</summary>
@@ -145,7 +145,7 @@ public sealed class LevelPlan
         plan.Curses = 0;
         // (A secret room's labyrinth is a second layer: the crossover has none, CROSSOVER.md §3.)
         plan.Secrets = 0;
-        plan.Templated = !id.IsTutorial && !plan.HasBoss && !plan.LeakCave;
+        plan.Templated = !id.IsTutorial && !plan.LeakCave;
         // Its shop (CROSSOVER.md §5): with no havens, a template level from its second row on may hold one in a room cell,
         // rolled on a stream of its own so nothing else of the plan changes.
         if (plan.Templated && plan.Shops == 0 && id.Level >= 2 && plan.Places < LevelStocking.MaxPlaces

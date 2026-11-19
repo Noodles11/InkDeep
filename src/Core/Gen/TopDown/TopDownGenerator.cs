@@ -452,7 +452,8 @@ public static partial class TopDownGenerator
         SoftenSlopes(map, Stage("slopes"), strata);
         // A leak cave's deepest floor has no way down: its leak lies where the shaft would be (a floor above it, a hole).
         // A template level has none either: she dives anywhere once its clock has run (DiveClock).
-        if ((map.LeakCave && !map.HoleDown) || map.Templated) map.Shaft = NoShaft;
+        // (A template boss level keeps its Crack: the vortex down, open once the boss is freed.)
+        if ((map.LeakCave && !map.HoleDown) || (map.Templated && !map.HasBoss)) map.Shaft = NoShaft;
         else
         {
             CutShaft(map, Stage("shaft"));
@@ -570,7 +571,7 @@ public static partial class TopDownGenerator
 
         // A template level (docs/proposals/CROSSOVER.md §2): its cells, and the places its rooms and POI marks can hold.
         var (cave, why) = plan.Templated
-            ? CaveLayout.FromTemplates(rng, kinds.Where(k => k is not (PoiKind.Hole or PoiKind.Secret or PoiKind.LeakCave or PoiKind.Haven or PoiKind.CurseDen)).ToList(), RadiusOf)
+            ? CaveLayout.FromTemplates(rng, kinds.Where(k => k is not (PoiKind.Hole or PoiKind.Secret or PoiKind.LeakCave or PoiKind.Haven or PoiKind.CurseDen)).ToList(), RadiusOf, plan.HasBoss)
             : CaveLayout.Build(rng, plan.HasBoss, plan.EntryFromArena, kinds, RadiusOf, plan.Template?.Layout, plan.AreaScale);
         open = cave?.Open ?? Array.Empty<bool>();
         if (cave is null) return why;

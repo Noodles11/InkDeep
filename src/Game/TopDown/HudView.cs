@@ -261,6 +261,8 @@ public partial class HudView : Control
     string _prompt = "";
     /// <summary>The dive clock run so far, 0 → 1 (−1: a level without one), and how long its prompt shows once it has run.</summary>
     float _diveClock = -1f;
+    /// <summary>A boss level's clock: when full, the current rises (its ring turns to ink instead of breathing light).</summary>
+    bool _tide;
     const float DivePromptLinger = 6f;
     bool _promptReady;
     float _promptShown;
@@ -355,9 +357,12 @@ public partial class HudView : Control
         bool templated = world.Map.Templated;
         _diveClock = templated ? OctoShoots.Core.Plane.DiveClock.Progress(world.Time) : -1f;
         // Over the shaft: how to dive, or why not yet.
-        bool over = templated ? world.CanDive && !Diving && world.Time < OctoShoots.Core.Plane.DiveClock.Seconds + DivePromptLinger
+        // (A boss level's clock raises the current instead: its way down is the Crack, as before.)
+        bool anywhere = templated && !world.Map.HasBoss;
+        _tide = templated && world.Map.HasBoss;
+        bool over = anywhere ? world.CanDive && !Diving && world.Time < OctoShoots.Core.Plane.DiveClock.Seconds + DivePromptLinger
             : world.OverShaft && !world.Defeated && !Diving;
-        if (over && templated)
+        if (over && anywhere)
         {
             _promptReady = true;
             _prompt = "dive";
@@ -384,6 +389,13 @@ public partial class HudView : Control
         DrawArc(BellAt, r, 0f, Mathf.Tau, 72, new Color(0.02f, 0.03f, 0.05f, 0.45f), 5f, true);
         if (_diveClock > 0f) DrawArc(BellAt, r, -Mathf.Pi * 0.5f, -Mathf.Pi * 0.5f + Mathf.Tau * _diveClock, 72, new Color(1f, 0.86f, 0.58f, 0.85f), 3f, true);
         if (_diveClock < 1f) return;
+        if (_tide)
+        {
+            // The current runs: the ring goes dark, ink drawn round it.
+            float swirl = (float)(Time.GetTicksMsec() * 0.002 % Mathf.Tau);
+            DrawArc(BellAt, r, swirl, swirl + Mathf.Pi * 1.4f, 48, new Color(0.03f, 0.01f, 0.05f, 0.85f), 5f, true);
+            return;
+        }
         float breath = 0.5f + 0.5f * Mathf.Sin(Time.GetTicksMsec() * 0.003f);
         DrawArc(BellAt, r, 0f, Mathf.Tau, 72, new Color(1f, 0.95f, 0.82f, 0.18f + 0.22f * breath), 7f, true);
     }

@@ -23,6 +23,8 @@ how authored pieces combine, never from noise.
 
 ## 1. Where bosses come from
 
+*(On the crossover branch the first depth's boss is Queen Clam, the reference roll: `BossRoster.For(…, crossover)`, GAME.md §14.)*
+
 **Parked.** For now bosses are hardcoded, one per depth (`BossRoster`; DESIGN-TOPDOWN §12.2): every depth meets
 Drippus Prime (docs/CORRUPTION.md), scaled by Menace. It is authored, not generated: its body plan (Ink: a creature of
 ink, no animal), form (Murkling), concept (The Brood), exposure (Whole: its whole body takes her light) and attacks

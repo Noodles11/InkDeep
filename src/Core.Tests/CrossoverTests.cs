@@ -105,12 +105,12 @@ public class CrossoverTests
     }
 
     [Fact]
-    public void Only_ordinary_crossover_levels_are_templated()
+    public void Every_crossover_level_but_the_tutorial_s_is_templated()
     {
         foreach (var id in Ids)
         {
             var plan = LevelPlan.For(TestLevels.Seed, id, crossover: true);
-            Assert.Equal(!plan.HasBoss && !id.IsTutorial, plan.Templated);
+            Assert.Equal(!id.IsTutorial, plan.Templated);
             Assert.False(LevelPlan.For(TestLevels.Seed, id).Templated);
         }
         Assert.False(LevelPlan.For(TestLevels.Seed, LevelId.First, crossover: true).Templated);
@@ -346,5 +346,77 @@ public class CrossoverTests
         Assert.True(stand.Sold);
         Assert.Equal(halves - LightPips.ShrineHalves, LightPips.Halves(w.Player.Hp));
         Assert.Contains(w.Pearls, q => q.ItemId == stand.ItemId);
+    }
+
+    static readonly Lazy<LevelMap> BossMap = new(() =>
+        TopDownGenerator.Generate(new RunStreams(TestLevels.Seed), Ids.First(id => !id.IsTutorial && LevelPlan.For(TestLevels.Seed, id, crossover: true).HasBoss), crossover: true));
+
+    [Fact]
+    public void A_template_boss_level_ends_in_a_sealed_round_arena_round_the_Crack()
+    {
+        var map = BossMap.Value;
+        Assert.True(map.Templated && map.HasBoss);
+        Assert.Null(LevelValidator.Validate(map));
+        Assert.Equal(CaveLayout.ArenaRadius, map.Exit.Radius);
+        Assert.Contains(map.WeakRocks, r => r.Kind == SealKind.Boss);
+        Assert.NotEmpty(map.Holes);
+        Assert.True(map.InShaft(map.Exit.Position, 0.5f), "no Crack in the arena's middle");
+        // Its floor is open water all round, out to most of its radius.
+        for (int k = 0; k < 16; k++)
+        {
+            var q = map.Exit.Position + new Vector2(MathF.Cos(k * MathF.Tau / 16f), MathF.Sin(k * MathF.Tau / 16f)) * (CaveLayout.ArenaRadius * 0.75f);
+            Assert.True(map.IsOpen(q), $"rock in the arena at {q}");
+        }
+    }
+
+    [Fact]
+    public void The_first_depth_s_boss_is_Queen_Clam()
+    {
+        Assert.Equal("Queen Clam", OctoShoots.Core.Bosses.BossRoster.For(TestLevels.Seed.Value, 1, 1, crossover: true).Name);
+        Assert.NotEqual("Queen Clam", OctoShoots.Core.Bosses.BossRoster.For(TestLevels.Seed.Value, 1, 1).Name);
+        var w = new PlaneWorld(BossMap.Value, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()));
+        if (BossMap.Value.Depth - LevelPlan.Tutorial == 1) Assert.Equal("Queen Clam", w.Boss!.Spec.Name);
+        Assert.False(w.CanDive);
+    }
+
+    [Fact]
+    public void On_a_boss_level_the_clock_raises_a_current_that_carries_her_to_the_arena()
+    {
+        var w = new PlaneWorld(BossMap.Value, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()));
+        var reach = LevelValidator.Distances(w.Map, w.ArenaCenter);
+        Assert.False(w.TideActive);
+        Assert.Equal(Vector2.Zero, w.TideAt(w.Player.Position));
+        w.DebugClockTo(DiveClock.Seconds + 0.5f);
+        w.Step(default);
+        Assert.True(w.TideActive);
+        Assert.Contains(w.Events, e => e.Type == PlaneEventType.TideRose);
+        Assert.Equal(Vector2.Zero, w.TideAt(w.ArenaCenter));
+        // Left to it, she is carried nearer the arena along the water, faster as it rises.
+        float before = LevelValidator.DistanceAt(reach, w.Player.Position);
+        for (int i = 0; i < 600 && !w.Defeated; i++) w.Step(default);
+        float after = LevelValidator.DistanceAt(reach, w.Player.Position);
+        Assert.True(after < before - 10f, $"{before:0.0} m from the arena, then {after:0.0} m");
+        Assert.True(w.TideStrength > TideTuning.Start);
+    }
+
+    [Fact]
+    public void A_creature_the_current_brings_to_the_arena_dissolves_and_feeds_the_boss()
+    {
+        var w = new PlaneWorld(BossMap.Value, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()));
+        w.DebugClockTo(DiveClock.Seconds + 0.5f);
+        float max = w.Boss!.MaxHp;
+        // A free-swimming creature just outside the arena's mouth, on open water toward the start.
+        var path = LevelValidator.ShortestPath(w.Map, w.ArenaCenter, w.Map.Start.Position, clearance: 1f);
+        var at = path.First(q => Vector2.Distance(q, w.ArenaCenter) > CaveLayout.ArenaRadius + TideTuning.Mouth + 1.5f);
+        w.Mobs.Add(new PlaneMob { Position = at, Home = at, Rng = new Rng(1) });
+        int dissolved = 0;
+        for (int i = 0; i < 600 && dissolved == 0; i++)
+        {
+            w.Step(default);
+            dissolved = w.Dissolved;
+        }
+        Assert.True(dissolved > 0, "nothing dissolved");
+        Assert.True(w.Boss.MaxHp > max);
+        Assert.True(w.Boss.MaxHp <= max * (1f + TideTuning.FeedMost) + 0.01f);
     }
 }

@@ -267,7 +267,8 @@ public sealed partial class PlaneWorld
     void PlaceBoss()
     {
         if (!Map.HasBoss || Map.Rift) return;
-        var spec = Options.Boss ?? BossRoster.For(Map.Seed, Map.Cycle, Math.Max(1, Map.Depth - LevelPlan.Tutorial));
+        // (A template boss level is the crossover's: its roster, CROSSOVER.md §8.)
+        var spec = Options.Boss ?? BossRoster.For(Map.Seed, Map.Cycle, Math.Max(1, Map.Depth - LevelPlan.Tutorial), crossover: Map.Templated);
         Boss = new PlaneBoss { Spec = spec, Position = ArenaCenter, Hp = spec.Hp, MaxHp = spec.Hp, TelegraphLength = spec.Telegraph };
         if (IsDrippus(Boss)) Boss.Mass = DrippusTuning.Mass;
         // It lies with its opening toward the screen (south, the camera's side), so the pearl shows.

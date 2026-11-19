@@ -344,7 +344,7 @@ Each step ends with a build that runs and passing tests.
    POI marks; the dive clock. *First playable: endless Sunlit Reef levels.* *(3 weeks)*
 3. **Pickups, pips and places** (built in 0.51.0–0.52.0 but for the active's charge by freeing; GAME.md §14): shell worths, healing orbs, bubble vaults, light pips; shop, clam, deal, shrine,
    secret as POI marks; pools by place; the HUD. *(2 weeks)*
-4. **The boss level:** the arena template, the rising current, dissolving creatures, the vortex; Queen Clam moved in.
+4. **The boss level** (built in 0.53.0: GAME.md §14; the current not drawn yet): the arena template, the rising current, dissolving creatures, the vortex; Queen Clam moved in.
    *A full first depth.* *(2 weeks)*
 5. **Treasures:** `TreasureCatalog`, the start cave, the Pearl Altar, the first three treasures. *(1 week)*
 6. **The ink look:** outline, halftone, paper grain, her sunset gradient, the neon edges of cleansed things.

@@ -41,7 +41,7 @@ public partial class TopDownMain
     /// way down is wherever she began her dive (before that, where she is).
     /// </summary>
     System.Numerics.Vector2 HoleCenter(int hole) =>
-        _map.Templated ? _diveAt ?? _world?.Player.Position ?? _map.Start.Position
+        _map.Templated && !_map.HasBoss ? _diveAt ?? _world?.Player.Position ?? _map.Start.Position
         : hole >= 0 && hole < _map.Holes.Count ? _map.Holes[hole].Shaft.Center : _map.Exit.Position;
 
     /// <summary>Where she began her dive on a template level (null: she has not).</summary>
@@ -96,7 +96,7 @@ public partial class TopDownMain
         if (InDiveCave) return;
         StartNextHoleShape();
         // A template level shows the level below only once she dives, under where she is (it has no hole to show it through).
-        if (_map.Templated && _diveHole < 0) return;
+        if (_map.Templated && !_map.HasBoss && _diveHole < 0) return;
         int want = _diveHole >= 0 ? _diveHole : NearestHole();
         if (want == _belowHole) return;
         if (_belowHole >= 0 && _diveHole < 0

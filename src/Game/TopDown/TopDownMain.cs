@@ -723,7 +723,8 @@ public partial class TopDownMain : Node3D
     /// </summary>
     PlaneOptions? DiveBoss()
     {
-        if (!_map.HasBoss || _map.Rift || _jelly is not { } jelly || Dives.FolkBossOf(_id, jelly) is not { } folk || Folk.Get(folk) is not { } n
+        // (The crossover's first depth is Queen Clam's, CROSSOVER.md §8: no neighbour waits there.)
+        if (!_map.HasBoss || _map.Rift || OctoShoots.Core.Run.Crossover.On && _id.ShownDepth == 1 || _jelly is not { } jelly || Dives.FolkBossOf(_id, jelly) is not { } folk || Folk.Get(folk) is not { } n
             || OctoShoots.Core.Bosses.FolkBosses.For(n.Id, n.Level, _map.Menace) is not { } spec) return null;
         var d = PlaneOptions.Default;
         return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Shots = d.Shots, Boss = spec };
@@ -2593,6 +2594,15 @@ public partial class TopDownMain : Node3D
                 CurseEvent(e);
                 if (e.Type == PlaneEventType.Dived) dived = true;
                 // The dive clock has run (docs/proposals/CROSSOVER.md §3): a soft chime, and the way down is anywhere.
+                // The boss level's current rises (docs/proposals/CROSSOVER.md §4): a long rumble, and she is told.
+                else if (e.Type == PlaneEventType.TideRose)
+                {
+                    _sfx.PlayPitched("sand_sink", 0.6f, -4f);
+                    _camera.Shake(0.25f);
+                    _haptics.Pulse(0.4f, 0.5f, 0.8f);
+                    Say("The current rises: it pulls everything toward the arena");
+                }
+                else if (e.Type == PlaneEventType.TideDissolved) _sfx.PlayAt("gurgle", new Vector3(e.Position.X, LevelMap.SwimBand, e.Position.Y), -6f, 0.15f);
                 else if (e.Type == PlaneEventType.DiveOpened)
                 {
                     _sfx.PlayPitched("bell_ring", 1.5f, -12f);
@@ -3042,7 +3052,7 @@ public partial class TopDownMain : Node3D
         _diveTime = 0f;
         _diveFrom = _world.Player.Position;
         // (A template level: down where she is.)
-        if (_map.Templated) _diveAt = _diveFrom;
+        if (_map.Templated && !_map.HasBoss) _diveAt = _diveFrom;
         // Down the hole she is over (the first, if she is somehow over none).
         _diveHole = Math.Max(0, _world.HoleUnder);
         var next = _diveTo = DestinationOf(_diveHole);

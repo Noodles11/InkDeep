@@ -299,7 +299,7 @@ public sealed partial class PlaneWorld
     /// She may dive now (DESIGN-TOPDOWN §4.6): over a hole that is open (its leak sealed), and no battle on. On a template
     /// level (docs/proposals/CROSSOVER.md §3): anywhere, once the dive clock has run.
     /// </summary>
-    public bool CanDive => Map.Templated ? DiveClock.Open(Time) && !Defeated : OverShaft && HoleOpen(HoleUnder) && !InBattle && !Defeated;
+    public bool CanDive => Map.Templated && !Map.HasBoss ? DiveClock.Open(Time) && !Defeated : OverShaft && HoleOpen(HoleUnder) && !InBattle && !Defeated;
 
     /// <summary>The dive clock has run on this template level (DiveOpened told).</summary>
     bool _diveOpened;
@@ -516,7 +516,7 @@ public sealed partial class PlaneWorld
         Run.Hp = p.Hp;
 
         // The dive clock runs out: the dive opens (a chime in the game).
-        if (Map.Templated && !_diveOpened && DiveClock.Open(Time))
+        if (Map.Templated && !Map.HasBoss && !_diveOpened && DiveClock.Open(Time))
         {
             _diveOpened = true;
             Events.Add(new PlaneEvent(PlaneEventType.DiveOpened, p.Position, Vector2.Zero));
