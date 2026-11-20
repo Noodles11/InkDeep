@@ -43,6 +43,7 @@ public partial class TopDownMain
         _camera.SetInk(InkLook);
         // (Its biome's ink: the muted reef's colour and pattern.)
         _camera.SetInkBiome(_map.Templated ? _map.Biome : OctoShoots.Core.Run.Biome.SunlitReef);
+        _camera.SetShotLight(LightMemory.ShotSpread, LightMemory.ShotShown);
         _fisheye.SetGrain(InkLook);
         ShowcaseOn = _showcase;
         _wake = _showcase ? LeaksSealedShare : 0f;

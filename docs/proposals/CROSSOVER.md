@@ -65,16 +65,16 @@ or a good secret can't be authored.
 
 **Changes** the way down. Today she seals the reef's leak, holes open, and she chooses one. Instead:
 
-- **Ordinary levels:** after **2 minutes** on the level, she may **dive anywhere**: press dive and she sinks through
+- **Ordinary levels:** after **30 seconds** on the level (built so in 0.66.0; first 2 minutes), she may **dive anywhere**: press dive and she sinks through
   the seabed to the next level's start. There is nothing to seal, find or beat first. A level can be passed in two
   minutes of drifting, or explored for as long as she likes.
 - **No going back up.** A level she has left is gone.
-- **The clock** is shown as a ring round her bell on the HUD, filling over the two minutes, with a soft chime
+- **The clock** is shown as a ring round her bell on the HUD, filling over the 30 seconds, with a soft chime
   when the dive opens.
 - **One layer.** A level is a single swimming plane: no back layer, no sub-levels (leak caves and labyrinths go).
 
 **Why.** It is the simplest possible way down, and it keeps every POI a real choice: the only reason to swim into
-the shop, the deal or the secret is that she wants what is there. It also caps how short a run can be (2 minutes a
+the shop, the deal or the secret is that she wants what is there. It also caps how short a run can be (30 seconds a
 level), so speed runs stay possible but never trivial.
 
 ## 4. The boss level and the current (Spelunky's ghost)
@@ -82,7 +82,7 @@ level), so speed runs stay possible but never trivial.
 The **last level of each depth** holds the **boss room**: an arena cave set in the template grid like any other cell
 (a hand-made template the size of 2 × 2 cells).
 
-- **On the boss level the clock does not open a dive.** At 2 minutes the level's water starts to move: a **current
+- **On the boss level the clock does not open a dive.** At 2 minutes (its own clock, `TideTuning.After`) the level's water starts to move: a **current
   rises** from the far edges and grows stronger every few seconds, **pushing everything that is not attached to the
   surface toward the boss room**: her, free-swimming creatures, shells, orbs, loose pearls, the reef's fish and
   drift. What is fixed to rock or seabed stays (rooted creatures such as Blightroots and Lashjaws, clams, anemones,

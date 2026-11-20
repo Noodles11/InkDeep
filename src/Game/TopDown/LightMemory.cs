@@ -87,10 +87,10 @@ public sealed class LightMemory
             var l = shotLights[s];
             var at = new System.Numerics.Vector2(l.X, l.Y);
             float r = l.Z, k = Mathf.Clamp(l.W * ShotShown, 0f, 1f);
-            Visit(at, r * 1.6f, (p, i) =>
+            Visit(at, r * ShotReach, (p, i) =>
             {
                 float d2 = System.Numerics.Vector2.DistanceSquared(p, at);
-                return k * Mathf.Exp(-d2 / (r * r * 1.6f));
+                return k * Mathf.Exp(-d2 / (r * r * ShotSpread));
             });
         }
         for (int i = 0; i < _bytes.Length; i++) _bytes[i] = (byte)(Mathf.Clamp(Shown(i), 0f, 1f) * 255f);
@@ -99,7 +99,13 @@ public sealed class LightMemory
     }
 
     /// <summary>How much of a bubble's halo strength (CombatView.Lights' w) counts as showing the reef: the post pass's own.</summary>
-    public const float ShotShown = 2.4f;
+    public const float ShotShown = 4f;
+    /// <summary>
+    /// How wide a bubble's light shows the reef (its halo's reach squared × this) and how far out it is kept; the post
+    /// pass shows a shot's light now by the same numbers (topdown_post's shot_spread, shot_gain: CameraRig.SetShotLight),
+    /// so all her light, beam and shots, is one light that lingers the same.
+    /// </summary>
+    public const float ShotSpread = 3f, ShotReach = 2.6f;
 
     /// <summary>Each cell within reach of a point gives its light; a cell lit more than it still shows takes it afresh.</summary>
     void Visit(System.Numerics.Vector2 c, float reach, Func<System.Numerics.Vector2, int, float> light)

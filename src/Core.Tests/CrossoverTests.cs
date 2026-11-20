@@ -180,12 +180,12 @@ public class CrossoverTests
     }
 
     [Fact]
-    public void The_dive_clock_runs_two_minutes()
+    public void The_dive_clock_runs_thirty_seconds()
     {
-        Assert.Equal(120f, DiveClock.Seconds);
-        Assert.False(DiveClock.Open(119.9f));
-        Assert.True(DiveClock.Open(120f));
-        Assert.Equal(0.5f, DiveClock.Progress(60f));
+        Assert.Equal(30f, DiveClock.Seconds);
+        Assert.False(DiveClock.Open(29.9f));
+        Assert.True(DiveClock.Open(30f));
+        Assert.Equal(0.5f, DiveClock.Progress(15f));
         Assert.Equal(1f, DiveClock.Progress(500f));
     }
 
@@ -388,7 +388,7 @@ public class CrossoverTests
         var reach = LevelValidator.Distances(w.Map, w.ArenaCenter);
         Assert.False(w.TideActive);
         Assert.Equal(Vector2.Zero, w.TideAt(w.Player.Position));
-        w.DebugClockTo(DiveClock.Seconds + 0.5f);
+        w.DebugClockTo(TideTuning.After + 0.5f);
         w.Step(default);
         Assert.True(w.TideActive);
         Assert.Contains(w.Events, e => e.Type == PlaneEventType.TideRose);
@@ -405,7 +405,7 @@ public class CrossoverTests
     public void A_creature_the_current_brings_to_the_arena_dissolves_and_feeds_the_boss()
     {
         var w = new PlaneWorld(BossMap.Value, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()));
-        w.DebugClockTo(DiveClock.Seconds + 0.5f);
+        w.DebugClockTo(TideTuning.After + 0.5f);
         float max = w.Boss!.MaxHp;
         // A free-swimming creature just outside the arena's mouth, on open water toward the start.
         var path = LevelValidator.ShortestPath(w.Map, w.ArenaCenter, w.Map.Start.Position, clearance: 1f);

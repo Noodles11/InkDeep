@@ -8,7 +8,7 @@ namespace OctoShoots.Core.Plane;
 /// </summary>
 public static class DiveClock
 {
-    public const float Seconds = 120f;
+    public const float Seconds = 30f;
 
     /// <summary>How far the clock has run, 0 → 1.</summary>
     public static float Progress(float time) => Math.Clamp(time / Seconds, 0f, 1f);

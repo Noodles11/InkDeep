@@ -59,7 +59,7 @@ public partial class CombatView : Node3D
     /// <summary>The glow round a bubble: a fixed 0.8 m disc whose strength grows with merging, ≤ 0.4 of her halo.</summary>
     const float HaloRadius = 0.8f, HaloMin = 0.16f, HaloMax = 0.4f;
     /// <summary>Their light on the swim layer: radius in metres (never past 3, merged or not), strength as a share of hers.</summary>
-    const float GroundRadius = 1.5f, GroundStrength = 0.35f;
+    const float GroundRadius = 2.1f, GroundStrength = 0.45f;
     /// <summary>A light's strongest on the water (its share of her halo): high enough that a harder shot shines more.</summary>
     const float LightMax = 0.7f;
     /// <summary>Halos past this distance from her are off screen and not sent.</summary>

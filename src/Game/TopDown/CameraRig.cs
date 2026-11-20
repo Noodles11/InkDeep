@@ -136,6 +136,13 @@ public partial class CameraRig : Node3D
     /// the Kelp Forest green, the Shipwreck red, the Ruins yellow, the Alien Wreckage cyan, the Drowned Temple orange,
     /// Atlantis violet). Its pattern is the reef's in every biome.
     /// </summary>
+    /// <summary>Her shots' light on the reef, by the light memory's numbers (LightMemory): one light, now and after.</summary>
+    public void SetShotLight(float spread, float gain)
+    {
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("shot_spread"), spread);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("shot_gain"), gain);
+    }
+
     public void SetInkBiome(OctoShoots.Core.Run.Biome biome)
     {
         var tint = biome switch

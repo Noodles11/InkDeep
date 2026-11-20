@@ -383,7 +383,7 @@ public partial class HudView : Control
 
     /// <summary>
     /// The dive clock (docs/proposals/CROSSOVER.md §3): a ring round her bell, filling with her warm light from the top
-    /// over the two minutes; once full it breathes, the way down open.
+    /// over the dive clock (DiveClock.Seconds, 30 s); once full it breathes, the way down open.
     /// </summary>
     void DrawDiveClock()
     {

@@ -8,10 +8,12 @@ namespace OctoShoots.Core.Plane;
 public static class TideTuning
 {
     /// <summary>
-    /// Once the level's clock has run (DiveClock.Seconds) the current starts at Start m/s and grows by Rise every Step
+    /// Once the level's clock has run (After) the current starts at Start m/s and grows by Rise every Step
     /// seconds, to Most: faster than she swims (Tuning.PlaneCruiseSpeed, 6) within about a minute.
     /// </summary>
     public const float Start = 1f, Rise = 0.5f, Step = 5f, Most = 9f;
+    /// <summary>How long a boss level's clock runs before its current rises (its own: the dive clock is shorter).</summary>
+    public const float After = 120f;
     /// <summary>A swept creature dissolves this far past the arena's rim, and each adds this share of the boss's own light to its corruption, to at most FeedMost.</summary>
     public const float Mouth = 3f, Feed = 0.04f, FeedMost = 0.6f;
 }
@@ -35,11 +37,11 @@ public sealed partial class PlaneWorld
     public int Dissolved { get; private set; }
 
     /// <summary>The current runs: a template boss level whose clock has run, its boss not yet freed.</summary>
-    public bool TideActive => Map.Templated && Map.HasBoss && Boss is { Freed: false } && DiveClock.Open(Time);
+    public bool TideActive => Map.Templated && Map.HasBoss && Boss is { Freed: false } && Time >= TideTuning.After;
 
     /// <summary>How fast the current runs now (m/s; 0 when it does not).</summary>
     public float TideStrength => !TideActive ? 0f
-        : MathF.Min(TideTuning.Most, TideTuning.Start + TideTuning.Rise * MathF.Floor((Time - DiveClock.Seconds) / TideTuning.Step));
+        : MathF.Min(TideTuning.Most, TideTuning.Start + TideTuning.Rise * MathF.Floor((Time - TideTuning.After) / TideTuning.Step));
 
     /// <summary>The current's flow at a point (m/s): toward the arena along the water, none inside it.</summary>
     public Vector2 TideAt(Vector2 p)

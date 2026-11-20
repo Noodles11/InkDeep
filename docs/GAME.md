@@ -254,9 +254,9 @@ the tests of the dive still test the dive.
   a place that finds neither is left out. Mob marks fill the spawn table by tag (lone, pack, thrower, ambusher,
   guard), and the marks are kept on the map (`LevelMap.MobMarks`, `PoiMarks`) for the rosters and places of later
   steps; the ink creatures still come from the corruption's Blightroots as before. No secret rooms (a labyrinth is a
-  second layer). A template level has no shaft and no holes: after **2 minutes** on it (`DiveClock`) she may dive
+  second layer). A template level has no shaft and no holes: after **30 seconds** on it (`DiveClock`; 2 minutes before 0.66.0) she may dive
   anywhere, and nothing else is asked (not even that no fight is on). A ring round her bell on the HUD fills over the
-  two minutes; when it is full a soft chime and a message say so, the prompt shows for a few seconds and the ring
+  30 seconds; when it is full a soft chime and a message say so, the prompt shows for a few seconds and the ring
   breathes. The level below is shown under her only once she dives. `--dbg-diveclock=s` starts each level's clock
   that far on (verification).
 - **Step 3, first part (0.51.0), shells, bubble vaults, shops:**
@@ -475,3 +475,8 @@ the tests of the dive still test the dive.
 - **No way down to find (0.65.1):** a dive-anywhere level (`LevelMap.DiveAnywhere`: a template level but a boss's) shows
   no exit: no "way down" sign on the maps or in their legend, and none named as she swims into it (`LevelMap.Shown`).
   Its cave's walk still ends there (the generator's own), and a boss level shows its Crack as before.
+- **A 30-second dive clock, one light (0.66.0):** the dive opens after **30 s** on a level (`DiveClock.Seconds`); a boss
+  level's current keeps its own two minutes (`TideTuning.After`). **All her light is one light:** her shots' light shows
+  the reef in its colour now and lingers after as her beam's does (0.3 s, fading over 1.3 s), by the same numbers in the
+  post pass and the light memory (`LightMemory.ShotSpread`, `ShotShown`, `CameraRig.SetShotLight`); and her shots light
+  a wider, stronger area than before (`CombatView.GroundRadius` 2.1 m, `GroundStrength` 0.45; shown about √3 × as wide).

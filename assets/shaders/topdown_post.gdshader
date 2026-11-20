@@ -143,6 +143,9 @@ uniform float ink_look = 0.0;
 // The biome's own ink (CameraRig.SetInkBiome): the colour its muted reef is washed in, always dark (the Sunlit Reef
 // blue, the Kelp Forest green, the Shipwreck red, the Ruins yellow). Its pattern is the reef's in every biome.
 uniform vec3 ink_tint = vec3(0.32, 0.5, 0.85);
+// Her shots' light on the reef (LightMemory.ShotSpread, ShotShown, via CameraRig.SetShotLight).
+uniform float shot_spread = 3.0;
+uniform float shot_gain = 4.0;
 // Ink, ash, the unlit water and the traced light's two ends.
 const vec3 INK = vec3(0.012, 0.014, 0.024);
 const vec3 ASH = vec3(0.6, 0.59, 0.56);
@@ -662,12 +665,13 @@ void fragment() {
 	// (In the ink look her bubbles' light shows the reef round them as her beam's does, the harder the shot the wider
 	// and the more: LightMemory.ShotShown.)
 	float shot_shown = 0.0;
+	// (How wide and how strongly: LightMemory's own numbers, so the light now and its afterimage are the same light.)
 	for (int i = 0; i < bubble_count; i++) {
 		vec4 b = bubble_lights[i];
 		vec2 ob = on_layer.xz - b.xy;
 		float e = exp(-dot(ob, ob) / (b.z * b.z));
 		bubbles += e * b.w;
-		shot_shown = max(shot_shown, exp(-dot(ob, ob) / (b.z * b.z * 1.6)) * clamp(b.w * 2.4, 0.0, 1.0));
+		shot_shown = max(shot_shown, exp(-dot(ob, ob) / (b.z * b.z * shot_spread)) * clamp(b.w * shot_gain, 0.0, 1.0));
 	}
 	col += bubble_color * bubbles * halo_strength * glow_boost * glow_boost * (0.35 + 0.65 * fog) * (1.0 - smoothstep(0.0, 4.0, above)) * (0.6 + 0.8 * reef_menace);
 	// The clam rooms' light, each in its pearl's colour: lifting what lies in them toward it, and a haze of it in the
