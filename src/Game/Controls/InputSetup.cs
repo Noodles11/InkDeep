@@ -23,8 +23,10 @@ public static class InputSetup
 	public const string AimDown = "im_down";
 	public const string AimLeft = "aim_left";
 	public const string AimRight = "aim_right";
-	public const string Beam = "beam";
-	public const string Fire = "fire";
+	// (New names in 0.65.0, when the beam became a toggle and the click her shots: a binding saved for the old ones is left
+	// behind rather than taken for the new.)
+	public const string Beam = "beam_toggle";
+	public const string Fire = "shoot";
 	public const string Glow = "toggle_glow";
 	public const string Dash = "dash";
 	public const string Dive = "dive";
@@ -58,11 +60,11 @@ public static class InputSetup
 		new(AimDown, "Aim down", "key:Down", "axis:RightY:+"),
 		new(AimLeft, "Aim left", "key:Left", "axis:RightX:-"),
 		new(AimRight, "Aim right", "key:Right", "axis:RightX:+"),
-		new(Beam, "Shine the beam (hold)", "mouse:Left", "axis:TriggerRight:+"),
+		new(Fire, "Shoot bubbles (hold)", "mouse:Left", "axis:TriggerRight:+"),
+		// Her beam, on and off (it stays as it is left): her light to see by, apart from her shots.
+		new(Beam, "Beam on / off", "key:Ctrl", "button:RightShoulder"),
 		new(Dash, "Dash", "key:Space", "axis:TriggerLeft:+"),
-		// Her bubble shots (the right mouse button, the right bumper), as before 0.13.0. (Her glow's toggle lost its
-		// buttons with her glow: the crossover has none, PlaneOptions.Glow. It may be bound by hand.)
-		new(Fire, "Shoot bubbles (hold)", "mouse:Right", "button:RightShoulder"),
+		// (Her glow's toggle lost its buttons with her glow: the crossover has none, PlaneOptions.Glow. It may be bound by hand.)
 		new(Glow, "Glow on / off (dark, beam off: unseen)", "", ""),
 		new(Dive, "Dive down the shaft", "key:Shift", "button:X"),
 		new(Active, "Use the active pearl (first slot)", "key:F", "button:Y"),

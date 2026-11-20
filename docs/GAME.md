@@ -54,13 +54,15 @@ the reef was never being called home. It was being kept.
 - **Her light** (LIGHT-AND-GRAPH §2):
   - her **aura**, always on round her: it shows the corrupted near her and seals a leak she stays close to. **Not in
     the crossover** (since 0.57.0, `PlaneOptions.Glow`): no glow round her, her bell casts no light; her beam is her light;
-  - her **beam**, a flashlight cone along her aim while the beam is held: it burns the corrupted, dazzles them, seals
+  - her **beam**, a flashlight cone along her aim, **turned on and off** (since 0.65.0: the right bumper or Ctrl, with
+    the lamp's pull-chain sound the glow's toggle had; it stays as it is left, apart from her shots): it burns the corrupted, dazzles them, seals
     leaks, opens seals, clears ink and ash, charges stones and opens bosses, by how much of its light reaches. It is a
     real light: rock, the seabed and every creature's body stop it and cast shadows (VISUAL-SHOWCASE). In the
     crossover it is mostly a light to see by: it shows what the glow showed (the creatures in the dark, what a bubble
     vault holds), dazzles what it falls on and burns creatures at a fifth of its strength (`PlaneOptions.BeamBurn`,
     `HerLightTuning.LightOnlyBurn`), but burns a boss's open pearl in full;
-  - her **bubble shots** (the right mouse button, the right bumper; back since 0.57.0, as before 0.13.0): thrown
+  - her **bubble shots** (since 0.65.0 the right trigger, a mouse click, or the arrow keys, which aim and shoot at once;
+    back since 0.57.0, as before 0.13.0): thrown
     bubbles of light that ease out, rest and merge, each a small lantern burning the corrupted it lights; her attack;
   - her **glow can be put out**: dark, she is hidden from the Leak's creatures and sees almost nothing (not in the
     crossover, which has no glow: its toggle has no default button).
@@ -68,7 +70,9 @@ the reef was never being called home. It was being kept.
   the HUD. Murklings drink her light. It comes back from cores (the light freed creatures leave), light orbs, light
   springs, healing pearls, havens and a sealed leak cave. Full of corruption, she dims and the dive ends (DIVE §2).
 - **Her active pearl** is used with its own button and recharges; she carries one at a time.
-- **Controls:** move, aim, beam, shoot, glow (unbound by default), dash, dive, active pearl, review pearls, pause. Every one can be rebound, on the
+- **Controls:** move, aim, shoot (RT / click / arrows), beam on/off (RB / Ctrl), glow (unbound by default), dash, dive,
+  active pearl, review pearls, pause. (0.65.0 renamed the beam's and the shot's actions, so bindings saved for the old
+  ones are left behind.) Every one can be rebound, on the
   keyboard and mouse and on a controller (`InputSetup`). Twin-stick aim on a controller.
 
 ## 4. The dive

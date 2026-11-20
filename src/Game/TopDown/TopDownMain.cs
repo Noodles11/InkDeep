@@ -269,6 +269,8 @@ public partial class TopDownMain : Node3D
     /// <summary>The absolute position (xz) of the world's origin: each dive moves the world back by the hole's offset.</summary>
     Vector2 _origin;
     bool _diving, _diveLatched, _activeLatched, _glowLatched;
+    /// <summary>Her beam, on or off (InputSetup.Beam toggles it; it stays as it is left), and its button's latch.</summary>
+    bool _beamOn, _beamLatched;
     float _diveTime;
     System.Numerics.Vector2 _diveFrom;
     ReefLook _lookFrom = ReefLook.Shallows, _lookTo = ReefLook.Shallows;
@@ -3148,7 +3150,7 @@ public partial class TopDownMain : Node3D
         int left = _world.Mobs.Count(m => m.Alive);
         _info.Text = $"{_id} · mobs {left}/{_world.Mobs.Count} · pearls {_run!.Items.Count}   attempt {_map.Attempt + 1}   pos {p.Position.X:0.0}, {p.Position.Y:0.0}   " +
                      $"{Engine.GetFramesPerSecond():0} FPS" +
-                     "\nWASD swim · Space dash · hold the left mouse or arrows to shine · right mouse to shoot · Shift over a hole dives · Tab map · Esc pause · F1 debug menu · F3 debug map · R regenerate";
+                     "\nWASD swim · Space dash · click or arrows to shoot · Ctrl beam on/off · Shift over a hole dives · Tab map · Esc pause · F1 debug menu · F3 debug map · R regenerate";
         Capture();
     }
 
@@ -4247,34 +4249,39 @@ public partial class TopDownMain : Node3D
         _activeLatched = use;
         if (AutoFire(ref input)) return input;
         bool held = Input.IsActionPressed(InputSetup.Fire);
-        bool shine = Input.IsActionPressed(InputSetup.Beam);
-        if (!held && !shine) _fireBlocked = false;
+        if (!held) _fireBlocked = false;
+        // Her beam: a press turns it on or off (the lamp's pull-chain, a touch lower as it goes out), apart from her shots.
+        bool toggle = Input.IsActionPressed(InputSetup.Beam);
+        if (toggle && !_beamLatched && !_world.Defeated)
+        {
+            _beamOn = !_beamOn;
+            _sfx.PlayPitched("lamp_switch", _beamOn ? 1.05f : 0.92f, -4f);
+        }
+        _beamLatched = toggle;
+        input.Beam = _beamOn;
         Vector2 aim = Input.GetVector(InputSetup.AimLeft, InputSetup.AimRight, InputSetup.AimUp, InputSetup.AimDown);
         if (_pad)
         {
-            // Controller: the right stick aims, the trigger shines her beam, the bumper shoots. Left alone, she aims the
-            // way she swims (standing still, the way she last aimed).
+            // Controller: the right stick aims, the trigger shoots, the bumper turns her beam on and off. Left alone, she
+            // aims the way she swims (standing still, the way she last aimed).
             if (aim.LengthSquared() > 0.04f) _padAim = new System.Numerics.Vector2(aim.X, aim.Y);
             else if (stick.LengthSquared() > 0.04f) _padAim = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(stick.X, stick.Y));
             else if (_padAim.LengthSquared() > 1e-6f) _padAim = System.Numerics.Vector2.Normalize(_padAim);
             input.Aim = _padAim.LengthSquared() > 1e-6f ? System.Numerics.Vector2.Normalize(_padAim) : _world.Player.Aim;
             input.Fire = held && !_fireBlocked;
-            input.Beam = shine && !_fireBlocked;
         }
         else if (aim.LengthSquared() > 0f)
         {
-            // The aim keys (the arrows) aim and shine her beam at once (the shoot button still shoots).
+            // The aim keys (the arrows) aim and shoot at once (the twin-stick way on a keyboard).
             input.Aim = System.Numerics.Vector2.Normalize(new System.Numerics.Vector2(aim.X, aim.Y));
-            input.Beam = true;
-            input.Fire = held && !_fireBlocked;
+            input.Fire = true;
         }
         else
         {
-            // The mouse: her beam (left) and her bubble shots (right) toward the pointer while a button is held.
+            // The mouse: she aims at the pointer (her beam too, while it is on); the click shoots.
             var to = MouseOnBand() - _world.Player.Position;
             input.Aim = to.LengthSquared() > 1e-4f ? System.Numerics.Vector2.Normalize(to) : default;
             input.Fire = held && !_fireBlocked;
-            input.Beam = shine && !_fireBlocked;
         }
         return input;
     }
