@@ -59,32 +59,41 @@ public class DangerTests
     }
 
     [Fact]
-    public void Without_her_glow_and_with_her_beam_off_the_murklings_still_find_her()
+    public void Without_her_glow_dark_and_quiet_she_is_unseen_but_her_beam_draws_them()
     {
         var map = TopDownGenerator.Generate(new RunStreams(TestLevels.Seed), new LevelId(1, 1 + LevelPlan.Tutorial, 2), crossover: true);
-        var w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), new PlaneOptions { Adventure = true, Glow = false });
-        w.Murklings.Clear();
-        var at = map.Start.Position;
-        var near = new System.Collections.Generic.List<Murkling>();
-        for (int k = 0; k < 8; k++)
+        float Closed(bool beam)
         {
-            float a = k * MathF.Tau / 8f;
-            var spot = at + new System.Numerics.Vector2(MathF.Cos(a), MathF.Sin(a)) * 7f;
-            if (!w.Clear(spot, 0.6f)) continue;
-            var m = w.DebugBud(spot, prime: false);
-            m.Bud = 0f;
-            near.Add(m);
+            var w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()), new PlaneOptions { Adventure = true, Glow = false });
+            w.Murklings.Clear();
+            // (No fish to hunt: only she could draw them.)
+            w.Fish.Clear();
+            w.ReefFish.Clear();
+            var at = map.Start.Position;
+            var near = new System.Collections.Generic.List<Murkling>();
+            for (int k = 0; k < 8; k++)
+            {
+                float a = k * MathF.Tau / 8f;
+                var spot = at + new System.Numerics.Vector2(MathF.Cos(a), MathF.Sin(a)) * 7f;
+                if (!w.Clear(spot, 0.6f)) continue;
+                var m = w.DebugBud(spot, prime: false);
+                m.Bud = 0f;
+                near.Add(m);
+            }
+            Assert.NotEmpty(near);
+            var before = near.Select(m => System.Numerics.Vector2.Distance(m.Position, at)).ToList();
+            for (int i = 0; i < 60 * 4; i++)
+            {
+                w.Player.Position = w.Player.PrevPosition = at;
+                w.Player.Hp = w.Run.MaxHp;
+                // (Her beam swept round her, so every murkling sees it.)
+                float turn = i * 0.05f;
+                w.Step(beam ? new PlaneInput { Beam = true, Aim = new System.Numerics.Vector2(MathF.Cos(turn), MathF.Sin(turn)) } : default);
+            }
+            return near.Select((m, i) => before[i] - System.Numerics.Vector2.Distance(m.Position, at)).Max();
         }
-        Assert.NotEmpty(near);
-        Assert.True(w.Presence.Range > 0f);
-        var before = near.Select(m => System.Numerics.Vector2.Distance(m.Position, at)).ToList();
-        for (int i = 0; i < 60 * 4; i++)
-        {
-            w.Player.Position = w.Player.PrevPosition = at;
-            w.Player.Hp = w.Run.MaxHp;
-            w.Step(default);
-        }
-        Assert.True(w.Presence.Shining);
-        Assert.Contains(near.Select((m, i) => before[i] - System.Numerics.Vector2.Distance(m.Position, at)), d => d > 2f);
+        float dark = Closed(beam: false), lit = Closed(beam: true);
+        Assert.True(dark < 1.5f, $"dark and quiet, the nearest still closed {dark} m");
+        Assert.True(lit > 2f, $"her beam on, the nearest closed only {lit} m");
     }
 }

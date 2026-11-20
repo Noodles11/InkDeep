@@ -489,5 +489,9 @@ the tests of the dive still test the dive.
   (`DangerTuning`): each step after the first, they come 35% more often and 30% more may stay round her: **more the
   longer she stays**. None come during a boss's fight or in its arena, and a boss level's clock stops once its boss is
   freed. The HUD shows the step as trembling red exclamation marks beside her bell (none at first, four at the most).
-  With no glow, she has a faint **presence** the light-seekers find her by (`LightTuning.PresenceReach`, about 11 m;
-  never drawn, reveals nothing), so the murklings come for her even with her beam off.
+  (0.67.1) **They hunt by light alone** where she has no glow: every murkling (seekers, throwers, primes, shoals) goes
+  for the brightest light it sees, her beam (then her) or a shot's light (then that bubble); with her beam off and no
+  shot in the water she is all but invisible to them. A light-seeker sees her beam as the shaft it makes in the water,
+  from the side too, by how near it is to the beam's axis at 60% of its strength (`LightQuery.Seen`,
+  `LightTuning.SideSeen`), so the beam draws them from outside it. (The 0.67.0 presence, a faint light of hers only
+  the creatures felt, is gone.) Where she has a glow (the dive), they sense her near them lit or not, as before.

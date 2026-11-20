@@ -783,7 +783,7 @@ public sealed partial class PlaneWorld
 
     /// <summary>The brightest light a murkling at <paramref name="at"/> can see within <paramref name="scan"/> (her own not while her Ink Cloud hides her).</summary>
     LightEmitter? SeekLight(Vector2 at, float scan = LightTuning.Scan, bool blind = false) =>
-        LightQuery.Brightest(Lights.All, at, scan, LightTuning.Threshold, LineOfSight, Unseen || blind ? e => e.Owner == Her : null);
+        LightQuery.Brightest(Lights.All, at, scan, LightTuning.Threshold, LineOfSight, Unseen || blind ? e => e.Owner == Her : null, seen: true);
 
     /// <summary>
     /// A basic murkling (docs/LIGHT-AND-GRAPH.md §3.1): it holds still and scans the lights every ScanEvery;
@@ -967,16 +967,19 @@ public sealed partial class PlaneWorld
                 StepSeeker(m);
                 continue;
             }
-            // A variant or a prime senses her within its Sense, lit or not (as the murklings always have); another light it
-            // goes for instead only when that is the brightest it sees (a bubble of hers, a lure).
+            // A variant or a prime goes for the brightest light it sees within its Sense: her glow or her beam (then her),
+            // or another (a bubble of hers, a lure). Where she has a glow it senses her within its Sense lit or not (as the
+            // murklings always have); where she has none (PlaneOptions.Glow off) it sees only light: with her beam off and
+            // no shot in the water she is all but invisible to it.
             var seen = SeekLight(m.Position, m.Sense, blind: Charmed(m));
-            bool her = seen is null || seen.Owner == Her;
-            Vector2 target = her ? p.Position : seen!.Position;
+            bool lost = seen is null && !Options.Glow;
+            bool her = !lost && (seen is null || seen.Owner == Her);
+            Vector2 target = lost ? m.Position : her ? p.Position : seen!.Position;
             m.Target = target;
             var to = target - m.Position;
             float dist = to.Length();
             // In her Ink Cloud (or charmed by Siren Song) it has lost her: it goes about its own business.
-            if (her && (Unseen || Charmed(m))) dist = float.MaxValue;
+            if (her && (Unseen || Charmed(m)) || lost) dist = float.MaxValue;
             // After her, round the rock rather than into it (a bait bubble it goes straight at).
             Vector2 wish = dist < m.Sense ? her ? WayToHer(m.Position) : SafeNormalize(to) : Vector2.Zero;
             // She is away: a den's murkling drifts home into its nave (DenTuning.Leash); else it hunts the reef's fish,

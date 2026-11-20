@@ -1028,7 +1028,9 @@ public sealed partial class PlaneWorld
         foreach (var o in school) centre += o.Position;
         centre /= school.Count;
         Vector2 wish;
-        if (!Unseen && Vector2.Distance(centre, p.Position) < AdventureTuning.ShoalSense)
+        // (Where she has no glow, PlaneOptions.Glow off, a school sees her only by a light: her beam or her shots.)
+        bool sees = Options.Glow || SeekLight(centre, AdventureTuning.ShoalSense) is not null;
+        if (!Unseen && sees && Vector2.Distance(centre, p.Position) < AdventureTuning.ShoalSense)
         {
             // Its place on the ring: evenly round her, the ring circling her (each school its own way, each layer a little
             // faster than the one inside it) — never tied to her aim, so she can time her shots through the gaps.
