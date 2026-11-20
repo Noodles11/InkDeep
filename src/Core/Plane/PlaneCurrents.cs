@@ -306,7 +306,7 @@ public sealed partial class PlaneWorld
         // (Stuck: no further on than a tick ago, for all the current's push.)
         if (LabyrinthSolved && _guideStuck <= 0f && flow.LengthSquared() > 1f && Vector2.DistanceSquared(_guideLast, p.Position) < 1e-4f) _guideStuck = CurrentTuning.GuideUnstick;
         _guideLast = p.Position;
-        if (flow != Vector2.Zero) Move(ref p.Position, ref flow, Radius, report: false);
+        if (flow != Vector2.Zero) Move(ref p.Position, ref flow, Radius, report: false, soft: true);
         foreach (var shot in Shots)
         {
             Vector2 d = CurrentAt(shot.Position) * Dt;

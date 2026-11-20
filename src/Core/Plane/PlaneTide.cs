@@ -83,7 +83,7 @@ public sealed partial class PlaneWorld
         if (!Defeated)
         {
             var flow = TideAt(p.Position);
-            if (flow != Vector2.Zero) Move(ref p.Position, ref flow, Radius, report: false);
+            if (flow != Vector2.Zero) Move(ref p.Position, ref flow, Radius, report: false, soft: true);
         }
         float mouth = ArenaRadius + TideTuning.Mouth;
         bool AtMouth(Vector2 at) => Vector2.Distance(at, ArenaCenter) < mouth;

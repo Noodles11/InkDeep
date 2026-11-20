@@ -374,6 +374,9 @@ public partial class BellView : Node3D
     /// </summary>
     public bool Puppet { get; init; }
     public float Lit = 1f;
+    /// <summary>How far she is lifted in the reef's soft edge (eased), and her lift a metre deep in it.</summary>
+    float _gooLift;
+    const float GooLift = 1.1f;
     /// <summary>
     /// Whether her bell casts its light round her (her glow: the bulb, its halo, the warm pool under her). False in the
     /// crossover (PlaneOptions.Glow): her bell still shines, but her beam is her light.
@@ -477,7 +480,9 @@ public partial class BellView : Node3D
         _idle = Mathf.MoveToward(_idle, speed < 0.6f ? 1f : 0f, h * 1.2f);
         float ease = _idle * _idle * (3f - 2f * _idle);
         float bob = 0.5f * Mathf.Sin(_time * 1.1f) * ease + 0.06f * _pulse;
-        Position = new Vector3(at.X, LevelMap.SwimBand + bob * (1f - DiveTurn) - DiveDepth, at.Y);
+        // (In the reef's soft edge she swims up against the rock: lifted the deeper she is, PlaneGoo.cs.)
+        _gooLift = Mathf.Lerp(_gooLift, world.Player.Goo * GooLift, 1f - Mathf.Exp(-10f * h));
+        Position = new Vector3(at.X, LevelMap.SwimBand + bob * (1f - DiveTurn) - DiveDepth + _gooLift, at.Y);
         // She turns to face her aim, her first gonad toward it (a turn about her axis: gonad 0 sits at 45° in the bell's
         // own frame), quickly but not in a snap.
         if (p.Aim.LengthSquared() > 1e-6f)

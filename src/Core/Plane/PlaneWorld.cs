@@ -31,6 +31,12 @@ public struct PlaneInput
 public sealed class PlaneBody
 {
     public Vector2 Position;
+    /// <summary>
+    /// How far she is inside the reef's soft edge (GooTuning: 0 in open water, up to GooTuning.Most metres), and the way
+    /// back out to the water. The view lifts her by it, as a jellyfish swims up against the reef.
+    /// </summary>
+    public float Goo;
+    public Vector2 GooOut;
     public Vector2 PrevPosition;
     public Vector2 Velocity;
     public Vector2 LastMoveDir = -Vector2.UnitY;
@@ -315,7 +321,21 @@ public sealed partial class PlaneWorld
         }
         p.JetTimer -= Dt;
 
-        Move(ref p.Position, ref p.Velocity, Radius);
+        // The reef's soft edge (GooTuning): inside it the water thickens and pushes her back out, the harder the deeper.
+        var (goo, gooOut) = GooAt(p.Position);
+        if (goo > 0f)
+        {
+            p.Velocity += gooOut * (GooTuning.Spring * goo * Dt);
+            p.Velocity /= 1f + GooTuning.Drag * goo * Dt;
+        }
+        Move(ref p.Position, ref p.Velocity, Radius, soft: true);
+        (p.Goo, p.GooOut) = GooAt(p.Position);
+        // (And it eases her back out toward the water, so her own stopping never holds her in it.)
+        if (p.Goo > 0f)
+        {
+            p.Position += p.GooOut * MathF.Min(p.Goo, p.Goo * GooTuning.Return * Dt + 0.01f);
+            (p.Goo, p.GooOut) = GooAt(p.Position);
+        }
         // The boss level's rising current (PlaneTide.cs).
         StepTide();
         StepPrismStones();
@@ -385,7 +405,7 @@ public sealed partial class PlaneWorld
 
         var p = Player;
         Vector2 flow = Director.FlowAt(p.Position, Time);
-        if (flow != Vector2.Zero) Move(ref p.Position, ref flow, Radius, report: false);
+        if (flow != Vector2.Zero) Move(ref p.Position, ref flow, Radius, report: false, soft: true);
         foreach (var mob in Mobs)
         {
             if (!mob.Alive) continue;
@@ -456,10 +476,18 @@ public sealed partial class PlaneWorld
     }
 
     /// <summary>Moves a circle along its velocity, blocking against high terrain and sliding along the slope.</summary>
-    public void Move(ref Vector2 position, ref Vector2 velocity, float radius, bool report = true)
+    public void Move(ref Vector2 position, ref Vector2 velocity, float radius, bool report = true, bool soft = false)
     {
+        // (soft: her own way through the water, the reef's edge a goo she may sink a little into, GooTuning.)
+        bool Fits(Vector2 q) => soft ? GooAt(q).Depth <= GooTuning.Most : Clear(q, radius);
+        Vector2 Into(Vector2 q)
+        {
+            if (!soft) return WallNormal(q, radius);
+            var (_, way) = GooAt(q);
+            return way == Vector2.Zero ? WallNormal(q, radius) : -way;
+        }
         // Pushed out of a wall (a crater or a spawn) first.
-        for (int i = 0; i < 20 && !Clear(position, radius); i++) position -= WallNormal(position, radius) * 0.05f;
+        for (int i = 0; i < 20 && !Fits(position); i++) position -= Into(position) * 0.05f;
 
         Vector2 delta = velocity * Dt;
         int steps = Math.Max(1, (int)MathF.Ceiling(delta.Length() / (radius * 0.5f)));
@@ -468,19 +496,19 @@ public sealed partial class PlaneWorld
         for (int s = 0; s < steps; s++)
         {
             Vector2 next = position + step;
-            if (Clear(next, radius))
+            if (Fits(next))
             {
                 position = next;
                 continue;
             }
             hit = true;
-            Vector2 n = WallNormal(next, radius);
+            Vector2 n = Into(next);
             float into = Vector2.Dot(step, n);
             if (into > 0f) step -= n * into;
             float vInto = Vector2.Dot(velocity, n);
             if (vInto > 0f) velocity -= n * vInto;
             next = position + step;
-            if (Clear(next, radius))
+            if (Fits(next))
             {
                 position = next;
                 continue;
@@ -495,7 +523,7 @@ public sealed partial class PlaneWorld
             foreach (var t in new[] { new Vector2(wish.X, 0f), new Vector2(0f, wish.Y), tangent * Vector2.Dot(wish, tangent), tangent * Vector2.Dot(wish, tangent) - n * wish.Length() })
             {
                 float gain = Vector2.Dot(t, wish);
-                if (gain <= bestGain || !Clear(position + t, radius)) continue;
+                if (gain <= bestGain || !Fits(position + t)) continue;
                 best = t;
                 bestGain = gain;
             }

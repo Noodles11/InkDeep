@@ -634,7 +634,7 @@ public sealed partial class PlaneWorld
     void PlaceAura()
     {
         var a = _aura!;
-        a.Position = Player.Position;
+        a.Position = HerOrigin;
         a.Range = LightTuning.AuraReach * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.Glow], 0.1f));
         a.Active = !Defeated && !GlowOff && Options.Glow;
     }
@@ -661,7 +661,8 @@ public sealed partial class PlaneWorld
         SyncFireflies();
         var beam = Beam;
         var shape = Run.Loadout.Shot;
-        beam.Position = Player.Position;
+        // (From the water's edge when she is sunk in the reef's soft edge: PlaneGoo.cs.)
+        beam.Position = HerOrigin;
         var aim = input.Aim.LengthSquared() > 1e-6f ? input.Aim : Player.Aim;
         if (aim.LengthSquared() > 1e-6f) beam.Direction = Vector2.Normalize(aim);
         beam.Range = LightTuning.BeamReach * Run.BeamReach * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.Glow], 0.1f)) * MathF.Sqrt(MathF.Max(RangeScale, 0.1f))

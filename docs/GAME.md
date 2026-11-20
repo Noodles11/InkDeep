@@ -495,3 +495,10 @@ the tests of the dive still test the dive.
   from the side too, by how near it is to the beam's axis at 60% of its strength (`LightQuery.Seen`,
   `LightTuning.SideSeen`), so the beam draws them from outside it. (The 0.67.0 presence, a faint light of hers only
   the creatures felt, is gone.) Where she has a glow (the dive), they sense her near them lit or not, as before.
+- **The reef's soft edge (0.68.0)** (`PlaneGoo.cs`, `GooTuning`): the rock is not a hard wall to her. Swimming into it
+  she goes on past its line, the water thickening round her like goo: it slows her (drag × how deep) and pushes her
+  back out (a spring × how deep), so she stops within about a metre and can go no further than 1.1 m; let go, it eases
+  her back out to the water. The deeper she is, the higher she rises (her bell lifted up to about a metre, as a
+  jellyfish swims up against the reef). Only she has it (`PlaneWorld.Move(…, soft: true)`, for her swim and the
+  currents, the tide and a lashjaw's pull on her); the creatures keep the hard line. Sunk in it, her glow, her beam and
+  her shots start from the water's edge she came in from (`PlaneWorld.HerOrigin`), never from inside the rock.

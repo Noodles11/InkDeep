@@ -44,7 +44,7 @@ public sealed partial class PlaneWorld
     public PrismPart PrismLead { get; } = new() { Hue = PrismHue.Green };
 
     /// <summary>Where her own body is: at the triangle's front corner while her light is split, else where she steers.</summary>
-    public Vector2 HerBody => Prism ? PrismLead.Position : Player.Position;
+    public Vector2 HerBody => Prism ? PrismLead.Position : HerOrigin;
 
     /// <summary>Her light is split now (from the first moment of the split to the last of the rejoining).</summary>
     public bool Prism => Player.PrismTimer > 0f;

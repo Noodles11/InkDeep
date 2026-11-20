@@ -94,7 +94,8 @@ public class PlaneWorldTests
     public void RidgesBlockHerAndSheSlidesAlongThem()
     {
         var w = World();
-        // Straight at the nearest edge of the square: the rim stops her.
+        // Straight at the nearest edge of the square: the rim stops her, a little way into its soft edge (PlaneGoo.cs) and
+        // never further.
         Vector2 start = w.Map.Start.Position;
         float[] edges = { start.Y, LevelMap.Seeded - start.X, LevelMap.Seeded - start.Y, start.X };
         int side = Array.IndexOf(edges, edges.Min());
@@ -102,9 +103,11 @@ public class PlaneWorldTests
         for (int i = 0; i < 180; i++)
         {
             w.Step(new PlaneInput { Move = outward });
-            Assert.True(w.Clear(w.Player.Position, w.Radius), $"inside rock at {w.Player.Position}");
+            Assert.True(w.GooAt(w.Player.Position).Depth <= GooTuning.Most + 0.05f, $"too deep in rock at {w.Player.Position}");
         }
-        Assert.True(w.Map.HeightAt(w.Player.Position) <= LevelMap.BlockHeight);
+        var held = w.Player.Position;
+        Hold(w, outward, 30);
+        Assert.True(Vector2.Distance(held, w.Player.Position) < 0.3f, "she still sinks on into the rock");
 
         // Pressing diagonally into the wall, she keeps gliding along it.
         Vector2 along = new(-outward.Y, outward.X);

@@ -277,7 +277,7 @@ public sealed partial class PlaneWorld
         float pull = p.DashTimer > 0f && against > 0.5f ? 0f : MathF.Max(LashTuning.MinPull, LashTuning.Pull - LashTuning.Resist * against);
         p.Position = p.PrevPosition;
         var v = toward * pull + across;
-        Move(ref p.Position, ref v, Radius, report: false);
+        Move(ref p.Position, ref v, Radius, report: false, soft: true);
         p.Velocity = v;
         l.Tip = p.Position;
         if (Vector2.Distance(p.Position, l.Mouth) <= LashTuning.Jaws + Radius)
