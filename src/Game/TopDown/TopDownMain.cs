@@ -3134,7 +3134,7 @@ public partial class TopDownMain : Node3D
         _minimap.Plain = adventure;
         _cleanse.Visible = !adventure;
         // Entering a place names it under the minimap.
-        var inside = _map.Pois.Where(poi => System.Numerics.Vector2.Distance(poi.Position, p.Position) <= poi.Radius + 1.5f)
+        var inside = _map.Pois.Where(poi => _map.Shown(poi) && System.Numerics.Vector2.Distance(poi.Position, p.Position) <= poi.Radius + 1.5f)
             .OrderBy(poi => System.Numerics.Vector2.Distance(poi.Position, p.Position)).FirstOrDefault();
         // The start needs no name under the map, and a treasure's hiding place keeps its secret.
         bool named = inside is not null && inside.Kind is not (PoiKind.Start or PoiKind.Relic);

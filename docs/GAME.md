@@ -472,3 +472,6 @@ the tests of the dive still test the dive.
   Drowned Temple; Atlantis's machine-fused beast is still to come (Drippus Prime stands in). Not done: their hazards
   (conduits that carry her beam, field pulses, rolling boulders, pressure plates, glyph doors, Atlantis's machines),
   the Alien Wreckage's own things, the Crack, the keystone pieces, new jellies.
+- **No way down to find (0.65.1):** a dive-anywhere level (`LevelMap.DiveAnywhere`: a template level but a boss's) shows
+  no exit: no "way down" sign on the maps or in their legend, and none named as she swims into it (`LevelMap.Shown`).
+  Its cave's walk still ends there (the generator's own), and a boss level shows its Crack as before.

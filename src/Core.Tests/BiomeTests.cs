@@ -192,6 +192,19 @@ public class BiomeTests
     }
 
     [Fact]
+    public void A_dive_anywhere_level_shows_no_way_down_but_a_boss_level_shows_its_Crack()
+    {
+        var streams = new RunStreams(TestLevels.Seed);
+        var level = TopDownGenerator.Generate(streams, At(1, 2), crossover: true);
+        Assert.True(level.DiveAnywhere);
+        Assert.All(level.Pois.Where(p => p.Kind == PoiKind.Exit), p => Assert.False(level.Shown(p)));
+        Assert.Contains(level.Pois, p => p.Kind != PoiKind.Exit && level.Shown(p));
+        var boss = TopDownGenerator.Generate(streams, At(1, LevelStocking.LevelsPerDepth), crossover: true);
+        Assert.False(boss.DiveAnywhere);
+        Assert.Contains(boss.Pois, p => p.Kind == PoiKind.Exit && boss.Shown(p));
+    }
+
+    [Fact]
     public void A_saved_run_keeps_its_branch()
     {
         var id = At(2, 3, branch: 1);

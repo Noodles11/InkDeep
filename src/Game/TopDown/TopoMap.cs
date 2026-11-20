@@ -306,6 +306,8 @@ public partial class TopoMap : Control
         for (int i = 0; i < map.Pois.Count; i++)
         {
             var poi = map.Pois[i];
+            // (A dive-anywhere level's exit is no place to show: LevelMap.Shown.)
+            if (!map.Shown(poi)) continue;
             bool shown = Visited.Contains(i) || Landmarks && poi.Kind is not (PoiKind.Secret or PoiKind.CrabDeal or PoiKind.Relic);
             if (!shown) continue;
             Vector2 p = P(poi.Position);
@@ -621,6 +623,8 @@ public partial class TopoMap : Control
             (PoiKind.Start, "Start"), (PoiKind.Exit, "Way down"), (PoiKind.ShellCache, "Shell cache"), (PoiKind.Shop, "Shop"),
             (PoiKind.TreasureCave, "Clam room"), (PoiKind.CurseDen, "Curse den"), (PoiKind.Secret, "Secret"),
         };
+        // (No way down to find where she dives anywhere.)
+        if (_map is { DiveAnywhere: true }) rows = rows.Where(r => r.Kind != PoiKind.Exit).ToArray();
         const float row = 22f;
         var at = new Vector2(Size.X - 132f, Size.Y - rows.Length * row - 14f);
         DrawRect(new Rect2(at - Vector2.One * 6f, new Vector2(126f, rows.Length * row + 8f)), new Color(1f, 1f, 1f, 0.8f));

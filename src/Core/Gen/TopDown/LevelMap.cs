@@ -384,6 +384,15 @@ public sealed class LevelMap
     /// shaft and no holes, since she may dive anywhere once the dive clock has run (DiveClock).
     /// </summary>
     public bool Templated;
+
+    /// <summary>A template level but a boss's (CROSSOVER.md §3): she dives anywhere once its clock has run, so it has no way down to find.</summary>
+    public bool DiveAnywhere => Templated && !HasBoss;
+
+    /// <summary>
+    /// Whether a place is one to show her (on the maps, named as she enters it): all but a dive-anywhere level's exit,
+    /// which is only where its cave's walk ends, no way down.
+    /// </summary>
+    public bool Shown(Poi poi) => !(poi.Kind == PoiKind.Exit && DiveAnywhere);
     /// <summary>The crossover's biome (Run.Biomes, LevelPlan.Biome): its creatures, its kelp, its look.</summary>
     public OctoShoots.Core.Run.Biome Biome;
     /// <summary>A template level's mob marks (where its roster puts a creature), in open water.</summary>
