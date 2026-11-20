@@ -502,3 +502,16 @@ the tests of the dive still test the dive.
   jellyfish swims up against the reef). Only she has it (`PlaneWorld.Move(…, soft: true)`, for her swim and the
   currents, the tide and a lashjaw's pull on her); the creatures keep the hard line. Sunk in it, her glow, her beam and
   her shots start from the water's edge she came in from (`PlaneWorld.HerOrigin`), never from inside the rock.
+- **The murklings' looks and the wakes, brought over from the cube branch (0.69.0)** (cherry-picked from
+  `inkdeep-cubes`; its own docs came with them, in CORRUPTION.md, ADVENTURE.md and VISUAL-SHOWCASE.md):
+  - **wakes**: everything that swims leaves a V of disturbed water behind it, bent and shimmering, longer the faster,
+    gone within a moment of stopping (`WakeField`, baked round her each frame for the post pass); in the dark it is
+    where the creatures are. In the ink look the washes, the dots and the lines are read where the water bends the
+    picture, so a wake ripples the reef as a hot-air shimmer even out of her light, and its disturbed water catches a
+    little light;
+  - **murklings as small black holes**: a lightless body, a photon ring and the water bent and whirling round it while
+    her light is on it, its core in her light's colour, its ink peeling off toward her and burning away, the water drawn
+    in as it regrows, an implosion when freed (`murk_hole.gdshader`);
+  - her beam strips the corruption off what it lights in layers of violet brackets (no longer shimmering the water);
+  - a murkling's birth shows only where light falls on it, rising with a hot-air ripple of the water.
+  (Not brought over: the cube branch's camera changes and its own cube-reef systems.)

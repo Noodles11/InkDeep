@@ -758,7 +758,13 @@ void fragment() {
 	}
 	// The ink look (CROSSOVER.md §12): laid over the graded world, before the vignette.
 	if (ink_look > 0.0) {
-		vec2 wp = world.xz + world_origin;
+		// (Read where the water bends the picture, suv: a wake's or a current's bend then ripples the washes, the dots and
+		// the lines too, so what swims shows in the dark as a hot-air shimmer of the reef.)
+		float idepth = texture(depth_tex, suv).r;
+		vec4 iview = INV_PROJECTION_MATRIX * vec4(suv * 2.0 - 1.0, idepth, 1.0);
+		vec3 iworld = (INV_VIEW_MATRIX * vec4(iview.xyz / iview.w, 1.0)).xyz;
+		float ih = iworld.y - swim_level;
+		vec2 wp = iworld.xz + world_origin;
 		float il = max(dot(col, vec3(0.299, 0.587, 0.114)), 0.0);
 		// Its light as it was before the unlit reef was dimmed: the wash's value.
 		float il0 = min(il / max(mix(unlit_dim, 1.0, shown), 0.05), 1.0);
@@ -770,9 +776,9 @@ void fragment() {
 		float q0 = (floor(x0) + step(dotted, sqrt(smoothstep(0.45, 1.0, fract(x0))))) / 4.0;
 		// Where she does not light it: the rock a wash of ash, the water and the floor under it near-black blue ink.
 		// (What stands on the floor, higher than the terrain under it, is washed as the rock is: the biomes' things.)
-		vec3 relief = ink_relief(world);
-		float thing = sun_has_shadow > 0.5 ? smoothstep(0.45, 0.8, world.y - relief.z) : 0.0;
-		float rock = max(smoothstep(-0.3, 0.5, h), thing);
+		vec3 relief = ink_relief(iworld);
+		float thing = sun_has_shadow > 0.5 ? smoothstep(0.45, 0.8, iworld.y - relief.z) : 0.0;
+		float rock = max(smoothstep(-0.3, 0.5, ih), thing);
 		// (Washed in the biome's colour, always dark; its motif drawn darker into the rock, faintly on the floor.)
 		vec3 wash = mix(ASH * 0.4, ink_tint * 0.42, 0.7);
 		vec3 ash = mix(INK * 2.0 + ink_tint * 0.02, wash, min(q0 * q0 * 1.5, 1.0));
@@ -781,7 +787,7 @@ void fragment() {
 		// foot darker, the higher rock a little lighter, and a fine grain of stone through it all.
 		float grain = value_noise(wp * 1.4) * 0.5 + value_noise(wp * 3.9 + 5.0) * 0.3 + value_noise(wp * 10.0 + 9.0) * 0.2;
 		float crest = clamp(relief.y * 0.12, -0.45, 0.35);
-		ash *= (0.55 + 0.65 * relief.x) * (1.0 + crest) * (0.8 + 0.4 * grain) * (0.85 + 0.3 * smoothstep(0.3, 9.0, h));
+		ash *= (0.55 + 0.65 * relief.x) * (1.0 + crest) * (0.8 + 0.4 * grain) * (0.85 + 0.3 * smoothstep(0.3, 9.0, ih));
 		vec3 water = mix(INK_WATER, ink_tint * 0.07, 0.35);
 		vec3 deep = mix(water, water * 1.7 + ink_tint * 0.03, q0);
 		deep *= 1.0 - 0.15 * ink_motif(wp * 0.8 + 11.0);
@@ -795,7 +801,7 @@ void fragment() {
 		if (open_deep) inked = INK_WATER + col * smoothstep(0.06, 0.5, il);
 		// The brush's lines: the caves' outline ink where she does not light it, traced in coral and magenta light where
 		// she does; round what lies at her plane always ink (the corruption's creatures are never traced in light).
-		vec2 lines = open_deep ? vec2(0.0) : ink_line(h, wp, uv, FRAGCOORD.xy, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX, VIEWPORT_SIZE);
+		vec2 lines = open_deep ? vec2(0.0) : ink_line(ih, wp, suv, FRAGCOORD.xy, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX, VIEWPORT_SIZE);
 		float traced = smoothstep(0.15, 0.7, shown);
 		vec3 neon = mix(NEON_CORAL, NEON_MAGENTA, value_noise(wp * 0.15 + 3.0));
 		inked = mix(inked, INK, lines.x * (1.0 - traced) * 0.95);
@@ -803,7 +809,9 @@ void fragment() {
 		inked = mix(inked, INK, lines.y * 0.95);
 		// (And round the things that stand on the floor or the rock out of her light, a wreck's timbers, a fallen wall: so
 		// they read in the dark.)
-		if (thing > 0.05 && !open_deep) inked = mix(inked, INK, art_outline_in(uv, FRAGCOORD.xy, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX, VIEWPORT_SIZE, -9.0, 12.0) * thing * 0.85 * (1.0 - traced));
+		if (thing > 0.05 && !open_deep) inked = mix(inked, INK, art_outline_in(suv, FRAGCOORD.xy, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX, VIEWPORT_SIZE, -9.0, 12.0) * thing * 0.85 * (1.0 - traced));
+		// (A wake's disturbed water catches a little light even out of hers: where something swims.)
+		inked += vec3(0.55, 0.62, 0.7) * wake_glint * 0.12 * (1.0 - smoothstep(0.0, 0.3, shown));
 		col = mix(col, inked, ink_look);
 	}
 
