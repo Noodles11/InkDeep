@@ -517,3 +517,10 @@ the tests of the dive still test the dive.
   - her beam strips the corruption off what it lights in layers of violet brackets (no longer shimmering the water);
   - a murkling's birth shows only where light falls on it, rising with a hot-air ripple of the water.
   (Not brought over: the cube branch's camera changes and its own cube-reef systems.)
+- **The camera, and the lit edges' colour (0.70.0):**
+  - from the cube branch: the camera **holds its distance with creatures round her**; only a boss's battle draws it in
+    (`CameraRig.Tense`, `BossZoom`); dashing, it leads a little the way she dashes, and fading copies of her bell trail
+    the dash (`bell_ghost.gdshader`);
+  - where her light traces the reef's edges in the ink look, the line is the **biome's own colour** (its ink's tint
+    made bright, wavering a little toward white): the Sunlit Reef blue, the Kelp Forest green, the Shipwreck red, the
+    Ruins yellow, the Alien Wreckage cyan, the Drowned Temple orange, Atlantis violet; no longer always coral and magenta.

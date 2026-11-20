@@ -153,12 +153,10 @@ uniform vec3 ink_tint = vec3(0.32, 0.5, 0.85);
 // Her shots' light on the reef (LightMemory.ShotSpread, ShotShown, via CameraRig.SetShotLight).
 uniform float shot_spread = 3.0;
 uniform float shot_gain = 4.0;
-// Ink, ash, the unlit water and the traced light's two ends.
+// Ink, ash and the unlit water. (The traced light's colour is the biome's: ink_tint.)
 const vec3 INK = vec3(0.012, 0.014, 0.024);
 const vec3 ASH = vec3(0.6, 0.59, 0.56);
 const vec3 INK_WATER = vec3(0.012, 0.022, 0.05);
-const vec3 NEON_CORAL = vec3(1.0, 0.45, 0.36);
-const vec3 NEON_MAGENTA = vec3(0.95, 0.26, 0.66);
 // Her light and the warm tint of her glow (HerColor.cs, data/clementine_color.cfg).
 global uniform vec3 her_light;
 global uniform vec3 her_warm;
@@ -803,7 +801,10 @@ void fragment() {
 		// she does; round what lies at her plane always ink (the corruption's creatures are never traced in light).
 		vec2 lines = open_deep ? vec2(0.0) : ink_line(ih, wp, suv, FRAGCOORD.xy, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX, VIEWPORT_SIZE);
 		float traced = smoothstep(0.15, 0.7, shown);
-		vec3 neon = mix(NEON_CORAL, NEON_MAGENTA, value_noise(wp * 0.15 + 3.0));
+		// (In the biome's own colour, its ink's tint made bright: the reef's blue, the kelp's green, the wreck's red, the
+		// ruins' yellow, the wreck's cyan, the temple's orange, Atlantis's violet; wavering a little toward white.)
+		vec3 glow = ink_tint / max(max(ink_tint.r, max(ink_tint.g, ink_tint.b)), 1e-3);
+		vec3 neon = mix(glow, mix(glow, vec3(1.0), 0.45), value_noise(wp * 0.15 + 3.0));
 		inked = mix(inked, INK, lines.x * (1.0 - traced) * 0.95);
 		inked = mix(inked, neon * 1.1, lines.x * traced * 0.8);
 		inked = mix(inked, INK, lines.y * 0.95);
