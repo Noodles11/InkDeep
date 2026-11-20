@@ -481,3 +481,13 @@ the tests of the dive still test the dive.
   the reef in its colour now and lingers after as her beam's does (0.3 s, fading over 1.3 s), by the same numbers in the
   post pass and the light memory (`LightMemory.ShotSpread`, `ShotShown`, `CameraRig.SetShotLight`); and her shots light
   a wider, stronger area than before (`CombatView.GroundRadius` 2.1 m, `GroundStrength` 0.45; shown about √3 × as wide).
+- **The danger clock and murklings out of the dark (0.67.0)** (`PlaneDanger.cs`, from the cube reef's danger clock):
+  a crossover level has no leaks for the corruption to bud from, so its **murklings come out of the dark** instead.
+  A level starts with as many as an inked reef would (4 + 8 × Menace, in its dark, at least 18 m from where she comes
+  in); more come out of any dark spot 9–20 m from her, one every 9 s ÷ (1 + Menace), while fewer than 4 + 5 × Menace
+  are within 26 m of her: **more the deeper**. Each level's **danger clock** climbs in five steps over 2.5 minutes
+  (`DangerTuning`): each step after the first, they come 35% more often and 30% more may stay round her: **more the
+  longer she stays**. None come during a boss's fight or in its arena, and a boss level's clock stops once its boss is
+  freed. The HUD shows the step as trembling red exclamation marks beside her bell (none at first, four at the most).
+  With no glow, she has a faint **presence** the light-seekers find her by (`LightTuning.PresenceReach`, about 11 m;
+  never drawn, reveals nothing), so the murklings come for her even with her beam off.

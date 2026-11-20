@@ -17,6 +17,11 @@ public static class LightTuning
     public const float Falloff = 1.6f, ConeSoft = 0.7f;
     /// <summary>Her aura: a point on her, always on (reach × √ her glow stat).</summary>
     public const float AuraReach = 5.5f, AuraIntensity = 1f;
+    /// <summary>
+    /// Her presence where she has no glow (PlaneOptions.Glow off): the faint light of her bell itself, a point on her that
+    /// reveals nothing and is never drawn, only felt by the light-seekers (her murklings find her by it, from about 11 m).
+    /// </summary>
+    public const float PresenceReach = 14f, PresenceIntensity = 0.5f;
     /// <summary>Her beam: a cone along her aim.</summary>
     public const float BeamReach = 16f, BeamHalfAngleDeg = 22f, BeamIntensity = 1.2f;
     /// <summary>
@@ -619,7 +624,19 @@ public sealed partial class PlaneWorld
         a.Position = Player.Position;
         a.Range = LightTuning.AuraReach * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.Glow], 0.1f));
         a.Active = !Defeated && !GlowOff && Options.Glow;
+        // (No glow: her presence, felt by the light-seekers only.)
+        var p = Presence;
+        p.Position = Player.Position;
+        p.Active = !Defeated && !GlowOff && !Options.Glow;
     }
+
+    LightEmitter? _presence;
+
+    /// <summary>Her presence (LightTuning.PresenceReach): where she has no glow, what the light-seekers find her by.</summary>
+    public LightEmitter Presence => _presence ??= Lights.Add(new LightEmitter
+    {
+        Owner = Her, Intensity = LightTuning.PresenceIntensity, Range = LightTuning.PresenceReach, Active = false,
+    });
 
     /// <summary>
     /// Her glow put out (docs/LIGHT-AND-GRAPH.md §2.4): no aura round her. Dark, and her beam not shining, she

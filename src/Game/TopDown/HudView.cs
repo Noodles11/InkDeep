@@ -295,6 +295,7 @@ public partial class HudView : Control
         _shells = world.Run.Shells;
         _time += dt;
         _adventure = world.Options.Adventure;
+        Danger = world.Danger;
         if (_adventure)
         {
             float max = Mathf.Max(world.Run.MaxHp, 1f);
@@ -410,6 +411,28 @@ public partial class HudView : Control
             int n = 0;
             foreach (var f in _flights) n += f.Worth;
             return n;
+        }
+    }
+
+    /// <summary>The level's danger step (PlaneWorld.Danger: 0 none, up to DangerTuning.Steps − 1): that many exclamation marks.</summary>
+    public int Danger { get; set; }
+
+    /// <summary>
+    /// The danger, right of her gauge's bell: an exclamation mark for each step past the first, in a warning red, each
+    /// trembling on its own, the more of them the harder.
+    /// </summary>
+    void DrawDanger(Font font)
+    {
+        if (Danger <= 0) return;
+        const int fs = 26;
+        var start = BellAt + new Vector2(BellRadius + 16f, 40f);
+        float shake = 0.7f + 0.9f * Danger;
+        var col = new Color(1f, 0.38f, 0.26f);
+        for (int i = 0; i < Danger; i++)
+        {
+            var jitter = new Vector2(Mathf.Sin(_time * 53f + i * 2.1f) + 0.5f * Mathf.Sin(_time * 87f + i * 5.3f),
+                Mathf.Sin(_time * 61f + i * 3.7f) + 0.5f * Mathf.Sin(_time * 79f + i * 1.3f)) * shake * 0.67f;
+            Outlined(font, start + new Vector2(i * 13f, 0f) + jitter, "!", fs, col);
         }
     }
 
@@ -722,7 +745,11 @@ public partial class HudView : Control
             DrawRect(new Rect2(b + new Vector2(bw * 0.5f - 1f, -2f), new Vector2(2f, bh + 4f)), new Color(0f, 0f, 0f, 0.7f * a));
         }
 
-        if (_adventure) DrawGauge(font);
+        if (_adventure)
+        {
+            DrawGauge(font);
+            DrawDanger(font);
+        }
         if (_diveClock >= 0f && !Diving) DrawDiveClock();
         // Shells, bottom left (her pearls circle her bell instead: PearlOrbitView): brightens and swells with each one
         // collected.

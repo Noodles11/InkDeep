@@ -387,6 +387,8 @@ public sealed partial class PlaneWorld
         PlaceInk(Dots);
         if (Map.LeakCave) PlaceCaveMurklings();
         else PlaceReefMurklings(Dots);
+        // (A crossover level has no leaks: its murklings come out of the dark, PlaneDanger.cs.)
+        PlaceDarkMurklings();
         ExitOpen = Leaks.Count == 0 && Boss is null;
     }
 
@@ -507,6 +509,7 @@ public sealed partial class PlaneWorld
         StepFlounders(dots);
         StepCaveMurklings(dots);
         StepReefMurklings(dots);
+        StepDarkMurklings();
         dots.Regrow(Tick, AdventureTuning.Regrow * Dt);
     }
 
