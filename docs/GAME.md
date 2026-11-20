@@ -24,6 +24,7 @@ page**, then the system documents (§0), then DESIGN-TOPDOWN.md, then anything i
 | [TITLE-MENU.md](TITLE-MENU.md) | The title screen, its cards, statistics, the Sea-pedia, saves and settings. |
 | [VISUAL-SHOWCASE.md](VISUAL-SHOWCASE.md), [ART-LOOKS.md](ART-LOOKS.md) | The painted look (the Blue Hollow), her beam's light, and the earlier looks. |
 | [DESIGN-TOPDOWN.md](DESIGN-TOPDOWN.md) | The detailed rules and numbers of the plane: movement, camera, the level generator, lighting, UI. Parts are out of date (§13). |
+| [STREAMING.md](STREAMING.md) | Playing on a phone: why there is no web build, the launcher (`tools/play.bat`), Steam Link and its alternatives. |
 | `proposals/` | Ideas not built: the deeper fish, the reef redo, the beam pearls plan, the project review. |
 | `archive/` | Superseded designs and the reasoning behind built features (the 2D and 3D designs, the open-reef RPG, the old proposals). Read for history, never for rules. |
 
