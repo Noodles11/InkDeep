@@ -17,10 +17,15 @@ It starts Godot's own executable, never winget's `godot` link on the PATH: run t
 On the PC:
 
 1. Install Steam and sign in.
-2. **Games → Add a Non-Steam Game to My Library… → Browse…**, set the file type to *All files*, choose
-   `tools\play.bat` in the repository, and add it.
-3. In the library, right-click it → **Properties…** and name it *Ink Deep* (the launcher finds the repository from its
-   own place, whatever **Start In** says).
+2. **Games → Add a Non-Steam Game to My Library… → Browse…** and choose Godot's own executable (Steam often adds
+   nothing when a `.bat` is chosen):
+   `%LOCALAPPDATA%\Microsoft\WinGet\Packages\GodotEngine.GodotEngine.Mono_Microsoft.Winget.Source_8wekyb3d8bbwe\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64.exe`
+   (paste the folder part into the dialog's address bar), tick it and **Add Selected Programs**.
+3. In the library, right-click the new entry → **Properties…**: name it *Ink Deep*, then either
+   - set **Target** to the launcher, `"D:\AI_Projects\InkDeep\tools\play.bat"` (with the quotes; it also brings the
+     C# build up to date), or
+   - leave the target and set **Launch Options** to `--path "D:\AI_Projects\InkDeep" --fullscreen` (it plays the last
+     build: run `tools\play.bat` once after changing the code).
 4. **Steam → Settings → Remote Play**: turn Remote Play on.
 
 On the phone:
