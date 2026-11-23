@@ -63,8 +63,12 @@ public sealed record RockMaterial(string Name, Spectrum Albedo, float Mirror, fl
 /// <summary>How light meeting a wall shares itself out (each 0..1, adding to 1): mirrored, scattered back, gone in, drunk.</summary>
 public readonly record struct Meeting(float Mirrored, float Scattered, float Entered, float Drunk);
 
-/// <summary>Her light's physical properties this step (LIGHT-WORLD.md §2), and what this water does to them.</summary>
-public readonly record struct LightPhysics(Spectrum Spectrum, float Coherence, float Reach, float Punch, float Halo)
+/// <summary>
+/// Her light's physical properties this step (LIGHT-WORLD.md §2), and what this water does to them. Power, Width and
+/// Pulse are her manual light's (LightSettings; 1 otherwise): her light's amount, her beam's width, and its pulse's
+/// multiplier this step.
+/// </summary>
+public readonly record struct LightPhysics(Spectrum Spectrum, float Coherence, float Reach, float Punch, float Halo, float Power = 1f, float Width = 1f, float Pulse = 1f)
 {
     public float Wavelength => Spectrum.Wavelength;
     public float Frequency => Spectrum.Frequency;
@@ -72,6 +76,22 @@ public readonly record struct LightPhysics(Spectrum Spectrum, float Coherence, f
 
     /// <summary>Nothing changed: her plain light in the reference water (the game without optics).</summary>
     public static readonly LightPhysics Neutral = new(Spectrum.Hers, OpticsTuning.Coherence, 1f, 1f, 1f);
+}
+
+/// <summary>
+/// Her light set by hand (the F1 menu's gauges): its spectrum (the bands' mix; the total is kept, light is conserved), its
+/// power (× her light's amount: her beam's burn and her shots' damage), its coherence (0..1), her beam's width (× its
+/// half-angle) and its pulse (Hz: her light swelling and ebbing, 0 steady). Set, it takes the place of what her pearls
+/// make of her light, in any level (the water's effect on it only with optics).
+/// </summary>
+public sealed class LightSettings
+{
+    public Spectrum Spectrum = Spectrum.Hers;
+    public float Power = 1f, Coherence = OpticsTuning.Coherence, Width = 1f, PulseHz;
+
+    /// <summary>Her light's pulse swing: ± this share of it at the pulse's peak and trough.</summary>
+    public const float PulseDepth = 0.5f;
+    public const float PowerLeast = 0.25f, PowerMost = 3f, WidthLeast = 0.3f, WidthMost = 2.5f, PulseMost = 8f, BandMost = 2f;
 }
 
 /// <summary>Phase 1's values (LIGHT-WORLD.md §14). (tune)</summary>
@@ -241,6 +261,12 @@ public sealed partial class PlaneWorld
     /// <summary>Her light's physics this step (LIGHT-WORLD.md §2): neutral without optics.</summary>
     public LightPhysics HerLightPhysics { get; private set; } = LightPhysics.Neutral;
 
+    /// <summary>Her light set by hand (the F1 menu's gauges), or null: her pearls make it.</summary>
+    public LightSettings? ManualLight { get; set; }
+
+    /// <summary>A manual light's spectrum with her light's total (its mix only: light is conserved).</summary>
+    static Spectrum Conserved(Spectrum s) => s.Total <= 1e-4f ? Spectrum.Hers : s.Scale(Spectrum.Hers.Total / s.Total);
+
     /// <summary>Walls glowing with light they stored.</summary>
     public List<WallGlow> WallGlows { get; } = new();
 
@@ -259,17 +285,26 @@ public sealed partial class PlaneWorld
     /// <summary>Her light's properties, and what this water does to them: reach, punch at mid reach, halo.</summary>
     void StepOptics()
     {
-        if (!Options.Optics)
+        var manual = ManualLight;
+        if (!Options.Optics && manual is null)
         {
             HerLightPhysics = LightPhysics.Neutral;
             return;
         }
         var shot = Run.Loadout.Shot;
-        var spectrum = SpectrumOf(shot.Ember, shot.Bloom, shot.Frost);
-        float coherence = Math.Clamp((shot.Laser ? OpticsTuning.LanceCoherence : OpticsTuning.Coherence) + OpticsTuning.FocusCoherence * Focus, 0f, 1f);
+        var spectrum = manual is not null ? Conserved(manual.Spectrum) : SpectrumOf(shot.Ember, shot.Bloom, shot.Frost);
+        float coherence = Math.Clamp((manual is not null ? manual.Coherence : shot.Laser ? OpticsTuning.LanceCoherence : OpticsTuning.Coherence)
+            + OpticsTuning.FocusCoherence * Focus, 0f, 1f);
         float reach = Optics.ReachScale(spectrum, Water, coherence);
         float punch = Math.Clamp(Optics.PunchAt(spectrum, Water, coherence, LightTuning.BeamReach * 0.5f), OpticsTuning.PunchLeast, OpticsTuning.PunchMost);
-        HerLightPhysics = new LightPhysics(spectrum, coherence, reach, punch, Optics.Halo(Water, coherence));
+        float power = 1f, width = 1f, pulse = 1f;
+        if (manual is not null)
+        {
+            power = Math.Clamp(manual.Power, LightSettings.PowerLeast, LightSettings.PowerMost);
+            width = Math.Clamp(manual.Width, LightSettings.WidthLeast, LightSettings.WidthMost);
+            if (manual.PulseHz > 0f) pulse = 1f + LightSettings.PulseDepth * MathF.Sin(Time * manual.PulseHz * MathF.Tau);
+        }
+        HerLightPhysics = new LightPhysics(spectrum, coherence, reach, punch * power * pulse, Optics.Halo(Water, coherence), power, width, pulse);
         StepWallGlows();
     }
 
@@ -309,8 +344,9 @@ public sealed partial class PlaneWorld
     /// <summary>A volley's shots take her light's potency (blue burns harder, red less) and the water's density (slower in brine).</summary>
     void ShapeOpticsVolley(int first)
     {
-        if (!Options.Optics) return;
-        float potency = Optics.Potency(HerLightPhysics.Spectrum), slow = 1f / MathF.Sqrt(MathF.Max(Water.Density, 0.5f));
+        if (!Options.Optics && ManualLight is null) return;
+        var l = HerLightPhysics;
+        float potency = Optics.Potency(l.Spectrum) * l.Power * l.Pulse, slow = 1f / MathF.Sqrt(MathF.Max(Water.Density, 0.5f));
         for (int i = first; i < Shots.Count; i++)
         {
             Shots[i].Damage *= potency;
@@ -378,5 +414,30 @@ public sealed partial class PlaneWorld
             Intensity = OpticsTuning.GlowLight, Colour = new Vector3(1f, 0.86f, 0.6f),
         });
         WallGlows.Add(g);
+    }
+}
+
+public sealed partial class PlaneWorld
+{
+    /// <summary>Her light as her pearls make it, as a manual light's settings (the F1 menu's gauges start from it).</summary>
+    public LightSettings PearlLight()
+    {
+        var shot = Run.Loadout.Shot;
+        return new LightSettings
+        {
+            Spectrum = SpectrumOf(shot.Ember, shot.Bloom, shot.Frost),
+            Coherence = shot.Laser ? OpticsTuning.LanceCoherence : OpticsTuning.Coherence,
+        };
+    }
+
+    /// <summary>What a light would be in this water (its pulse steady, no focus): for the F1 menu's read-out while the game stands still.</summary>
+    public LightPhysics Preview(LightSettings s)
+    {
+        var spectrum = Conserved(s.Spectrum);
+        float coherence = Math.Clamp(s.Coherence, 0f, 1f);
+        float power = Math.Clamp(s.Power, LightSettings.PowerLeast, LightSettings.PowerMost);
+        float punch = Math.Clamp(Optics.PunchAt(spectrum, Water, coherence, LightTuning.BeamReach * 0.5f), OpticsTuning.PunchLeast, OpticsTuning.PunchMost);
+        return new LightPhysics(spectrum, coherence, Optics.ReachScale(spectrum, Water, coherence), punch * power, Optics.Halo(Water, coherence),
+            power, Math.Clamp(s.Width, LightSettings.WidthLeast, LightSettings.WidthMost));
     }
 }

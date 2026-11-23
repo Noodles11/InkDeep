@@ -6,14 +6,17 @@ using OctoShoots.Core.Gen.TopDown;
 using OctoShoots.Core.Items;
 using OctoShoots.Core.Plane;
 using OctoShoots.Core.Run;
+using OctoShoots.Game.Controls;
 using OctoShoots.Game.Fx;
 
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// F1, any time in a run: the debug menu. The game stands still under it. Jump to any level of the seed (cycle, depth,
-/// level; a depth ends at its boss level), switch the floor fog off (to see the floor clear), try Clementine's colour
-/// (HerColor: live, and savable to its file), and switch any pearl on or off. Everything applies at once.
+/// F1, any time in a run: the debug menu, a drawer sliding in from the right as the pause menu does (DrawerStyle), all of
+/// it one scroll (the mouse wheel, the right stick). The game stands still under it. Jump to any level of the seed
+/// (cycle, depth, level; a depth ends at its boss level), switch the floor fog off (to see the floor clear), set
+/// Clementine's light by hand (its spectrum, power, coherence, width and pulse: PlaneOptics' LightSettings), try her
+/// colour (HerColor: live, and savable to its file), and switch any pearl on or off. Everything applies at once.
 /// </summary>
 public partial class DebugMenu : Control
 {
@@ -28,6 +31,26 @@ public partial class DebugMenu : Control
     public event Action<bool>? FloorFogToggled;
     /// <summary>The camera-zoom slider moved (for this session only).</summary>
     public event Action<float>? ZoomChanged;
+    /// <summary>Her light set by hand (its settings), or given back to her pearls (null).</summary>
+    public event Action<LightSettings?>? LightChanged;
+
+    const float Width = 660f, SlideSeconds = OctoShoots.Game.Ui.DrawerStyle.SlideSeconds, ScrollSpeed = 900f;
+    PanelContainer _panel = null!;
+    ColorRect _shade = null!;
+    ScrollContainer _scroll = null!;
+    float _open;
+    bool _opening;
+
+    /// <summary>Open, or sliding in.</summary>
+    public bool IsOpen => _opening;
+
+    PlaneWorld? _world;
+    LightSettings? _manual;
+    CheckBox _byHand = null!;
+    HSlider _red = null!, _green = null!, _blue = null!, _power = null!, _coherence = null!, _width = null!, _pulse = null!;
+    ColorRect _swatch = null!;
+    Label _readout = null!;
+    bool _filling;
 
     static readonly Color Ink = new(0.82f, 0.9f, 0.92f);
     static readonly Color Soft = new(0.55f, 0.65f, 0.68f);
@@ -56,34 +79,32 @@ public partial class DebugMenu : Control
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         MouseFilter = MouseFilterEnum.Stop;
         Visible = false;
-        AddChild(new ColorRect { Color = new Color(0.01f, 0.03f, 0.05f, 0.6f), MouseFilter = MouseFilterEnum.Ignore, AnchorRight = 1f, AnchorBottom = 1f });
-
-        var center = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
-        center.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        AddChild(center);
-        var panel = new PanelContainer { CustomMinimumSize = new Vector2(640f, 0f) };
-        panel.AddThemeStyleboxOverride("panel", new StyleBoxFlat
-        {
-            BgColor = new Color(0.03f, 0.07f, 0.09f, 0.96f),
-            BorderColor = new Color(0.45f, 0.95f, 0.8f, 0.55f),
-            BorderWidthBottom = 2, BorderWidthTop = 2, BorderWidthLeft = 2, BorderWidthRight = 2,
-            CornerRadiusBottomLeft = 10, CornerRadiusBottomRight = 10, CornerRadiusTopLeft = 10, CornerRadiusTopRight = 10,
-            ContentMarginLeft = 22, ContentMarginRight = 22, ContentMarginTop = 18, ContentMarginBottom = 18,
-        });
-        center.AddChild(panel);
-        var box = new VBoxContainer();
-        box.AddThemeConstantOverride("separation", 10);
-        panel.AddChild(box);
+        // (The world dimmed behind the drawer as it slides in.)
+        _shade = new ColorRect { Color = new Color(0.01f, 0.03f, 0.05f, 0f), MouseFilter = MouseFilterEnum.Ignore, AnchorRight = 1f, AnchorBottom = 1f };
+        AddChild(_shade);
+        _panel = new PanelContainer { CustomMinimumSize = new Vector2(Width, 0f) };
+        _panel.AddThemeStyleboxOverride("panel", OctoShoots.Game.Ui.DrawerStyle.Panel());
+        AddChild(_panel);
+        var frame = new VBoxContainer();
+        frame.AddThemeConstantOverride("separation", 10);
+        _panel.AddChild(frame);
 
         var head = new HBoxContainer();
-        box.AddChild(head);
-        var title = Caption("Debug", 28, Head);
+        frame.AddChild(head);
+        var title = OctoShoots.Game.Ui.DrawerStyle.Title("Debug");
         title.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         head.AddChild(title);
-        var close = new Button { Text = "Close  (F1)" };
+        var close = OctoShoots.Game.Ui.DrawerStyle.Button("Close  (F1)");
         close.Pressed += () => Closed?.Invoke();
         head.AddChild(close);
-        box.AddChild(Caption("The game is paused. Debug runs are not saved or counted in your statistics.", 13, Soft));
+        frame.AddChild(Caption("The game is paused. Debug runs are not saved or counted in your statistics.", 13, Soft));
+
+        // All the rest one scroll (the wheel; the right stick on a controller).
+        _scroll = new ScrollContainer { SizeFlagsVertical = SizeFlags.ExpandFill, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, FollowFocus = true };
+        frame.AddChild(_scroll);
+        var box = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        box.AddThemeConstantOverride("separation", 10);
+        _scroll.AddChild(box);
 
         // Level: cycle, depth, level (up to that depth's boss level).
         box.AddChild(new HSeparator());
@@ -124,9 +145,12 @@ public partial class DebugMenu : Control
         box.AddChild(_floorFog);
         var zoomRow = new HBoxContainer();
         zoomRow.AddThemeConstantOverride("separation", 16);
-        zoomRow.AddChild(Caption("Camera zoom", 13, Ink));
+        zoomRow.AddChild(Inline("Camera zoom", 13, Ink));
         zoomRow.AddChild(OctoShoots.Game.Title.SettingsCard.ZoomSlider(CameraRig.DefaultZoom, v => ZoomChanged?.Invoke(v), Ink));
         box.AddChild(zoomRow);
+
+        // Clementine's light by hand: each of its physical characteristics a gauge (PlaneOptics' LightSettings).
+        BuildLight(box);
 
         // Clementine's colour: her body, and her light (derived from it unless set).
         box.AddChild(new HSeparator());
@@ -192,11 +216,124 @@ public partial class DebugMenu : Control
         pearlHead.AddChild(none);
         box.AddChild(Caption("Switched pearls apply at once. Holding several active pearls, the last one switched on is used.", 13, Soft));
 
-        var scroll = new ScrollContainer { CustomMinimumSize = new Vector2(0f, 360f), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
-        box.AddChild(scroll);
         _pearlList = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         _pearlList.AddThemeConstantOverride("separation", 4);
-        scroll.AddChild(_pearlList);
+        box.AddChild(_pearlList);
+    }
+
+    /// <summary>
+    /// The light section: "Set by hand", and a gauge for each characteristic of her light (its red, green and blue
+    /// bands, its power, coherence, beam width and pulse), its colour as a swatch, and a read-out of what it is in this
+    /// water (its wavelength and frequency, reach, punch, halo). Moving a gauge sets it by hand; "From her pearls"
+    /// starts the gauges again from what her pearls make of it.
+    /// </summary>
+    void BuildLight(VBoxContainer box)
+    {
+        box.AddChild(new HSeparator());
+        var head = new HBoxContainer();
+        head.AddThemeConstantOverride("separation", 10);
+        box.AddChild(head);
+        var t = Caption("CLEMENTINE'S LIGHT", 13, Head);
+        t.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        head.AddChild(t);
+        _byHand = new CheckBox { Text = "Set by hand" };
+        _byHand.AddThemeColorOverride("font_color", Ink);
+        _byHand.Toggled += on =>
+        {
+            if (_filling) return;
+            _manual = on ? Read() : null;
+            LightChanged?.Invoke(_manual);
+            ShowLight();
+        };
+        head.AddChild(_byHand);
+        var fromPearls = new Button { Text = "From her pearls" };
+        fromPearls.Pressed += () =>
+        {
+            if (_world is null) return;
+            Fill(_world.PearlLight());
+            if (_manual is not null)
+            {
+                _manual = Read();
+                LightChanged?.Invoke(_manual);
+            }
+            ShowLight();
+        };
+        head.AddChild(fromPearls);
+        box.AddChild(Caption("Its colour from its three bands' mix (its total kept: light is conserved); its reach, punch and halo follow from it and the water.", 13, Soft));
+
+        var top = new HBoxContainer();
+        top.AddThemeConstantOverride("separation", 12);
+        box.AddChild(top);
+        _swatch = new ColorRect { CustomMinimumSize = new Vector2(46f, 46f), SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        top.AddChild(_swatch);
+        _readout = Caption("", 14, Ink);
+        _readout.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        top.AddChild(_readout);
+
+        var grid = new GridContainer { Columns = 3 };
+        grid.AddThemeConstantOverride("h_separation", 12);
+        grid.AddThemeConstantOverride("v_separation", 4);
+        box.AddChild(grid);
+        _red = Gauge(grid, "Red  640 nm", 0, LightSettings.BandMost, 0.01, v => $"{v:0.00}", new Color(1f, 0.45f, 0.4f));
+        _green = Gauge(grid, "Green  530 nm", 0, LightSettings.BandMost, 0.01, v => $"{v:0.00}", new Color(0.5f, 1f, 0.55f));
+        _blue = Gauge(grid, "Blue  465 nm", 0, LightSettings.BandMost, 0.01, v => $"{v:0.00}", new Color(0.5f, 0.7f, 1f));
+        _power = Gauge(grid, "Power", LightSettings.PowerLeast, LightSettings.PowerMost, 0.05, v => $"x {v:0.00}", Ink);
+        _coherence = Gauge(grid, "Coherence", 0, 1, 0.01, v => $"{v:0.00}", Ink);
+        _width = Gauge(grid, "Beam width", LightSettings.WidthLeast, LightSettings.WidthMost, 0.05, v => $"x {v:0.00}", Ink);
+        _pulse = Gauge(grid, "Pulse", 0, LightSettings.PulseMost, 0.1, v => v <= 0.001 ? "steady" : $"{v:0.0} Hz", Ink);
+    }
+
+    /// <summary>A gauge: its name, a slider, its value; moved, her light is set by hand.</summary>
+    HSlider Gauge(GridContainer grid, string name, double min, double max, double step, Func<double, string> show, Color colour)
+    {
+        var n = Inline(name, 15, colour);
+        n.CustomMinimumSize = new Vector2(130f, 0f);
+        grid.AddChild(n);
+        var s = new HSlider { MinValue = min, MaxValue = max, Step = step, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter, CustomMinimumSize = new Vector2(300f, 24f) };
+        grid.AddChild(s);
+        var v = Inline(show(min), 15, Ink);
+        v.CustomMinimumSize = new Vector2(80f, 0f);
+        grid.AddChild(v);
+        s.ValueChanged += value =>
+        {
+            v.Text = show(value);
+            if (_filling) return;
+            _manual = Read();
+            _byHand.SetPressedNoSignal(true);
+            LightChanged?.Invoke(_manual);
+            ShowLight();
+        };
+        return s;
+    }
+
+    LightSettings Read() => new()
+    {
+        Spectrum = new Spectrum((float)_red.Value, (float)_green.Value, (float)_blue.Value),
+        Power = (float)_power.Value, Coherence = (float)_coherence.Value, Width = (float)_width.Value, PulseHz = (float)_pulse.Value,
+    };
+
+    void Fill(LightSettings s)
+    {
+        _filling = true;
+        _red.Value = s.Spectrum.R;
+        _green.Value = s.Spectrum.G;
+        _blue.Value = s.Spectrum.B;
+        _power.Value = s.Power;
+        _coherence.Value = s.Coherence;
+        _width.Value = s.Width;
+        _pulse.Value = s.PulseHz;
+        _filling = false;
+    }
+
+    /// <summary>The swatch and the read-out: the light the gauges make (or her pearls'), in this water.</summary>
+    void ShowLight()
+    {
+        if (_world is null) return;
+        var l = _world.Preview(_manual ?? Read());
+        var c = l.Colour;
+        _swatch.Color = new Color(c.X, c.Y, c.Z);
+        _readout.Text = $"{l.Wavelength:0} nm · {l.Frequency:0} THz{(_manual is null ? "  (her pearls')" : "  (by hand)")}\n"
+            + $"In {_world.Water.Name}: reach x {l.Reach:0.00} · punch x {l.Punch:0.00} · halo x {l.Halo:0.00}";
     }
 
     /// <summary>The pickers into HerColor (the light follows the body while "from body" is on).</summary>
@@ -216,9 +353,16 @@ public partial class DebugMenu : Control
 
     LevelId Selected => new((int)_cycle.Value, (int)_depth.Value, (int)_level.Value);
 
-    /// <summary>Fills the menu from the run and shows it.</summary>
-    public void Open(PlaneRun run, ItemCatalog? catalog, SeedCode seed, LevelId current, bool floorFog)
+    /// <summary>Fills the menu from the run and slides it in.</summary>
+    public void Open(PlaneRun run, ItemCatalog? catalog, SeedCode seed, LevelId current, bool floorFog, PlaneWorld world)
     {
+        _world = world;
+        _manual = world.ManualLight;
+        _filling = true;
+        _byHand.ButtonPressed = _manual is not null;
+        _filling = false;
+        Fill(_manual ?? world.PearlLight());
+        ShowLight();
         _floorFog.SetPressedNoSignal(floorFog);
         _seed = seed;
         if (!ReferenceEquals(catalog, _catalog) || _pearls.Count == 0)
@@ -233,10 +377,32 @@ public partial class DebugMenu : Control
         ClampLevel();
         Refresh(run);
         ShowColour();
+        _opening = true;
         Visible = true;
     }
 
-    public void Close() => Visible = false;
+    /// <summary>Slides away.</summary>
+    public void Close()
+    {
+        _opening = false;
+        GetViewport()?.GuiReleaseFocus();
+    }
+
+    public override void _Process(double delta)
+    {
+        float dt = (float)delta;
+        _open = Mathf.MoveToward(_open, _opening ? 1f : 0f, dt / SlideSeconds);
+        Visible = _opening || _open > 0f;
+        var size = GetViewportRect().Size;
+        float e = 1f - Mathf.Pow(1f - _open, 3f);
+        _panel.Position = new Vector2(size.X - Width * e, 0f);
+        _panel.Size = new Vector2(Width, size.Y);
+        _shade.Color = new Color(0.01f, 0.03f, 0.05f, 0.45f * e);
+        if (!_opening || !InputSetup.UsingPad) return;
+        // (The right stick scrolls it.)
+        float scroll = Input.GetAxis(InputSetup.AimUp, InputSetup.AimDown);
+        if (Mathf.Abs(scroll) > 0.2f) _scroll.ScrollVertical += Mathf.RoundToInt(scroll * ScrollSpeed * dt);
+    }
 
     /// <summary>The pearl boxes follow what she carries.</summary>
     public void Refresh(PlaneRun run)

@@ -25,7 +25,7 @@ namespace OctoShoots.Game.TopDown;
 /// level, any pearls), F3 toggles the debug map, R regenerates from the seed field.
 /// Verification flags: --seed=, --cycle=, --depth=, --level=, --at=start|arch|arch-near|cave|exit|hole|kelp|shop|shop-out|cache|cache-near|secret|secret-in|treasure|treasure-out|clam-pearl|mob|boss|spring|spring-in,
 /// --autopilot, --dive (dives whenever it can), --dbg-pad (on the controller from the start), --calm (no creatures), --fire, --pearls=, --hp=, --luck=, --boss-hp=, --paused, --map, --f3, --no-focus, --dbg-nofog (no floor fog),
-/// --at=optic (facing the first mirror plate or lightglass pane), --capture=dir --frames=a,b, --dbg-say=text (a message banner, a second in), --dbg-loose=id (that pearl loose near her), --at=prism|trio|charge (in a prism stones' bed, a charge stones' trio's
+/// --at=optic (facing the first mirror plate or lightglass pane), --dbg-f1 (the F1 menu open), --dbg-light=r,g,b,power,coherence,width,pulse (her light set by hand), --capture=dir --frames=a,b, --dbg-say=text (a message banner, a second in), --dbg-loose=id (that pearl loose near her), --at=prism|trio|charge (in a prism stones' bed, a charge stones' trio's
 /// nook, before a charge stone), --dbg-prism (a coloured seal's stones laid on her way to it; --fire aims at it), --dbg-shadow (her beam held
 /// along the most open way, two murklings held still in it), --dbg-sense (the same with her beam dark and the murklings
 /// held past her glow: unseen, sensed),
@@ -674,6 +674,13 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--dbg-slowmo=") && float.TryParse(Value("--dbg-slowmo="), NumberStyles.Float, CultureInfo.InvariantCulture, out float slow))
                 Engine.TimeScale = Math.Clamp(slow, 0.02f, 1f);
             else if (arg == "--paused") _startPaused = true;
+            // (The F1 menu opened 20 frames in; her light set by hand: red,green,blue,power,coherence,width,pulse.)
+            else if (arg == "--dbg-f1") _dbgF1 = true;
+            else if (arg.StartsWith("--dbg-light=") && Value("--dbg-light=").Split(',') is { Length: 7 } hand)
+            {
+                float F(int i) => float.Parse(hand[i], CultureInfo.InvariantCulture);
+                _manualLight = new LightSettings { Spectrum = new Spectrum(F(0), F(1), F(2)), Power = F(3), Coherence = F(4), Width = F(5), PulseHz = F(6) };
+            }
             else if (arg == "--dbg-requests") _dbgRequests = true;
             else if (arg.StartsWith("--dbg-freed=")) _dbgFreed = Value("--dbg-freed=").Split(',', StringSplitOptions.RemoveEmptyEntries);
             else if (arg.StartsWith("--treasures=")) _dbgTreasures = Value("--treasures=").Split(',', StringSplitOptions.RemoveEmptyEntries);
@@ -1284,6 +1291,13 @@ public partial class TopDownMain : Node3D
         _debug.GoTo += DebugGoTo;
         _debug.FloorFogToggled += SetFloorFog;
         _debug.ZoomChanged += zoom => _camera.ZoomSetting = zoom;
+        // Her light set by hand (kept for every level after, till it is given back to her pearls).
+        _debug.LightChanged += light =>
+        {
+            MarkDebugRun();
+            _manualLight = light;
+            if (_world is not null) _world.ManualLight = light;
+        };
         _debug.PearlToggled += (id, on) =>
         {
             MarkDebugRun();
@@ -1669,6 +1683,8 @@ public partial class TopDownMain : Node3D
         // Waking in a haven (Lantern Bay): she is healed whole.
         if (map.InHaven(arriveAt ?? map.Start.Position)) _run.Hp = _run.MaxHp;
         _world = new PlaneWorld(_map, _tuning, _run, InDiveCave ? DiveCaveOptions(_map) : DebugBoss() ?? DiveBoss());
+        // (Her light as set by hand in the F1 menu, if it is.)
+        _world.ManualLight = _manualLight;
         if (_dbgDiveClock > 0f) _world.DebugClockTo(_dbgDiveClock);
         ShowMouths();
         if (_captureDir is not null)
@@ -2490,11 +2506,11 @@ public partial class TopDownMain : Node3D
         bool f1 = Input.IsPhysicalKeyPressed(Key.F1);
         if (f1 && !_f1Latched && _world is not null && _run is not null)
         {
-            if (_debug.Visible) CloseDebug();
+            if (_debug.IsOpen) CloseDebug();
             else
             {
                 if (_pause.Visible) _pause.Close();
-                _debug.Open(_run, _catalog, _seed, _id, _floorFog);
+                _debug.Open(_run, _catalog, _seed, _id, _floorFog, _world);
             }
         }
         _f1Latched = f1;
@@ -3966,6 +3982,10 @@ public partial class TopDownMain : Node3D
     float _springHealed;
 
 
+    /// <summary>Her light as set by hand in the F1 menu (null: her pearls make it).</summary>
+    LightSettings? _manualLight;
+    bool _dbgF1;
+
     void CloseDebug()
     {
         _debug.Close();
@@ -4633,6 +4653,7 @@ public partial class TopDownMain : Node3D
     void Capture()
     {
         _frame++;
+        if (_dbgF1 && _frame == 20 && _world is not null && _run is not null) _debug.Open(_run, _catalog, _seed, _id, _floorFog, _world);
         if (_dbgPop && _frame == 30)
         {
             // Verification (`--dbg-pop`): a murkling, a prime, a Thumpsquirt and a Lashjaw freed round her at once.

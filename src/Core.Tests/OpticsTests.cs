@@ -156,4 +156,35 @@ public class OpticsTests
         Assert.True(ruins.Glows > 0, "no wall glowed in the Ruins");
         Assert.Equal(0, wreck.Glows);
     }
+
+    [Fact]
+    public void Her_light_set_by_hand_takes_its_colour_power_width_and_pulse_in_any_level()
+    {
+        var w = World(Biome.SunlitReef, optics: false);
+        w.Step(new PlaneInput { Beam = true, Aim = Vector2.UnitX });
+        float plainHalf = w.Beam.HalfAngle;
+        w.ManualLight = new LightSettings { Spectrum = new Spectrum(0.1f, 0.3f, 2f), Power = 2f, Width = 2f, Coherence = 0.5f };
+        w.Step(new PlaneInput { Beam = true, Aim = Vector2.UnitX });
+        var l = w.HerLightPhysics;
+        Assert.True(l.Wavelength < 490f, $"a blue light at {l.Wavelength} nm");
+        Assert.Equal(Spectrum.Hers.Total, l.Spectrum.Total, 3);
+        Assert.True(l.Punch > 1.9f, $"punch {l.Punch}");
+        Assert.True(w.Beam.HalfAngle > plainHalf * 1.9f, $"half-angle {w.Beam.HalfAngle} against {plainHalf}");
+        // Pulsed, her light swells and ebbs.
+        w.ManualLight = new LightSettings { PulseHz = 2f };
+        float least = float.MaxValue, most = 0f;
+        for (int i = 0; i < 60; i++)
+        {
+            w.Player.Hp = w.Run.MaxHp;
+            w.Step(new PlaneInput { Beam = true, Aim = Vector2.UnitX });
+            least = MathF.Min(least, w.HerLightPhysics.Pulse);
+            most = MathF.Max(most, w.HerLightPhysics.Pulse);
+        }
+        Assert.True(most > 1.4f && least < 0.6f, $"pulse {least}..{most}");
+        // Given back to her pearls, it is as it was.
+        w.ManualLight = null;
+        w.Step(new PlaneInput { Beam = true, Aim = Vector2.UnitX });
+        Assert.Equal(LightPhysics.Neutral, w.HerLightPhysics);
+        Assert.Equal(plainHalf, w.Beam.HalfAngle, 4);
+    }
 }

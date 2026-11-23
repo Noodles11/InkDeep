@@ -577,4 +577,18 @@ the tests of the dive still test the dive.
   - **The light card** heads the pause menu's Stats: her light's wavelength and frequency in its colour, her reach,
     punch and halo in this water, and the water and rock she is in.
   - `--at=optic` starts her facing the first plate or pane. Tests: `OpticWallTests`.
+- **Her light by hand, and the F1 menu a drawer (0.75.0).** The debug menu (F1, any time in a run) slides in from
+  the right as the pause menu does (`DrawerStyle`), all of it one scroll (the wheel, or the right stick). Its
+  **Clementine's light** section sets her light by hand (`LightSettings`, `PlaneWorld.ManualLight`, PlaneOptics.cs):
+  - one gauge for each characteristic: the red, green and blue bands (0–2: their mix sets her colour, the total
+    kept), power (× 0.25–3: her beams' burn and her shots' damage, and her beam's brightness), coherence (0–1), beam
+    width (× 0.3–2.5 of its half-angle) and pulse (0–8 Hz: her light swelling and ebbing ± half);
+  - a swatch of its colour, and a read-out of its wavelength and frequency, and its reach, punch and halo in this
+    level's water (`PlaneWorld.Preview`);
+  - moving a gauge sets it by hand ("Set by hand" off gives it back to her pearls; "From her pearls" starts the
+    gauges again from what her pearls make: `PlaneWorld.PearlLight`). It holds for every level after, in any level
+    (the water's effect only with optics), and marks the run a debug run. Her beam is drawn in the spectrum's colour
+    while it is set by hand.
+  - `--dbg-f1` opens the menu 20 frames in; `--dbg-light=r,g,b,power,coherence,width,pulse` starts her light set by
+    hand. Tests: `OpticsTests`.
 

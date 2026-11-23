@@ -333,7 +333,8 @@ public partial class BeamView : Node3D
             bool rhythmic = born is null && slot <= 0;
             float frenzy = world.FrenzyLeft > 0f ? Mathf.Min(1f, world.FrenzyLeft / 0.5f) : 0f;
             float rhythmLook = rhythmic ? (1f + FocusGlow * world.Focus) * (1f + SpinGlow * world.SpinUp) * (1f + BeatGlow * world.PulseBeat) * (1f + FrenzyGlow * frenzy) : 1f;
-            var tint = OctoShoots.Game.Fx.LightColour.Beam(rayHue, TopDownMain.ShowcaseOn);
+            // (Her light set by hand: its colour from its spectrum, kept a light's, toward warm white.)
+            var tint = world.ManualLight is not null ? HandTint(world) : OctoShoots.Game.Fx.LightColour.Beam(rayHue, TopDownMain.ShowcaseOn);
             if (rhythmic) tint = tint.Lerp(Colors.White, FocusWhite * world.Focus + FrenzyWhite * frenzy);
             // Black Sun: the creatures' shadows down her own beam glow dark violet (her_beam_volume).
             m.SetShaderParameter("black_sun", born is null && world.Run.Loadout.Flags.Contains("blackSun") ? 1f : 0f);
@@ -343,6 +344,8 @@ public partial class BeamView : Node3D
             // (Her own beam as bright as it burns: her damage stat, BrightOf.)
             float bright = born is null ? beam.Intensity / LightTuning.BeamIntensity * BrightOf(world.LightPower)
                 : Mathf.Clamp(Mathf.Sqrt(born.Worth / HerLightTuning.BeamShots) * BornHaze, BornLeast, 1.2f);
+            // (Her light set by hand: brighter with its power, swelling with its pulse.)
+            if (world.ManualLight is not null) bright *= Mathf.Sqrt(world.HerLightPhysics.Power) * world.HerLightPhysics.Pulse;
             m.SetShaderParameter("strength", fan.On * dim * bright * rhythmLook * (rayHue is LightHue.None or LightHue.White ? 1f : ColouredHaze));
             m.SetShaderParameter("origin", origin);
             m.SetShaderParameter("axis", dir);
@@ -397,7 +400,7 @@ public partial class BeamView : Node3D
             // Her own beam's spotlight: from her heart, level along the beam (tilted down, it lit the floor south of it on the screen).
             var look = (dir + Vector3.Down * SpotTilt).Normalized();
             _spot.GlobalTransform = new Transform3D(Basis.LookingAt(look, Vector3.Up), heart);
-            _spot.LightColor = OctoShoots.Game.Fx.LightColour.Beam(rayHue, TopDownMain.ShowcaseOn);
+            _spot.LightColor = world.ManualLight is not null ? HandTint(world) : OctoShoots.Game.Fx.LightColour.Beam(rayHue, TopDownMain.ShowcaseOn);
             _spot.LightEnergy = SpotEnergy * fan.On * dim * rhythmLook;
             _spot.SpotRange = range * 1.25f;
             _spot.SpotAngle = Mathf.RadToDeg(beam.HalfAngle);
@@ -572,5 +575,12 @@ void fragment() {
     {
         n = (n << 13) ^ n;
         return ((n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff) / (float)0x7fffffff;
+    }
+
+    /// <summary>Her light set by hand: the colour its spectrum makes, a quarter of the way to warm white (it stays a light's).</summary>
+    static Color HandTint(PlaneWorld world)
+    {
+        var c = world.HerLightPhysics.Colour;
+        return new Color(c.X, c.Y, c.Z).Lerp(new Color(1f, 0.95f, 0.85f), 0.25f);
     }
 }

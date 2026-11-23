@@ -676,7 +676,7 @@ public sealed partial class PlaneWorld
         StepGreatLights();
         float halfDeg = MathF.Min(LightTuning.BeamHalfAngleDeg * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.ShotSize], 0.1f)), LightTuning.MaxHalfAngleDeg);
         // (The Lance: long and narrow, its light carried to its end; Shark Mode narrower.)
-        float half = halfDeg * MathF.PI / 180f * MathF.Sqrt(MathF.Max(shape.SizeMult, 0.1f)) * FocusWidth
+        float half = halfDeg * MathF.PI / 180f * MathF.Sqrt(MathF.Max(shape.SizeMult, 0.1f)) * FocusWidth * HerLightPhysics.Width
             * (shape.Laser ? GreatLightTuning.LanceWidth : 1f) * (Run.Loadout.Has("shark_mode") ? GreatLightTuning.SharkNarrow : 1f);
         float carry = shape.Laser ? LightTuning.MostCarry : 0f;
         float range = beam.Range;
