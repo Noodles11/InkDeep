@@ -538,3 +538,21 @@ the tests of the dive still test the dive.
   (Sardine Run) a **machine gun**, each shot's kick a third of a plain one's. The look is the same bolt of light,
   stretched along its flight the faster it goes, its trail a tracer; each shot flashes her light at the muzzle and
   kicks the view a touch.
+- **Her light as physics (0.72.0, phase 1 of proposals/LIGHT-WORLD.md):** her light has a spectrum (red 640, green
+  530, blue 465 nm), so a wavelength, a frequency and a photon energy; a coherence; and each biome's water and rock are
+  matter (`PlaneOptics.cs`, `BiomeOptics`; `PlaneOptions.Optics`, on in the crossover). The full rules are in
+  LIGHT-AND-GRAPH.md §17.
+  - Her colour words move her power along the spectrum (0.6 a copy, total kept).
+  - Each biome's water drinks each band at its own rate and scatters (Beer–Lambert). Her **reach** is how far her light
+    gets before 35% is left, against her plain light in the reef's water (0.55–1.5). Her beam's length takes it, and
+    her beam's burn takes her **punch** (potency × what the water left at mid reach, against the reef's).
+  - Her shots take her potency (blue burns harder per unit of light, red less), fly slower in dense water (the
+    Temple's brine), and lose power to the water as they fly (at least a quarter kept).
+  - Her gun's shots meet the biome's rock by its material:
+    - they ring off a mirror (the wreck's iron most often);
+    - they pass through a thin wall bent by Snell's law and come out its far side (the Alien Wreckage's crystal,
+      Atlantis's quartz, the Temple's black glass);
+    - or the wall drinks them and glows with the share it stores (the Ruins' gilt sandstone most). A wall glow is a
+      light: the murklings see it.
+  - The view draws a spark where a shot bounces, a flash where it leaves a wall, and the stored glow on the water.
+  - Tests: `OpticsTests`.

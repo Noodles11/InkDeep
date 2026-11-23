@@ -828,6 +828,8 @@ public sealed partial class PlaneWorld
         }
         // (A gun's volley: fast and straight, kicking her back, PlaneGun.cs.)
         ShapeGunVolley(first, aim, charge);
+        // (Her light's potency, and the water's density on her shots: PlaneOptics.cs.)
+        ShapeOpticsVolley(first);
         return count;
     }
 
@@ -1144,6 +1146,8 @@ public sealed partial class PlaneWorld
         }
         if (!Map.IsOpen(next) || _rocks.Any(r => r.Contains(next)))
         {
+            // Her gun's shot meets the biome's rock: a mirror, a thin crystal, or a wall that drinks it (PlaneOptics.cs).
+            if (!(shot.Boomerang && shot.Returning) && !_rocks.Any(r => r.Contains(next)) && ShotMeetsRock(shot, dir, next)) return;
             // Her light striking a secret's seal lights its emblem (once a bubble, whatever it carries).
             if (!shot.SealStruck && _rocks.Any(r => r.Contains(next)))
             {
@@ -1172,7 +1176,10 @@ public sealed partial class PlaneWorld
                 return;
             }
         }
+        float flown = shot.Traveled;
         shot.Traveled += Vector2.Distance(shot.Line, next);
+        // (The water drinks its share of its power: PlaneOptics.cs.)
+        ShotThroughWater(shot, flown, shot.Traveled);
         if (shot.Grow) Resize(shot);
         shot.Line = next;
         shot.Position = next;

@@ -446,7 +446,7 @@ public partial class TopDownMain : Node3D
         // 0.13.0; in the crossover her glow is gone and her beam is her light to see by, mostly (PlaneOptions).
         PlaneOptions.Default = new PlaneOptions
         {
-            Adventure = true, Shots = true, Glow = !Crossover.On, Gun = Crossover.On,
+            Adventure = true, Shots = true, Glow = !Crossover.On, Gun = Crossover.On, Optics = Crossover.On,
             BeamBurn = Crossover.On ? HerLightTuning.LightOnlyBurn : 1f,
         };
         // The bundled fonts: Nunito is every screen's default (THEME-BIBLE §6.8).
@@ -2846,6 +2846,9 @@ public partial class TopDownMain : Node3D
                 }
                 else if (e.Type is PlaneEventType.MobHit or PlaneEventType.BossHit) _damage.Show(e);
                 else if (e.Type == PlaneEventType.ShotPopped) _combat.Pop(e.Position, e.Size * 1.7f, e.Direction);
+                // Her light on rock (PlaneOptics.cs): a spark where a shot rings off a mirror wall, a flash where it leaves a crystal bent.
+                else if (e.Type == PlaneEventType.ShotBounced) _combat.LightBurst(e.Position, 0.3f);
+                else if (e.Type == PlaneEventType.ShotRefracted) _combat.LightBurst(e.Position, 0.45f);
                 else if (e.Type == PlaneEventType.ColourShatter)
                 {
                     // Ember on what frost stilled: it shatters in a burst of steam (docs/LIGHT-AND-GRAPH.md §10).

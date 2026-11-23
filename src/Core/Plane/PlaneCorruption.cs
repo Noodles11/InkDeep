@@ -62,6 +62,12 @@ public sealed class PlaneOptions
     /// hover and merge. On in the game.
     /// </summary>
     public bool Gun;
+    /// <summary>
+    /// Her light as physics (PlaneOptics.cs, docs/proposals/LIGHT-WORLD.md): her spectrum through each biome's water sets
+    /// her reach and punch, her shots lose power to the water, and her gun's shots meet the biome's rock (bounce, pass
+    /// through bent, or are drunk and leave it glowing). On in the crossover.
+    /// </summary>
+    public bool Optics;
     /// <summary>The reef's bubble geysers (PlaneGeysers.cs): off (none are placed or spray); on only for their own tests.</summary>
     public bool Geysers;
 

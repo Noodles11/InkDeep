@@ -116,6 +116,8 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     DotDecayed,
     /// <summary>Tide Pulse: one of its waves leaves her (Size: which, 0–2).</summary>
     PushWave,
+    /// <summary>Her light on rock (LIGHT-WORLD.md §5): a shot bounced off a mirror wall (at the wall; Direction: its way on), or came out of a thin wall bent (at its far side; Direction: its way; Size: the wall's depth).</summary>
+    ShotBounced, ShotRefracted,
     /// <summary>Her light on the boss's sealed wall while leaks stand open: it takes none (at the carving; Size: the leaks left).</summary>
     SealRefused,
     /// <summary>A corrupted creature comes into her light and is dazzled (Direction: from her to it; Size: its radius).</summary>
@@ -357,6 +359,8 @@ public sealed partial class PlaneWorld
             GlowOff = !GlowOff;
             Events.Add(new PlaneEvent(PlaneEventType.GlowToggled, Player.Position, Vector2.Zero, GlowOff ? 0f : 1f));
         }
+        // Her light's physics in this water (PlaneOptics.cs, LIGHT-WORLD.md).
+        StepOptics();
         SyncLights(input);
         StepHerLight();
         // Pistol Shrimp Claw's snaps where her beam ends on a creature (PlaneRhythm.cs).

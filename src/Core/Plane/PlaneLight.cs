@@ -320,7 +320,8 @@ public sealed partial class PlaneWorld
             // (Her fire rate is its tick rate: each burns, seals and charges the faster.)
             float tick = BeamTick;
             // (Her own beam's rays by her rhythms: focus, spin-up, pulse (PlaneRhythm.cs); and Shark Mode's heat and Frenzy.)
-            float rhythm = RhythmBurn * GreatBurn;
+            // (And her punch in this water: PlaneOptics.cs.)
+            float rhythm = RhythmBurn * GreatBurn * HerLightPhysics.Punch;
             yield return (Beam, _beamWorth * tick * rhythm);
             for (int i = 0; i < _rays.Count; i++) yield return (_rays[i], _rayWorth[i] * tick * rhythm);
             yield return (RearBeam, tick);
@@ -666,7 +667,7 @@ public sealed partial class PlaneWorld
         var aim = input.Aim.LengthSquared() > 1e-6f ? input.Aim : Player.Aim;
         if (aim.LengthSquared() > 1e-6f) beam.Direction = Vector2.Normalize(aim);
         beam.Range = LightTuning.BeamReach * Run.BeamReach * MathF.Sqrt(MathF.Max(Run.Loadout.Stats[Stat.Glow], 0.1f)) * MathF.Sqrt(MathF.Max(RangeScale, 0.1f))
-            * (shape.Laser ? GreatLightTuning.LanceReach : 1f);
+            * (shape.Laser ? GreatLightTuning.LanceReach : 1f) * HerLightPhysics.Reach;
         // Her rhythms (PlaneRhythm.cs): focus narrows her beam. Her great lights (PlaneGreatLights.cs).
         StepRhythm(input.Beam && !Defeated, beam.Direction);
         StepGreatLights();

@@ -559,3 +559,41 @@ The light grammar's seventh words (docs/proposals/LIGHT-GRAMMAR.md §9; `PlaneGr
   Drawn as a dark violet glow down her beam behind the creature (`her_beam_volume`'s `black_sun`). Pierce leaves no
   shadows to burn.
 - Tests: `GreatLightTests`.
+
+## 17. Her light as physics (built: phase 1 of proposals/LIGHT-WORLD.md)
+
+Her light is a real light with physical properties, and the crossover's biomes are matter it meets (`PlaneOptics.cs`;
+`PlaneOptions.Optics`, on in the crossover; off, everything is as before).
+
+- **Spectrum** (`Spectrum`): her energy in three bands (red 640 nm, green 530 nm, blue 465 nm), her plain light warm
+  gold (1, 0.82, 0.45).
+  - From it come her colour, her energy-weighted wavelength, her frequency (c / λ) and her photon energy (h·c / λ).
+  - Each copy of a colour word (ember, bloom, frost) moves 0.6 of her power into its band. The total is kept: a colour
+    is not more light (`PlaneWorld.SpectrumOf`).
+- **Coherence:** 0.15 for a plain beam, 0.9 for the Lance; her focus rhythm adds up to 0.4. A coherent light loses
+  less to the water's scattering.
+- **Water** (`WaterMedium`, `BiomeOptics.Water`): absorption per band and scattering, both per metre; a refractive
+  index; a density. What is left after d metres is `band × e^−(absorption + scattering × (1 − ½ coherence)) × d`.
+- **Her reach:** how far she gets before 35% of her light is left, against her plain light in the reef's water,
+  clamped to 0.55–1.5 (`Optics.ReachScale`). It scales her beam's length.
+- **Her punch:** her potency (photon energy against her plain light's) × the share the water left at mid reach (8 m),
+  against the reef's, clamped to 0.6–1.4 (`Optics.PunchAt`). It scales her beams' burn.
+- **Her halo:** the water's scattering against the reef's.
+- **Her shots** take her potency at the throw, and fly slower by 1 / √density. As they fly, the water takes its
+  share of their power against the reef's water, never below a quarter (`ShotThroughWater`).
+- **Rock** (`RockMaterial`, `BiomeOptics.Rock`): albedo per band; a mirror share; how much of what is not given back
+  enters it; its index; the thickest wall light crosses; how much of what it drinks it stores.
+- **A meeting** (`Optics.Meet`) shares light out four ways, adding to 1:
+  - mirrored: albedo × mirror, more at a grazing angle (Schlick's Fresnel);
+  - scattered back: the rest of the albedo;
+  - entered: of the rest, the material's share;
+  - drunk: the remainder.
+- **Her gun's shots on rock** (`ShotMeetsRock`) roll the meeting's shares with the seeded bubble stream:
+  - **mirrored:** the shot bounces, keeping 85% of its power (`ShotBounced`);
+  - **entered**, where the material lets light through: it bends in by Snell's law. If the wall is no thicker than the
+    material's Through depth and it can leave (no total internal reflection), it comes out of the far side bent back,
+    the material drinking 15% a metre (`ShotRefracted`);
+  - **otherwise:** it is drunk. The wall glows with what it stores (`WallGlow`): 3 s × the stored share, a light in the
+    registry that murklings see and may drink, fading.
+- Mirror Scale's sure bounces and the light bubbles keep their old ways.
+- Tests: `OpticsTests`.

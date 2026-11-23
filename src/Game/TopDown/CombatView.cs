@@ -1143,6 +1143,9 @@ void fragment() {
                 }
                 _candidates.Add((ray.End, GroundStrength * 1.4f * surge.Power, GroundRadius * 1.6f));
             }
+        // Walls glowing with the light they stored (PlaneOptics.cs): warm, fading, never brighter than her.
+        foreach (var g in world.WallGlows)
+            _candidates.Add((g.At, GroundStrength * 0.9f * g.Glow, GroundRadius * 1.2f));
         SyncLights(world, dt);
         _trails.Step(dt, _time, GetViewport().GetCamera3D());
         (_shed, _shedNext) = (_shedNext, _shed);
