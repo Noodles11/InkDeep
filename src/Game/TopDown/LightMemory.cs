@@ -16,7 +16,7 @@ namespace OctoShoots.Game.TopDown;
 public sealed class LightMemory
 {
     /// <summary>A cell's side (metres); how long a lit cell holds its colour, and how long it then takes to fade.</summary>
-    public const float Cell = 0.25f, Hold = 0.3f, Fade = 1.3f;
+    public const float Cell = 0.25f, Hold = 0.1f, Fade = 0.5f;
 
     int _n;
     float[] _peak = Array.Empty<float>(), _age = Array.Empty<float>();

@@ -391,7 +391,7 @@ the tests of the dive still test the dive.
   caves' outline is still traced in coral and magenta light where she lights it.)
 - **Her light's afterimage, her shots' light, the vaults in the dark (0.58.0):**
   - **The afterimage** (`LightMemory`): where her beam and her shots' light have fallen, the reef keeps its colour
-    for 0.3 s after the light has moved on, then fades back to the muted ash over 1.3 s, its edge softened over about a metre. A grid of quarter-metre cells
+    for 0.1 s after the light has moved on (0.3 s before 0.76.1), then fades back to the muted ash over 0.5 s (was 1.3 s), its edge softened over about a metre. A grid of quarter-metre cells
     over the level, each the light it last had and how long ago, traced as the post pass draws her beam (its fan to
     where it stops, cut by rock) and her shots' light; the post pass takes the larger of it and her light now
     (`her_after`, `her_after_rect`).
@@ -494,7 +494,7 @@ the tests of the dive still test the dive.
   Its cave's walk still ends there (the generator's own), and a boss level shows its Crack as before.
 - **A 30-second dive clock, one light (0.66.0):** the dive opens after **30 s** on a level (`DiveClock.Seconds`); a boss
   level's current keeps its own two minutes (`TideTuning.After`). **All her light is one light:** her shots' light shows
-  the reef in its colour now and lingers after as her beam's does (0.3 s, fading over 1.3 s), by the same numbers in the
+  the reef in its colour now and lingers after as her beam's does (0.1 s, fading over 0.5 s), by the same numbers in the
   post pass and the light memory (`LightMemory.ShotSpread`, `ShotShown`, `CameraRig.SetShotLight`); and her shots light
   a wider, stronger area than before (`CombatView.GroundRadius` 2.1 m, `GroundStrength` 0.45; shown about √3 × as wide).
 - **The danger clock and murklings out of the dark (0.67.0)** (`PlaneDanger.cs`, from the cube reef's danger clock):
