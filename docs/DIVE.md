@@ -48,6 +48,13 @@ the battle is over (`CameraRig.Tense`). The sun's shadows reach 90 m
 (`SunLight`), and the minimap spans 150 m, about the whole level (`MinimapView.Span`). The Sunlit Shallows take
 their dimmed look (`ReefLook.OpenShallows`) so the wider view never washes out.
 
+**The level below is whole before she sinks (0.79.1).** At the lip of a dive she holds until the level below is made,
+its corruption laid, and its sun's shade cast ahead on a worker (`SunMap.Prepare`, `SunMap.Ready`). Her own level
+keeps its shade while the iris opens. Once the iris has opened most of the view (0.75 s in), the level below's shade
+is put in place, read where that level lies (`SunMap.ShowAhead`, the `sun_offset` global). Arrived, it is already
+the level's (`SunMap.Build` takes it at once). So a level never shows lit and is then covered in shade as she
+lands, as it did while its shade was still being cast after she arrived.
+
 ## 4. Havens
 
 *(Shelved by the crossover: its levels have none, GAME.md §14.)*

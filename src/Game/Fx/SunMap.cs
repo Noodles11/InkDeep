@@ -8,7 +8,8 @@ namespace OctoShoots.Game.Fx;
 /// Where the sun reaches into the water (sunlight.gdshaderinc's sun_shadow): for every point of the sea surface, the height
 /// at which its ray of sunlight (along the sun's direction) first meets the reef — the terrain, a cave's roof, or an
 /// arch or overhang. A point below that is in shade. Worked out once per level, off the main thread (about two million
-/// steps): until it is ready the sun's shade is off. God rays end at the rock that cuts them, light falls through the
+/// steps): until it is ready the sun's shade is off. Diving, the level below's map is cast ahead (Prepare) and the dive
+/// waits on it, so the level below shows shaded as she sinks to it and is shaded from the moment she is down. God rays end at the rock that cuts them, light falls through the
 /// holes in arches, and the caustics on creatures, flora and drifting snow stop where the reef shades them.
 /// </summary>
 public static class SunMap
@@ -23,10 +24,84 @@ public static class SunMap
     static System.Threading.Tasks.Task<byte[]>? _pending;
     static LevelMap? _pendingFor;
     static bool _wanted;
+    /// <summary>The level whose map is in place now.</summary>
+    static LevelMap? _shown;
+    /// <summary>The level below's map, cast ahead while she waits at the lip of a dive (Prepare).</summary>
+    static System.Threading.Tasks.Task<byte[]>? _next;
+    static LevelMap? _nextFor;
+
+    /// <summary>
+    /// Casts the level below's map ahead, on a worker, leaving this level's in place (the dive waits on it: a level is
+    /// entered whole, its shade with it, never lit bright and then shaded once it is down).
+    /// </summary>
+    public static void Prepare(LevelMap map, Vector3 sunDir)
+    {
+        if (ReferenceEquals(_nextFor, map) || ReferenceEquals(_shown, map)) return;
+        _nextFor = map;
+        _next = System.Threading.Tasks.Task.Run(() => Cast(map, sunDir));
+    }
+
+    /// <summary>The level's map is ready (cast ahead, or in place already).</summary>
+    public static bool Ready(LevelMap map) => ReferenceEquals(_shown, map) && _pending is null || ReferenceEquals(_nextFor, map) && _next is { IsCompleted: true };
+
+    /// <summary>
+    /// The level below's map put in place now (the dive, once the level below is what shows), its lookups shifted by where
+    /// that level lies (<paramref name="offset"/>, world metres; zero once she is down and it is the level).
+    /// </summary>
+    public static bool ShowAhead(LevelMap map, Vector3 offset)
+    {
+        if (!ReferenceEquals(_nextFor, map) || _next is not { IsCompleted: true } task || task.IsFaulted) return false;
+        Install(task.Result, map);
+        SetOffset(offset);
+        return true;
+    }
+
+    /// <summary>Where the map's level lies (world metres): its lookups are made from there.</summary>
+    public static void SetOffset(Vector3 offset) => RenderingServer.GlobalShaderParameterSet(SN.Of("sun_offset"), offset);
+
+    static void Install(byte[] bytes, LevelMap map)
+    {
+        if (_image is null || _texture is null)
+        {
+            _image = Image.CreateFromData(Size, Size, false, Image.Format.Rf, bytes);
+            _texture = ImageTexture.CreateFromImage(_image);
+        }
+        else
+        {
+            _image.SetData(Size, Size, false, Image.Format.Rf, bytes);
+            _texture.Update(_image);
+        }
+        RenderingServer.GlobalShaderParameterSet(SN.Of("sun_shadow"), _texture);
+        _shown = map;
+        _pending = null;
+        _wanted = true;
+        Apply();
+    }
 
     /// <summary>Starts casting the level's sun map on a worker; <see cref="Poll"/> puts it in place when it is done.</summary>
     public static void Build(LevelMap map, Vector3 sunDir)
     {
+        SetOffset(Vector3.Zero);
+        // (Cast ahead for this level, as she dived to it: in place at once, or as soon as it is done.)
+        if (ReferenceEquals(_shown, map) && _pending is null)
+        {
+            Enable(true);
+            return;
+        }
+        if (ReferenceEquals(_nextFor, map) && _next is { } ahead)
+        {
+            _next = null;
+            _nextFor = null;
+            if (ahead.IsCompleted && !ahead.IsFaulted)
+            {
+                Install(ahead.Result, map);
+                return;
+            }
+            Enable(false);
+            _pendingFor = map;
+            _pending = ahead;
+            return;
+        }
         Enable(false);
         _pendingFor = map;
         _pending = System.Threading.Tasks.Task.Run(() => Cast(map, sunDir));
@@ -42,20 +117,7 @@ public static class SunMap
             if (task.IsFaulted) GD.PushError(task.Exception?.ToString());
             return;
         }
-        var bytes = task.Result;
-        if (_image is null || _texture is null)
-        {
-            _image = Image.CreateFromData(Size, Size, false, Image.Format.Rf, bytes);
-            _texture = ImageTexture.CreateFromImage(_image);
-        }
-        else
-        {
-            _image.SetData(Size, Size, false, Image.Format.Rf, bytes);
-            _texture.Update(_image);
-        }
-        RenderingServer.GlobalShaderParameterSet(SN.Of("sun_shadow"), _texture);
-        _wanted = true;
-        Apply();
+        Install(task.Result, current);
     }
 
     static byte[] Cast(LevelMap map, Vector3 sunDir)

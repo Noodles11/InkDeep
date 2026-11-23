@@ -18,6 +18,8 @@ global uniform float sun_has_shadow;
 global uniform sampler2D sun_shadow : filter_linear, repeat_disable;
 global uniform float light_strength;
 global uniform float sun_caustic;
+// Where the shade map's level lies (world metres): zero, but for the level below while she dives to it.
+global uniform vec3 sun_offset;
 
 float sl_hash(vec2 p) {
 	// Stable at large coordinates (pixel positions in the thousands).
@@ -48,6 +50,7 @@ float sun_path(vec3 p) {
 // 1 where the sun reaches this point, 0 in the shadow of rock above it (softened over about a metre).
 float sun_lit(vec3 p) {
 	if (sun_has_shadow < 0.5) return 1.0;
+	p -= sun_offset;
 	vec2 uv = sun_plane(p) / reef_extent;
 	if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) return 1.0;
 	// The surface a ray first meets is lit (the ray ends on it); anything more than about a metre below is in shade.

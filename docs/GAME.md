@@ -677,4 +677,7 @@ the tests of the dive still test the dive.
     - The title launches only a jelly's dive (`RunLaunch.Pending`): no seeded, saved or new run of its own, and the
       save, seed and shots pieces are gone.
   - The dive clock's ring stands right of the bars, and the danger marks right of the shells.
+- **The dive loads the level below whole (0.79.1):** she holds at the lip until the level below is made, its
+  corruption laid and its sun's shade cast. That shade is drawn on the level below as the iris opens, so she never
+  lands on a level that shows lit and is then covered in shade (DIVE.md §3).
 

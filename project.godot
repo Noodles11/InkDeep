@@ -87,6 +87,10 @@ sun_has_shadow={
 "type": "float",
 "value": 0.0
 }
+sun_offset={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
 sun_shadow={
 "type": "sampler2D",
 "value": ""

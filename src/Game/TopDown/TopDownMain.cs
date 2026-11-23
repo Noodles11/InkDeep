@@ -3278,8 +3278,8 @@ public partial class TopDownMain : Node3D
         Earned(_achievements.LevelCleared(_world));
         AddToRun();
         _diving = true;
-        // The sea surface sinks with her: the sun's shade is this level's, so it is off until the next one is entered.
-        OctoShoots.Game.Fx.SunMap.Enable(false);
+        // (The sun's shade stays this level's till she sinks; then the level below's, cast ahead: StepDive.)
+        _belowShaded = false;
         _diveTime = 0f;
         _diveFrom = _world.Player.Position;
         // (A template level: down where she is.)
@@ -3298,6 +3298,10 @@ public partial class TopDownMain : Node3D
 
     static float Ease(float t) => Mathf.SmoothStep(0f, 1f, Mathf.Clamp(t, 0f, 1f));
 
+    /// <summary>This dive's level below is drawn with its own sun's shade (SunMap.ShowAhead), from BelowShadeAt seconds in.</summary>
+    bool _belowShaded;
+    const float BelowShadeAt = 0.75f;
+
     /// <summary>
     /// One frame of the dive. She gathers (a flare), then a hard stroke turns her head-first and she sinks a level's drop
     /// down the shaft in pulses, then rights herself and settles. The camera falls with her and pulls in; the level above
@@ -3308,8 +3312,15 @@ public partial class TopDownMain : Node3D
     void StepDive(float dt)
     {
         _diveTime += dt;
-        bool ready = _below is not null && _belowHole == _diveHole;
+        // The level below whole before she sinks (docs/DIVE.md): made, its corruption laid, its sun's shade cast. Till
+        // then she holds at the lip; so it never shows lit and is then covered in shade as she arrives.
+        if (_below is not null && _belowMap is { } belowMap) OctoShoots.Game.Fx.SunMap.Prepare(belowMap, OctoShoots.Game.Fx.SunLight.Direction);
+        bool ready = _below is not null && _belowHole == _diveHole && _belowCorruption is null
+            && _belowMap is { } made && OctoShoots.Game.Fx.SunMap.Ready(made);
         if (!ready && _diveTime > 0.25f) _diveTime = 0.25f;
+        // Once the iris has opened most of the view onto the level below, its shade is what is drawn (read where that
+        // level lies); the level above, nearly all cut away by then, keeps its own till that moment.
+        if (ready && !_belowShaded && _diveTime > BelowShadeAt) _belowShaded = OctoShoots.Game.Fx.SunMap.ShowAhead(_belowMap!, _belowOffset);
         float t = _diveTime, k = Mathf.Clamp(t / DiveSeconds, 0f, 1f);
         // The descent: in three pulses, each a quick lurch then a glide.
         float sink = Ease((t - 0.25f) / 0.95f);
