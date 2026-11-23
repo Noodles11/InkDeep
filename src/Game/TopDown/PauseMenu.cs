@@ -317,9 +317,44 @@ public partial class PauseMenu : Control
     }
 
     /// <summary>Her stats now: each value, and how far it is from her bare base (better green, worse red).</summary>
+    /// <summary>
+    /// Her light in physical terms in this water (PlaneOptics.cs, LIGHT-WORLD.md §2.6), shown above her stats: its colour,
+    /// wavelength and frequency, its reach, punch and halo here against the reef's, and the water and rock it meets. Null:
+    /// no card (the game without optics).
+    /// </summary>
+    public (LightPhysics Light, string Water, string Rock)? LightCard { get; set; }
+
+    void FillLightCard()
+    {
+        if (LightCard is not { } card) return;
+        var l = card.Light;
+        var c = l.Colour;
+        void Pair(string name, string value, Color? colour = null)
+        {
+            var n = new Label { Text = name, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+            n.AddThemeColorOverride("font_color", Gold);
+            _stats.AddChild(n);
+            var v = new Label { Text = value, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+            v.AddThemeColorOverride("font_color", colour ?? new Color(1f, 0.95f, 0.88f));
+            _stats.AddChild(v);
+        }
+        static string Times(float k) => $"× {k:0.00}";
+        Pair("Her light", $"● {l.Wavelength:0} nm · {l.Frequency:0} THz", new Color(c.X, c.Y, c.Z));
+        Pair("The water", card.Water);
+        Pair("Reach here", Times(l.Reach));
+        Pair("Punch here", Times(l.Punch));
+        Pair("Halo here", Times(l.Halo));
+        Pair("The rock", card.Rock);
+        _stats.AddChild(new Control { CustomMinimumSize = new Vector2(0f, 10f) });
+        _stats.AddChild(new Control());
+        _stats.AddChild(new Control());
+        _stats.AddChild(new Control());
+    }
+
     void FillStats(PlaneRun run)
     {
         Empty(_stats);
+        FillLightCard();
         // Her light in words first (the sentence: PlaneStatSheet.Words), then her stats.
         foreach (var (kind, words) in PlaneStatSheet.Words(run))
         {

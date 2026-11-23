@@ -1038,7 +1038,7 @@ public sealed partial class PlaneWorld
         for (int k = 1; k < n; k++)
         {
             var q = Vector2.Lerp(a, b, k / (float)n);
-            if (!Map.IsOpen(q) || _rocks.Any(r => r.Contains(q)) || VaseAt(q, radius) is not null) return q;
+            if (!Map.IsOpen(q) || _rocks.Any(r => r.Contains(q)) || VaseAt(q, radius) is not null || OpticWalls.Count > 0 && OpticAt(q) is not null) return q;
         }
         return b;
     }
@@ -1142,6 +1142,14 @@ public sealed partial class PlaneWorld
         if (VaseAt(next, shot.Radius) is { } vase && !(shot.Boomerang && shot.Returning))
         {
             BubbleMeetsVase(shot, vase, dir);
+            return;
+        }
+        // A mirror plate or a lightglass pane (PlaneOpticWalls.cs).
+        if (OpticWalls.Count > 0 && OpticCrossed(shot.Line, next, out var short_) is { } optic && !(shot.Boomerang && shot.Returning))
+        {
+            shot.Traveled += Vector2.Distance(shot.Line, short_);
+            shot.Line = shot.Position = short_;
+            ShotMeetsOptic(shot, dir, optic);
             return;
         }
         if (!Map.IsOpen(next) || _rocks.Any(r => r.Contains(next)))

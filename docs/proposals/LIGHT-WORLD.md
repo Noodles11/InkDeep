@@ -6,7 +6,7 @@ water filters and scatters light its own way, its walls drink it, throw it back,
 there opens, closes, grows, flees, follows, attacks or changes colour by what light falls on it. The player learns
 each place the way a diver learns a reef: by shining into it and watching what it does.
 
-This page is the design. **Phase 1 is built** on the `inkdeep-crossover` branch (§13): her light's physics, each
+This page is the design. **Phases 1 and 2 are built** on the `inkdeep-crossover` branch (§13): her light's physics, each
 biome's water and rock, and her shots meeting rock. Everything else is the plan. Values marked *(tune)* are starting
 points.
 
@@ -433,7 +433,7 @@ The standing rules (CLAUDE.md) hold:
   round them.
 - `PlaneOptions.Optics`: on in the crossover. Without it, everything is as before (the water neutral, rock as it was).
 
-**Phase 2.**
+**Phase 2: built (0.73.0)**, as LIGHT-AND-GRAPH.md §18 says.
 
 - The beam divided at walls: mirror rays off metal, refracted rays through crystal (PlanePaths).
 - Mirror plates and lightglass in the templates.

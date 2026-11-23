@@ -599,6 +599,9 @@ public sealed partial class PlaneWorld
         // (A plain loop: this is asked thousands of times a frame, and a lambda would make garbage each time.)
         for (int i = 0; i < _rocks.Count; i++)
             if (_rocks[i].Contains(q)) return true;
+        // (A mirror plate or a lightglass pane: PlaneOpticWalls.cs.)
+        for (int i = 0; i < OpticWalls.Count; i++)
+            if (OpticWalls[i].Contains(q)) return true;
         return VaseAt(q, 0.05f) is not null;
     }
 

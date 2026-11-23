@@ -25,7 +25,7 @@ namespace OctoShoots.Game.TopDown;
 /// level, any pearls), F3 toggles the debug map, R regenerates from the seed field.
 /// Verification flags: --seed=, --cycle=, --depth=, --level=, --at=start|arch|arch-near|cave|exit|hole|kelp|shop|shop-out|cache|cache-near|secret|secret-in|treasure|treasure-out|clam-pearl|mob|boss|spring|spring-in,
 /// --autopilot, --dive (dives whenever it can), --dbg-pad (on the controller from the start), --calm (no creatures), --fire, --pearls=, --hp=, --luck=, --boss-hp=, --paused, --map, --f3, --no-focus, --dbg-nofog (no floor fog),
-/// --capture=dir --frames=a,b, --dbg-say=text (a message banner, a second in), --dbg-loose=id (that pearl loose near her), --at=prism|trio|charge (in a prism stones' bed, a charge stones' trio's
+/// --at=optic (facing the first mirror plate or lightglass pane), --capture=dir --frames=a,b, --dbg-say=text (a message banner, a second in), --dbg-loose=id (that pearl loose near her), --at=prism|trio|charge (in a prism stones' bed, a charge stones' trio's
 /// nook, before a charge stone), --dbg-prism (a coloured seal's stones laid on her way to it; --fire aims at it), --dbg-shadow (her beam held
 /// along the most open way, two murklings held still in it), --dbg-sense (the same with her beam dark and the murklings
 /// held past her glow: unseen, sensed),
@@ -67,6 +67,7 @@ public partial class TopDownMain : Node3D
     readonly List<float> _holeOpen = new();
     AbyssView _abyss = null!;
     VaseView _vases = null!;
+    OpticWallView _opticWalls = null!;
     VaultView _vaults = null!;
     /// <summary>Achievements: their data, what earns them on this run, and the banner that announces them (§8).</summary>
     AchievementCatalog? _achievementData;
@@ -503,6 +504,8 @@ public partial class TopDownMain : Node3D
         AddChild(_abyss);
         _vases = new VaseView();
         AddChild(_vases);
+        _opticWalls = new OpticWallView();
+        AddChild(_opticWalls);
         _vaults = new VaultView();
         AddChild(_vaults);
         _relics = new RelicView();
@@ -1739,6 +1742,7 @@ public partial class TopDownMain : Node3D
         _kelp.Build(map, LookOf(map));
         _abyss.Build(map, LookOf(map));
         _vases.Show(_world);
+        _opticWalls.Show(_world);
         _vaults.Show(_world);
         _relics.Show(_world);
         _props.Show(_map, ReefLook.Of(_map.Id));
@@ -2291,6 +2295,9 @@ public partial class TopDownMain : Node3D
             // A few metres from the first shell cache, its shells still lying there (captures of them).
             "cache-near" => _map.Pois.Where(p => p.Kind == PoiKind.ShellCache)
                 .SelectMany(p => Enumerable.Range(0, 12).Select(k => p.Position + new System.Numerics.Vector2(Mathf.Cos(k * Mathf.Tau / 12f), Mathf.Sin(k * Mathf.Tau / 12f)) * 6f))
+                .Select(q => (System.Numerics.Vector2?)q).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
+            // Facing the first mirror plate or lightglass pane, three metres off its face (PlaneOpticWalls.cs).
+            "optic" => _world.OpticWalls.SelectMany(w => new[] { w.Centre + w.Normal * 3f, w.Centre - w.Normal * 3f })
                 .Select(q => (System.Numerics.Vector2?)q).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
             // A few metres south of the first pot, in water that sees it.
             "vase" => _world.Vases.Select(v => (System.Numerics.Vector2?)(v.Position + new System.Numerics.Vector2(0f, 4f))).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
@@ -2849,6 +2856,13 @@ public partial class TopDownMain : Node3D
                 // Her light on rock (PlaneOptics.cs): a spark where a shot rings off a mirror wall, a flash where it leaves a crystal bent.
                 else if (e.Type == PlaneEventType.ShotBounced) _combat.LightBurst(e.Position, 0.3f);
                 else if (e.Type == PlaneEventType.ShotRefracted) _combat.LightBurst(e.Position, 0.45f);
+                // A lightglass pane shattered by its own colour.
+                else if (e.Type == PlaneEventType.GlassShattered)
+                {
+                    _combat.LightBurst(e.Position, 0.6f + 0.3f * e.Size);
+                    _combat.Pop(e.Position, e.Size, e.Direction);
+                    _sfx.PlayPitched("bell_ring", 1.6f, -6f);
+                }
                 else if (e.Type == PlaneEventType.ColourShatter)
                 {
                     // Ember on what frost stilled: it shatters in a burst of steam (docs/LIGHT-AND-GRAPH.md §10).
@@ -3047,6 +3061,7 @@ public partial class TopDownMain : Node3D
         Guard("currents", () => _currents.Sync(_world, dt, _camera));
         Guard("abyss", () => _abyss.Sync(_world, dt));
         Guard("vases", () => _vases.Sync(dt));
+        Guard("optic walls", () => _opticWalls.Sync());
         Guard("vaults", () => _vaults.Sync(_world, dt, _memory));
         Guard("relics", () => _relics.Sync(_world, dt, _combat));
         Guard("hazards", () => _hazards.Sync(_world));
@@ -3630,6 +3645,8 @@ public partial class TopDownMain : Node3D
             _pause.Trade = _world.InHaven;
             _pause.Restartable = _jelly is null;
             _pause.Sells = BayOpen(BayService.PearlCollector);
+            // Her light in physical terms in this water (PlaneOptics.cs).
+            _pause.LightCard = _world.Options.Optics ? (_world.HerLightPhysics, _world.Water.Name, _world.Rock.Name) : null;
             _pause.Open(_world.Run, _catalog, _seed.ToString(), InDiveCave || _id.Haven ? PlaceTitle().Title : $"{_id} · {HudView.Clock(_elapsed)}", _world.Player.Hp, _achievementData);
             FillPauseRequests();
             // The chart: what she can see below her, two rows more for each cartographer pearl.

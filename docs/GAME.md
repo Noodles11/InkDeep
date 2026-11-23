@@ -556,3 +556,19 @@ the tests of the dive still test the dive.
       light: the murklings see it.
   - The view draws a spark where a shot bounces, a flash where it leaves a wall, and the stored glow on the water.
   - Tests: `OpticsTests`.
+- **The lit world, phase 2 (0.73.0): her beam divided at walls, mirror plates, lightglass, the light card.** The rules
+  are in LIGHT-AND-GRAPH.md §18.
+  - **Her beam is divided where it meets the biome's rock** by its material: a mirror's share springs off as a ray of
+    hers (the wreck's iron, the Temple's black glass, Atlantis's orichalcum). A crystal's share goes into a thin wall,
+    bends and comes out the far side as a ray (Alien Wreckage, Atlantis, the Temple). The share a wall stores glows on
+    after her light leaves (the Ruins, the kelp).
+  - **Mirror plates** stand in the Shipwreck's (3), the Temple's (4), Atlantis's (4) and the Alien Wreckage's (1)
+    water. They throw her beam and her shots back whole, and they turn when she pushes their end.
+  - **Lightglass panes** stand across the Alien Wreckage's passages (4), Atlantis's (2) and the Temple's (1), red, green
+    or blue. She and the creatures cannot pass them. Only the pane's own colour of her light goes through (her beam
+    tinted the pane's colour; a shot passes that share of the time). Rung by that colour long enough, a pane shatters,
+    leaving two shells: her plain light does it slowly, a light of its colour fast.
+  - **The light card** heads the pause menu's Stats: her light's wavelength and frequency in its colour, her reach,
+    punch and halo in this water, and the water and rock she is in.
+  - `--at=optic` starts her facing the first plate or pane. Tests: `OpticWallTests`.
+

@@ -597,3 +597,37 @@ Her light is a real light with physical properties, and the crossover's biomes a
     registry that murklings see and may drink, fading.
 - Mirror Scale's sure bounces and the light bubbles keep their old ways.
 - Tests: `OpticsTests`.
+
+## 18. Her light divided at walls; mirror plates and lightglass (built: phase 2 of proposals/LIGHT-WORLD.md)
+
+With optics on (`PlaneOptics.cs`, §17), every ray of hers takes part in the paths (PlanePaths' `SyncPaths`), path
+pearls or none. Where it lands, `OpticLanding` (`PlaneOpticWalls.cs`) divides it:
+
+- **On a mirror plate:** it goes on reflected about the plate's face with 95% of its light and the rest of its reach
+  (`PathWord.Mirror`), as often as plates take it, up to the born rays' cap. Her own path words do not apply there.
+- **On a lightglass pane:** its band's share of her spectrum (`PassShare`) goes on through, in the pane's colour (a
+  red pane's light is ember, and acts as ember does) (`PathWord.Refract`). Her other words do not apply.
+- **On the biome's rock** (not a seal's, not a pot), by `Optics.Meet`:
+  - the mirrored share, once a line and if at least 12%, springs off as a ray with that share of its light and √share
+    of its reach (`Mirror`);
+  - where the rock lets light through, the entered share, once a line and if at least 12%, bends in by Snell's law. It
+    comes out of a wall no thicker than the rock's Through depth as a ray bent back, losing 15% a metre inside
+    (`Refract`);
+  - the share it stores keeps a wall glow full there (`StoreBeamLight`, at most 16 glows).
+  - Her own path words still apply.
+- **Mirror plates and lightglass** (`OpticWall`, `OpticWallTuning`; placed by `PlaceOpticWalls` from the level's seed,
+  9 m from her start, 11 m apart, clear of the level's places):
+  - **A mirror plate** is a slab 2.6 m by 0.4 m in open water. Her body and the creatures cannot pass it (`Clear`), and
+    it stops light (`Stops`, `FirstBlocked`). Her shots crossing it (`OpticCrossed`, exact, so a fast shot cannot step
+    over it) bounce off whole, keeping 95% of their power. She turns it by pushing it: the torque of her push about its
+    centre, slowed by the water's drag, stopping where its end would cut into rock.
+  - **A lightglass pane** is 0.44 m thick, set across the narrowest way of a passage 2.5–7 m wide, its ends in the rock.
+    It is red, green or blue. A shot crossing it passes its band's share of the time (keeping at least half its power)
+    or is stopped there. Her beam's band share rings it (3 × share × her light per second; a shot 0.3 × share), and it
+    settles 0.1 a second unlit. At 1.2 it shatters (`GlassShattered`), leaving two shells. With her plain light a blue
+    pane takes about 5 s, a red one about 2 s.
+- **The view:** `OpticWallView` draws a polished steel slab with a faint silver sheen, and a pane tinted its colour
+  that brightens as it is rung. A spark marks a bounce, a flash a pass, a chime and a burst a shatter. The pause menu's
+  light card (`PauseMenu.LightCard`) shows her light in physical terms.
+- Tests: `OpticWallTests`.
+

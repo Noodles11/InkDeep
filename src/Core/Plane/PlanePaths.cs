@@ -34,7 +34,7 @@ public static class PathTuning
 
 /// <summary>The path words (one bit each, for what a ray's line has taken).</summary>
 [Flags]
-public enum PathWord { None = 0, Bounce = 1, Fork = 2, Return = 4, Ghost = 8, Spine = 16 }
+public enum PathWord { None = 0, Bounce = 1, Fork = 2, Return = 4, Ghost = 8, Spine = 16, Mirror = 32, Refract = 64 }
 
 /// <summary>A ray of hers born where her light landed on rock: by which word, where (on the rock), worth and colour.</summary>
 public sealed class BornRay
@@ -103,12 +103,14 @@ public sealed partial class PlaneWorld
         var s = Run.Loadout.Shot;
         int bounces = s.Bounces;
         var words = (bounces > 0 ? PathWord.Bounce : 0) | (s.Split ? PathWord.Fork : 0) | (s.Boomerang ? PathWord.Return : 0) | (s.Spectral ? PathWord.Ghost : 0);
-        if (!Defeated && (words != PathWord.None || Spines.Count > 0))
+        // (With optics, every ray of hers is divided where it meets a wall: PlaneOpticWalls.cs.)
+        bool optics = Options.Optics;
+        if (!Defeated && (words != PathWord.None || Spines.Count > 0 || optics))
         {
             // Her own rays first (as HerBeams gives them), then each born ray in the order it was born.
             var parents = new List<(LightEmitter Beam, float Worth, LightHue Hue, PathWord Taken, int Bounces)>();
             float tick = BeamTick;
-            if (words != PathWord.None)
+            if (words != PathWord.None || optics)
                 foreach (var (beam, shots) in HerBeams)
                     if (beam.Shining && BornOf(beam) is null) parents.Add((beam, shots / tick, RayHue(beam), PathWord.None, 0));
             // An echo's spines (PlaneEcho.cs): rays of hers out from where a creature was freed, taking her path words.
@@ -128,6 +130,8 @@ public sealed partial class PlaneWorld
                 // Its light where it lands, against what it had at her bell (light is conserved).
                 float left = worth * BeamFalloff(beam, len) / LightTuning.NearLight;
                 var landed = hue | HueAlong(beam.Position, at);
+                // Her light divided where it meets a wall: a mirror, a pane, the biome's rock (PlaneOpticWalls.cs).
+                if (optics && OpticLanding(beam, at, len, left, landed, taken, bounced, parents)) continue;
                 // Ghost: through a wall thin enough (the reef's rock, not a seal's nor a pot), and on beyond.
                 if ((words & PathWord.Ghost) != 0 && (taken & PathWord.Ghost) == 0 && !_rocks.Exists(r => r.Contains(at + beam.Direction * 0.1f))
                     && VaseAt(at + beam.Direction * 0.1f, 0.05f) is null)
@@ -178,7 +182,7 @@ public sealed partial class PlaneWorld
                 if ((words & PathWord.Return) != 0 && (taken & PathWord.Return) == 0 && _bornCount < PathTuning.MostBorn && len >= PathTuning.Shortest)
                     // Back along its own way to where it left, lighting what stands in it from the other side; it lands nowhere.
                     Bear(PathWord.Return, at, back, -beam.Direction, len - PathTuning.Off, beam.HalfAngle, left * PathTuning.Return, landed,
-                        PathWord.Bounce | PathWord.Fork | PathWord.Return | PathWord.Ghost, bounces);
+                        PathWord.Bounce | PathWord.Fork | PathWord.Return | PathWord.Ghost | PathWord.Mirror | PathWord.Refract, bounces);
             }
         }
         // Pearl Necklace (Focus + Fork): at full focus her own beam's tip opens into a ring of rays.

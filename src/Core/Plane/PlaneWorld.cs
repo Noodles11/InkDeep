@@ -118,6 +118,8 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     PushWave,
     /// <summary>Her light on rock (LIGHT-WORLD.md §5): a shot bounced off a mirror wall (at the wall; Direction: its way on), or came out of a thin wall bent (at its far side; Direction: its way; Size: the wall's depth).</summary>
     ShotBounced, ShotRefracted,
+    /// <summary>A lightglass pane shatters, rung by its own colour long enough (at its centre; Direction: its long way; Size: its half length).</summary>
+    GlassShattered,
     /// <summary>Her light on the boss's sealed wall while leaks stand open: it takes none (at the carving; Size: the leaks left).</summary>
     SealRefused,
     /// <summary>A corrupted creature comes into her light and is dazzled (Direction: from her to it; Size: its radius).</summary>
@@ -190,6 +192,8 @@ public sealed partial class PlaneWorld
         // (The Sunken Ruins' amphorae: its own pots, CROSSOVER.md §8.)
         if (Options.Vases || Map.Templated && Map.Biome == OctoShoots.Core.Run.Biome.SunkenRuins) PlaceVases();
         if (Map.Templated) PlaceVaults();
+        // Mirror plates and lightglass (PlaneOpticWalls.cs).
+        if (Options.Optics && Map.Templated && !Map.Rift) PlaceOpticWalls();
         PlaceSprings();
         PlaceChargeStones();
         PlaceSeals();
@@ -361,6 +365,7 @@ public sealed partial class PlaneWorld
         }
         // Her light's physics in this water (PlaneOptics.cs, LIGHT-WORLD.md).
         StepOptics();
+        StepOpticWalls();
         SyncLights(input);
         StepHerLight();
         // Pistol Shrimp Claw's snaps where her beam ends on a creature (PlaneRhythm.cs).
@@ -457,6 +462,7 @@ public sealed partial class PlaneWorld
         foreach (var rock in _rocks)
             if (rock.Contains(p, radius)) return false;
         if (ShutMouths.Count > 0 && Plug(p, radius) is not null) return false;
+        if (OpticWalls.Count > 0 && OpticAt(p, radius) is not null) return false;
         return VaseAt(p, radius) is null;
     }
 
