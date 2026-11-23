@@ -41,6 +41,8 @@ public partial class TopDownMain
         _showcase = IsShowcase;
         _camera.SetShowcase(_showcase);
         _camera.SetInk(InkLook);
+        // (The world dithered: --no-dither leaves it as the washes and halftone alone, for comparison.)
+        _camera.SetDither(!OS.GetCmdlineUserArgs().Contains("--no-dither"));
         // (Its biome's ink: the muted reef's colour and pattern.)
         _camera.SetInkBiome(_map.Templated ? _map.Biome : OctoShoots.Core.Run.Biome.SunlitReef);
         _camera.SetShotLight(LightMemory.ShotSpread, LightMemory.ShotShown);

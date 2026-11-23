@@ -131,6 +131,9 @@ public partial class CameraRig : Node3D
     /// </summary>
     public void SetInk(bool on) => _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ink_look"), on ? 1f : 0f);
 
+    /// <summary>The world dithered where she does not light it (topdown_post's dither): an ordered dither fixed to the world.</summary>
+    public void SetDither(bool on) => _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("dither"), on ? 1f : 0f);
+
     /// <summary>
     /// The ink look's biome (topdown_post's ink_tint): the colour its muted reef is washed in, dark (the Sunlit Reef blue,
     /// the Kelp Forest green, the Shipwreck red, the Ruins yellow, the Alien Wreckage cyan, the Drowned Temple orange,

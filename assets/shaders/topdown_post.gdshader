@@ -151,6 +151,13 @@ uniform float ink_look = 0.0;
 // blue, the Kelp Forest green, the Shipwreck red, the Ruins yellow). Its pattern is the reef's in every biome.
 uniform vec3 ink_tint = vec3(0.32, 0.5, 0.85);
 // Her shots' light on the reef (LightMemory.ShotSpread, ShotShown, via CameraRig.SetShotLight).
+// The world's dithering (the ink look): where she does not light it, the reef and the water are drawn in a few tones of
+// brightness, the steps between them an ordered (8 × 8 Bayer) dither fixed to the world (dither_cell metres a cell, so it never
+// crawls as the camera moves); the washes' soft edges dither too, in place of the halftone dots. Her light is never
+// dithered. 0: off.
+uniform float dither = 1.0;
+uniform float dither_cell = 0.1;
+uniform float dither_levels = 6.0;
 uniform float shot_spread = 3.0;
 uniform float shot_gain = 4.0;
 // Ink, ash and the unlit water. (The traced light's colour is the biome's: ink_tint.)
@@ -331,6 +338,23 @@ vec2 ink_line(float h, vec2 wp, vec2 uv, vec2 frag, mat4 ip, mat4 iv, vec2 viewp
 float ink_screen(vec2 wp) {
 	vec2 g = mat2(vec2(0.7071, 0.7071), vec2(-0.7071, 0.7071)) * wp * 4.5;
 	return length(fract(g) - 0.5) * 1.414;
+}
+
+// An 8 × 8 Bayer threshold (0..1) for a cell: the bits of x and x ^ y interleaved and reversed, the classic ordered dither.
+float bayer8(vec2 cell) {
+	ivec2 i = ivec2(mod(cell, 8.0));
+	int x = i.x, xy = i.x ^ i.y;
+	int v = ((xy & 1) << 5) | ((x & 1) << 4) | ((xy & 2) << 2) | ((x & 2) << 1) | ((xy & 4) >> 1) | ((x & 4) >> 2);
+	return (float(v) + 0.5) / 64.0;
+}
+
+// A colour drawn in dither_levels tones of its brightness (on a square-root scale, so the dark reef keeps its steps), the
+// step between two tones an ordered dither fixed to the world; its hue kept (the biome's tint never speckles).
+vec3 dither_world(vec3 c, vec2 wp) {
+	float t = bayer8(floor(wp / dither_cell));
+	float l = max(dot(c, vec3(0.299, 0.587, 0.114)), 1e-4);
+	float s = floor(sqrt(l) * dither_levels + t) / dither_levels;
+	return c * (s * s / l);
 }
 
 // The reef's motif on its unlit rock (the ink look), 0..1 where it marks it: scattered polyps.
@@ -770,7 +794,8 @@ void fragment() {
 		// Flat washes: the light stepped into four tones, each step's soft edge a halftone (a 45° dot screen whose dots
 		// grow as the edge goes on), so a shadow is a flat fill with dots at its edge, never a gradient.
 		// (The biome's own screen, fixed to the reef: ink_screen.)
-		float dotted = ink_screen(wp);
+		// (Dithered: the steps' edges an ordered dither, not dots.)
+		float dotted = dither > 0.5 ? bayer8(floor(wp / dither_cell)) : ink_screen(wp);
 		float x0 = sqrt(il0) * 4.0;
 		float q0 = (floor(x0) + step(dotted, sqrt(smoothstep(0.45, 1.0, fract(x0))))) / 4.0;
 		// Where she does not light it: the rock a wash of ash, the water and the floor under it near-black blue ink.
@@ -793,6 +818,8 @@ void fragment() {
 		// (The floor darkens into the hollow at a wall's foot, as the rock above shades it.)
 		deep *= clamp(1.0 + min(relief.y, 0.0) * 0.12, 0.55, 1.0) * (0.9 + 0.2 * grain);
 		vec3 unlit = mix(deep, ash, rock);
+		// (The world dithered: a few tones a channel, an ordered dither between them. Her light below is not.)
+		if (dither > 0.0) unlit = mix(unlit, dither_world(unlit, wp), dither);
 		// In her light (and what she has cleansed) its own colour, clean and smooth: her light is never put through the
 		// washes' steps or the halftone, and it comes in quickly at its edge (the ash's dots never catch its gradient).
 		vec3 inked = mix(unlit, col, smoothstep(0.0, 0.3, shown));
