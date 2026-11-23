@@ -354,7 +354,8 @@ public sealed partial class PlaneWorld
             var q = Vector2.Lerp(a, b, s / d);
             if (!Map.IsOpen(q) || _rocks.Any(r => r.Contains(q))) return false;
         }
-        return true;
+        // (A grown kelp's stalk stands in the way: PlaneFlora.cs.)
+        return Flora.Count == 0 || !KelpBlocks(a, b);
     }
 
     void StepCombat(in PlaneInput input)

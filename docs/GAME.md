@@ -687,4 +687,15 @@ the tests of the dive still test the dive.
   (`SmoothMin`, `RoundLip` 3 m), a rounded lip rather than a corner. The water is exactly the cave's, so where she
   swims is unchanged, and corridors and marks keep their depth. Arch placement reads the heights, so a level's arches
   may differ from before.
+- **The lit world, phase 3 (0.81.0): plants that answer light, fluorescence, light rooms.** The rules are in
+  LIGHT-AND-GRAPH.md §19.
+  - Six plants:
+    - sun anemones open in light and give what they hid;
+    - shy anemones shut in light and open in the dark;
+    - giant kelp grows a stalk while light is held on it (green the fastest) and hides what lies behind it;
+    - sunflower sponges store light and become lamps the murklings go to;
+    - night lilies open and glow only in the dark;
+    - fluorescent corals drink blue light and glow green.
+  - Each level has 1 or 2 light rooms: a ring of the biome's plant round a prize (shells and light specks) that opens
+    when they are all awake at once.
 

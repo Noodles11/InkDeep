@@ -122,6 +122,8 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     GlassShattered,
     /// <summary>Light specks: she gathers one (Size: its worth); a murkling drinks of one (Size: how much); specks thrown out where something was freed (Size: their worth).</summary>
     SpeckGathered, SpeckEaten, SpecksDropped,
+    /// <summary>The flora (PlaneFlora.cs): a plant gives what it held (Size: its kind); a plant wakes (a sponge fills: Size its kind); a light room opens (Size: its plants).</summary>
+    FloraGave, FloraWoke, LightRoomOpened,
     /// <summary>Her light on the boss's sealed wall while leaks stand open: it takes none (at the carving; Size: the leaks left).</summary>
     SealRefused,
     /// <summary>A corrupted creature comes into her light and is dazzled (Direction: from her to it; Size: its radius).</summary>
@@ -199,6 +201,8 @@ public sealed partial class PlaneWorld
         // Light specks through its water (PlaneSpecks.cs).
         if (Options.Specks && !Map.Rift) PlaceSpecks();
         PlaceSprings();
+        // Plants that answer light and the light rooms (PlaneFlora.cs).
+        if (Options.Flora && Map.Templated && !Map.Rift) PlaceFlora();
         PlaceChargeStones();
         PlaceSeals();
         PlacePrismStones();
@@ -392,6 +396,8 @@ public sealed partial class PlaneWorld
         StepDiveCave();
         // Light specks: gathered, drawn to her, dropped where her light freed something (PlaneSpecks.cs).
         StepSpecks();
+        // The plants answer the light on them (PlaneFlora.cs).
+        StepFlora();
         // Murklings made during the step (a prime's pieces) join the others now, never while a loop walks them.
         Murklings.AddRange(_madeLater);
         _madeLater.Clear();

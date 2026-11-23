@@ -70,6 +70,8 @@ public sealed class PlaneOptions
     public bool Optics;
     /// <summary>Light specks (PlaneSpecks.cs): scattered and dropped, gathered as her energy, drunk by murklings. On in the crossover.</summary>
     public bool Specks;
+    /// <summary>Plants that answer light and light rooms (PlaneFlora.cs, LIGHT-WORLD.md phase 3). On in the crossover.</summary>
+    public bool Flora;
     /// <summary>The reef's bubble geysers (PlaneGeysers.cs): off (none are placed or spray); on only for their own tests.</summary>
     public bool Geysers;
 

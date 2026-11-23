@@ -631,3 +631,31 @@ pearls or none. Where it lands, `OpticLanding` (`PlaneOpticWalls.cs`) divides it
   light card (`PauseMenu.LightCard`) shows her light in physical terms.
 - Tests: `OpticWallTests`.
 
+## 19. Plants that answer light, fluorescence, light rooms (built: phase 3 of proposals/LIGHT-WORLD.md)
+
+`PlaneFlora.cs` (`PlaneOptions.Flora`, on in the crossover). Every plant reads the light falling on it: every light in
+the registry but the plants' own, in sight (`LightOnPlant`). Her colours are read through her light's spectrum (a
+band's share against her plain light's, `BandShare`).
+
+| Plant | Sense | Lit | Dark | Gives |
+|---|---|---|---|---|
+| Sun anemone | ≥ 0.3 | Opens (2/s); stays open 5 s after the light leaves | Closes over about 3 s | The 3 shells it hid, the first time it opens |
+| Shy anemone | ≥ 0.5 | Snaps shut (6/s) | Opens slowly (0.4/s) | Its 3 shells, if she touches it while open |
+| Giant kelp | ≥ 0.15 | Grows its stalk through open water, 1.6 m/s × light × her green share, to 7 m | Withers over 20 s | A grown stalk stands in the way of sight (`LineOfSight`): no creature sees a light through it |
+| Sunflower sponge | Any | Stores light × seconds; at 3 it glows 30 s, a light of its own (0.8, 6 m reach) the murklings come to | Leaks its store slowly | A lamp |
+| Night lily | ≤ 0.08 (darkness) | Shuts (3/s) | Opens (0.25/s), glowing faint violet | 0.6 energy, if she touches it while open |
+| Fluorescent coral | Light × her blue share | Glows green (0.6 light, 4 m) by what it drinks past 0.2 (fluorescence: high frequency in, lower out) | The glow fades (0.25/s) | Light |
+
+- **Light rooms** (`LightRoom`, 1 or 2 a level, in open water 4.6 m round, 16 m from her start, 22 m apart): a ring
+  (3.2 m) of the biome's plant (`FloraTuning.For`):
+  - Reef: 5 sun anemones; Kelp: 3 giant kelps; Shipwreck: 4 shy anemones; Ruins: 3 sponges;
+  - Alien Wreckage and Atlantis: 4 fluorescent corals; Temple: 5 night lilies.
+
+  Once all its plants are awake at once (`PlaneFlora.Awake`), it opens (`LightRoomOpened`): 6 shells and 3 energy of
+  light specks. Six loose plants of the biome's kinds stand about the level too.
+- **The view** (`FloraView`): each plant modelled on the real thing (an anemone's column and its crown of tentacles
+  spreading and folding, a kelp's stipe and its stalk with blades lying out at her plane, a barrel sponge, a lily on
+  its stem, a branching coral). A glow has a soft halo drawn after the ink look and lights the water round it. A
+  shut room has a faint ring on the floor and a "~" emblem.
+- `--at=room` starts her beside the first light room. Tests: `FloraTests`.
+

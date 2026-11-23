@@ -25,7 +25,7 @@ namespace OctoShoots.Game.TopDown;
 /// level, any pearls), F3 toggles the debug map, R regenerates from the seed field.
 /// Verification flags: --seed=, --cycle=, --depth=, --level=, --at=start|arch|arch-near|cave|exit|hole|kelp|shop|shop-out|cache|cache-near|secret|secret-in|treasure|treasure-out|clam-pearl|mob|boss|spring|spring-in,
 /// --autopilot, --dive (dives whenever it can), --dbg-pad (on the controller from the start), --calm (no creatures), --fire, --pearls=, --hp=, --luck=, --boss-hp=, --paused, --map, --f3, --no-focus, --dbg-nofog (no floor fog),
-/// --at=optic (facing the first mirror plate or lightglass pane), --dbg-f1 (the F1 menu open), --dbg-light=r,g,b,power,coherence,width,pulse (her light set by hand), --capture=dir --frames=a,b, --dbg-say=text (a message banner, a second in), --dbg-loose=id (that pearl loose near her), --at=prism|trio|charge (in a prism stones' bed, a charge stones' trio's
+/// --at=optic (facing the first mirror plate or lightglass pane), --at=room (beside the first light room), --dbg-f1 (the F1 menu open), --dbg-light=r,g,b,power,coherence,width,pulse (her light set by hand), --capture=dir --frames=a,b, --dbg-say=text (a message banner, a second in), --dbg-loose=id (that pearl loose near her), --at=prism|trio|charge (in a prism stones' bed, a charge stones' trio's
 /// nook, before a charge stone), --dbg-prism (a coloured seal's stones laid on her way to it; --fire aims at it), --dbg-shadow (her beam held
 /// along the most open way, two murklings held still in it), --dbg-sense (the same with her beam dark and the murklings
 /// held past her glow: unseen, sensed),
@@ -69,6 +69,7 @@ public partial class TopDownMain : Node3D
     VaseView _vases = null!;
     OpticWallView _opticWalls = null!;
     SpeckView _specks = null!;
+    FloraView _flora = null!;
     VaultView _vaults = null!;
     /// <summary>Achievements: their data, what earns them on this run, and the banner that announces them (§8).</summary>
     AchievementCatalog? _achievementData;
@@ -448,7 +449,7 @@ public partial class TopDownMain : Node3D
         // 0.13.0; in the crossover her glow is gone and her beam is her light to see by, mostly (PlaneOptions).
         PlaneOptions.Default = new PlaneOptions
         {
-            Adventure = true, Shots = true, Glow = !Crossover.On, Gun = Crossover.On, Optics = Crossover.On, Specks = Crossover.On,
+            Adventure = true, Shots = true, Glow = !Crossover.On, Gun = Crossover.On, Optics = Crossover.On, Specks = Crossover.On, Flora = Crossover.On,
             BeamBurn = Crossover.On ? HerLightTuning.LightOnlyBurn : 1f,
         };
         // The bundled fonts: Nunito is every screen's default (THEME-BIBLE §6.8).
@@ -509,6 +510,8 @@ public partial class TopDownMain : Node3D
         AddChild(_opticWalls);
         _specks = new SpeckView();
         AddChild(_specks);
+        _flora = new FloraView();
+        AddChild(_flora);
         _vaults = new VaultView();
         AddChild(_vaults);
         _relics = new RelicView();
@@ -1782,6 +1785,7 @@ public partial class TopDownMain : Node3D
         _vases.Show(_world);
         _opticWalls.Show(_world);
         _specks.Clear();
+        _flora.Show(_world);
         _vaults.Show(_world);
         _relics.Show(_world);
         _props.Show(_map, ReefLook.Of(_map.Id));
@@ -2337,6 +2341,9 @@ public partial class TopDownMain : Node3D
             // A few metres from the first shell cache, its shells still lying there (captures of them).
             "cache-near" => _map.Pois.Where(p => p.Kind == PoiKind.ShellCache)
                 .SelectMany(p => Enumerable.Range(0, 12).Select(k => p.Position + new System.Numerics.Vector2(Mathf.Cos(k * Mathf.Tau / 12f), Mathf.Sin(k * Mathf.Tau / 12f)) * 6f))
+                .Select(q => (System.Numerics.Vector2?)q).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
+            // Beside the first light room, in water that sees it (PlaneFlora.cs).
+            "room" => _world.LightRooms.SelectMany(r => Enumerable.Range(0, 16).Select(k => r.Centre + new System.Numerics.Vector2(Mathf.Cos(k * Mathf.Tau / 16f), Mathf.Sin(k * Mathf.Tau / 16f)) * (FloraTuning.Ring + 2.5f)))
                 .Select(q => (System.Numerics.Vector2?)q).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
             // Facing the first mirror plate or lightglass pane, three metres off its face (PlaneOpticWalls.cs).
             "optic" => _world.OpticWalls.SelectMany(w => new[] { w.Centre + w.Normal * 3f, w.Centre - w.Normal * 3f })
@@ -2905,6 +2912,15 @@ public partial class TopDownMain : Node3D
                 // Her light on rock (PlaneOptics.cs): a spark where a shot rings off a mirror wall, a flash where it leaves a crystal bent.
                 else if (e.Type == PlaneEventType.ShotBounced) _combat.LightBurst(e.Position, 0.3f);
                 else if (e.Type == PlaneEventType.ShotRefracted) _combat.LightBurst(e.Position, 0.45f);
+                // The flora (PlaneFlora.cs): a light room opening, a plant giving what it held, a sponge filling.
+                else if (e.Type == PlaneEventType.LightRoomOpened)
+                {
+                    _combat.LightBurst(e.Position, 1.6f);
+                    _sfx.PlaySecret();
+                    _haptics.Pulse(0.4f, 0.35f, 0.2f);
+                }
+                else if (e.Type == PlaneEventType.FloraGave) _sfx.PlayPitched("bell_ring", 1.4f, -12f);
+                else if (e.Type == PlaneEventType.FloraWoke) _sfx.PlayPitched("bell_ring", 1.1f, -14f);
                 // A light speck gathered: a small flash, a soft chime (PlaneSpecks.cs).
                 else if (e.Type == PlaneEventType.SpeckGathered)
                 {
@@ -3121,6 +3137,7 @@ public partial class TopDownMain : Node3D
         Guard("vases", () => _vases.Sync(dt));
         Guard("optic walls", () => _opticWalls.Sync());
         Guard("specks", () => _specks.Sync(_world, dt));
+        Guard("flora", () => _flora.Sync(_world, dt));
         // Her colours follow her light (HerColor.FollowLight): her body, glow, light and tips, as her beam and shots.
         if (_world is not null)
         {

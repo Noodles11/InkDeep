@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using OctoShoots.Core.Gen.TopDown;
+using OctoShoots.Core.Plane;
 using OctoShoots.Core.Run;
 
 namespace OctoShoots.Game.TopDown;
@@ -16,7 +17,7 @@ public partial class TopDownMain
 {
     EdgeArrows _arrows = null!;
 
-    static readonly Color SpringColour = new(1f, 0.93f, 0.7f);
+    static readonly Color SpringColour = new(1f, 0.93f, 0.7f), LightRoomColour = new(0.7f, 1f, 0.85f);
 
     /// <summary>How near (metres) counts as at a spring (its emblem fades: EdgeArrows).</summary>
     const float SpringReach = 3f;
@@ -46,6 +47,9 @@ public partial class TopDownMain
             }
             yield return (poi.Position, LevelView.PoiColor(poi.Kind), Sign(poi.Kind), Mathf.Max(poi.Radius, SpringReach));
         }
+        // Light rooms while they are shut ("~").
+        foreach (var room in _world.LightRooms)
+            if (!room.Opened) yield return (room.Centre, LightRoomColour, "~", FloraTuning.Ring + 1f);
         // Her light springs: where she heals and grows ("+").
         foreach (var sp in _world.Springs)
             if (!sp.Spent || _world.Run.Energy > 0f) yield return (sp.Position, SpringColour, "+", SpringReach);

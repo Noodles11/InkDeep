@@ -6,7 +6,7 @@ water filters and scatters light its own way, its walls drink it, throw it back,
 there opens, closes, grows, flees, follows, attacks or changes colour by what light falls on it. The player learns
 each place the way a diver learns a reef: by shining into it and watching what it does.
 
-This page is the design. **Phases 1 and 2 are built** on the `inkdeep-crossover` branch (§13): her light's physics, each
+This page is the design. **Phases 1 to 3 are built** on the `inkdeep-crossover` branch (§13): her light's physics, each
 biome's water and rock, and her shots meeting rock. Everything else is the plan. Values marked *(tune)* are starting
 points.
 
@@ -439,7 +439,7 @@ The standing rules (CLAUDE.md) hold:
 - Mirror plates and lightglass in the templates.
 - The light card on the pause screen.
 
-**Phase 3.**
+**Phase 3: built (0.81.0)**, as LIGHT-AND-GRAPH.md §19 says (the light room as a ring of plants, not a cell type).
 
 - Flora with senses and verbs (`PlaneFlora`: sun anemones, shy anemones, giant kelp, sunflower sponges, night lilies).
 - The light room cell type.

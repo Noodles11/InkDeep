@@ -1161,6 +1161,10 @@ void fragment() {
                 }
                 _candidates.Add((ray.End, GroundStrength * 1.4f * surge.Power, GroundRadius * 1.6f));
             }
+        // Glowing plants' light round them: a sponge's gold, a lily's violet, a coral's green (PlaneFlora.cs).
+        foreach (var f in world.Flora)
+            if (f.Light is { Shining: true } l)
+                _candidates.Add((f.Position, GroundStrength * Mathf.Min(l.Intensity, 1f), GroundRadius * Mathf.Clamp(l.Range / 4f, 0.6f, 1.6f)));
         // Light specks' faint light round them (PlaneSpecks.cs).
         foreach (var s in world.Specks)
             _candidates.Add((s.Position, GroundStrength * 0.35f, GroundRadius * 0.7f));
