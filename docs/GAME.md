@@ -393,8 +393,9 @@ the tests of the dive still test the dive.
   - `--dbg-sweep` turns the auto-fire's aim round her (verification of the afterimage).
   - (0.58.1) Her beam lights its cone alone, right up to her bell: no lit disc round her (reef_show's `rs_beam`).
   - (0.71.1) Her light reaches only so high: the floor below her and the rock rising a little above her plane are
-    lit, but it fades out 1.8–3.2 m above her plane (`rs_height`), so an arch or a cave's roof over her is never lit
-    (her beam, her aura, her shots' light and their afterimage alike).
+    lit, but it fades out 2.6–4.0 m above her plane (`rs_height`; 1.8–3.2 m in 0.71.1, raised in 0.71.2), just under the
+    lowest arch (5 m up), so an arch or a cave's roof over her is never lit (her beam, her aura, her shots' light and
+    their afterimage alike).
 - **Step 7, second part (0.59.0), the biomes' cells and looks:**
   - **Cells by biome** (`CaveTemplates.KelpForest`, `Shipwreck`, `SunkenRuins`, `VariantsOf`, `ChunksOf`): five cells
     each, one of every shape a cell can take (a cross, a T, a straight, a bend, a dead end; turned and mirrored they open
