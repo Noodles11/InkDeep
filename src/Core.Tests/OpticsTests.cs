@@ -129,7 +129,16 @@ public class OpticsTests
     static (int Bounced, int Refracted, int Glows) Volleys(PlaneWorld w)
     {
         int bounced = 0, refracted = 0, glows = 0;
-        var at = w.Map.Start.Position;
+        // (Four metres off the nearest wall from her start: the chambers are wide.)
+        var start = w.Map.Start.Position;
+        var at = start;
+        float nearest = float.MaxValue;
+        for (int k = 0; k < 32; k++)
+        {
+            var d = new Vector2(MathF.Cos(k * MathF.Tau / 32f), MathF.Sin(k * MathF.Tau / 32f));
+            float reach = w.LineReach(start, d, 40f, out bool hit);
+            if (hit && reach > 5f && reach < nearest) (nearest, at) = (reach, start + d * (reach - 4f));
+        }
         for (int k = 0; k < 24; k++)
         {
             var aim = new Vector2(MathF.Cos(k * MathF.Tau / 24f), MathF.Sin(k * MathF.Tau / 24f));

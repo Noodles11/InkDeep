@@ -296,7 +296,9 @@ the tests of the dive still test the dive.
   (18, not the proposal's 22, so the grid fits inside the level's rim), a Spelunky walk from one row to the far one,
   side cells up to two deep and the odd loop, the whole grid turned or mirrored any of eight ways. Each used cell takes
   a template that opens where it is joined (sockets 6 m wide in the middle of a side), turned and mirrored, its chunk
-  slots filled at random; then the rock edges are eroded with noise, and the generator's own stages (walls, passes,
+  slots filled at random; then the open water is grown 1.5 m into the rock everywhere (0.84.0: roomier passages and
+  chambers than the cells draw, `CaveLayout.Widen`; its water band ×1.45, `WidenedWater`) and the rock edges are
+  eroded with noise, and the generator's own stages (walls, passes,
   arches, decoration) build on it. Ten Sunlit Reef cells and one room cell so far. A room cell holds a place that
   lives in a cave (a treasure clam, a Crab Deal) behind a short spur; an open place (a shell cache) takes a POI mark;
   a place that finds neither is left out. Mob marks fill the spawn table by tag (lone, pack, thrower, ambusher,

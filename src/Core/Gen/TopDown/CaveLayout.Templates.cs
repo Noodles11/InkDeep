@@ -36,6 +36,10 @@ public sealed partial class CaveLayout
     const int TemplateTries = 40;
     /// <summary>The erosion (metres): two octaves of noise on the signed distance to the rock.</summary>
     const float Erode = 1.5f, ErodeFine = 0.6f;
+    /// <summary>How far the open water is grown into the rock everywhere (metres): roomier passages and chambers than the cells draw.</summary>
+    public const float Widen = 1.5f;
+    /// <summary>The water a template level holds against a grown one's (its area band × this): what Widen adds.</summary>
+    public const float WidenedWater = 1.45f;
 
     /// <summary>The boss's arena (CROSSOVER.md §4): a round cave this wide in a 2 × 2 block of cells, its doorways this wide.</summary>
     public const float ArenaRadius = 15f, ArenaDoor = 6f;
@@ -190,7 +194,7 @@ public sealed partial class CaveLayout
             return open;
         }
 
-        var g = new CaveLayout();
+        var g = new CaveLayout { _scale = WidenedWater };
         int NN = g.N;
         var raw = new bool[NN * NN];
         var roomAt = new Dictionary<int, Vector2>();
@@ -268,7 +272,7 @@ public sealed partial class CaveLayout
         {
             int i = y * NN + x;
             float sd = raw[i] ? 0.5f - toRock[i] : toWater[i] - 0.5f;
-            float v = sd + Fbm(x * 0.13f, y * 0.13f, seed) * Erode + Fbm(x * 0.41f, y * 0.41f, seed + 31) * ErodeFine;
+            float v = sd - Widen + Fbm(x * 0.13f, y * 0.13f, seed) * Erode + Fbm(x * 0.41f, y * 0.41f, seed + 31) * ErodeFine;
             float edge = MathF.Min(MathF.Min(x, y), MathF.Min(g.Size - x, g.Size - y));
             if (edge < Rim + 1f) v = MathF.Max(v, Rim + 1f - edge);
             open[i] = v < 0f;

@@ -116,7 +116,9 @@ public static class LevelValidator
                 return "a cave's mouth cannot be reached from the start";
         // The playable area: the water she can reach.
         int area = WaterArea(map);
-        float lo = AreaMin * map.AreaScale, hi = AreaMax * map.AreaScale, least = MinExitGeodesic * MathF.Sqrt(map.AreaScale);
+        // (A template level's water is widened: CaveLayout.Widen.)
+        float band = map.AreaScale * (map.Templated ? CaveLayout.WidenedWater : 1f);
+        float lo = AreaMin * band, hi = AreaMax * band, least = MinExitGeodesic * MathF.Sqrt(map.AreaScale);
         if (area < (int)lo || area > (int)hi) return $"{area} m² of water to swim (want {lo:0}–{hi:0} m²)";
         float geodesic = DistanceAt(dist, exit.Position);
         if (geodesic < least) return $"the exit is only {geodesic:0} m from the start (want ≥ {least:0} m)";

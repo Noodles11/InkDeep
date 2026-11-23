@@ -149,12 +149,15 @@ public class OpticWallTests
     public void On_the_wreck_s_iron_her_beam_is_divided_a_mirror_ray_springing_off_it()
     {
         var w = World(Biome.Shipwreck);
-        var at = w.Map.Start.Position;
+        var start = w.Map.Start.Position;
         bool any = false;
         for (int k = 0; k < 32 && !any; k++)
         {
             var aim = new Vector2(MathF.Cos(k * MathF.Tau / 32f), MathF.Sin(k * MathF.Tau / 32f));
-            if (w.LineReach(at, aim, 12f, out bool hit) > 11f || !hit) continue;
+            // (Four metres off the wall that way: the chambers are wide.)
+            float reach = w.LineReach(start, aim, 40f, out bool hit);
+            if (!hit || reach < 5f) continue;
+            var at = start + aim * (reach - 4f);
             Hold(w, at, new PlaneInput { Beam = true, Aim = aim });
             Hold(w, at, new PlaneInput { Beam = true, Aim = aim });
             any = w.Born.Any(b => b.Word == PathWord.Mirror);
