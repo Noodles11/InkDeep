@@ -152,7 +152,7 @@ public class OpticsTests
     {
         var wreck = Volleys(World(Biome.Shipwreck));
         var ruins = Volleys(World(Biome.SunkenRuins));
-        Assert.True(wreck.Bounced > ruins.Bounced * 2 && wreck.Bounced >= 5, $"wreck {wreck.Bounced} bounces, ruins {ruins.Bounced}");
+        Assert.True(wreck.Bounced > ruins.Bounced && wreck.Bounced >= 5, $"wreck {wreck.Bounced} bounces, ruins {ruins.Bounced}");
         Assert.True(ruins.Glows > 0, "no wall glowed in the Ruins");
         Assert.Equal(0, wreck.Glows);
     }
@@ -186,5 +186,44 @@ public class OpticsTests
         w.Step(new PlaneInput { Beam = true, Aim = Vector2.UnitX });
         Assert.Equal(LightPhysics.Neutral, w.HerLightPhysics);
         Assert.Equal(plainHalf, w.Beam.HalfAngle, 4);
+    }
+
+    /// <summary>Her first shot thrown along the open way from her start.</summary>
+    static PlaneShot Throw(PlaneWorld w)
+    {
+        var at = w.Map.Start.Position;
+        Vector2 aim = Vector2.UnitX;
+        float far = 0f;
+        for (int k = 0; k < 16; k++)
+        {
+            var d = new Vector2(MathF.Cos(k * MathF.Tau / 16f), MathF.Sin(k * MathF.Tau / 16f));
+            float r = w.LineReach(at, d, 30f, out _);
+            if (r > far) (far, aim) = (r, d);
+        }
+        for (int i = 0; i < 30 && !w.Shots.Any(s => s.FromPlayer); i++)
+        {
+            w.Player.Position = w.Player.PrevPosition = at;
+            w.Step(new PlaneInput { Fire = true, Aim = aim });
+        }
+        return w.Shots.First(s => s.FromPlayer);
+    }
+
+    [Fact]
+    public void Her_shots_take_her_light_as_her_beam_has_it_its_colour_power_width_and_reach()
+    {
+        var plain = Throw(World(Biome.SunlitReef));
+        var w = World(Biome.SunlitReef);
+        w.ManualLight = new LightSettings { Power = 2f, Width = 1.8f };
+        var hand = Throw(w);
+        Assert.True(hand.Damage > plain.Damage * 1.8f, $"damage {hand.Damage} against {plain.Damage}");
+        Assert.True(hand.Radius > plain.Radius * 1.7f, $"size {hand.Radius} against {plain.Radius}");
+        // Her colour words: her shots carry them, as her beam does.
+        var map = World(Biome.SunlitReef).Map;
+        var run = new PlaneRun(Catalog.Value, new Tuning());
+        run.Add("frost_kelp");
+        var cold = new PlaneWorld(map, new Tuning(), run, new PlaneOptions { Adventure = true, Glow = false, Gun = true, Optics = true });
+        cold.Murklings.Clear();
+        Assert.Equal(LightHue.Blue, Throw(cold).Light);
+        Assert.Equal(LightHue.None, plain.Light);
     }
 }

@@ -762,6 +762,22 @@ void fragment() {
     }
 
     /// <summary>Her light's colour in a shot: her own, or (Prism Pearl) the red, green or blue third of it.</summary>
+    PlaneWorld? _world;
+
+    /// <summary>
+    /// Her shot's colour, as her beam's: a prism's hue; else her light set by hand (its spectrum's colour); else her colour
+    /// words (LightColour.Beam); else her own light. tinted: not her own plain light.
+    /// </summary>
+    Color ShotTint(PlaneShot shot, out bool tinted)
+    {
+        tinted = true;
+        if (shot.Hue != PrismHue.None) return LightOf(shot.Hue);
+        if (_world?.ManualLight is not null) return BeamView.HandTint(_world);
+        if (shot.Light != LightHue.None) return OctoShoots.Game.Fx.LightColour.Beam(shot.Light, TopDownMain.ShowcaseOn);
+        tinted = false;
+        return HerColor.Light;
+    }
+
     public static Color LightOf(PrismHue hue) => hue switch
     {
         PrismHue.Red => new Color(1f, 0.28f, 0.3f),
@@ -782,7 +798,7 @@ void fragment() {
         var back = speed > 1e-3f ? -heading / speed : Vector3.Zero;
         var side = new Vector3(-back.Z, 0f, back.X);
         var hot = new Color(1.6f, 1.45f, 1.1f);
-        var gold = LightOf(shot.Hue).Lerp(new Color(1f, 0.95f, 0.84f), shot.Hue == PrismHue.None ? warmth : warmth * 0.3f) * 1.25f;
+        var gold = ShotTint(shot, out bool tinted).Lerp(new Color(1f, 0.95f, 0.84f), !tinted ? warmth : warmth * 0.3f) * 1.25f;
         var ember = new Color(1f, 0.4f, 0.1f, 0f);
         float k = Mathf.Clamp(light, 0.3f, 1.3f);
         bool first = !_shed.TryGetValue(shot, out var was);
@@ -994,6 +1010,7 @@ void fragment() {
 
     public void Sync(PlaneWorld world, float dt)
     {
+        _world = world;
         _time += dt;
         while (_shots.Count < world.Shots.Count)
         {
@@ -1077,8 +1094,9 @@ void fragment() {
                 float warmth = charged ? Mathf.Max(Warmth(shot.Bubbles), 0.5f) : Warmth(shot.Bubbles);
                 _shots[i].SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("seed"), seed);
                 _shots[i].SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("ink"), 0f);
-                var hue = LightOf(shot.Hue);
-                _shots[i].SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("prism_hue"), shot.Hue == PrismHue.None ? new Color(0f, 0f, 0f, 0f) : hue with { A = 1f });
+                // (In her light's colour, as her beam is: ShotTint.)
+                var hue = ShotTint(shot, out bool tinted);
+                _shots[i].SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("prism_hue"), !tinted ? new Color(0f, 0f, 0f, 0f) : hue with { A = 1f });
                 // A full one burns white: a small star.
                 _shots[i].SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("lantern"), Mathf.Max(light, 0.35f * shot.Dim) * (shot.Bubbles >= PlaneCombatTuning.BubbleCap ? 1.25f : 1f));
                 _shots[i].SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("warmth"), warmth);
@@ -1092,7 +1110,7 @@ void fragment() {
                 _shots[i].SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("spin"), shot.Boomerang ? 9f : 1f);
                 _shots[i].SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("pearl"), Mathf.Clamp((shot.Charged - 0.25f) / 0.75f, 0f, 1f));
                 float strength = Mathf.Clamp(light * 1.4f, 0.35f, 1.2f) * (shot.Explosive ? 1.25f : 1f);
-                _trails.Feed(shot, _shots[i].Position, warmth, strength, TrailStyle(shot));
+                _trails.Feed(shot, _shots[i].Position, warmth, strength, TrailStyle(shot), hue.Lerp(new Color(1f, 0.95f, 0.84f), !tinted ? warmth : warmth * 0.3f));
                 Shed(shot, _shots[i].Position, heading, speed, mote, warmth, light);
 
                 // Its glow in the water: a disc as wide as her shot size, stronger (never wider) as it merges.
@@ -1102,7 +1120,7 @@ void fragment() {
                 halo.Position = _shots[i].Position;
                 halo.Scale = Vector3.One * HaloRadius * drawn;
                 halo.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("strength"), Mathf.Min(Mathf.Lerp(HaloMin, HaloMax, Warmth(shot.Bubbles)) * (0.6f + 0.4f * k), HaloMax) * (shot.Explosive ? 1.3f : 1f));
-                halo.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("color"), LightOf(shot.Hue).Lerp(new Color(1f, 0.95f, 0.84f), shot.Hue == PrismHue.None ? warmth : warmth * 0.3f));
+                halo.SetInstanceShaderParameter(OctoShoots.Game.Fx.SN.Of("color"), hue.Lerp(new Color(1f, 0.95f, 0.84f), !tinted ? warmth : warmth * 0.3f));
                 // Its lantern: the harder it hits, the farther and stronger it shines, on the water round it (the post
                 // pass) and as a real light on the reef.
                 float share = Mathf.Sqrt(Mathf.Max(shot.Damage, 0f) / PlaneCombatTuning.ShotDamage);
@@ -1112,7 +1130,7 @@ void fragment() {
                 lamp.Position = _shots[i].Position + Vector3.Up * LampAbove;
                 lamp.OmniRange = LampReach * Mathf.Clamp(share, 0.55f, 2.6f);
                 lamp.LightEnergy = LampEnergy * Mathf.Clamp(share, 0.6f, 1.8f) * ember * shot.Dim * (1f + 0.5f * pulse);
-                lamp.LightColor = LightOf(shot.Hue).Lerp(new Color(1f, 0.95f, 0.84f), shot.Hue == PrismHue.None ? warmth * 0.6f : warmth * 0.2f);
+                lamp.LightColor = hue.Lerp(new Color(1f, 0.95f, 0.84f), !tinted ? warmth * 0.6f : warmth * 0.2f);
             }
             else if (shot.BossPearl)
             {

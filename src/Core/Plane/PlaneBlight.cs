@@ -1071,7 +1071,7 @@ public sealed partial class PlaneWorld
             foreach (var m in Murklings)
             {
                 if (!m.Alive || m.Clinging || shot.Struck == m || !Reaches(shot, m.Position, m.Radius)) continue;
-                float light = HitDamage(shot);
+                float light = HitDamage(shot, m, m.Position);
                 float dealt = Ward(m, m.Position, light);
                 bool emptied = dealt > 0f && m.Corruption.Hit(dealt);
                 Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, m.Position, SafeNormalize(shot.Velocity), dealt));

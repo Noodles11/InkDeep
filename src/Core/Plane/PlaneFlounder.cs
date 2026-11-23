@@ -172,7 +172,7 @@ public sealed partial class PlaneWorld
             foreach (var f in Flounders)
             {
                 if (!f.Corrupted || shot.Struck == f || !ReachesFlounder(shot, f)) continue;
-                float dealt = Ward(f, f.Position, HitDamage(shot));
+                float dealt = Ward(f, f.Position, HitDamage(shot, f, f.Position));
                 HitFlounder(f, dealt, SafeNormalize(shot.Velocity));
                 if (shot.Pierce) shot.Struck = f;
                 else

@@ -591,4 +591,21 @@ the tests of the dive still test the dive.
     while it is set by hand.
   - `--dbg-f1` opens the menu 20 frames in; `--dbg-light=r,g,b,power,coherence,width,pulse` starts her light set by
     hand. Tests: `OpticsTests`.
+- **Her shots take her light as her beam has it (0.75.1).** Where it is relevant, her shots follow the same light as
+  her beam (`ShapeOpticsVolley`, `ShotColour`, PlaneOptics.cs):
+  - **Colour:** each shot carries her colours when it is thrown (`PlaneShot.Light`: her colour words mixed, or Neon
+    Rave's one at a time) and is drawn in them, its halo, lantern and trail too (`CombatView.ShotTint`: a prism's hue
+    first, then her light set by hand, then her colour words). They act on what it hits as her beam's do, at once:
+    - ember leaves it burning on;
+    - frost chills it 0.35 of the way to a standstill (faster with more frost);
+    - bloom and sunfire mark it for when it is freed;
+    - lull (bloom + frost) makes it lose her;
+    - ember on what frost has stilled shatters it.
+    Bosses take no colours.
+  - **Power and pulse:** with optics or her light set by hand, her potency, power and pulse scale their damage, and so
+    their light.
+  - **Width and reach:** her beam's width scales their size, and her reach in this water scales their range.
+  - **Coherence:** it sets what the water takes from them, as for her beam (§17).
+  - Her light's physics is now worked out at the start of each step, so the first shot of a level takes it too.
+    Tests: `OpticsTests`.
 

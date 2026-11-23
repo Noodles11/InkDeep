@@ -341,17 +341,66 @@ public sealed partial class PlaneWorld
     /// passes through a thin wall bent (crystal, quartz), or is drunk there, the wall glowing by what it stored. True: it
     /// was dealt with (it carries on, or it is gone).
     /// </summary>
-    /// <summary>A volley's shots take her light's potency (blue burns harder, red less) and the water's density (slower in brine).</summary>
+    /// <summary>
+    /// A volley's shots take her light as her beam has it: her colours (drawn in them, acting on what they hit), and, with
+    /// optics or her light set by hand, its potency (blue burns harder, red less), its power and pulse (their damage and
+    /// light), its width (their size, as her beam's width) and its reach in this water (their range), and the water's
+    /// density (slower in brine).
+    /// </summary>
     void ShapeOpticsVolley(int first)
     {
+        // (Her colours as her beam has them now: her colour words mixed, or Neon Rave's one at a time.)
+        var all = LightHue.None;
+        foreach (var h in Primaries()) all |= h;
+        if (NeonHue != LightHue.None) all = NeonHue;
+        for (int i = first; i < Shots.Count; i++) Shots[i].Light = all;
         if (!Options.Optics && ManualLight is null) return;
         var l = HerLightPhysics;
         float potency = Optics.Potency(l.Spectrum) * l.Power * l.Pulse, slow = 1f / MathF.Sqrt(MathF.Max(Water.Density, 0.5f));
         for (int i = first; i < Shots.Count; i++)
         {
-            Shots[i].Damage *= potency;
-            Shots[i].Velocity *= slow;
-            Shots[i].Speed0 *= slow;
+            var s = Shots[i];
+            s.Damage *= potency;
+            s.Velocity *= slow;
+            s.Speed0 *= slow;
+            s.Radius *= l.Width;
+            s.BaseRadius *= l.Width;
+            if (s.Range > 0f) s.Range *= l.Reach;
+        }
+    }
+
+    /// <summary>The share of a shot's colour that marks what it hits: frost's chill a hit adds (of a full standstill).</summary>
+    public const float ShotChill = 0.35f;
+
+    /// <summary>
+    /// Her shot's colours on what it hits (as her beam's act, PlaneColour.ApplyColour, but at once): ember leaves it burning
+    /// on, frost chills it a step toward a standstill, bloom and sunfire mark it for when it is freed, lull makes it lose
+    /// her, and ember on what frost has stilled shatters it.
+    /// </summary>
+    void ShotColour(object on, LightHue hue, Vector2 at)
+    {
+        if (hue == LightHue.None) return;
+        if (!_glare.TryGetValue(on, out var g)) _glare[on] = g = new Glare();
+        var s = Run.Loadout.Shot;
+        bool red = (hue & LightHue.Red) != 0, green = (hue & LightHue.Green) != 0, blue = (hue & LightHue.Blue) != 0;
+        if (red)
+        {
+            g.Afterglow = MathF.Max(g.Afterglow, ColourTuning.Ember(s.Ember));
+            g.Ember = true;
+        }
+        if (blue)
+        {
+            g.Chill = MathF.Min(1f, g.Chill + ShotChill / MathF.Max(ColourTuning.Frost(s.Frost) / ColourTuning.FrostTime, 0.2f));
+            if (g.Chill >= 1f) g.Frozen = MathF.Max(g.Frozen, ColourTuning.Mark);
+        }
+        if (green) g.Bloom = ColourTuning.Mark;
+        if (red && green) g.Sun = ColourTuning.Mark;
+        if (green && blue) g.Charm = MathF.Max(g.Charm, ColourTuning.LullTime);
+        if (red && blue && g.Chill >= 1f)
+        {
+            g.Chill = 0f;
+            g.Frozen = 0f;
+            _colourBursts.Add((at, true));
         }
     }
 

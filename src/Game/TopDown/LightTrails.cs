@@ -116,12 +116,13 @@ public partial class LightTrails : Node3D
     }
 
     /// <summary>One of her shots this frame: where it is drawn, how warm and how bright its light is, and its pearls' style.</summary>
-    public void Feed(PlaneShot shot, Vector3 at, float warmth, float strength, Style style)
+    public void Feed(PlaneShot shot, Vector3 at, float warmth, float strength, Style style, Color? tint = null)
     {
         if (!_live.TryGetValue(shot, out var trail)) _live[shot] = trail = new Trail { Seed = _ids++ * 17, Life = LifeOf(shot) };
         trail.Fed = true;
         // (Prism Pearl: a third of her split light keeps its own colour.)
-        trail.Color = CombatView.LightOf(shot.Hue).Lerp(new Color(1f, 0.95f, 0.84f), shot.Hue == OctoShoots.Core.Plane.PrismHue.None ? warmth : warmth * 0.3f);
+        // (Her light's colour, as her shot's own: CombatView.ShotTint.)
+        trail.Color = tint ?? CombatView.LightOf(shot.Hue).Lerp(new Color(1f, 0.95f, 0.84f), shot.Hue == OctoShoots.Core.Plane.PrismHue.None ? warmth : warmth * 0.3f);
         trail.Strength = strength;
         trail.Style = style;
         var pts = trail.Points;

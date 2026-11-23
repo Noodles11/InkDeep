@@ -205,7 +205,7 @@ public sealed partial class PlaneWorld
             foreach (var t in Thumpsquirts)
             {
                 if (!t.Alive || t.Airborne || shot.Struck == t || !Reaches(shot, t.Position, ThumpTuning.Radius)) continue;
-                float light = HitDamage(shot);
+                float light = HitDamage(shot, t, t.Position);
                 float dealt = Ward(t, t.Position, light);
                 bool emptied = dealt > 0f && t.Corruption.Hit(dealt);
                 Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, t.Position, SafeNormalize(shot.Velocity), dealt));

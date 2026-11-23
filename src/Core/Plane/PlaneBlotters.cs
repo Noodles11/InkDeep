@@ -260,7 +260,7 @@ public sealed partial class PlaneWorld
             foreach (var b in Blotters)
             {
                 if (!b.Alive || b.Rise > 0f || shot.Struck == b || !Reaches(shot, b.Position, BlotterTuning.ShellRadius)) continue;
-                float light = HitDamage(shot);
+                float light = HitDamage(shot, b, b.Position);
                 b.SinceStruck = 0f;
                 float dealt = Ward(b, b.Position, light);
                 bool emptied = dealt > 0f && b.Corruption.Hit(dealt);

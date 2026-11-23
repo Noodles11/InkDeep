@@ -208,6 +208,8 @@ public sealed class PlaneShot
     public Vector2 From = new(float.NaN);
     /// <summary>Prism Pearl: the colour of her split light it is (none: her own).</summary>
     public PrismHue Hue;
+    /// <summary>Her light's colours when it was thrown (her colour words, as her beam has them): drawn in them, and they act on what it hits.</summary>
+    public LightHue Light;
     /// <summary>Queen Clam's pearls: corruption, which her light cannot clear; the royal one homes. (PearlHp is no longer used.)</summary>
     public bool BossPearl, Royal;
     /// <summary>Her bubbles' light, 1 → dimmer (a murkling, its throw, a Blightroot's ring); damage dims with it.</summary>
@@ -484,7 +486,7 @@ public sealed partial class PlaneWorld
                     if (!mob.Alive || !Reaches(shot, mob.Position, mob.Radius)) continue;
                     if (shot.Hit is not null && !shot.Hit.Add(mob)) continue;
                     bool fresh = mob.Hp >= PlaneCombatTuning.MobHp - 0.01f;
-                    DamageMob(mob, HitDamage(shot), shot.Velocity);
+                    DamageMob(mob, HitDamage(shot, mob, mob.Position), shot.Velocity);
                     // A full bubble freeing a foe at full health in one hit (Big Bubble Energy).
                     if (!mob.Alive && fresh && shot.Bubbles >= PlaneCombatTuning.BubbleCap)
                         Events.Add(new PlaneEvent(PlaneEventType.FullBubbleFreed, mob.Position, shot.Velocity, shot.Bubbles));
@@ -938,8 +940,10 @@ public sealed partial class PlaneWorld
     /// What one of her bubbles deals on a hit: its damage, grown with distance (Starfish Arm), and now and then a
     /// critical hit (Giant Squid Eye: CritChance of hits do CritMult×, from the level's seeded bubble rolls).
     /// </summary>
-    float HitDamage(PlaneShot shot)
+    float HitDamage(PlaneShot shot, object? on = null, Vector2 at = default)
     {
+        // (Her light's colours act on what it hits, as her beam's do: PlaneOptics' ShotColour.)
+        if (on is not null) ShotColour(on, shot.Light, at);
         float damage = shot.Damage * GrowFactor(shot);
         var spec = Run.Loadout.Shot;
         if (spec.CritChance > 0f && _bubbleRng.NextFloat() < spec.CritChance) damage *= spec.CritMult;

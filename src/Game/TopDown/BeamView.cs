@@ -578,7 +578,7 @@ void fragment() {
     }
 
     /// <summary>Her light set by hand: the colour its spectrum makes, a quarter of the way to warm white (it stays a light's).</summary>
-    static Color HandTint(PlaneWorld world)
+    public static Color HandTint(PlaneWorld world)
     {
         var c = world.HerLightPhysics.Colour;
         return new Color(c.X, c.Y, c.Z).Lerp(new Color(1f, 0.95f, 0.85f), 0.25f);

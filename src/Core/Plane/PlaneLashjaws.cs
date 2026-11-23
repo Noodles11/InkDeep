@@ -241,7 +241,7 @@ public sealed partial class PlaneWorld
             foreach (var l in Lashjaws)
             {
                 if (!l.Alive || shot.Struck == l || !Reaches(shot, l.Position, LashTuning.Head)) continue;
-                float dealt = Ward(l, l.Position, HitDamage(shot));
+                float dealt = Ward(l, l.Position, HitDamage(shot, l, l.Position));
                 bool emptied = dealt > 0f && l.Corruption.Hit(dealt);
                 Events.Add(new PlaneEvent(emptied && l.Phase == 2 ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, l.Position, SafeNormalize(shot.Velocity), dealt));
                 if (emptied) BreakLashjaw(l);

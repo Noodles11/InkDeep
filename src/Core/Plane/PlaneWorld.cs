@@ -233,6 +233,8 @@ public sealed partial class PlaneWorld
         Events.Clear();
         if (Defeated) return;
         Tick++;
+        // Her light's physics in this water first (PlaneOptics.cs, LIGHT-WORLD.md): her shots and her beam both take it.
+        StepOptics();
         var p = Player;
         var t = Tuning;
         p.PrevPosition = p.Position;
@@ -363,8 +365,6 @@ public sealed partial class PlaneWorld
             GlowOff = !GlowOff;
             Events.Add(new PlaneEvent(PlaneEventType.GlowToggled, Player.Position, Vector2.Zero, GlowOff ? 0f : 1f));
         }
-        // Her light's physics in this water (PlaneOptics.cs, LIGHT-WORLD.md).
-        StepOptics();
         StepOpticWalls();
         SyncLights(input);
         StepHerLight();

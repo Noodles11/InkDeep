@@ -235,7 +235,7 @@ public sealed partial class PlaneWorld
             foreach (var w in Inkwardens)
             {
                 if (!w.Alive || shot.Struck == w || !Reaches(shot, w.Position, WardenTuning.Radius)) continue;
-                float light = HitDamage(shot);
+                float light = HitDamage(shot, w, w.Position);
                 bool emptied = w.Corruption.Hit(light);
                 Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, w.Position, SafeNormalize(shot.Velocity), light));
                 Shove(ref w.Knock, shot.Velocity, WardenTuning.Radius, shot.Knock);
