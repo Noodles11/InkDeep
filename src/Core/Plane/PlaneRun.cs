@@ -26,6 +26,8 @@ public sealed class PlaneRun
         "abyssal_glow", "glass_squid", "sea_cucumber", "sardine_run", "pistol_shrimp", "brass_compass", "sea_chart_nautilus",
         "bubble_shield", "whale_song", "firefly_squid", "prism_pearl", "ink_cloud", "conch_horn", StartingPearl,
         "fire_coral", "glowing_moss", "frost_kelp", "ghost_jelly", "pearl_diver", "glow_burst", "electric_eel_tail", "fire_urchin_spine", "lamprey_mouth", "bubble_gland", "anemone_pump", "sunbeam", "nautilus_spiral", "rear_fin",
+        // The light pearls (docs/proposals/LIGHT-WORLD.md §10, phase 5).
+        "abyssal_blue", "ember_coal", "deep_lens", "polariser_lens", "siltwalker",
     };
 
     /// <summary>
@@ -40,6 +42,8 @@ public sealed class PlaneRun
         "triple_tentacle", "hammerhead", "double_helix", "plankton_swarm", "shark_tooth", "pufferfish_pout", "cuttlebone",
         "cannonball", "whale_lung", "captains_hook", "giant_squid_eye", "sardine_run", "pearl_diver", "swordfish_bill",
         "mirror_scale",
+        // (The light pearls that change her shots: their colour and punch, their reach, their damage over distance.)
+        "abyssal_blue", "ember_coal", "deep_lens",
     };
 
     /// <summary>The pearls offered anywhere (a place's pool, a boss's, a shrine's, the crab's): the shot pearls.</summary>

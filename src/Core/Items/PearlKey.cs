@@ -111,6 +111,12 @@ public static class PearlKey
                 case "severedNerve" or "moltenCarapace" or "clawTithe": Add(Damage, PearlIcon.Chevron, 1.5f); break;
                 case "lastLight": Add(Defence, PearlIcon.Shield, 1.5f); break;
                 case "blackSun": Add(Damage, PearlIcon.Chevron, 1.5f); break;
+                // The light pearls (LIGHT-WORLD.md §10).
+                case "nearUv": Add(Freeze, PearlIcon.Chevron, 1.5f); break;
+                case "infrared": Add(Burn, PearlIcon.Chevron, 1.5f); break;
+                case "deepLens": Add(Damage, PearlIcon.Chevron, 1.5f); break;
+                case "polariser": Add(Defence, PearlIcon.Shield); break;
+                case "siltwalker": Add(Range, PearlIcon.Arrow); break;
             }
         if (item.Active is { } a)
         {

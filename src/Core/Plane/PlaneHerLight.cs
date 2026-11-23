@@ -136,7 +136,7 @@ public sealed partial class PlaneWorld
             // Her knockback is her beam's light pressure: it is pushed away from her while it is in it (held steady
             // against the knock's easing off).
             Press(ref m.Knock, LightPressure(m, m.Position, m.Radius));
-            if (n == 0 || Guarded(m.Position) || !m.Corruption.Sear(burn * n)) continue;
+            if (n == 0 || Guarded(m.Position) || !m.Corruption.Sear(m.Trait == MurkTrait.None ? burn * n : TraitBurn(m, burn * n))) continue;
             Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, m.Position, Vector2.Zero, burn));
             BurstMurkling(m, ember: true);
             FreedInColour(m, m.Position);

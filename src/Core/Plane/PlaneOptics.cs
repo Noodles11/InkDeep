@@ -115,6 +115,18 @@ public static class OpticsTuning
     public const float InsideDrink = 0.15f;
 }
 
+/// <summary>The light pearls' numbers (LIGHT-WORLD.md §10, phase 5). (tune)</summary>
+public static class PearlOpticsTuning
+{
+    /// <summary>How much of her light Abyssal Blue or the Ember Coal pushes into its band (× her total), and what each does to her punch and reach.</summary>
+    public const float Shift = 1.2f, UvPunch = 1.25f, InfraReach = 0.7f, InfraPunch = 0.75f;
+    /// <summary>Siltwalker: the water it works in (its scatter per metre at least), her reach and halo there.</summary>
+    public const float Silty = 0.015f, SiltReach = 1.2f, SiltHalo = 0.5f;
+    /// <summary>Lens of the Deep: a shot's damage grows by this share a metre it flies, up to LensMost.</summary>
+    public const float LensPerMetre = 0.06f, LensMost = 1.6f;
+    public static float Lens(float metres) => MathF.Min(LensMost, 1f + LensPerMetre * metres);
+}
+
 /// <summary>Each biome's water and rock (LIGHT-WORLD.md §3.1, §4.1).</summary>
 public static class BiomeOptics
 {
@@ -281,6 +293,13 @@ public sealed partial class PlaneWorld
     /// <summary>Her light set by hand (the F1 menu's gauges), or null: her pearls make it.</summary>
     public LightSettings? ManualLight { get; set; }
 
+    /// <summary>A spectrum with a band pushed in, its total kept (light is conserved).</summary>
+    static Spectrum Shifted(Spectrum s, Spectrum push)
+    {
+        var t = s + push.Scale(s.Total);
+        return t.Scale(s.Total / t.Total);
+    }
+
     /// <summary>A manual light's spectrum with her light's total (its mix only: light is conserved).</summary>
     static Spectrum Conserved(Spectrum s) => s.Total <= 1e-4f ? Spectrum.Hers : s.Scale(Spectrum.Hers.Total / s.Total);
 
@@ -303,13 +322,18 @@ public sealed partial class PlaneWorld
     void StepOptics()
     {
         var manual = SetLight();
+        HerPulseHz = manual?.PulseHz ?? 0f;
         if (!Options.Optics && manual is null)
         {
             HerLightPhysics = LightPhysics.Neutral;
             return;
         }
         var shot = Run.Loadout.Shot;
+        var flags = Run.Loadout.Flags;
         var spectrum = manual is not null ? Conserved(manual.Spectrum) : SpectrumOf(shot.Ember, shot.Bloom, shot.Frost);
+        // The light pearls (LIGHT-WORLD.md §10): Abyssal Blue pushes her light toward near-UV, the Ember Coal toward infrared.
+        if (flags.Contains("nearUv")) spectrum = Shifted(spectrum, new Spectrum(0f, 0f, PearlOpticsTuning.Shift));
+        if (flags.Contains("infrared")) spectrum = Shifted(spectrum, new Spectrum(PearlOpticsTuning.Shift, 0f, 0f));
         float coherence = Math.Clamp((manual is not null ? manual.Coherence : shot.Laser ? OpticsTuning.LanceCoherence : OpticsTuning.Coherence)
             + OpticsTuning.FocusCoherence * Focus, 0f, 1f);
         float reach = Optics.ReachScale(spectrum, Water, coherence);
@@ -321,7 +345,20 @@ public sealed partial class PlaneWorld
             width = Math.Clamp(manual.Width, LightSettings.WidthLeast, LightSettings.WidthMost);
             if (manual.PulseHz > 0f) pulse = 1f + LightSettings.PulseDepth * MathF.Sin(Time * manual.PulseHz * MathF.Tau);
         }
-        HerLightPhysics = new LightPhysics(spectrum, coherence, reach, punch * power * pulse, Optics.Halo(Water, coherence), power, width, pulse);
+        float halo = Optics.Halo(Water, coherence);
+        if (flags.Contains("nearUv")) punch *= PearlOpticsTuning.UvPunch;
+        if (flags.Contains("infrared"))
+        {
+            reach *= PearlOpticsTuning.InfraReach;
+            punch *= PearlOpticsTuning.InfraPunch;
+        }
+        // Siltwalker: in scattering water her light keeps itself together.
+        if (flags.Contains("siltwalker") && Water.Scatter >= PearlOpticsTuning.Silty)
+        {
+            reach *= PearlOpticsTuning.SiltReach;
+            halo *= PearlOpticsTuning.SiltHalo;
+        }
+        HerLightPhysics = new LightPhysics(spectrum, coherence, reach, punch * power * pulse, halo, power, width, pulse);
         StepWallGlows();
     }
 
@@ -351,6 +388,8 @@ public sealed partial class PlaneWorld
     {
         if (!Options.Optics || after <= before) return;
         shot.Damage *= ShotKept(after) / ShotKept(before);
+        // Lens of the Deep: her shots focus as they fly, harder the farther they go.
+        if (Run.Loadout.Flags.Contains("deepLens")) shot.Damage *= PearlOpticsTuning.Lens(after) / PearlOpticsTuning.Lens(before);
     }
 
     /// <summary>

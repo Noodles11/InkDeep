@@ -192,6 +192,11 @@ public static class ItemCaption
         "colorCycle" => "Shots cycle through neon colours",
         "richDrops" => "Foes drop more sand dollars",
         "richCaches" => "Shell caches hold 50% more",
+        "nearUv" => $"Her light turns past frost toward near-UV: {SignedPct(OctoShoots.Core.Plane.PearlOpticsTuning.UvPunch - 1f)} punch; it wakes fluorescent coral, but dusty water drinks it",
+        "infrared" => $"Her light turns toward infrared: murklings cannot see it, but it is {Pct(OctoShoots.Core.Plane.PearlOpticsTuning.InfraReach)} as long and {Pct(OctoShoots.Core.Plane.PearlOpticsTuning.InfraPunch)} as strong",
+        "deepLens" => $"Her shots focus as they fly: +{Pct(OctoShoots.Core.Plane.PearlOpticsTuning.LensPerMetre)} damage a metre, up to ×{N(OctoShoots.Core.Plane.PearlOpticsTuning.LensMost)}",
+        "polariser" => "Polarised light: mantis shrimp no longer see her",
+        "siltwalker" => $"In silty water her light keeps together: {Pct(OctoShoots.Core.Plane.PearlOpticsTuning.SiltReach)} as long, its halo halved",
         _ => flag,
     };
 

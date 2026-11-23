@@ -279,6 +279,10 @@ public sealed class Murkling
     public float ScanTimer;
     /// <summary>Whether it is a basic light-seeker (not a variant, a prime or a turned fish).</summary>
     public bool Seeker => Kind == MurkKind.Basic && !Prime && !Lesser;
+    /// <summary>Its corrupted trait (PlaneInkTraits.cs), a band-ward's band, a chitin-mirror's shell's facing (radians).</summary>
+    public MurkTrait Trait;
+    public LightHue Ward;
+    public float Shell;
     public MurkState State => Clinging || Feeding is not null ? MurkState.Attached : Shaken > 0f ? MurkState.Released
         : Light is not null ? MurkState.Approaching : MurkState.Searching;
 }
@@ -783,9 +787,12 @@ public sealed partial class PlaneWorld
         return roll >= share ? MurkKind.Basic : roll < share * 0.5f ? MurkKind.Thrower : MurkKind.Hunter;
     }
 
+    /// <summary>Tests: the light a murkling here would seek.</summary>
+    public LightEmitter? DebugSeekLight(Vector2 at) => SeekLight(at);
+
     /// <summary>The brightest light a murkling at <paramref name="at"/> can see within <paramref name="scan"/> (her own not while her Ink Cloud hides her).</summary>
     LightEmitter? SeekLight(Vector2 at, float scan = LightTuning.Scan, bool blind = false) =>
-        LightQuery.Brightest(Lights.All, at, scan, LightTuning.Threshold, LineOfSight, Unseen || blind ? e => e.Owner == Her : null, seen: true);
+        LightQuery.Brightest(Lights.All, at, scan, LightTuning.Threshold, LineOfSight, Unseen || blind || Run.Loadout.Flags.Contains("infrared") ? e => e.Owner == Her : null, seen: true);
 
     /// <summary>
     /// A basic murkling (docs/LIGHT-AND-GRAPH.md §3.1): it holds still and scans the lights every ScanEvery;
@@ -1076,6 +1083,8 @@ public sealed partial class PlaneWorld
             {
                 if (!m.Alive || m.Clinging || shot.Struck == m || !Reaches(shot, m.Position, m.Radius)) continue;
                 float light = HitDamage(shot, m, m.Position);
+                // (A trait may turn it away harmless: a chitin shell, a refractor's middle.)
+                if (m.Trait != MurkTrait.None && TraitMeets(shot, m, ref light)) continue;
                 float dealt = Ward(m, m.Position, light);
                 bool emptied = dealt > 0f && m.Corruption.Hit(dealt);
                 Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, m.Position, SafeNormalize(shot.Velocity), dealt));
@@ -1173,6 +1182,7 @@ public sealed partial class PlaneWorld
         }
         var m = new Murkling { Position = at, Area = area, Seed = _blightRng.Range(0f, 100f), ThrowTimer = BlightTuning.ThrowEvery * _blightRng.Range(0.5f, 1f) };
         if (!prime) m.Kind = Options.Adventure && Options.InkMurklings ? RosterKind(m.Seed) : KindAt(m.Seed);
+        if (!prime && Options.Fauna) GiveTrait(m);
         float meter = BlightTuning.MurkCorruption * (1f + BlightTuning.MeterPerMenace * Menace);
         m.Corruption.Max = m.Corruption.Value = meter * (prime ? BlightTuning.PrimeMeter : 1f);
         // Its own full size (bigger with the Menace, in the adventure), its grade and its meter by it (a prime keeps a

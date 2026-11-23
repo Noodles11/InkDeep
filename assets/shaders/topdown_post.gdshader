@@ -156,7 +156,7 @@ uniform vec3 ink_tint = vec3(0.32, 0.5, 0.85);
 // crawls as the camera moves); the washes' soft edges dither too, in place of the halftone dots. (Clementine, her shots and
 // the HUD are drawn after the pass and stay clean.) 0: off.
 uniform float dither = 1.0;
-uniform float dither_cell = 0.1;
+uniform float dither_cell = 0.05;
 uniform float dither_levels = 9.0;
 uniform float dither_strength = 0.75;
 // What is dithered: 0 the rock and what stands on it; 1 the water and the floor too; 2 everything, her light included.

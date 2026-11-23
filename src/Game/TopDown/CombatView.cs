@@ -1165,6 +1165,10 @@ void fragment() {
         foreach (var f in world.Flora)
             if (f.Light is { Shining: true } l)
                 _candidates.Add((f.Position, GroundStrength * Mathf.Min(l.Intensity, 1f), GroundRadius * Mathf.Clamp(l.Range / 4f, 0.6f, 1.6f)));
+        // The animals' own light round them: a lantern shoal's, a cuttlefish's, a firefly squid's (PlaneFauna.cs).
+        foreach (var f in world.Fauna)
+            if (f.Light is { Shining: true } fl)
+                _candidates.Add((f.Position, GroundStrength * Mathf.Min(fl.Intensity, 1f), GroundRadius * Mathf.Clamp(fl.Range / 4f, 0.6f, 1.4f)));
         // A plankton bloom's light round it (PlaneWaterPockets.cs).
         foreach (var w in world.Pockets)
             if (w.Light is { Shining: true } bl)

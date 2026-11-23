@@ -71,6 +71,7 @@ public partial class TopDownMain : Node3D
     SpeckView _specks = null!;
     FloraView _flora = null!;
     PocketView _pockets = null!;
+    FaunaView _fauna = null!;
     VaultView _vaults = null!;
     /// <summary>Achievements: their data, what earns them on this run, and the banner that announces them (§8).</summary>
     AchievementCatalog? _achievementData;
@@ -450,7 +451,7 @@ public partial class TopDownMain : Node3D
         // 0.13.0; in the crossover her glow is gone and her beam is her light to see by, mostly (PlaneOptions).
         PlaneOptions.Default = new PlaneOptions
         {
-            Adventure = true, Shots = true, Glow = !Crossover.On, Gun = Crossover.On, Optics = Crossover.On, Specks = Crossover.On, Flora = Crossover.On, Pockets = Crossover.On,
+            Adventure = true, Shots = true, Glow = !Crossover.On, Gun = Crossover.On, Optics = Crossover.On, Specks = Crossover.On, Flora = Crossover.On, Pockets = Crossover.On, Fauna = Crossover.On,
             BeamBurn = Crossover.On ? HerLightTuning.LightOnlyBurn : 1f,
         };
         // The bundled fonts: Nunito is every screen's default (THEME-BIBLE §6.8).
@@ -515,6 +516,8 @@ public partial class TopDownMain : Node3D
         AddChild(_flora);
         _pockets = new PocketView();
         AddChild(_pockets);
+        _fauna = new FaunaView();
+        AddChild(_fauna);
         _vaults = new VaultView();
         AddChild(_vaults);
         _relics = new RelicView();
@@ -1790,6 +1793,7 @@ public partial class TopDownMain : Node3D
         _specks.Clear();
         _flora.Show(_world);
         _pockets.Clear();
+        _fauna.Clear();
         _vaults.Show(_world);
         _relics.Show(_world);
         _props.Show(_map, ReefLook.Of(_map.Id));
@@ -2348,6 +2352,10 @@ public partial class TopDownMain : Node3D
                 .Select(q => (System.Numerics.Vector2?)q).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
             // Beside the first light room, in water that sees it (PlaneFlora.cs).
             "room" => _world.LightRooms.SelectMany(r => Enumerable.Range(0, 16).Select(k => r.Centre + new System.Numerics.Vector2(Mathf.Cos(k * Mathf.Tau / 16f), Mathf.Sin(k * Mathf.Tau / 16f)) * (FloraTuning.Ring + 2.5f)))
+                .Select(q => (System.Numerics.Vector2?)q).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
+            // Beside an animal (fauna=kind, else the first), three metres off it (PlaneFauna.cs).
+            _ when where.StartsWith("fauna") => _world.Fauna.Where(f => !where.Contains('=') || f.Kind.ToString().Equals(where[(where.IndexOf('=') + 1)..], System.StringComparison.OrdinalIgnoreCase))
+                .SelectMany(f => Enumerable.Range(0, 12).Select(k => f.Home + new System.Numerics.Vector2(Mathf.Cos(k * Mathf.Tau / 12f), Mathf.Sin(k * Mathf.Tau / 12f)) * 3f))
                 .Select(q => (System.Numerics.Vector2?)q).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
             // Facing the first mirror plate or lightglass pane, three metres off its face (PlaneOpticWalls.cs).
             "optic" => _world.OpticWalls.SelectMany(w => new[] { w.Centre + w.Normal * 3f, w.Centre - w.Normal * 3f })
@@ -2929,6 +2937,9 @@ public partial class TopDownMain : Node3D
                 else if (e.Type is PlaneEventType.StoneStood or PlaneEventType.StoneFaded)
                     _sfx.PlayPitched("bell_ring", e.Type == PlaneEventType.StoneStood ? 0.7f : 0.95f, -12f);
                 else if (e.Type == PlaneEventType.BloomLit) _sfx.PlayPitched("bell_ring", 1.6f, -16f);
+                // Phase 5: a mantis shrimp's snap, a firefly squid setting off to lead her.
+                else if (e.Type == PlaneEventType.MantisStruck) _sfx.PlayPitched("splat", 1.6f, -8f);
+                else if (e.Type == PlaneEventType.SquidLeads) _sfx.PlayPitched("bell_ring", 1.3f, -12f);
                 // A light speck gathered: a small flash, a soft chime (PlaneSpecks.cs).
                 else if (e.Type == PlaneEventType.SpeckGathered)
                 {
@@ -3147,6 +3158,7 @@ public partial class TopDownMain : Node3D
         Guard("specks", () => _specks.Sync(_world, dt));
         Guard("flora", () => _flora.Sync(_world, dt));
         Guard("pockets", () => _pockets.Sync(_world, dt));
+        Guard("fauna", () => _fauna.Sync(_world, _blight, dt));
         // Her colours follow her light (HerColor.FollowLight): her body, glow, light and tips, as her beam and shots.
         if (_world is not null)
         {

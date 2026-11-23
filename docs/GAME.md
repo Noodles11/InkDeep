@@ -380,7 +380,7 @@ the tests of the dive still test the dive.
   and the floor under it near-black blue ink, the light stepped into four tones with a **halftone** (a 45° dot screen)
   at each step's soft edge, so a shadow is a flat fill, never a gradient. **Dithered (0.74.0; softer in 0.74.1; everywhere since 0.74.2):**
   the whole picture under the pass (the rock and what stands on it, the water and the floor, her light on them) is
-  drawn in nine tones of brightness, the steps between them an ordered 8 × 8 Bayer dither fixed to the world (0.1 m a
+  drawn in nine tones of brightness, the steps between them an ordered 8 × 8 Bayer dither fixed to the world (0.05 m a
   cell, so it never crawls as the camera moves), blended in at 75%, its hue kept so the biome's tint never speckles;
   the washes' soft edges dither too, in place of the dots (`topdown_post`'s `dither`, `dither_scope` 2, `bayer8`,
   `dither_world`; `CameraRig.SetDither`). `--no-dither` turns it off, `--dither-rock` and `--dither-water` narrow it,
@@ -706,4 +706,12 @@ the tests of the dive still test the dive.
     across it.
   - **Vent shimmer:** it wobbles her shots.
   - **Plankton blooms:** they glow when lit, a decoy for the murklings.
+- **The lit world, phase 5 (0.83.0): animals that answer light, corrupted traits, the light pearls** (LIGHT-AND-GRAPH.md §21):
+  - **Animals:** glass shrimp flee light; lantern shoals follow a steady blue light; cuttlefish glow back the colour
+    lighting them; mantis shrimp strike what comes close while lit; firefly squid lead her to a secret when her light
+    pulses at their beat.
+  - **Traits:** some murklings are chitin-mirrors (hit their soft side), refractors (hit their edge), band-wards (hurt
+    only by her other colours) or light-eaters (fed by weak light: focus them).
+  - **Pearls:** Abyssal Blue, Ember Coal and Lens of the Deep are offered; Polariser Lens and Siltwalker are built but
+    dormant (they don't change her shots).
 

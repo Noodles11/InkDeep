@@ -74,6 +74,11 @@ public sealed class PlaneOptions
     public bool Flora;
     /// <summary>Local water (PlaneWaterPockets.cs, LIGHT-WORLD.md phase 4): brine pools, silt, vent shimmer, plankton blooms. On in the crossover.</summary>
     public bool Pockets;
+    /// <summary>
+    /// Phase 5 of the lit world: the reef's animals that answer light (PlaneFauna.cs) and the murklings' corrupted traits
+    /// (PlaneInkTraits.cs, with Optics). On in the crossover.
+    /// </summary>
+    public bool Fauna;
     /// <summary>The reef's bubble geysers (PlaneGeysers.cs): off (none are placed or spray); on only for their own tests.</summary>
     public bool Geysers;
 

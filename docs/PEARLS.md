@@ -129,10 +129,10 @@ Taking a pearl is a moment of its own. It plays round Clementine while she swims
 | Rhythms | 3 | 0 |
 | Echoes | 3 | 0 |
 | Glow | 5 | 0 |
-| Stats and others | 19 | 6 |
+| Stats and others | 24 | 6 |
 | Active pearls | 7 | 6 |
 | The crab's | 5 | |
-| **All** | **61** | **12** |
+| **All** | **66** | **12** |
 
 ### Shapes
 
@@ -219,6 +219,11 @@ The plain adverbs: her numbers, her pickups, her maps.
 | **Lucky Sea Glass** | *Found only on moonlit tides* | +2 luck | Yes | ★ | clam rooms, shops | untouchable |
 | **Glass Squid** | *See-through, and sharp for it* | +29% damage; −20 max HP | Yes | ★★ | clam rooms, curse rooms |  |
 | **Sea Cucumber** | *Slow, soft, and very hard to stop* | +30 max HP; −15% swim speed; Heals 30 HP | Yes | ★ | clam rooms, shops |  |
+| **Abyssal Blue** | *The last colour before the dark* | Her light turns past frost toward near-UV: +25% punch; it wakes fluorescent coral, but dusty water drinks it | Once | ★★★ | clam rooms, bosses |  |
+| **Ember Coal** | *Warm, and nothing sees it* | Her light turns toward infrared: murklings cannot see it, but it is 70% as long and 75% as strong | Once | ★★ | clam rooms, secret rooms |  |
+| **Lens of the Deep** | *Sharper the farther it looks* | Her shots focus as they fly: +6% damage a metre, up to ×1.6 | Once | ★★★ | clam rooms, bosses |  |
+| **Polariser Lens** | *Glare is only light that lost its way* | Polarised light: mantis shrimp no longer see her | Once | ★★ | clam rooms, shops |  |
+| **Siltwalker** | *Murk is a door, not a wall* | In silty water her light keeps together: 120% as long, its halo halved | Once | ★★ | clam rooms, shops |  |
 | **Moon Jelly Heart** | *Beats in slow pulses* | +20 max HP; Heals 20 HP | Yes | ★ | clam rooms, bosses, the whale |  |
 | **Shark Tooth** | *Still sharp* | +14% damage | Yes | ★★ | clam rooms, curse rooms |  |
 | **Remora Sucker** | *Sticks to everything* | Pulls pickups and freed murklings' light toward her from 7.5 m (not 2.5 m) | Yes (each copy: Pulls pickups and freed murklings' light toward her from 7.5 m (not 2.5 m)) | ★ | shops, clam rooms |  |
@@ -286,7 +291,7 @@ Three pearls of one tag re-theme her whole light (docs/LIGHT-AND-GRAPH.md §16).
 | Form | Pearls with the tag | What happens | Its numbers |
 |---|---|---|---|
 | **Kraken Form** | 3 of: Triple Tentacle, Starfish Arm, Starburst Gland, Cuttlebone, Giant Squid Eye, Ink Cloud | The Crown: seven short rays shine all round her beside her beam |  |
-| **Neon Rave** | 3 of: Anglerfish Lure, Ghost Jelly, Sunbeam, Moon Jelly Heart, Abyssal Glow, Glowing Moss, Firefly Squid, Lantern Pearl, Glow Burst | Her light cycles through all seven colours, every colour's effect in turn | +14% reach of her glow and her beam |
+| **Neon Rave** | 3 of: Anglerfish Lure, Ghost Jelly, Sunbeam, Abyssal Blue, Moon Jelly Heart, Abyssal Glow, Glowing Moss, Firefly Squid, Lantern Pearl, Glow Burst | Her light cycles through all seven colours, every colour's effect in turn | +14% reach of her glow and her beam |
 | **Shark Mode** | 3 of: Pufferfish Pout, Electric Eel Tail, Swordfish Bill, Shark Tooth, Lamprey Mouth, Hammerhead, Fire Urchin Spine | A narrower, hotter beam; what it frees sends her into a frenzy | +20% swim speed |
 | **Coral Reef** | 3 of: Coral Crown, Fire Coral, Coral Polyp, Anemone Pump, Bubble Coral | Her light lingers where it lands, and standing in her own afterlight mends her | Where her beam ends, a pool of her light stays 2.5 s and goes on burning: swept, it paints a trail |
 | **Pirate** | 3 of: Squid Ink Espresso, Pirate's Doubloon, Cannonball, Captain's Hook, Brass Compass, Sea Chart Nautilus | Gilded light: shells it touches fly to her, and what it frees drops more | +2 luck |

@@ -450,7 +450,7 @@ The standing rules (CLAUDE.md) hold:
 - Local water: haloclines, brine pools, silt clouds, vent shimmer, plankton blooms.
 - Sun-stone and shadow-stone.
 
-**Phase 5.**
+**Phase 5: built (0.83.0)**, as LIGHT-AND-GRAPH.md §21 says (Polariser Lens and Siltwalker dormant: not shot pearls).
 
 - Fauna that answer light (glass shrimp, lantern shoals, cuttlefish, mantis shrimp, firefly squid).
 - Corrupted traits (chitin-mirror, refractor, band-ward, light-eater).

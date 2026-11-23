@@ -685,3 +685,46 @@ water (`PocketTuning.For`):
   glows cyan in light (`PocketView`). Events: `StoneStood`, `StoneFaded`, `SiltRaised`, `BloomLit`.
 - Tests: `LocalWaterTests`.
 
+## 21. Animals that answer light, corrupted traits, the light pearls (built: phase 5 of proposals/LIGHT-WORLD.md)
+
+**The reef's animals** (`PlaneFauna.cs`, `PlaneOptions.Fauna`, on in the crossover; `FaunaTuning.For`): never her
+target. Each reads the light on it (every light but the animals' own; her share apart) and answers:
+
+| Animal | Biome | Rule |
+|---|---|---|
+| Glass shrimp | Reef 2, Kelp 2 | Lit ≥ 0.2, the cluster flees the brightest light on it (2.8 m/s); in the dark it drifts home (0.7 m/s) |
+| Lantern shoal | Kelp 1, Alien 2 | A living blue light (0.45, 4 m), always on. Her light on it ≥ 0.15 with blue in it (≥ 0.8 of her plain light's share) and pulsing under 2.5 Hz: it follows her 6 s, 2.2 m behind, lighting the water as she goes. A faster pulse scatters it |
+| Cuttlefish | Reef 1, Ruins 2 | Grey and dark in the dark. Lit ≥ 0.2, its skin takes the colour of the light on it and glows it back (0.5, 4 m): a coloured light the murklings go to |
+| Mantis shrimp | Reef 1, Temple 2 | In its burrow in the dark. Lit ≥ 0.25 it comes out and strikes what is within 2.4 m: her (10, if her light is what brought it out; never with the Polariser Lens) or a murkling (half its meter), resting 2 s after |
+| Firefly squid | Kelp 1, Temple 1 | Glows blue in the dark, flashing at 1.5 Hz. Her light on it pulsing at its beat (±0.5 Hz): it leads her 12 s toward the secret she has not found (else the nearest shut light room), 3 m ahead, waiting if she falls behind |
+
+**Corrupted traits** (`PlaneInkTraits.cs`, with Fauna and Optics): 35% of the murklings a level buds carry its biome's
+trait (`InkTraitTuning.For`; none in the Sunlit Reef):
+
+| Trait | Biome | Rule |
+|---|---|---|
+| Chitin-mirror | Shipwreck, Ruins | A glassy half-shell turns round it (0.8 rad/s). A shot meeting the shell glances off it harmless (85% kept); the shell turns half her beam away. Hit its soft side |
+| Refractor | Temple, Atlantis | A shot through its middle half is bent 0.6 rad off past it, harmless; one at its edge burns ×1.3; her beam bends half away |
+| Band-ward | Alien, Atlantis | One band (red, green or blue) passes it untouched: it takes (1 − that band's share of her light) × 1.5 − 0.5 (0.1 to 1) of her light, shots and beam |
+| Light-eater | Kelp, Ruins | Her light on it under 0.45 (a far or wide beam) feeds it: half of the burn back on its meter. Focus it |
+
+**The light pearls** (`items.json`, flags; `PearlOpticsTuning`):
+
+| Pearl | Flag | Rule | Offered |
+|---|---|---|---|
+| Abyssal Blue | `nearUv` | Her light pushed toward blue (1.2 × her total into the band, the total kept), +25% punch; dusty water drinks it, coral wakes to it | Yes |
+| Ember Coal | `infrared` | Her light pushed toward red; murklings cannot see her light (`SeekLight`); 70% reach, 75% punch | Yes |
+| Lens of the Deep | `deepLens` | Her shots' damage grows 6% a metre they fly, up to ×1.6 | Yes |
+| Polariser Lens | `polariser` | Mantis shrimp do not see her | No (ported, dormant: it does not change her shots) |
+| Siltwalker | `siltwalker` | In water that scatters ≥ 0.015/m: 120% reach, half the halo | No (ported, dormant) |
+
+- **The view** (`FaunaView`): glass shrimp a cluster of small clear bodies; a lantern shoal small dark fish wheeling
+  round their centre, each with a blue photophore; a cuttlefish a flat mantle in its fin skirt, arms gathered ahead, its
+  skin taking the light's colour; a mantis shrimp a dark burrow, its segmented body rising out of it and its claw
+  snapping out at what it strikes; a firefly squid a slender mantle in a flashing blue halo. A trait shows where the
+  murkling shows: a chitin-mirror's half-shell turning, a refractor's crystal skin, a band-ward's rim in its band, a
+  light-eater's grey fringe. Events: `MantisStruck`, `SquidLeads`. `--at=fauna[=Kind]` starts her beside one.
+- Not built from the proposal: the doc's other animals (moray, hermit crab, comb jelly, whale-fall worms, sea
+  butterflies, deep angler), the silt-born trait, pressure plates for the shrimp, a squid's flash pattern beyond its
+  beat. A leading squid swims straight (no path round rock).
+- Tests: `FaunaTests`.

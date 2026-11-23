@@ -124,6 +124,8 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     StoneStood, StoneFaded,
     /// <summary>Local water: a silt cloud kicked up (at it; Size: its radius); a plankton bloom lit (at it).</summary>
     SiltRaised, BloomLit,
+    /// <summary>The reef's animals (PlaneFauna.cs): a mantis shrimp strikes (from it; Direction: toward what it struck; Size: its reach); a firefly squid starts leading her (Direction: its way; Size: seconds).</summary>
+    MantisStruck, SquidLeads,
     /// <summary>Light specks: she gathers one (Size: its worth); a murkling drinks of one (Size: how much); specks thrown out where something was freed (Size: their worth).</summary>
     SpeckGathered, SpeckEaten, SpecksDropped,
     /// <summary>The flora (PlaneFlora.cs): a plant gives what it held (Size: its kind); a plant wakes (a sponge fills: Size its kind); a light room opens (Size: its plants).</summary>
@@ -144,7 +146,7 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     ChargeStoneLit }
 
 /// <summary>What hurt Clementine (the killing blow names what ended a run; saved by number, so Gloomvine stays though nothing deals it now).</summary>
-public enum DamageSource { None, PufferNeedle, PufferSpines, BossPearl, RoyalPearl, BossSnap, BossContact, Murkling, MurkShot, Gloomvine, Blightroot, Blotter, Thumpsquirt, Lashjaw, Curse, Hearthguard, Leak, LeakWater, Debris, Dart }
+public enum DamageSource { None, PufferNeedle, PufferSpines, BossPearl, RoyalPearl, BossSnap, BossContact, Murkling, MurkShot, Gloomvine, Blightroot, Blotter, Thumpsquirt, Lashjaw, Curse, Hearthguard, Leak, LeakWater, Debris, Dart, Mantis }
 
 /// <summary>
 /// Direction: for ShotPopped, the unit direction from the bubble's centre to where its film gave way. Size: a popped
@@ -209,6 +211,8 @@ public sealed partial class PlaneWorld
         if (Options.Flora && Map.Templated && !Map.Rift) PlaceFlora();
         // Local water (PlaneWaterPockets.cs).
         if (Options.Pockets && Map.Templated && !Map.Rift) PlacePockets();
+        // The reef's animals that answer light (PlaneFauna.cs).
+        if (Options.Fauna && Map.Templated && !Map.Rift) PlaceFauna();
         PlaceChargeStones();
         PlaceSeals();
         PlacePrismStones();
@@ -406,6 +410,9 @@ public sealed partial class PlaneWorld
         StepFlora();
         // Local water: silt settling, blooms lit, vents' shimmer (PlaneWaterPockets.cs).
         if (Options.Pockets) StepPockets();
+        // The animals answer the light on them; the murklings' traits (PlaneFauna.cs, PlaneInkTraits.cs).
+        StepFauna();
+        StepTraits();
         // Murklings made during the step (a prime's pieces) join the others now, never while a loop walks them.
         Murklings.AddRange(_madeLater);
         _madeLater.Clear();
