@@ -452,7 +452,7 @@ public partial class TopDownMain : Node3D
         };
         // The bundled fonts: Nunito is every screen's default (THEME-BIBLE §6.8).
         TitleStyle.InstallDefaultFont();
-        // Her colour (data/clementine_color.cfg), for every shader and view that wears it.
+        // Her colours (her plain light's till play's light takes them over: HerColor.FollowLight), for every shader and view.
         OctoShoots.Game.Fx.HerColor.Load();
         ParseArgs();
         TakeLaunch();
@@ -3078,6 +3078,12 @@ public partial class TopDownMain : Node3D
         Guard("abyss", () => _abyss.Sync(_world, dt));
         Guard("vases", () => _vases.Sync(dt));
         Guard("optic walls", () => _opticWalls.Sync());
+        // Her colours follow her light (HerColor.FollowLight): her body, glow, light and tips, as her beam and shots.
+        if (_world is not null)
+        {
+            var hue = _world.HerSpectrum.Colour;
+            OctoShoots.Game.Fx.HerColor.FollowLight(new Color(hue.X, hue.Y, hue.Z));
+        }
         Guard("vaults", () => _vaults.Sync(_world, dt, _memory));
         Guard("relics", () => _relics.Sync(_world, dt, _combat));
         Guard("hazards", () => _hazards.Sync(_world));

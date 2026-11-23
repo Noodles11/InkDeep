@@ -261,6 +261,13 @@ public sealed partial class PlaneWorld
     /// <summary>Her light's physics this step (LIGHT-WORLD.md §2): neutral without optics.</summary>
     public LightPhysics HerLightPhysics { get; private set; } = LightPhysics.Neutral;
 
+    /// <summary>
+    /// Her light's spectrum now, with or without optics: set by hand, or her colour words' (SpectrumOf). Every jelly's
+    /// colours follow it (the view's HerColor.FollowLight), as her beam and her shots do.
+    /// </summary>
+    public Spectrum HerSpectrum => Options.Optics || ManualLight is not null ? HerLightPhysics.Spectrum
+        : SpectrumOf(Run.Loadout.Shot.Ember, Run.Loadout.Shot.Bloom, Run.Loadout.Shot.Frost);
+
     /// <summary>Her light set by hand (the F1 menu's gauges), or null: her pearls make it.</summary>
     public LightSettings? ManualLight { get; set; }
 

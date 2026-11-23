@@ -94,7 +94,7 @@ public partial class MirrorMenu : Control
     /// <summary>Shows her look as she has it, under her name (which the mirror does not change).</summary>
     public void Open(string name, JellyLook look)
     {
-        _summary.Text = $"{name}, as the nacre shows her. All but her name is hers to change.";
+        _summary.Text = $"{name}, as the nacre shows her. Her colours are her light's; the shape of her gonads is hers to change.";
         _back.Text = InputSetup.UsingPad ? $"As she was  ({InputSetup.Hint(InputSetup.MenuBack, true)})" : "As she was  (Esc)";
         _form.Set(look, quiet: true);
         _opening = true;

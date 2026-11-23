@@ -447,12 +447,12 @@ public partial class BellView : Node3D
     /// <summary>A jelly's look on this bell and its strands only (not the shared colours every other view follows).</summary>
     public void Wear(OctoShoots.Core.Saves.JellyLook look)
     {
-        var (body, light, glow) = OctoShoots.Game.Fx.HerColor.Of(look);
+        // (Its colours its light's, as every jelly's: HerColor.Of; only its gonads' shape is its own.)
+        var (body, light, glow, tips) = OctoShoots.Game.Fx.HerColor.Of(look);
         _ownGlow = glow;
         var b = new Vector4(body.R, body.G, body.B, 1f);
         var l = new Vector4(light.R, light.G, light.B, 1f);
-        bool tipsSet = Color.HtmlIsValid(look.Tips);
-        var tips = tipsSet ? Color.FromHtml(look.Tips) : Colors.White;
+        bool tipsSet = true;
         int gonads = Mathf.Max(0, System.Array.IndexOf(OctoShoots.Core.Saves.JellyNames.Symbols, look.Gonads));
         foreach (var m in new[] { _bellMaterial, _strandMaterial })
         {

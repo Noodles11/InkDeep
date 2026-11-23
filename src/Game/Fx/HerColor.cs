@@ -4,18 +4,17 @@ using Godot;
 namespace OctoShoots.Game.Fx;
 
 /// <summary>
-/// Clementine's colour, from one place: res://data/clementine_color.cfg (or the F1 debug menu, which can save back to it).
-/// Her body (the bell, the tentacles) is the main colour; her light (bubbles, shots, their halos and trails, the
-/// active pearl's charge) is derived from it — lighter and a touch warmer, the way gold sits beside tangerine — unless
-/// the file sets it too. Her glow in the water and the warm pool on the floor are derived as well.
+/// Clementine's colour, from one place: her light. The player picks no colour; every jelly's colours follow her light's
+/// characteristics, as her beam and her shots do (PlaneOptics' spectrum: her colour words, or her light set by hand in
+/// the F1 menu). Her light (bubbles, shots, their halos and trails, the active pearl's charge) is the spectrum's
+/// colour; her body (the bell, the tentacles) a deeper, richer shade of its hue, the way tangerine sits beside gold;
+/// her tentacle tips a paler one; her glow in the water and the warm pool on the floor are derived as well
+/// (<see cref="FollowLight"/>). Her plain warm gold light gives the tangerine she always had.
 /// Published as global shader parameters (her_body, her_light, her_warm in project.godot), so every shader follows at
 /// once; views that colour lights or nodes themselves read the properties here (and <see cref="Changed"/>).
 /// </summary>
 public static class HerColor
 {
-    public const string File = "res://data/clementine_color.cfg";
-    const string Section = "clementine";
-
     /// <summary>The default: tangerine (THEME-BIBLE §6.1), and gold for her light.</summary>
     public static readonly Color DefaultBody = Color.FromHtml("#FF8C42");
 
@@ -37,62 +36,62 @@ public static class HerColor
     public static int Gonads { get; private set; }
 
     /// <summary>
-    /// A jelly's look (docs/GAME.md §9), applied at once: her bell and arms, her glow, her tips and her gonads'
-    /// shape. Load (forced) goes back to Clementine's own.
+    /// A jelly's look (docs/GAME.md §9), applied at once: only her gonads' shape now (her colours are her light's: a
+    /// look's old colours are not worn).
     /// </summary>
     public static void SetLook(OctoShoots.Core.Saves.JellyLook look)
     {
-        if (Color.HtmlIsValid(look.Arms)) Body = Color.FromHtml(look.Arms);
-        LightOverride = Color.HtmlIsValid(look.Glow) ? Color.FromHtml(look.Glow) : null;
-        Tips = Color.HtmlIsValid(look.Tips) ? Color.FromHtml(look.Tips) : null;
         Gonads = Math.Max(0, Array.IndexOf(OctoShoots.Core.Saves.JellyNames.Symbols, look.Gonads));
         Publish();
     }
 
-    /// <summary>A jelly's colours as her look gives them (the body, her light, the glow she casts), without wearing them.</summary>
-    public static (Color Body, Color Light, Color Glow) Of(OctoShoots.Core.Saves.JellyLook look)
+    /// <summary>A jelly's colours (the body, her light, the glow she casts, her tips), without wearing them: her plain light's, as every jelly's.</summary>
+    public static (Color Body, Color Light, Color Glow, Color Tips) Of(OctoShoots.Core.Saves.JellyLook look)
     {
-        var body = Color.HtmlIsValid(look.Arms) ? Color.FromHtml(look.Arms) : DefaultBody;
-        Color? light = Color.HtmlIsValid(look.Glow) ? Color.FromHtml(look.Glow) : null;
-        return (body, light ?? Shift(body, hue: 0.041f, sat: 0.78f), Shift(light ?? body, hue: 0.004f, sat: 0.65f));
+        var (body, light, tips) = FromLight(PlainLight);
+        return (body, light, Shift(light, hue: 0.004f, sat: 0.65f), tips);
+    }
+
+    /// <summary>Her plain warm gold light's colour (PlaneOptics' Spectrum.Hers, its strongest band 1).</summary>
+    public static readonly Color PlainLight = new(1f, 0.82f, 0.45f);
+
+    /// <summary>A light's colour (its strongest band 1) and the jelly it makes: her body a deeper, richer shade of its hue, her light itself, her tips a paler one.</summary>
+    public static (Color Body, Color Light, Color Tips) FromLight(Color light)
+    {
+        float h = light.H, s = light.S;
+        var body = Color.FromHsv(Mathf.PosMod(h - 0.041f, 1f), Mathf.Clamp(s / 0.78f, 0f, 1f), 1f);
+        var lit = Color.FromHsv(h, s, Mathf.Max(light.V, 0.9f));
+        var tips = Color.FromHsv(h, s * 0.6f, 1f);
+        return (body, lit, tips);
+    }
+
+    static Color _following = new(-1f, -1f, -1f);
+
+    /// <summary>
+    /// Her colours follow her light (each frame in play, PlaneWorld.HerSpectrum's colour): body, light, glow, warm pool and
+    /// tips; published only when it has changed enough to see.
+    /// </summary>
+    public static void FollowLight(Color light)
+    {
+        if (Mathf.Abs(light.R - _following.R) + Mathf.Abs(light.G - _following.G) + Mathf.Abs(light.B - _following.B) < 0.004f) return;
+        _following = light;
+        var (body, lit, tips) = FromLight(light);
+        Body = body;
+        LightOverride = lit;
+        Tips = tips;
+        Publish();
     }
 
     static bool _loaded;
 
-    /// <summary>Reads the file (once, unless forced) and publishes the colours.</summary>
+    /// <summary>Her plain light's colours (once, unless forced), till play's light takes them over.</summary>
     public static void Load(bool force = false)
     {
         if (_loaded && !force) return;
         _loaded = true;
-        Tips = null;
         Gonads = 0;
-        var cfg = new ConfigFile();
-        if (cfg.Load(File) == Error.Ok)
-        {
-            string body = (string)cfg.GetValue(Section, "body", DefaultBody.ToHtml(false));
-            string light = (string)cfg.GetValue(Section, "light", "");
-            if (Color.HtmlIsValid(body)) Body = Color.FromHtml(body);
-            LightOverride = Color.HtmlIsValid(light) ? Color.FromHtml(light) : null;
-        }
-        Publish();
-    }
-
-    /// <summary>A new colour (the debug menu): applied at once; null light derives it from the body.</summary>
-    public static void Set(Color body, Color? light)
-    {
-        Body = body;
-        LightOverride = light;
-        Publish();
-    }
-
-    /// <summary>Writes the current colours back to the file, so they stick (works where the project is writable).</summary>
-    public static Error Save()
-    {
-        var cfg = new ConfigFile();
-        cfg.Load(File);
-        cfg.SetValue(Section, "body", "#" + Body.ToHtml(false).ToUpperInvariant());
-        cfg.SetValue(Section, "light", LightOverride is { } l ? "#" + l.ToHtml(false).ToUpperInvariant() : "");
-        return cfg.Save(File);
+        _following = new Color(-1f, -1f, -1f);
+        FollowLight(PlainLight);
     }
 
     static void Publish()
