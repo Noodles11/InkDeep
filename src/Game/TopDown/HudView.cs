@@ -303,6 +303,8 @@ public partial class HudView : Control
         _energyPulse = Mathf.Max(0f, _energyPulse - dt * 2.5f);
         _time += dt;
         _adventure = world.Options.Adventure;
+        // (The crossover's plain bars, in place of her bell's arms.)
+        _plain = OctoShoots.Core.Run.Crossover.On;
         Danger = world.Danger;
         if (_adventure)
         {
@@ -504,7 +506,98 @@ public partial class HudView : Control
         Outlined(font, c + new Vector2(26f, 8f), $"{_energy:0.#}", (int)(22f * (1f + 0.25f * k)), new Color(1f, 0.93f, 0.78f));
     }
 
-    Vector2 ShellIcon => _adventure ? BellAt + new Vector2(BellRadius + 26f, -4f) : new(Margin + 12f, Size.Y - Margin - 22f);
+    Vector2 ShellIcon => _adventure ? _plain ? ChargeAt + new Vector2(GaugeShell * 0.5f, ChargeHeight + 24f) : BellAt + new Vector2(BellRadius + 26f, -4f)
+        : new(Margin + 12f, Size.Y - Margin - 22f);
+
+    // ───────────────────────── the plain bars (the crossover) ─────────────────────────
+
+    /// <summary>The crossover's HUD: plain bars, top left, in place of her bell and its arms.</summary>
+    bool _plain;
+    /// <summary>
+    /// The bars: health's (its length at her starting max HP, longer as it grows) and its height, the charge's height,
+    /// the gap between them; the pearl beside the charge (pixels across).
+    /// </summary>
+    const float BarWidth = 220f, HealthHeight = 16f, ChargeHeight = 10f, BarGap = 10f, PearlSize = 24f;
+    /// <summary>Health's colour steps (shares of her max HP): green above Fine, amber above Low, red (pulsing) under.</summary>
+    const float Fine = 0.6f, Low = 0.3f;
+    static readonly Vector2 HealthAt = new(Margin, Margin + 4f);
+    static readonly Vector2 ChargeAt = HealthAt + new Vector2(0f, HealthHeight + BarGap);
+    /// <summary>The active pearl beside its bar, in the shells' 3D view (none: hidden).</summary>
+    MeshInstance3D? _pearl;
+    ItemDef? _pearlShown;
+
+    /// <summary>The middle of the active pearl, right of its bar.</summary>
+    Vector2 PearlIcon => ChargeAt + new Vector2(BarWidth * _maxShare + PearlSize * 0.5f + 8f, ChargeHeight * 0.5f);
+
+    /// <summary>The active pearl beside its bar: its own look, turning slowly, swelling a beat as it is used.</summary>
+    void SyncPearl()
+    {
+        if (_shellView is null) return;
+        if (_pearl is null)
+        {
+            _pearl = new MeshInstance3D { Mesh = new SphereMesh { Radius = 0.5f, Height = 1f, RadialSegments = 32, Rings = 16 }, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = false };
+            _shellView.AddChild(_pearl);
+        }
+        _pearl.Visible = _adventure && _plain && _active is not null;
+        if (!_pearl.Visible) return;
+        if (_pearlShown != _active)
+        {
+            _pearlShown = _active;
+            _pearl.MaterialOverride = OctoShoots.Game.Fx.PearlMaterials.Get(_active!);
+        }
+        var spin = new Quaternion(Vector3.Up, _time * 0.6f) * new Quaternion(Vector3.Right, 0.35f);
+        PlaceShell(_pearl, PearlIcon, PearlSize * (1f + 0.25f * _used), spin.Normalized());
+    }
+
+    /// <summary>
+    /// The bars, top left: her health (its colour by how much is left, red and pulsing when low; what a hit took pale a
+    /// moment, then draining; a flash as it is struck), and under it her active pearl's charge in the pearl's colour
+    /// (breathing when ready, a flash as it is used; without a pearl, its empty track). Her shells under them.
+    /// </summary>
+    void DrawBars(Font font)
+    {
+        float pulse = 0.5f + 0.5f * Mathf.Sin(_time * 5f);
+        float width = BarWidth * _maxShare;
+        var health = _health > Fine ? new Color(0.42f, 0.86f, 0.46f) : _health > Low ? new Color(1f, 0.76f, 0.26f)
+            : new Color(1f, 0.28f, 0.26f).Lerp(new Color(1f, 0.62f, 0.55f), 0.45f * pulse);
+        Bar(HealthAt, width, HealthHeight, _health, _healthShown, health, _hurt);
+        if (_active is not null)
+        {
+            var pearl = OctoShoots.Game.Fx.PearlMaterials.GlowColor(_active);
+            bool ready = _charge >= 1f;
+            Bar(ChargeAt, width, ChargeHeight, _charge, _charge, ready ? pearl.Lerp(Colors.White, 0.3f * pulse) : pearl * 0.8f, _used);
+            // (The pearl itself is drawn over this, in 3D: SyncPearl.) A soft glow behind it once it is ready.
+            if (ready) DrawCircle(PearlIcon, PearlSize * (0.7f + 0.08f * pulse), pearl with { A = 0.25f + 0.15f * pulse });
+        }
+        else Bar(ChargeAt, width, ChargeHeight, 0f, 0f, new Color(0.6f, 0.62f, 0.66f), 0f);
+        SyncPearl();
+        // Her shells under the bars (the shell itself is drawn in 3D over this).
+        if (_shellsSeen || _flights.Count > 0)
+        {
+            float k2 = _pulse * _pulse;
+            var at = ShellIcon;
+            if (k2 > 0.01f) DrawCircle(at, 14f * (1f + 0.35f * k2), new Color(1f, 0.8f, 0.55f, 0.4f * k2));
+            if (_ring > 0.01f) DrawArc(at, 12f * (1.3f + 2.2f * (1f - _ring)), 0f, Mathf.Tau, 40, new Color(1f, 0.92f, 0.7f, 0.8f * _ring * _ring), 2.5f * _ring + 0.5f, true);
+            string count = Mathf.Max(_shells - InFlight, 0).ToString();
+            int fs = (int)(19f * (1f + 0.3f * k2));
+            Outlined(font, at + new Vector2(16f, 7f + 2f * k2), count, fs, new Color(1f, 0.9f, 0.8f).Lerp(new Color(1f, 1f, 0.75f), k2));
+        }
+    }
+
+    /// <summary>One bar: a dark frame, its empty track, a pale trail (what was just lost), its fill with a lighter top, a flash.</summary>
+    void Bar(Vector2 at, float width, float height, float share, float trail, Color fill, float flash)
+    {
+        DrawRect(new Rect2(at - Vector2.One * 2f, new Vector2(width + 4f, height + 4f)), new Color(0f, 0f, 0f, 0.55f));
+        DrawRect(new Rect2(at, new Vector2(width, height)), new Color(0.06f, 0.07f, 0.1f, 0.85f));
+        if (trail > share) DrawRect(new Rect2(at, new Vector2(width * Mathf.Clamp(trail, 0f, 1f), height)), new Color(1f, 0.95f, 0.85f, 0.7f));
+        float w = width * Mathf.Clamp(share, 0f, 1f);
+        if (w > 0.5f)
+        {
+            DrawRect(new Rect2(at, new Vector2(w, height)), fill);
+            DrawRect(new Rect2(at, new Vector2(w, height * 0.35f)), fill.Lerp(Colors.White, 0.35f));
+        }
+        if (flash > 0.01f) DrawRect(new Rect2(at, new Vector2(width, height)), new Color(1f, 1f, 1f, 0.45f * flash));
+    }
 
     /// <summary>Where a flight is at progress e (0 → 1): a quadratic arc from its start to the counter, bowed to one side.</summary>
     Vector2 FlightAt(Vector2 from, float side, float e)
@@ -523,7 +616,7 @@ public partial class HudView : Control
     /// <summary>Her bell on the HUD: the active pearl's colours and pattern filling it (none: clear glass).</summary>
     void SyncBell()
     {
-        _bell.Visible = _adventure;
+        _bell.Visible = _adventure && !_plain;
         var look = _active?.Pearl;
         _bellLook.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("has_pearl"), look is not null);
         if (look is { Colors.Count: > 0 })
@@ -769,7 +862,8 @@ public partial class HudView : Control
 
         if (_adventure)
         {
-            DrawGauge(font);
+            if (_plain) DrawBars(font);
+            else DrawGauge(font);
             DrawDanger(font);
         }
         if (_energyShown && !Diving) DrawEnergy(font);

@@ -109,7 +109,16 @@ public sealed partial class PlaneWorld
                     light += worth * BeamLight(beam, vault.Position, 0f, vault.Radius, vault);
             vault.Light = light > 0f ? vault.Light + light * Dt : MathF.Max(0f, vault.Light - VaultTuning.Settle * Dt);
             bool rammed = p.IsDashing && Vector2.Distance(vault.Position, p.Position) < vault.Radius + Radius;
-            if (vault.Light >= VaultTuning.BurstLight || rammed) BurstVault(vault);
+            // A shot of hers pops it at once (and goes out on it).
+            PlaneShot? shot = null;
+            foreach (var s in Shots)
+                if (s.FromPlayer && !s.BossPearl && s.Life > 0f && Reaches(s, vault.Position, vault.Radius))
+                {
+                    shot = s;
+                    break;
+                }
+            if (shot is not null) Pop(shot, vault.Position - shot.Position);
+            if (vault.Light >= VaultTuning.BurstLight || rammed || shot is not null) BurstVault(vault);
         }
     }
 

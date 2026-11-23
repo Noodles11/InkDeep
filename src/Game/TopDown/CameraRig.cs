@@ -18,8 +18,12 @@ public partial class CameraRig : Node3D
     /// </summary>
     public static bool Flat { get; set; }
 
-    /// <summary>Downward tilt from the horizontal: 60°, or straight down when Flat or in the watercolour study (ArtLook.Watercolour).</summary>
-    public static float Tilt => Flat || OctoShoots.Game.Fx.ArtLook.IsWatercolour ? 90f : 60f;
+    /// <summary>
+    /// Downward tilt from the horizontal: 60° (the older look); Flat (the crossover) tilted only a little, FlatTilt, so the
+    /// rock's faces show a touch; straight down in the watercolour study (ArtLook.Watercolour).
+    /// </summary>
+    public static float Tilt => OctoShoots.Game.Fx.ArtLook.IsWatercolour ? 90f : Flat ? FlatTilt : 60f;
+    public const float FlatTilt = 78f;
     public const float Fov = 35f;
 
     /// <summary>How much ground (metres, top to bottom) a camera shows at this distance from it, by either projection.</summary>

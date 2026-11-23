@@ -436,7 +436,7 @@ public partial class BellView : Node3D
     public float Lit = 1f;
     /// <summary>How far she is lifted in the reef's soft edge (eased), and her lift a metre deep in it.</summary>
     float _gooLift;
-    const float GooLift = 1.1f;
+    const float GooLift = 2.2f, GooGrow = 0.35f;
     /// <summary>
     /// Whether her bell casts its light round her (her glow: the bulb, its halo, the warm pool under her). False in the
     /// crossover (PlaneOptions.Glow): her bell still shines, but her beam is her light.
@@ -505,7 +505,9 @@ public partial class BellView : Node3D
         }
         // Split, all three are smaller; the red and the blue come out of her (from nothing to their size).
         float size = Mathf.Lerp(1f, PrismTuning.Size, _prism);
-        Scale = Vector3.One * (Part >= 0 ? PrismTuning.Size * Mathf.Clamp(_prism * 1.6f, 0.05f, 1f) : size);
+        // (Risen over the reef's soft edge she is nearer the eye: drawn larger, up to GooGrow × at her deepest, PlaneGoo.cs.)
+        float risen = 1f + GooGrow * Mathf.Clamp(_gooLift / (GooLift * OctoShoots.Core.Plane.GooTuning.Most), 0f, 1f);
+        Scale = Vector3.One * (Part >= 0 ? PrismTuning.Size * Mathf.Clamp(_prism * 1.6f, 0.05f, 1f) : size * risen);
         var vel = new Vector2(p.Velocity.X, p.Velocity.Y);
         float speed = vel.Length();
         float pace = Mathf.Clamp(speed / Mathf.Max(world.CruiseSpeed, 0.1f), 0f, 1.6f);

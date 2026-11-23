@@ -1211,6 +1211,9 @@ public partial class TopDownMain : Node3D
         _hudRoot.AddChild(_hud);
         _minimap = new MinimapView();
         _hudRoot.AddChild(_minimap);
+        // The crossover's arrows at the screen's edges, in place of the minimap (TopDownMain.Arrows.cs).
+        _arrows = new EdgeArrows();
+        _hudRoot.AddChild(_arrows);
         _cleanse = new CleanseMeter();
         _hudRoot.AddChild(_cleanse);
         // Tab: the whole level on one sheet, drawn by the minimap's rules (wall edges, fog, places only once spotted).
@@ -1979,6 +1982,7 @@ public partial class TopDownMain : Node3D
             FadeLevelLife(from, radius, stay);
             _corruption.Fade(stay);
             _minimap.DiveOut(Ease(t / 0.9f));
+            _arrows.DiveOut(Ease(t / 0.9f));
         }
         _hud.Elapsed = _elapsed;
         _hud.Track(_world, _catalog, dt);
@@ -2009,6 +2013,7 @@ public partial class TopDownMain : Node3D
         foreach (var view in LevelLife) ResetFade(view);
         ResetFade(_level);
         _minimap.Arrive();
+        _arrows.Arrive();
         _portalsArmed = false;
         _arriving = true;
         _arriveTime = 0f;
@@ -3181,7 +3186,8 @@ public partial class TopDownMain : Node3D
         _dark.Sync(_world, _camera.Camera, _bell.GlobalPosition, dt);
         // A wall between the camera and her (a tunnel's roof, a wall in front) is cut open round her while it hides her,
         // the opening irising out quickly and closing gently (eased in the shader); one she only swims beside stays whole.
-        bool hidden = _level.Hides(_bell.GlobalPosition, _camera.Camera.GlobalPosition);
+        // (Not while she pushes into the reef's soft edge: she rises over the rock there, and nothing is cut, PlaneGoo.cs.)
+        bool hidden = _world.Player.Goo <= 0.02f && _level.Hides(_bell.GlobalPosition, _camera.Camera.GlobalPosition);
         _seeThrough = Mathf.MoveToward(_seeThrough, hidden ? 1f : 0f, dt * (hidden ? 4.5f : 2.2f));
         _level.SeeThrough(_bell.GlobalPosition, SeeThroughRadius, _dbgNoCarve ? 0f : _seeThrough);
         // In the curse den's dark her own light is dimmed too, to about half.
@@ -3233,7 +3239,8 @@ public partial class TopDownMain : Node3D
         _minimap.Landmarks = _fullMap.Landmarks = _world.Run.Loadout.Flags.Contains("landmarks");
         // The adventure: the minimap only with Sea Chart Nautilus, and never a ring round it (the gonad gauge says those).
         bool adventure = _world.Options.Adventure;
-        _minimap.Visible = HasMap;
+        _minimap.Visible = HasMap && !OctoShoots.Core.Run.Crossover.On;
+        SyncArrows(dt);
         _minimap.Plain = adventure;
         _cleanse.Visible = !adventure;
         // Entering a place names it under the minimap.
@@ -3341,6 +3348,7 @@ public partial class TopDownMain : Node3D
         _corruption.Fade(stay);
         // The minimap dives too: it zooms in on her and fades away (the new level's fades in once she is down).
         _minimap.DiveOut(Ease(t / 0.9f));
+        _arrows.DiveOut(Ease(t / 0.9f));
         _damage.Tick(dt);
         _hud.Elapsed = _elapsed;
         _hud.Track(_world, _catalog, dt);
@@ -3386,6 +3394,7 @@ public partial class TopDownMain : Node3D
         if (leftTutorial) TutorialPassed();
         EnterLevel(map, keepRun: true, 0, arrived);
         _minimap.Arrive();
+        _arrows.Arrive();
         foreach (var view in LevelLife) ResetFade(view);
         Route();
         if (_captureDir is not null) GD.Print($"Dive finishes at frame {_frame}");

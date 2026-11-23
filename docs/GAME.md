@@ -653,4 +653,14 @@ the tests of the dive still test the dive.
   - **Coherence:** it sets what the water takes from them, as for her beam (§17).
   - Her light's physics is now worked out at the start of each step, so the first shot of a level takes it too.
     Tests: `OpticsTests`.
+- **0.78.0:**
+  - The crossover's HUD is plain bars, top left (`HudView.DrawBars`): health (green, amber, red pulsing), the active
+    pearl's charge with the pearl beside it, and shells and energy under them. The bell gauge stays dormant.
+  - Arrows at the screen's edges point to places off screen in their colours (`EdgeArrows`,
+    `TopDownMain.Arrows.cs`): rooms, caches, shrines, light springs, and the boss's arena while its boss waits. They
+    replace the minimap in the crossover.
+  - In the reef's soft edge nothing is cut away round her (no see-through). She rises twice as high (`GooLift` 2.2)
+    and is drawn up to 35% larger.
+  - Her shots pop bubble vaults at once (`VaultShotTests`).
+  - The flat camera is tilted a little: 78° (`CameraRig.FlatTilt`; the old view was 60°).
 
