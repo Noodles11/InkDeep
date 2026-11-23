@@ -674,6 +674,8 @@ public static partial class TopDownGenerator
         int N = map.Samples;
         var toWater = CaveLayout.Chamfer(open, true);
         var rift = map.Exit;
+        // (A template level, the crossover's: the reef rounded, its face on a smooth edge rather than the 1 m grid's.)
+        float[]? edge = map.Templated ? RoundedEdge(open, N) : null;
         // The raw profile first: the floor, and the rock rising from the water's edge to its warped top. (Every sample
         // on its own, so the rows are worked at once.)
         var raw = new float[N * N];
@@ -693,7 +695,11 @@ public static partial class TopDownGenerator
                     var warp = strata.Warp(x, y);
                     float t = Bilinear(tops, x + warp.X, y + warp.Y);
                     float top = WallTopMin + (WallTopMax - WallTopMin) * (t - ReefTerrain.HMin) / (ReefTerrain.HMax - ReefTerrain.HMin);
-                    raw[i] = MathF.Max(WallFoot, MathF.Min(top, WallFoot + WallRise * (toWater[i] - 1f)));
+                    raw[i] = edge is null ? MathF.Max(WallFoot, MathF.Min(top, WallFoot + WallRise * (toWater[i] - 1f)))
+                        // Rounded: the rise from its smooth face (the edge between the samples, so where the rock meets the swim
+                        // line follows it, not the grid's steps: a jutting corner stands lower and rounds off), its lip eased
+                        // into its top (a smooth minimum, never a corner). The water is exactly the cave's.
+                        : MathF.Max(RoundFloor, SmoothMin(top, WallFoot + WallRise * (edge[i] - 0.5f), RoundLip));
                 }
             }
         });
@@ -712,6 +718,59 @@ public static partial class TopDownGenerator
             }
         });
     }
+
+    /// <summary>
+    /// The rounded reef (template levels, after the cube branch's smooth reef): the signed distance to the water's edge
+    /// (metres, + in the rock, − in the water; the edge between a rock and a water sample), blurred over about RoundBlur
+    /// metres so the edge's corners round off and its 1 m steps are gone.
+    /// </summary>
+    static float[] RoundedEdge(bool[] open, int N)
+    {
+        var toWater = CaveLayout.Chamfer(open, true);
+        var toRock = CaveLayout.Chamfer(open, false);
+        var s = new float[N * N];
+        for (int i = 0; i < s.Length; i++) s[i] = open[i] ? 0.5f - toRock[i] : toWater[i] - 0.5f;
+        // (A separable Gaussian, sigma RoundBlur, the grid's edges held.)
+        int r = (int)MathF.Ceiling(RoundBlur * 2.5f);
+        var w = new float[2 * r + 1];
+        float sum = 0f;
+        for (int k = -r; k <= r; k++) sum += w[k + r] = MathF.Exp(-k * k / (2f * RoundBlur * RoundBlur));
+        for (int k = 0; k < w.Length; k++) w[k] /= sum;
+        var tmp = new float[s.Length];
+        Parallel.For(0, N, y =>
+        {
+            for (int x = 0; x < N; x++)
+            {
+                float v = 0f;
+                for (int k = -r; k <= r; k++) v += w[k + r] * s[y * N + Math.Clamp(x + k, 0, N - 1)];
+                tmp[y * N + x] = v;
+            }
+        });
+        var o = new float[s.Length];
+        Parallel.For(0, N, y =>
+        {
+            for (int x = 0; x < N; x++)
+            {
+                float v = 0f;
+                for (int k = -r; k <= r; k++) v += w[k + r] * tmp[Math.Clamp(y + k, 0, N - 1) * N + x];
+                o[y * N + x] = v;
+            }
+        });
+        return o;
+    }
+
+    /// <summary>A smooth minimum: min(a, b), eased over k where they meet (a rounded lip, never a corner).</summary>
+    static float SmoothMin(float a, float b, float k)
+    {
+        float h = MathF.Max(k - MathF.Abs(a - b), 0f) / k;
+        return MathF.Min(a, b) - h * h * k * 0.25f;
+    }
+
+    /// <summary>
+    /// The rounded reef's numbers: how far its edge is blurred (metres), how round the lip where the rise meets the top
+    /// (metres of height), and the least a rock sample stands (still rock: above the swim line).
+    /// </summary>
+    const float RoundBlur = 1.8f, RoundLip = 3f, RoundFloor = 0.12f;
 
     /// <summary>A sealed wall's half thickness (metres either side of its middle, along its passage), and how far past the passage's half width it reaches across.</summary>
     public const float SealThick = 3.2f, SealPast = 1.5f;

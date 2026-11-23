@@ -680,4 +680,11 @@ the tests of the dive still test the dive.
 - **The dive loads the level below whole (0.79.1):** she holds at the lip until the level below is made, its
   corruption laid and its sun's shade cast. That shade is drawn on the level below as the iris opens, so she never
   lands on a level that shows lit and is then covered in shade (DIVE.md §3).
+- **The reef rounded (0.80.0, after the cube branch's smooth reef):** on template levels the rock is raised from a
+  signed distance to the water's edge (between the samples), blurred over about 1.8 m (`RoundedEdge`), not from the
+  1 m grid's yes or no. Where the rock meets the swim line follows that smooth edge, so its corners round off and its
+  1 m steps are gone (a jutting corner stands lower). The rise to the rock's top is eased into it by a smooth minimum
+  (`SmoothMin`, `RoundLip` 3 m), a rounded lip rather than a corner. The water is exactly the cave's, so where she
+  swims is unchanged, and corridors and marks keep their depth. Arch placement reads the heights, so a level's arches
+  may differ from before.
 
