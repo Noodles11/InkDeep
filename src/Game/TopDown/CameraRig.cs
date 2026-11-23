@@ -132,7 +132,12 @@ public partial class CameraRig : Node3D
     public void SetInk(bool on) => _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("ink_look"), on ? 1f : 0f);
 
     /// <summary>The world dithered where she does not light it (topdown_post's dither): an ordered dither fixed to the world.</summary>
-    public void SetDither(bool on) => _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("dither"), on ? 1f : 0f);
+    public void SetDither(bool on, int scope = 2)
+    {
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("dither"), on ? 1f : 0f);
+        // (0 the rock and what stands on it; 1 the water too; 2 everything, her light included.)
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("dither_scope"), scope);
+    }
 
     /// <summary>
     /// The ink look's biome (topdown_post's ink_tint): the colour its muted reef is washed in, dark (the Sunlit Reef blue,

@@ -41,8 +41,10 @@ public partial class TopDownMain
         _showcase = IsShowcase;
         _camera.SetShowcase(_showcase);
         _camera.SetInk(InkLook);
-        // (The world dithered: --no-dither leaves it as the washes and halftone alone, for comparison.)
-        _camera.SetDither(!OS.GetCmdlineUserArgs().Contains("--no-dither"));
+        // (The world dithered, topdown_post's dither: --no-dither leaves it as the washes and halftone alone.)
+        var args = OS.GetCmdlineUserArgs();
+        // (Everything dithered; --dither-rock or --dither-water narrow it, for comparison.)
+        _camera.SetDither(!args.Contains("--no-dither"), args.Contains("--dither-rock") ? 0 : args.Contains("--dither-water") ? 1 : 2);
         // (Its biome's ink: the muted reef's colour and pattern.)
         _camera.SetInkBiome(_map.Templated ? _map.Biome : OctoShoots.Core.Run.Biome.SunlitReef);
         _camera.SetShotLight(LightMemory.ShotSpread, LightMemory.ShotShown);

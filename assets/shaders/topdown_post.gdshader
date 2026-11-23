@@ -151,14 +151,16 @@ uniform float ink_look = 0.0;
 // blue, the Kelp Forest green, the Shipwreck red, the Ruins yellow). Its pattern is the reef's in every biome.
 uniform vec3 ink_tint = vec3(0.32, 0.5, 0.85);
 // Her shots' light on the reef (LightMemory.ShotSpread, ShotShown, via CameraRig.SetShotLight).
-// The world's dithering (the ink look): where she does not light it, the rock and what stands on it (never the water) are
+// The world's dithering (the ink look): the whole picture under the pass (the rock, the water, her light on them) is
 // drawn in a few tones of brightness, the steps between them an ordered (8 × 8 Bayer) dither fixed to the world (dither_cell metres a cell, so it never
-// crawls as the camera moves); the washes' soft edges dither too, in place of the halftone dots. Her light is never
-// dithered. 0: off.
+// crawls as the camera moves); the washes' soft edges dither too, in place of the halftone dots. (Clementine, her shots and
+// the HUD are drawn after the pass and stay clean.) 0: off.
 uniform float dither = 1.0;
 uniform float dither_cell = 0.1;
 uniform float dither_levels = 9.0;
 uniform float dither_strength = 0.75;
+// What is dithered: 0 the rock and what stands on it; 1 the water and the floor too; 2 everything, her light included.
+uniform int dither_scope = 2;
 uniform float shot_spread = 3.0;
 uniform float shot_gain = 4.0;
 // Ink, ash and the unlit water. (The traced light's colour is the biome's: ink_tint.)
@@ -801,6 +803,7 @@ void fragment() {
 		float edge = sqrt(smoothstep(0.45, 1.0, fract(x0)));
 		float qw = (floor(x0) + step(dotted, edge)) / 4.0;
 		float q0 = dither > 0.5 ? (floor(x0) + step(bayer8(floor(wp / dither_cell)), edge)) / 4.0 : qw;
+		if (dither > 0.5 && dither_scope >= 1) qw = q0;
 		// Where she does not light it: the rock a wash of ash, the water and the floor under it near-black blue ink.
 		// (What stands on the floor, higher than the terrain under it, is washed as the rock is: the biomes' things.)
 		vec3 relief = ink_relief(iworld);
@@ -823,6 +826,7 @@ void fragment() {
 		// (The rock and what stands on it dithered, never the water: a few tones of brightness, an ordered dither between
 		// them, softened by dither_strength. Her light below is not.)
 		if (dither > 0.0) ash = mix(ash, dither_world(ash, wp), dither * dither_strength);
+		if (dither > 0.0 && dither_scope >= 1) deep = mix(deep, dither_world(deep, wp), dither * dither_strength);
 		vec3 unlit = mix(deep, ash, rock);
 		// In her light (and what she has cleansed) its own colour, clean and smooth: her light is never put through the
 		// washes' steps or the halftone, and it comes in quickly at its edge (the ash's dots never catch its gradient).
@@ -845,6 +849,8 @@ void fragment() {
 		if (thing > 0.05 && !open_deep) inked = mix(inked, INK, art_outline_in(suv, FRAGCOORD.xy, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX, VIEWPORT_SIZE, -9.0, 12.0) * thing * 0.85 * (1.0 - traced));
 		// (A wake's disturbed water catches a little light even out of hers: where something swims.)
 		inked += vec3(0.55, 0.62, 0.7) * wake_glint * 0.12 * (1.0 - smoothstep(0.0, 0.3, shown));
+		// (Everything dithered, her light too: dither_scope 2.)
+		if (dither > 0.0 && dither_scope >= 2) inked = mix(inked, dither_world(inked, wp), dither * dither_strength);
 		col = mix(col, inked, ink_look);
 	}
 
