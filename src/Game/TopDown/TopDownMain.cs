@@ -2354,7 +2354,7 @@ public partial class TopDownMain : Node3D
             "room" => _world.LightRooms.SelectMany(r => Enumerable.Range(0, 16).Select(k => r.Centre + new System.Numerics.Vector2(Mathf.Cos(k * Mathf.Tau / 16f), Mathf.Sin(k * Mathf.Tau / 16f)) * (FloraTuning.Ring + 2.5f)))
                 .Select(q => (System.Numerics.Vector2?)q).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
             // Beside an animal (fauna=kind, else the first), three metres off it (PlaneFauna.cs).
-            _ when where.StartsWith("fauna") => _world.Fauna.Where(f => !where.Contains('=') || f.Kind.ToString().Equals(where[(where.IndexOf('=') + 1)..], System.StringComparison.OrdinalIgnoreCase))
+            _ when where?.StartsWith("fauna") == true => _world.Fauna.Where(f => !where.Contains('=') || f.Kind.ToString().Equals(where[(where.IndexOf('=') + 1)..], System.StringComparison.OrdinalIgnoreCase))
                 .SelectMany(f => Enumerable.Range(0, 12).Select(k => f.Home + new System.Numerics.Vector2(Mathf.Cos(k * Mathf.Tau / 12f), Mathf.Sin(k * Mathf.Tau / 12f)) * 3f))
                 .Select(q => (System.Numerics.Vector2?)q).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
             // Facing the first mirror plate or lightglass pane, three metres off its face (PlaneOpticWalls.cs).
