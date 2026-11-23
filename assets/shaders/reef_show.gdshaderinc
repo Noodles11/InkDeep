@@ -86,11 +86,22 @@ vec3 rs_seen(vec3 p, vec3 cam) {
 	return p + d * ((plane - p.y) / d.y);
 }
 
+// Her light's reach up and down (0..1): a cone on her plane, it lights the rock rising a little above her (walls, a ledge)
+// and all that lies below, never what stands high over her (an arch's top, a cave's roof: RS_HIGH_FROM–RS_HIGH_TO
+// metres above her plane it fades out).
+const float RS_HIGH_FROM = 1.8, RS_HIGH_TO = 3.2;
+// (Her plane above the swim level: LevelMap.SwimBand.)
+const float RS_PLANE = 0.7;
+float rs_height(vec3 p, float plane) {
+	return 1.0 - smoothstep(plane + RS_HIGH_FROM, plane + RS_HIGH_TO, p.y);
+}
+
 // How much of her light falls on a point (0..1): her aura's or her beam's, where the eye sees it on her plane.
 float reef_lit(vec3 p, vec3 cam) {
 	if (reef_showcase <= 0.0) return 0.0;
 	vec3 q = rs_seen(p, cam);
-	return max(rs_aura(q), rs_beam(q));
+	float plane = her_show_aura.w > 0.0 ? her_show_aura.y : her_beam_show.y;
+	return max(rs_aura(q), rs_beam(q)) * rs_height(p, plane);
 }
 
 // How awake the reef is at a point (0..1): behind a wave's front, as awake as the wave leaves it.

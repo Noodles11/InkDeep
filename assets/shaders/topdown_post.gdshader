@@ -713,7 +713,8 @@ void fragment() {
 				+ texture(her_after, a + vec2(0.0, t.y)).r + texture(her_after, a - vec2(0.0, t.y)).r) * 0.16;
 			after = smoothstep(0.0, 1.0, after);
 		}
-		shown = max(shown, max(shot_shown, after) * ink_look);
+		// (As high as her light reaches, never an arch over her: rs_height.)
+		shown = max(shown, max(shot_shown, after) * ink_look * rs_height(world, swim_level + RS_PLANE));
 	}
 	col *= mix(unlit_dim, 1.0, shown);
 	float luma = dot(col, vec3(0.299, 0.587, 0.114));
