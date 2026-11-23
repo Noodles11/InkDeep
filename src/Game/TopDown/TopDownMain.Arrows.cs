@@ -7,8 +7,9 @@ using OctoShoots.Core.Run;
 namespace OctoShoots.Game.TopDown;
 
 /// <summary>
-/// What the arrows at the screen's edges point at in the crossover (EdgeArrows, in place of the minimap): the level's
-/// places in their colours (its rooms, caches, shrines), its light springs (where she heals and grows) while they hold
+/// What the emblems at the screen's edges show in the crossover (EdgeArrows, the cubes branch's: a ringed sign in its
+/// place's colour that waits at the screen's edge and slides onto its place once that is on the screen, in place of the
+/// minimap): the level's places (its rooms, caches, shrines), its light springs (where she heals and grows) while they hold
 /// healing or she has energy to lay, and the boss's arena while its boss waits.
 /// </summary>
 public partial class TopDownMain
@@ -17,7 +18,22 @@ public partial class TopDownMain
 
     static readonly Color SpringColour = new(1f, 0.93f, 0.7f);
 
-    IEnumerable<(System.Numerics.Vector2 At, Color Colour)> ArrowTargets()
+    /// <summary>How near (metres) counts as at a spring (its emblem fades: EdgeArrows).</summary>
+    const float SpringReach = 3f;
+
+    /// <summary>A place's sign on its emblem (the cubes' signs: "$" a shop, "*" a treasure cave, "o" a shell cache, "%" a crab's deal).</summary>
+    static string Sign(PoiKind kind) => kind switch
+    {
+        PoiKind.Haven => "+",
+        PoiKind.TreasureCave => "*",
+        PoiKind.Shop => "$",
+        PoiKind.ShellCache => "o",
+        PoiKind.CrabDeal => "%",
+        PoiKind.Shrine => "^",
+        _ => "!",
+    };
+
+    IEnumerable<(System.Numerics.Vector2 At, Color Colour, string Sign, float Reach)> ArrowTargets()
     {
         foreach (var poi in _map.Pois)
         {
@@ -25,13 +41,14 @@ public partial class TopDownMain
             // A boss's arena while its boss waits; no other way out (she dives anywhere).
             if (poi.Kind == PoiKind.Exit)
             {
-                if (_map.HasBoss && _world.Boss is { Freed: false }) yield return (poi.Position, ReefKinds.Colour(ReefKind.Boss));
+                if (_map.HasBoss && _world.Boss is { Freed: false }) yield return (poi.Position, ReefKinds.Colour(ReefKind.Boss), "X", poi.Radius);
                 continue;
             }
-            yield return (poi.Position, LevelView.PoiColor(poi.Kind));
+            yield return (poi.Position, LevelView.PoiColor(poi.Kind), Sign(poi.Kind), Mathf.Max(poi.Radius, SpringReach));
         }
+        // Her light springs: where she heals and grows ("+").
         foreach (var sp in _world.Springs)
-            if (!sp.Spent || _world.Run.Energy > 0f) yield return (sp.Position, SpringColour);
+            if (!sp.Spent || _world.Run.Energy > 0f) yield return (sp.Position, SpringColour, "+", SpringReach);
     }
 
     /// <summary>The arrows each frame (the crossover's, in place of the minimap).</summary>
@@ -40,6 +57,6 @@ public partial class TopDownMain
         _arrows.Visible = OctoShoots.Core.Run.Crossover.On && !InLabyrinth;
         if (!_arrows.Visible) return;
         _arrows.SetTargets(ArrowTargets().ToList());
-        _arrows.Sync(_camera.Camera, Mathf.Max(_hudRoot.Scale.X, 0.01f), dt);
+        _arrows.Sync(_camera.Camera, Mathf.Max(_hudRoot.Scale.X, 0.01f), dt, _bell.GlobalPosition);
     }
 }

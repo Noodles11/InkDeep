@@ -9,16 +9,14 @@ using OctoShoots.Game.TopDown;
 
 namespace OctoShoots.Game.Title;
 
-public enum LaunchMode { New, Seeded, Continue, Jelly }
-
-/// <summary>What the title screen asks the game scene to start: a new run, a seeded one, or the saved run.</summary>
+/// <summary>What the title screen asks the game scene to start: the chosen jelly's dive (the cube reef, the one game).</summary>
 public static class RunLaunch
 {
     public const string GameScene = "res://src/Game/TopDown/TopDownMain.tscn";
     public const string TitleScene = "res://src/Game/Title/TitleMain.tscn";
 
-    /// <summary>Set by the title before it opens the game scene; the game reads and clears it.</summary>
-    public static LaunchMode? Pending { get; set; }
+    /// <summary>Set by the title before it opens the game scene (a jelly dives); the game reads and clears it.</summary>
+    public static bool Pending { get; set; }
     /// <summary>Which jelly dives (an index into the save's jellies, docs/DIVE.md §1).</summary>
     public static int Jelly { get; set; } = -1;
     public static SeedCode Seed { get; set; }
@@ -26,15 +24,4 @@ public static class RunLaunch
     public static (SeedCode Seed, LevelId Id, float Luck, Task<LevelShape> Shape)? Shaping { get; set; }
     /// <summary>The title's last frame of its loading screen, which the game keeps up until it is ready to show.</summary>
     public static Godot.Texture2D? Frame { get; set; }
-
-    /// <summary>
-    /// Where a new run starts: in the tutorial (Depth 0) until she has passed it once, then in Depth 1 — unless the
-    /// settings ask to replay the tutorial.
-    /// </summary>
-    public static LevelId Start(Profile profile, ViewOptions view) =>
-        profile.TutorialPassed && !view.ReplayTutorial ? LevelId.FirstRun : LevelId.First;
-
-    /// <summary>Where a saved run takes up again.</summary>
-    public static LevelId Start(SuspendedRun run) =>
-        run.Reef();
 }

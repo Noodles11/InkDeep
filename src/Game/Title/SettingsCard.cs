@@ -55,7 +55,7 @@ public partial class SettingsCard : PanelContainer
             _view.SunLight = (float)v;
             Save();
         };
-        box.AddChild(Row("Sunlight", "God rays, caustics and dappled light under the water (0 turns them off).", sun));
+        box.AddChild(Row("Sunlight", "Caustics and dappled light under the water (0 turns them off).", sun));
 
         var shadows = Toggle(_view.LightShadows, on =>
         {
@@ -91,18 +91,6 @@ public partial class SettingsCard : PanelContainer
             Save();
         });
         box.AddChild(Row("Controller vibration", "A buzz when her light strikes, when she is hurt, when she dashes and in a current.", vibration));
-
-        // Once she has passed the tutorial, runs start below it; she may choose to start in it again.
-        if (GameSave.Current.Profile.TutorialPassed)
-        {
-            box.AddChild(Heading("Runs"));
-            var tutorial = Toggle(_view.ReplayTutorial, on =>
-            {
-                _view.ReplayTutorial = on;
-                Save();
-            });
-            box.AddChild(Row("Start in the Shallows", "New runs begin in Depth 0, the Sunlit Shallows, instead of Depth 1.", tutorial));
-        }
 
         // Controls: every binding, keyboard and mouse or controller, rebindable (saved at once).
         box.AddChild(Heading("Controls"));

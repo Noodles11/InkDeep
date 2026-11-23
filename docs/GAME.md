@@ -663,4 +663,18 @@ the tests of the dive still test the dive.
     and is drawn up to 35% larger.
   - Her shots pop bubble vaults at once (`VaultShotTests`).
   - The flat camera is tilted a little: 78° (`CameraRig.FlatTilt`; the old view was 60°).
+- **From the cubes branch (0.79.0):**
+  - **The POI emblems** (`EdgeArrows`, the cubes branch's): each place is a dark disc ringed in its colour with its sign
+    inked in the middle. It waits at the screen's edge on the line toward its place, a pointer on its ring, and slides
+    onto the place once that is on the screen, fading as she arrives. Signs: "$" a shop, "*" a treasure cave, "o" a
+    shell cache, "%" a crab's deal, "^" a shrine, "+" a light spring, "X" the boss's arena while its boss waits.
+  - **Its sounds** (`Sfx`, `audio/sfx/CREDITS.md`): a squish as her light strikes, a bloop as a murkling emerges
+    (fainter the farther off), a swish as she dashes, a big bubble as a vault pops, a wet splat as an ink bomb lands.
+  - **Its title menu** (`TitleMain`, `TitleMain.Phases`, `MenuSpray`): it opens out of the whitening gonad loader onto
+    Clementine in open water with fish. Her beam lights the items, the chosen one dissolves, her push wave clears the
+    rest, and Play dives to her jellies.
+    - Its water is the first depth's here, not the cube reef's.
+    - The title launches only a jelly's dive (`RunLaunch.Pending`): no seeded, saved or new run of its own, and the
+      save, seed and shots pieces are gone.
+  - The dive clock's ring stands right of the bars, and the danger marks right of the shells.
 

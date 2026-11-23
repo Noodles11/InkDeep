@@ -12,7 +12,7 @@ namespace OctoShoots.Game.Title;
 
 /// <summary>
 /// The statistics (proposal §4.3): four headline numbers, then runs, combat, treasure and records in label/value rows
-/// (records marked "best"), and a bar per cause of death. Seeded runs are counted too.
+/// (records marked "best"), and a bar per cause of death.
 /// </summary>
 public partial class StatsCard : PanelContainer
 {
@@ -94,7 +94,6 @@ public partial class StatsCard : PanelContainer
         groups.AddChild(Group("Runs", new()
         {
             ("Runs started", s.Runs.ToString("N0"), false),
-            ("Seeded runs", s.SeededRuns.ToString("N0"), false),
             ("Levels cleared", s.RoomsCleared.ToString("N0"), false),
             ("Deaths", s.Deaths.ToString("N0"), false),
             ("Runs abandoned", s.Abandoned.ToString("N0"), false),

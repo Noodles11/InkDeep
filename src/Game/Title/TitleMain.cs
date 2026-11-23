@@ -18,14 +18,19 @@ using OctoShoots.Game.TopDown;
 namespace OctoShoots.Game.Title;
 
 /// <summary>
-/// The title screen (docs/TITLE-MENU.md): a menu over the live sea. Clementine swims slowly up and down the longest
-/// straight channel of a fixed seed's reef in the middle of the screen, the camera following her, and the menu's items stand
-/// in a ring round her:
-/// Play, Seeded run, Sea-pedia, Statistics, Save &amp; load, Settings and Quit. She turns to face the
-/// pointer (her crosshair, GonadCursor), or with the controller the item in focus, her first gonad toward it, as in the
-/// game. With the controller the left stick points from her: her crosshair stands round her the way it is pushed and the
-/// item that way takes the focus (the D-pad still steps round the ring); choosing an item, she shoots her light at it, and what it does happens as the shot strikes it.
-/// Starting a run, the menu fades and she swims off to the right, the camera after her, the loading page over that shot
+/// The title screen (docs/TITLE-MENU.md). It opens on black, the gonad loader turning in the middle; once the sea is made
+/// the loader whitens and opens out into the menu (StepReveal: its shape the first of the opening, a white glow spreading
+/// from it over the whole screen, a second in all). Clementine floats in the middle of wide open water, its floor far
+/// below and blurred, in the top layer's look (Menace 0), a few fish wandering about her, and the menu's items stand in
+/// a ring round her: Play (a jelly's dive in the cube reef: the one game), Sea-pedia, Statistics, Settings and Quit, in a
+/// murkling's colour. The item under the pointer (or in focus, with the controller) she lights with her beam: it
+/// outlines bright and sprays sparks of her light and the corruption's brackets, as a mob in her beam. Chosen, its text
+/// dissolves outward along her beam in a spray, and her push wave throws the other items (and the logo) off the screen;
+/// then Play dives (the game's dive between layers) and her jellies' slots show in the water below; the others open
+/// their cards, the menu coming back when they close; Quit quits. She turns to face the pointer (her crosshair,
+/// GonadCursor), or with the controller the item in focus, as in the game. With the controller the left stick points
+/// from her: her crosshair stands round her the way it is pushed and the item that way takes the focus.
+/// Starting a run (a jelly chosen), she swims off to the right, the camera after her, the loading page over that shot
 /// while the first level is shaped. Run with game flags (--seed=, --at=, …) it skips straight to a run.
 /// Review flags: --title-sample (an example profile, never saved), --title-card=stats|pedia|creatures|save|settings|seed,
 /// --title-pick=id (that item focused, then chosen: her shot at it), --dbg-stick=x,y (the left stick held that way),
@@ -35,9 +40,13 @@ namespace OctoShoots.Game.Title;
 /// </summary>
 public partial class TitleMain : Node3D
 {
-    const string BackdropSeed = "KELP7Q2Z";
-    /// <summary>Clementine's idle swim along the channel: a fraction of her cruise (about 0.7 m/s).</summary>
-    const float SwimInput = 0.12f;
+    /// <summary>The open water: its square (metres), how far below her plane its floor lies, and her place in it.</summary>
+    const int WaterSize = 200;
+    const float FloorDepth = 22f;
+    static readonly System.Numerics.Vector2 Middle = new(WaterSize * 0.5f, WaterSize * 0.5f);
+    /// <summary>The fish wandering about her: how many, and how near and far from her their homes are (metres).</summary>
+    const int Fish = 7;
+    const float FishNear = 4f, FishFar = 11f;
     /// <summary>Starting a run: how hard she swims off, where she sits across the screen as she goes, and the least the shot lasts (seconds).</summary>
     const float LaunchSwim = 0.75f, LaunchAt = 0.3f, LaunchLeast = 2.4f, LaunchLeastReduced = 0.5f;
     /// <summary>The menu's fade, how long the loading page waits (she is clear of it by then), and its fade.</summary>
@@ -52,16 +61,16 @@ public partial class TitleMain : Node3D
     LevelView _level = null!;
     BellView _bell = null!;
     PufferlingView _puffers = null!;
+    BeamView _beam = null!;
+    ReefFishView _fish = null!;
+    WorldEnvironment _env = null!;
+    ReefLook _look = null!, _lookBelow = null!;
     CameraRig _camera = null!;
     MarineSnow _snow = null!;
     SunLight _sun = null!;
     readonly DeepShoals _shoals = new();
     Task<LevelShape>? _backdrop;
     PlaneWorld? _world;
-    List<System.Numerics.Vector2> _route = new();
-    int _routeAt, _routeDir = 1, _routeEnd;
-    /// <summary>Where the channel's clear water ends: she stops there if the level takes that long.</summary>
-    float _channelEnd;
     double _accumulator;
 
     // The menu.
@@ -82,7 +91,33 @@ public partial class TitleMain : Node3D
     TextureRect _padCross = null!;
     const float PadCrossOut = 120f, PadPush = 0.4f;
     float _padCrossShown;
-    MenuShots _shots = null!;
+    MenuSpray _spray = null!;
+    /// <summary>The item the pointer is over (her beam lights it).</summary>
+    Button? _hovered;
+
+    /// <summary>
+    /// Where the title stands: the sea being made (the loader), opening onto the menu, the menu, an item chosen (its text
+    /// dissolving, the rest pushed away), diving (Play), below (her jellies' slots), or climbing back up to the menu.
+    /// </summary>
+    enum Phase { Loading, Revealing, Menu, Choosing, Diving, Below, Climbing, Returning }
+    Phase _phase = Phase.Loading;
+    float _phaseTime;
+    /// <summary>The opening's length, and its first part (the loader whitening, its glow starting).</summary>
+    const float RevealSeconds = 1f, Whiten = 0.3f;
+    /// <summary>The chosen item: its row, what it does, where her beam struck it from and which way (on the screen).</summary>
+    (Button Button, Label Detail, string Id)? _chosen;
+    Action? _chosenAction;
+    Vector2 _strikeFrom, _strikeDir;
+    /// <summary>Choosing: the text's dissolve and the push wave (seconds); coming back, the items' return.</summary>
+    const float DissolveSeconds = 0.5f, PushSeconds = 0.6f, ReturnSeconds = 0.4f;
+    /// <summary>Each item, the logo and the footer pushed off by her wave: how far (page units) and how faded (0–1).</summary>
+    readonly Dictionary<Control, float> _pushed = new();
+    float _push;
+    /// <summary>The game's dive between layers (TopDownMain.StepLayerMove): its length, how far down, how close the camera draws.</summary>
+    const float DiveSeconds = 1.6f, DiveCloser = 0.4f;
+    float _drop;
+    ColorRect _reveal = null!;
+    ShaderMaterial _loaderLook = null!;
     Control? _inline;
     Control? _card;
     /// <summary>
@@ -101,6 +136,7 @@ public partial class TitleMain : Node3D
     readonly PlaneWorld?[] _slotWorlds = new PlaneWorld?[JellyNames.MaxJellies];
     readonly string?[] _slotWorn = new string?[JellyNames.MaxJellies];
     const float SlotGap = 4.3f, SlotUp = 1.5f, SlotDrift = 0.35f, SlotLight = 3f;
+    /// <summary>Where cards are put (under the opening's cover).</summary>
     ColorRect _fade = null!;
     Control _footer = null!;
     LoadingSplash _splash = null!;
@@ -115,6 +151,10 @@ public partial class TitleMain : Node3D
     int _frame;
     string? _openCard;
     string? _autoLaunch;
+    /// <summary>Review: --title-slow=N runs the opening, the choosing and the dive N times slower.</summary>
+    float _slow = 1f;
+    /// <summary>Review: the --title-pick item still to be chosen, once the menu has been up a moment.</summary>
+    bool _pickPending;
     /// <summary>Review: --dbg-stick=x,y holds the controller's left stick that way.</summary>
     Vector2? _dbgStick;
     /// <summary>Review: --title-pick=id focuses that item and chooses it a moment in (her shot at it).</summary>
@@ -162,6 +202,7 @@ public partial class TitleMain : Node3D
             else if (arg.StartsWith("--dbg-stick=") && Value("--dbg-stick=").Split(',') is { Length: 2 } st
                 && float.TryParse(st[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float sx) && float.TryParse(st[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float sy))
                 _dbgStick = new Vector2(sx, sy);
+            else if (arg.StartsWith("--title-slow=") && float.TryParse(Value("--title-slow="), NumberStyles.Float, CultureInfo.InvariantCulture, out float slow)) _slow = Mathf.Max(slow, 0.01f);
             else if (arg.StartsWith("--capture=")) _captureDir = Value("--capture=");
             else if (arg.StartsWith("--frames="))
                 foreach (string f in Value("--frames=").Split(','))
@@ -173,24 +214,30 @@ public partial class TitleMain : Node3D
         _catalog = LoadCatalog();
         Engine.MaxFps = _captureDir is null ? _view.MaxFps : 0;
 
-        AddChild(TopDownMain.MakeEnvironment(ReefLook.Shallows));
-        ReefLook.SetExtent(LevelMap.Seeded);
+        // The first depth's water, and the one under it for the dive.
+        _look = ReefLook.Of(new LevelId(1, 1 + LevelPlan.Tutorial, 1));
+        _lookBelow = ReefLook.Of(new LevelId(1, 2 + LevelPlan.Tutorial, 1));
+        _env = TopDownMain.MakeEnvironment(_look);
+        AddChild(_env);
+        ReefLook.SetExtent(WaterSize);
         _sun = new SunLight();
         AddChild(_sun);
-        _sun.Configure(ReefLook.Shallows.Sun, ReefLook.Shallows.SunEnergy);
+        _sun.Configure(_look.Sun, _look.SunEnergy);
         _level = new LevelView();
         AddChild(_level);
         _puffers = new PufferlingView();
         AddChild(_puffers);
+        _fish = new ReefFishView();
+        AddChild(_fish);
         _bell = new BellView();
         AddChild(_bell);
+        _beam = new BeamView();
+        AddChild(_beam);
         for (int i = 0; i < _slotBells.Length; i++)
         {
             _slotBells[i] = new BellView { Puppet = true, Visible = false, Lit = 0f };
             AddChild(_slotBells[i]);
         }
-        // (The title's sea keeps the tilted perspective; only the game's camera is Flat.)
-        CameraRig.Flat = false;
         _camera = new CameraRig();
         AddChild(_camera);
         _snow = new MarineSnow(900, new Vector3(22f, 7f, 17f), 0.11f);
@@ -198,17 +245,15 @@ public partial class TitleMain : Node3D
         _sun.SetStrength(_view.SunLight);
         _camera.SetReducedMotion(_view.ReducedMotion);
 
-        var streams = new RunStreams(SeedCode.Parse(BackdropSeed));
-        _backdrop = Task.Run(() =>
-        {
-            var map = TopDownGenerator.Generate(streams, LevelId.First);
-            return LevelShape.Prepare(PlaneOptions.Default.Adventure ? AbyssReef.Apply(map) : map);
-        });
+        _backdrop = Task.Run(() => LevelShape.Prepare(OpenWater()));
 
         BuildUi();
     }
 
-    void SkipToGame() => GetTree().ChangeSceneToFile(RunLaunch.GameScene);
+    void SkipToGame()
+    {
+        GetTree().ChangeSceneToFile(RunLaunch.GameScene);
+    }
 
     public override void _ExitTree()
     {
@@ -252,72 +297,44 @@ public partial class TitleMain : Node3D
 
     // ───────────────────────── the backdrop ─────────────────────────
 
-    /// <summary>The level is ready: show it, empty it of foes, and set Clementine swimming along a canyon.</summary>
+    /// <summary>Wide open water: a floor far below her plane (seen blurred), nothing else in it.</summary>
+    static LevelMap OpenWater()
+    {
+        // (Its floor kept however deep, as an abyss reef's is: no shaft anywhere in it.)
+        var map = new LevelMap(WaterSize) { Seed = 7, Id = new LevelId(1, 1, 1), Abyss = true };
+        map.Shaft = new Shaft(new System.Numerics.Vector2(-1000f, -1000f), System.Numerics.Vector2.UnitX, 1f, 1f);
+        for (int i = 0; i < map.Heights.Length; i++) map.Heights[i] = -FloorDepth;
+        map.Pois.Add(new Poi { Kind = PoiKind.Start, Position = Middle, Radius = 3f });
+        map.Pois.Add(new Poi { Kind = PoiKind.Exit, Position = new System.Numerics.Vector2(-1000f, -1000f), Radius = 1f });
+        return map;
+    }
+
+    /// <summary>The water is made: show it, Clementine floating in its middle and a few fish wandering about her.</summary>
     void ShowBackdrop(LevelShape shape)
     {
         var map = shape.Map;
         _level.Show(shape);
-        _world = new PlaneWorld(map, _tuning, new PlaneRun(_catalog, _tuning));
+        var options = new PlaneOptions { Corruption = false, Pufferlings = false, Adventure = false, InkMurklings = false, Shots = false };
+        _world = new PlaneWorld(map, _tuning, new PlaneRun(_catalog, _tuning), options);
         _world.Mobs.Clear();
+        _world.AddWanderers(Middle, Fish, FishNear, FishFar, 0x7171UL);
         // The slots' jellies are drawn from worlds of their own (never stepped: only where each floats is set).
         for (int i = 0; i < _slotWorlds.Length; i++) _slotWorlds[i] = new PlaneWorld(map, _tuning, new PlaneRun(_catalog, _tuning), new PlaneOptions { Corruption = false });
         _puffers.Show(_world);
-        // Back and forth along the west end of the channel, all of it still clear to the east for when she leaves.
-        var (from, length) = LongWayEast(map);
-        _channelEnd = from.X + length - 3f;
-        const float Step = 3f, Stay = 0.3f;
-        _route = Enumerable.Range(0, (int)(length * Stay / Step) + 1).Select(i => from + new System.Numerics.Vector2(i * Step, 0f)).ToList();
-        _routeEnd = Math.Max(2, _route.Count - 1);
-        _world.Player.Position = _world.Player.PrevPosition = _route[0];
+        _fish.Show(_world);
+        _world.Player.Position = _world.Player.PrevPosition = Middle;
         _camera.Track(Focus(1f), 0f, snap: true);
     }
 
-    /// <summary>The longest straight run of open water from west to east across a reef, with room to swim either side of it.</summary>
-    static (System.Numerics.Vector2 From, float Length) LongWayEast(LevelMap map)
-    {
-        const float Room = 2.5f;
-        bool Clear(int x, int y) => new[] { -Room, 0f, Room }.All(d => map.IsOpen(new System.Numerics.Vector2(x, y + d)));
-        (System.Numerics.Vector2 From, float Length) best = (map.Start.Position, 0f);
-        for (int y = 0; y <= map.Size; y++)
-        {
-            int start = -1;
-            for (int x = 0; x <= map.Size + 1; x++)
-            {
-                bool clear = x <= map.Size && Clear(x, y);
-                if (clear && start < 0) start = x;
-                if (clear || start < 0) continue;
-                if (x - start > best.Length) best = (new System.Numerics.Vector2(start, y), x - start);
-                start = -1;
-            }
-        }
-        return best;
-    }
-
-    System.Numerics.Vector2 SwimInputNow()
-    {
-        if (_world is null || _route.Count < 3) return default;
-        // Being dressed, she holds still in the water.
-        if (Dressing) return default;
-        var pos = _world.Player.Position;
-        if (_launching && !Reduced) return pos.X < _channelEnd ? new System.Numerics.Vector2(LaunchSwim, 0f) : default;
-        // Advance (or back up) the target once she is near it.
-        var target = _route[Math.Clamp(_routeAt, 0, _route.Count - 1)];
-        if (System.Numerics.Vector2.Distance(target, pos) < 1.2f)
-        {
-            _routeAt += _routeDir;
-            if (_routeAt >= _routeEnd || _routeAt <= 0) _routeDir = -_routeDir;
-            _routeAt = Math.Clamp(_routeAt, 0, _routeEnd);
-            target = _route[_routeAt];
-        }
-        var to = target - pos;
-        return to.LengthSquared() > 0.01f ? System.Numerics.Vector2.Normalize(to) * SwimInput : default;
-    }
+    /// <summary>She floats where she is; only swimming off to a dive does she swim.</summary>
+    System.Numerics.Vector2 SwimInputNow() =>
+        _world is not null && _launching && !Reduced ? new System.Numerics.Vector2(LaunchSwim, 0f) : default;
 
     /// <summary>The camera keeps her in the middle of the screen, inside the ring of items.</summary>
     Vector3 Focus(float alpha)
     {
         var p = System.Numerics.Vector2.Lerp(_world!.Player.PrevPosition, _world.Player.Position, alpha);
-        return new Vector3(p.X, LevelMap.SwimBand, p.Y);
+        return new Vector3(p.X, LevelMap.SwimBand - _drop, p.Y);
     }
 
     /// <summary>
@@ -334,7 +351,9 @@ public partial class TitleMain : Node3D
         {
             if (GetViewport().GuiGetFocusOwner() is Button b && _items.Any(it => it.Button == b)) screen = b.GetGlobalRect().GetCenter();
         }
-        else screen = GetViewport().GetMousePosition();
+        else screen = _hovered is { } over ? over.GetGlobalRect().GetCenter() : GetViewport().GetMousePosition();
+        // (Choosing, her beam stays on the item it dissolves.)
+        if (Dissolving && _chosen is { } chosen) screen = chosen.Button.GetGlobalRect().GetCenter();
         if (screen is not { } at) return _world.Player.Aim;
         var cam = _camera.Camera;
         Vector3 origin = cam.ProjectRayOrigin(at), dir = cam.ProjectRayNormal(at);
@@ -361,19 +380,21 @@ public partial class TitleMain : Node3D
             _backdrop = null;
             if (task.IsFaulted) GD.PushError(task.Exception?.ToString());
             else ShowBackdrop(task.Result);
-            // The sea fades up once there is something to see.
-            _bootLoader?.QueueFree();
-            _bootLoader = null;
-            var t = CreateTween();
-            t.TweenProperty(_fade, "color:a", 0f, Reduced ? 0.3f : 0.8f);
+            // The sea is made: the loader opens out onto the menu.
+            SetPhase(Phase.Revealing);
+            Intro();
         }
+        // (Review, --title-slow=N: the title's own motions N times slower; a long first frame never skips them.)
+        _phaseTime += Mathf.Min(dt, 1f / 30f) / _slow;
         if (_world is not null)
         {
             _accumulator += delta;
             int steps = 0;
             while (_accumulator >= PlaneWorld.Dt && steps < 4)
             {
-                _world.Step(new PlaneInput { Move = SwimInputNow(), Aim = AimNow() });
+                _world.Step(new PlaneInput { Move = SwimInputNow(), Aim = AimNow(), Beam = Lit() is not null || Dissolving });
+                // (Her light is never spent here.)
+                _world.Player.Hp = PlaneCombatTuning.PlayerMaxHp;
                 _accumulator -= PlaneWorld.Dt;
                 steps++;
             }
@@ -383,13 +404,16 @@ public partial class TitleMain : Node3D
             _bell.Visible = !Dressing;
             if (_bell.Visible) _bell.Sync(_world, alpha, dt);
             else RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_glow_strength"), 0f);
+            _beam.Visible = _bell.Visible;
+            _beam.Sync(_world, _bell.LightPosition, dt);
             SyncSlots(dt);
             _puffers.Sync(_world, dt);
+            _fish.Sync(_world, dt);
             // Swimming off, the camera eases ahead of her, the water she is going to in the shot.
             if (_launching && !Reduced) _lead = Mathf.Lerp(_lead, LaunchLead(), 1f - Mathf.Exp(-2.8f * dt));
             _dress = Dressing ? Mathf.Min(1f, _dress + dt / DressIn) : Mathf.Max(0f, _dress - dt / DressOut);
             float framing = Reduced ? (Dressing ? 1f : 0f) : _dress * _dress * (3f - 2f * _dress);
-            _camera.Zoom = Mathf.Lerp(1f, DressZoom, framing);
+            _camera.Zoom = Mathf.Lerp(1f, DressZoom, framing) * DiveZoom();
             _camera.Track(Focus(alpha), dt, look: new Vector3(_lead, 0f, 0f));
             _shoals.Step(new Vector2(_bell.GlobalPosition.X, _bell.GlobalPosition.Z), dt);
             _camera.SetDeepFish(_shoals);
@@ -397,9 +421,9 @@ public partial class TitleMain : Node3D
             _snow.Tick(dt, Focus(alpha) + Vector3.Up * 6f, _camera.Camera.GlobalBasis);
             _level.UpdateCanopy(_world.Player.Position, dt, _camera.Camera.GlobalPosition);
         }
+        StepPhase(dt);
         LayoutRing();
         PadPoint(dt);
-        _shots.From = HerOnPage();
         StepLaunch(dt);
         Capture();
     }
@@ -416,8 +440,8 @@ public partial class TitleMain : Node3D
 
         // A light dimming of the whole sea, deeper toward the edges, so the ring's words read anywhere on it.
         var shade = new Gradient();
-        shade.SetColor(0, new Color(0.01f, 0.05f, 0.07f, 0.12f));
-        shade.SetColor(1, new Color(0.01f, 0.05f, 0.07f, 0.6f));
+        shade.SetColor(0, new Color(0.01f, 0.05f, 0.07f, 0f));
+        shade.SetColor(1, new Color(0.01f, 0.05f, 0.07f, 0.3f));
         var dim = new TextureRect
         {
             Texture = new GradientTexture2D { Gradient = shade, Width = 256, Height = 256, Fill = GradientTexture2D.FillEnum.Radial, FillFrom = new Vector2(0.5f, 0.5f), FillTo = new Vector2(1.05f, 0.5f) },
@@ -445,16 +469,14 @@ public partial class TitleMain : Node3D
         _logo = logo;
         _ui.AddChild(logo);
 
-        // Her shots at the items, over the ring.
-        _shots = new MenuShots();
-        _shots.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        // Her light on the items: its spray, and her push wave, over the ring.
+        _spray = new MenuSpray();
+        _spray.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 
         // Play opens her save slots (pick a jelly to wake, or make a new one).
         AddItem("reef", "Play", () => OpenCard("jellies"));
-        AddItem("seeded", "Seeded run", ToggleSeedBox);
         AddItem("pedia", "Sea-pedia", () => OpenCard("pedia"));
         AddItem("stats", "Statistics", () => OpenCard("stats"));
-        AddItem("save", "Save & load", () => OpenCard("save"));
         AddItem("settings", "Settings", () => OpenCard("settings"));
         AddItem("quit", "Quit", () => GetTree().Quit());
         Refresh();
@@ -466,9 +488,9 @@ public partial class TitleMain : Node3D
         _ui.AddChild(footer);
         _footer = footer;
 
-        _ui.AddChild(_shots);
+        _ui.AddChild(_spray);
 
-        _fade = new ColorRect { Color = new Color(0f, 0f, 0f, 1f), MouseFilter = Control.MouseFilterEnum.Ignore };
+        _fade = new ColorRect { Color = new Color(0f, 0f, 0f, 0f), MouseFilter = Control.MouseFilterEnum.Ignore };
         _fade.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         _ui.AddChild(_fade);
 
@@ -477,7 +499,16 @@ public partial class TitleMain : Node3D
         AddChild(pageLayer);
         _splash = new LoadingSplash { OverTheSea = true };
         pageLayer.AddChild(_splash);
-        _bootLoader = new GonadLoader();
+        // The opening: black but for what the loader opens (StepReveal), the loader turning in its middle.
+        _reveal = new ColorRect { MouseFilter = Control.MouseFilterEnum.Stop };
+        _reveal.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        var reveal = new ShaderMaterial { Shader = GD.Load<Shader>("res://assets/shaders/title_reveal.gdshader") };
+        reveal.SetShaderParameter("gonad", OctoShoots.Game.Fx.GonadCursor.Texture());
+        _reveal.Material = reveal;
+        pageLayer.AddChild(_reveal);
+        _bootLoader = new GonadLoader { Centered = true };
+        _loaderLook = new ShaderMaterial { Shader = WhitenShader() };
+        _bootLoader.Material = _loaderLook;
         pageLayer.AddChild(_bootLoader);
         // The left stick's crosshair: her own, standing round her the way the stick is pushed.
         _padCross = new TextureRect
@@ -488,9 +519,13 @@ public partial class TitleMain : Node3D
         };
         pageLayer.AddChild(_padCross);
 
-        // After the first layout pass, so the motions start from where the containers put things.
-        GetTree().CreateTimer(0.05).Timeout += Intro;
     }
+
+    /// <summary>The loader whitening (white: 0 its own colours → 1 white, and brighter).</summary>
+    static Shader WhitenShader() => new()
+    {
+        Code = "shader_type canvas_item;\nuniform float white = 0.0;\nvoid fragment() {\n\tvec4 c = texture(TEXTURE, UV) * COLOR;\n\tc.rgb = mix(c.rgb, vec3(1.0), white) * (1.0 + 0.6 * white);\n\tCOLOR = c;\n}\n",
+    };
 
     /// <summary>The logo surfaces, then the items bob up one by one; Play takes the focus.</summary>
     void Intro()
@@ -503,25 +538,22 @@ public partial class TitleMain : Node3D
             TitleStyle.Bloom(button.GetParent<Control>(), 0.55f + 0.06f * i++, Reduced);
         }
         _items.First(it => it.Button.GetParent<Control>().Visible).Button.GrabFocus();
-        if (_autoLaunch is "jelly" or "reef" && GameSave.ReadOnly)
+        if (_autoLaunch is not null && GameSave.ReadOnly)
         {
             // Review: a jelly of the sample save (never written) dives.
             if (GameSave.Current.Jellies.Count == 0)
                 GameSave.Current.Jellies.Add(new Jelly { Name = "Mira", Seed = SeedCode.NewRandom().ToString(), Look = new JellyLook { Glow = "#7FE7FF" } });
             GetTree().CreateTimer(1.2).Timeout += () => PlayJelly(0);
         }
-        else if (_autoLaunch is { } launch)
-            GetTree().CreateTimer(1.2).Timeout += () => Launch(launch == "continue" ? LaunchMode.Continue : LaunchMode.New, SeedCode.NewRandom());
         if (_autoPick is { } pick && _items.Any(it => it.Id == pick))
         {
             _byPad = true;
             Item(pick).Button.GrabFocus();
-            GetTree().CreateTimer(2.0).Timeout += () => Item(pick).Button.EmitSignal(BaseButton.SignalName.Pressed);
+            _pickPending = true;
         }
         if (_openCard is { } open)
         {
-            if (open == "seed") ToggleSeedBox();
-            else OpenCard(open);
+            OpenCard(open);
             if (_reviewLook is { } look && _card is JellyCard jellies) Callable.From(() => jellies.SetForm(look)).CallDeferred();
         }
     }
@@ -534,29 +566,31 @@ public partial class TitleMain : Node3D
         var button = new Button { Text = text, Flat = true, FocusMode = Control.FocusModeEnum.All, Alignment = HorizontalAlignment.Center, MouseDefaultCursorShape = Control.CursorShape.PointingHand };
         button.AddThemeFontOverride("font", TitleStyle.BodyBold);
         button.AddThemeFontSizeOverride("font_size", 32);
-        foreach (string state in new[] { "font_color", "font_pressed_color" }) button.AddThemeColorOverride(state, TitleStyle.Pearl);
-        foreach (string state in new[] { "font_hover_color", "font_focus_color", "font_hover_pressed_color" }) button.AddThemeColorOverride(state, TitleStyle.Coral);
+        // In a murkling's colour; lit by her beam, white and outlined in her light (ShowLit).
+        foreach (string state in new[] { "font_color", "font_pressed_color", "font_hover_color", "font_focus_color", "font_hover_pressed_color" }) button.AddThemeColorOverride(state, Murk);
         button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
-        button.AddThemeColorOverride("font_outline_color", new Color(0.02f, 0.08f, 0.1f, 0.6f));
+        button.AddThemeColorOverride("font_outline_color", MurkEdge);
         button.AddThemeConstantOverride("outline_size", 4);
+        button.Material = new ShaderMaterial { Shader = DissolveShader };
         button.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
         row.AddChild(button);
-        var detail = TitleStyle.Text("", 16, TitleStyle.WaterSoft, TitleStyle.Body, HorizontalAlignment.Center);
-        detail.AddThemeColorOverride("font_outline_color", new Color(0.02f, 0.08f, 0.1f, 0.6f));
+        var detail = TitleStyle.Text("", 16, Murk with { A = 0.85f }, TitleStyle.Body, HorizontalAlignment.Center);
+        detail.AddThemeColorOverride("font_outline_color", MurkEdge);
         detail.AddThemeConstantOverride("outline_size", 3);
+        detail.Material = new ShaderMaterial { Shader = DissolveShader };
         row.AddChild(detail);
         _ring.AddChild(row);
-        // Chosen, she shoots her light at it; what it does happens as the shot strikes.
-        button.Pressed += () =>
+        // Chosen, its text dissolves along her beam and her push wave throws the rest off (Choose).
+        button.Pressed += () => Choose(id, pressed);
+        button.MouseEntered += () =>
         {
-            if (_launching || _shots.Busy) return;
-            _shots.Fire(button.GetGlobalRect().GetCenter() / UiScale, () =>
-            {
-                Struck(button);
-                pressed();
-            });
+            _hovered = button;
+            button.GrabFocus();
         };
-        button.MouseEntered += () => button.GrabFocus();
+        button.MouseExited += () =>
+        {
+            if (_hovered == button) _hovered = null;
+        };
         button.FocusEntered += () => Focused(button, true);
         button.FocusExited += () => Focused(button, false);
         _items.Add((button, detail, id));
@@ -568,16 +602,6 @@ public partial class TitleMain : Node3D
         float seconds = Reduced ? 0.01f : 0.12f;
         button.PivotOffset = button.Size * 0.5f;
         button.CreateTween().TweenProperty(button, "scale", Vector2.One * (on ? 1.12f : 1f), seconds).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
-    }
-
-    /// <summary>Her shot strikes an item: it jolts, bigger for a beat, and settles.</summary>
-    void Struck(Button button)
-    {
-        if (Reduced) return;
-        button.PivotOffset = button.Size * 0.5f;
-        var t = button.CreateTween();
-        t.TweenProperty(button, "scale", Vector2.One * 1.3f, 0.06f).SetEase(Tween.EaseType.Out);
-        t.TweenProperty(button, "scale", Vector2.One * (button.HasFocus() ? 1.12f : 1f), 0.25f).SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Back);
     }
 
     /// <summary>
@@ -594,8 +618,9 @@ public partial class TitleMain : Node3D
             float a = -Mathf.Pi * 0.5f + i * Mathf.Tau / visible.Count;
             var at = centre + new Vector2(Mathf.Cos(a) * RingRadii.X, Mathf.Sin(a) * RingRadii.Y);
             row.Size = row.GetCombinedMinimumSize();
-            row.Position = at - row.Size * 0.5f;
+            row.Position = at - row.Size * 0.5f + Pushed(row, at);
         }
+        PushPart(_logo, new Vector2(56f, 34f));
         if (_inline?.GetParent() is Control holder && holder.HasMeta("under") && holder.GetMeta("under").As<Button>() is { } under)
         {
             var row = under.GetParent<Control>();
@@ -659,54 +684,11 @@ public partial class TitleMain : Node3D
         var save = GameSave.Current;
         var p = save.Profile;
         Item("reef").Detail.Text = save.Jellies.Count > 0 ? $"{save.Jellies.Count} of {JellyNames.MaxJellies} jellies" : "make your jelly";
-        Item("seeded").Detail.Text = p.RecentSeeds.Count > 0 ? $"last: {p.RecentSeeds[0]}" : "type a seed to share a reef";
         Item("pedia").Detail.Text = $"{SeaPediaCard.PearlsFound(p)} / {PlaneRun.PortedPearls.Length + PlaneRun.CrabPearls.Length} pearls · {SeaPediaCard.CreaturesMet(p)} / {SeaPediaCard.Creatures.Count} creatures";
         Item("stats").Detail.Text = p.Stats.Runs > 0 ? $"best: {StatsCard.Reach(p.Stats)} · {p.Stats.Runs} runs" : "no runs yet";
-        Item("save").Detail.Text = save.Run is { } r ? $"saved run: {r.Where}" : "no saved run";
     }
 
     // ───────────────────────── runs ─────────────────────────
-
-    /// <summary>Asks before a new run replaces the saved one, right under the item.</summary>
-    void ConfirmReplace(Button item, SuspendedRun run, Action start)
-    {
-        CloseInline();
-        var card = new PanelContainer();
-        card.AddThemeStyleboxOverride("panel", TitleStyle.Box(TitleStyle.Pearl, TitleStyle.Coral, 3, 16, 16));
-        var box = new VBoxContainer();
-        box.AddThemeConstantOverride("separation", 10);
-        card.AddChild(box);
-        box.AddChild(TitleStyle.Text($"Start a new run? Your saved run ({run.Where}) will be lost.", 17, TitleStyle.Ink, TitleStyle.BodyBold));
-        var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 10);
-        box.AddChild(row);
-        var yes = TitleStyle.Pill("Start new", size: 16);
-        var no = TitleStyle.Pill("Keep it", primary: false, size: 16);
-        yes.Pressed += () =>
-        {
-            AbandonSavedRun();
-            start();
-        };
-        no.Pressed += () =>
-        {
-            CloseInline();
-            item.GrabFocus();
-        };
-        row.AddChild(yes);
-        row.AddChild(no);
-        ShowInline(card, item);
-        no.GrabFocus();
-    }
-
-    /// <summary>The saved run ends here: it counts as abandoned.</summary>
-    static void AbandonSavedRun()
-    {
-        var save = GameSave.Current;
-        if (save.Run is not { } run) return;
-        new PlaneProfileRecorder(save.Profile).RunAbandoned(run.Elapsed);
-        save.Run = null;
-        GameSave.Write();
-    }
 
     /// <summary>The jelly wakes in Lantern Bay (the open reef, docs/archive/RPG-PROPOSAL.md).</summary>
     void PlayJelly(int index)
@@ -723,40 +705,23 @@ public partial class TitleMain : Node3D
         }
         OctoShoots.Game.Fx.HerColor.SetLook(save.Jellies[index].Look);
         SeedCode.TryParse(save.Jellies[index].Seed, out var seed);
-        Launch(LaunchMode.Jelly, seed);
+        Launch(seed);
     }
 
     /// <summary>
     /// The menu fades and Clementine swims off to the right, the camera after her and the loading page over the shot, the
     /// first level being shaped meanwhile.
     /// </summary>
-    void Launch(LaunchMode mode, SeedCode seed)
+    void Launch(SeedCode seed)
     {
-        if (_launching) return;
+        if (_launching || GameSave.Current.Current is not { } jelly) return;
         _launching = true;
-        RunLaunch.Pending = mode;
+        RunLaunch.Pending = true;
         RunLaunch.Seed = seed;
-        // The run as the game will take it.
-        SuspendedRun? saved = null;
-        if (mode == LaunchMode.Continue && GameSave.Current.Run is { } run && SeedCode.TryParse(run.Seed, out var kept))
-        {
-            saved = run;
-            seed = kept;
-        }
-        if (mode == LaunchMode.Jelly && GameSave.Current.Current is { } jelly)
-        {
-            // Her dive, shaped behind the page (docs/DIVE.md §1).
-            var (diveSeed, id, luck) = TopDownMain.DiveStart(jelly);
-            RunLaunch.Shaping = (diveSeed, id, luck, TopDownMain.Shape(diveSeed, id, luck));
-            TopDownMain.FillDiveSplash(_splash, jelly, id);
-        }
-        else
-        {
-            var id = saved is not null ? RunLaunch.Start(saved) : RunLaunch.Start(GameSave.Current.Profile, _view);
-            float luck = saved?.Luck ?? 0f;
-            RunLaunch.Shaping = (seed, id, luck, TopDownMain.Shape(seed, id, luck));
-            TopDownMain.FillFirstSplash(_splash, seed, saved?.CustomSeed ?? mode == LaunchMode.Seeded, id, saved, _catalog, _tuning);
-        }
+        // Her dive, shaped behind the page (docs/DIVE.md §1).
+        var (diveSeed, id, luck) = TopDownMain.DiveStart(jelly);
+        RunLaunch.Shaping = (diveSeed, id, luck, TopDownMain.Shape(diveSeed, id, luck));
+        TopDownMain.FillDiveSplash(_splash, jelly, id);
 
         Input.MouseMode = Input.MouseModeEnum.Hidden;
         CloseInline();
@@ -840,25 +805,6 @@ public partial class TitleMain : Node3D
         GetTree().ChangeSceneToFile(RunLaunch.GameScene);
     }
 
-    // ───────────────────────── the seed box ─────────────────────────
-
-    void ToggleSeedBox()
-    {
-        if (_inline is SeedBox)
-        {
-            CloseInline();
-            Item("seeded").Button.GrabFocus();
-            return;
-        }
-        var box = new SeedBox(GameSave.Current.Profile.RecentSeeds, seed =>
-        {
-            if (GameSave.Current.Run is { } run) ConfirmReplace(Item("seeded").Button, run, () => Launch(LaunchMode.Seeded, seed));
-            else Launch(LaunchMode.Seeded, seed);
-        });
-        ShowInline(box, Item("seeded").Button);
-        box.FocusField();
-    }
-
     /// <summary>Shows a small card right under a menu item (the seed box, a confirmation).</summary>
     void ShowInline(Control content, Button under)
     {
@@ -891,7 +837,6 @@ public partial class TitleMain : Node3D
             "stats" => new StatsCard(GameSave.Current.Profile, id => _catalog is not null && _catalog.TryGet(id, out var it) ? it.Name : id, close),
             "pedia" or "creatures" => new SeaPediaCard(GameSave.Current.Profile, _catalog, close),
             "jellies" => new JellyCard(PlayJelly, close),
-            "save" => new SaveCard(_catalog, () => Launch(LaunchMode.Continue, default), () => AbandonSavedRun(), Refresh, close),
             _ => new SettingsCard(_view, ApplyView, close),
         };
         var size = PageSize;
@@ -915,7 +860,6 @@ public partial class TitleMain : Node3D
             card.CreateTween().TweenProperty(card, "position:x", size.X - cardSize.X, Reduced ? 0.01f : OctoShoots.Game.Ui.DrawerStyle.SlideSeconds)
                 .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
         }
-        _ring.CreateTween().TweenProperty(_ring, "modulate:a", which == "jellies" ? 0f : 0.25f, 0.2f);
         if (which == "creatures" && card is SeaPediaCard pedia) pedia.CallDeferred(SeaPediaCard.MethodName.ShowCreatures);
         // Focus the card's first control, so the keyboard works there.
         CallDeferred(MethodName.FocusCard);
@@ -963,9 +907,10 @@ public partial class TitleMain : Node3D
                 .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
             slide.TweenCallback(Callable.From(card.QueueFree));
         }
-        _ring.CreateTween().TweenProperty(_ring, "modulate:a", 1f, 0.2f);
         Refresh();
-        _items.FirstOrDefault(it => it.Button.GetParent<Control>().Visible).Button?.GrabFocus();
+        // The menu comes back: from below, she climbs first.
+        if (_launching) return;
+        SetPhase(_drop > 0f || _phase == Phase.Below && _chosen?.Id == "reef" ? Phase.Climbing : Phase.Returning);
     }
 
     void ApplyView(ViewOptions view)

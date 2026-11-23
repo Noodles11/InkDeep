@@ -7,9 +7,10 @@ namespace OctoShoots.Game.Fx;
 /// <summary>
 /// The game's sounds: synth-style placeholders generated at startup, and recorded ones (audio/sfx), played flat or
 /// positionally. All of them go through the Sfx bus, heard as through water: a low-pass filter takes the treble off,
-/// more the deeper she is (SetDepth). Her light thrown is a pop (PlayThrow: one of the recorded pops at random), and
-/// her light striking anything it can harm a squishy pop (PlayStrike). Recorded too, and heard whatever OnlyToggle says:
-/// a sealed wall unlocking (PlaySecret), a shell gathered (PlayGather: its chime with one of two gathers at random), and
+/// more the deeper she is (SetDepth). Her light thrown is a pop (PlayThrow: one of the recorded pops at random). Recorded
+/// too, and heard whatever OnlyToggle says: her light striking anything it can harm (PlayStrike: a squish), a murkling
+/// emerging (PlayEmerge: a bloop), her dash (PlayDash: a swish), an ink bomb's detonator set off (PlayFuse) and the bomb going off (PlaySplat), a sealed
+/// wall unlocking or a cracked seal broken (PlaySecret), a shell gathered (PlayGather: its chime with one of two gathers at random), and
 /// the roar of her beam's fire while it burns a creature (Burning: a loop, eased in and out).
 /// </summary>
 public partial class Sfx : Node
@@ -18,10 +19,16 @@ public partial class Sfx : Node
     const string Bus = "Sfx";
     /// <summary>The water's low-pass: its cutoff in the Shallows and at the deepest (Hz).</summary>
     const float ShallowCutoff = 7000f, DeepCutoff = 1500f;
-    /// <summary>The recorded pops (audio/sfx/pop1–pop10.wav) and the strike (squishpop.mp3).</summary>
+    /// <summary>The recorded pops (audio/sfx/pop1–pop10.wav) and the strike (squish.mp3).</summary>
     const int Pops = 10;
-    const string StrikePath = "res://audio/sfx/squishpop.mp3";
+    const string StrikePath = "res://audio/sfx/squish.mp3";
+    /// <summary>A murkling emerging; an ink bomb's detonator set off, and the bomb going off.</summary>
+    const string BloopPath = "res://audio/sfx/bloop.wav", FusePath = "res://audio/sfx/fuse.ogg", SplatPath = "res://audio/sfx/splat.wav";
+    /// <summary>Her dash (a swish).</summary>
+    const string DashPath = "res://audio/sfx/dash.wav";
 
+    /// <summary>A bubble vault popping.</summary>
+    const string BubblePath = "res://audio/sfx/big_bubble.mp3";
     const string SecretPath = "res://audio/sfx/secret.wav", GatherPath = "res://audio/sfx/gather.wav", FirePath = "res://audio/sfx/fire.ogg";
     static readonly string[] GatherVariants = { "res://audio/sfx/gather2.ogg", "res://audio/sfx/gather3.ogg" };
     /// <summary>Gathers no closer together than this (s): a handful of shells at once is one gather, not a pile of them.</summary>
@@ -29,7 +36,7 @@ public partial class Sfx : Node
     /// <summary>The beam's fire: its loudness at full (dB), and how fast it swells in and dies away (per second, of its 0..1).</summary>
     const float FireDb = -6f, FireIn = 6f, FireOut = 3f;
 
-    AudioStream? _secret, _gather, _fire;
+    AudioStream? _secret, _gather, _fire, _bubble, _bloop, _fuse, _splat, _dash;
     readonly List<AudioStream> _gathers = new();
     AudioStreamPlayer? _firePlayer;
     float _fireOn;
@@ -67,6 +74,11 @@ public partial class Sfx : Node
         }
         _strike = ResourceLoader.Exists(StrikePath) ? GD.Load<AudioStream>(StrikePath) : null;
         _secret = ResourceLoader.Exists(SecretPath) ? GD.Load<AudioStream>(SecretPath) : null;
+        _bubble = ResourceLoader.Exists(BubblePath) ? GD.Load<AudioStream>(BubblePath) : null;
+        _bloop = ResourceLoader.Exists(BloopPath) ? GD.Load<AudioStream>(BloopPath) : null;
+        _fuse = ResourceLoader.Exists(FusePath) ? GD.Load<AudioStream>(FusePath) : null;
+        _splat = ResourceLoader.Exists(SplatPath) ? GD.Load<AudioStream>(SplatPath) : null;
+        _dash = ResourceLoader.Exists(DashPath) ? GD.Load<AudioStream>(DashPath) : null;
         _gather = ResourceLoader.Exists(GatherPath) ? GD.Load<AudioStream>(GatherPath) : null;
         foreach (string path in GatherVariants)
             if (ResourceLoader.Exists(path)) _gathers.Add(GD.Load<AudioStream>(path));
@@ -193,11 +205,40 @@ public partial class Sfx : Node
         PlayRecorded(_pops[pick], volumeDb, 0.92f + (float)_random.NextDouble() * 0.18f);
     }
 
-    /// <summary>Her light striking something it can harm: a squishy pop, a touch apart in pitch each time.</summary>
+    /// <summary>Her light striking something it can harm: a squish, a touch apart in pitch each time.</summary>
     public void PlayStrike(float volumeDb = 0f)
     {
-        if (OnlyToggle) return;
         if (_strike is not null) PlayRecorded(_strike, volumeDb, 0.9f + (float)_random.NextDouble() * 0.2f);
+    }
+
+    /// <summary>A murkling emerging: a bloop, a touch apart in pitch each time.</summary>
+    public void PlayEmerge(float volumeDb = -4f)
+    {
+        if (_bloop is not null) PlayRecorded(_bloop, volumeDb, 0.92f + (float)_random.NextDouble() * 0.16f);
+    }
+
+    /// <summary>An ink bomb's detonator set off: its fuse.</summary>
+    public void PlayFuse(float volumeDb = -4f)
+    {
+        if (_fuse is not null) PlayRecorded(_fuse, volumeDb, 0.96f + (float)_random.NextDouble() * 0.08f);
+    }
+
+    /// <summary>Her dash: a swish, a touch apart in pitch each time.</summary>
+    public void PlayDash(float volumeDb = -4f)
+    {
+        if (_dash is not null) PlayRecorded(_dash, volumeDb, 0.94f + (float)_random.NextDouble() * 0.12f);
+    }
+
+    /// <summary>An ink bomb going off: a wet splat.</summary>
+    public void PlaySplat(float volumeDb = -2f)
+    {
+        if (_splat is not null) PlayRecorded(_splat, volumeDb, 0.92f + (float)_random.NextDouble() * 0.12f);
+    }
+
+    /// <summary>A bubble vault pops: a big bubble, a touch apart in pitch each time.</summary>
+    public void PlayBubble(float volumeDb = -2f)
+    {
+        if (_bubble is not null) PlayRecorded(_bubble, volumeDb, 0.92f + (float)_random.NextDouble() * 0.16f);
     }
 
     /// <summary>A sealed wall unlocks (its seal opened).</summary>

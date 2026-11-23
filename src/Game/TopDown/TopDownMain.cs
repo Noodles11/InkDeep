@@ -726,10 +726,10 @@ public partial class TopDownMain : Node3D
         if (haven) _id = _id with { Haven = true };
     }
 
-    /// <summary>What the title screen asked for: a new run, a seeded run, or the saved one.</summary>
+    /// <summary>What the title screen asked for: the chosen jelly's dive.</summary>
     void TakeLaunch()
     {
-        if (RunLaunch.Pending is not { } mode)
+        if (!RunLaunch.Pending)
         {
             _customSeed = OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--seed="));
             _recorder = new PlaneProfileRecorder(new Profile());
@@ -739,10 +739,10 @@ public partial class TopDownMain : Node3D
             if (_jelly is not null) foreach (string id in _dbgFreed) _jelly.Freed.Add(id);
             return;
         }
-        RunLaunch.Pending = null;
+        RunLaunch.Pending = false;
         _persist = true;
         _recorder = new PlaneProfileRecorder(GameSave.Current.Profile);
-        if (mode == LaunchMode.Jelly && RunLaunch.Jelly >= 0 && RunLaunch.Jelly < GameSave.Current.Jellies.Count)
+        if (RunLaunch.Jelly >= 0 && RunLaunch.Jelly < GameSave.Current.Jellies.Count)
         {
             // A jelly dives (docs/DIVE.md §1): her dive where it stands, or a new one.
             _jelly = GameSave.Current.Jellies[RunLaunch.Jelly];
@@ -752,20 +752,17 @@ public partial class TopDownMain : Node3D
             _resume = _jelly.Dive;
             return;
         }
-        if (mode == LaunchMode.Continue && GameSave.Current.Run is { } saved && SeedCode.TryParse(saved.Seed, out var seed))
-        {
-            _seed = seed;
-            _customSeed = saved.CustomSeed;
-            _id = RunLaunch.Start(saved);
-            _resume = saved;
-            return;
-        }
         _seed = RunLaunch.Seed;
-        _customSeed = mode == LaunchMode.Seeded;
+        _customSeed = false;
         _id = RunStart();
     }
 
-    LevelId RunStart() => RunLaunch.Start(_recorder.Profile, _view ?? SettingsStore.LoadView());
+    /// <summary>Where a new run starts: in the tutorial until she has passed it once, then in Depth 1 (unless the settings replay it).</summary>
+    LevelId RunStart()
+    {
+        var view = _view ?? SettingsStore.LoadView();
+        return _recorder.Profile.TutorialPassed && !view.ReplayTutorial ? LevelId.FirstRun : LevelId.First;
+    }
 
     /// <summary>Verification: the options with the boss `--boss=` names: queen, drippus, a concept, a neighbour (null: the game's own).</summary>
     PlaneOptions? DebugBoss()
@@ -2696,7 +2693,7 @@ public partial class TopDownMain : Node3D
             _elapsed += PlaneWorld.Dt;
             _accumulator -= PlaneWorld.Dt;
             steps++;
-            bool struck = false;
+            bool struck = false, emerged = false;
             foreach (var e in _world.Events)
             {
                 NoteRequest(e);
@@ -2862,6 +2859,13 @@ public partial class TopDownMain : Node3D
                     _snow.Stir(_bell.GlobalPosition, 3.5f, 3f);
                     _combat.DashBurst(e.Position);
                     _haptics.Pulse(0.35f, 0.3f, 0.14f);
+                    _sfx.PlayDash();
+                }
+                // A murkling emerging: a bloop (once a step), fainter the farther off it is.
+                else if (e.Type == PlaneEventType.MurklingEmerged && !emerged && Heard(e.Position) is float emergeDb)
+                {
+                    emerged = true;
+                    _sfx.PlayEmerge(-4f + emergeDb);
                 }
                 else if (e.Type == PlaneEventType.PlayerHit)
                 {
@@ -2990,7 +2994,7 @@ public partial class TopDownMain : Node3D
                 else if (e.Type == PlaneEventType.VaultBurst)
                 {
                     _vaults.Burst(new Vector2(e.Position.X, e.Position.Y), e.Size);
-                    _sfx.PlayAt("pop", new Vector3(e.Position.X, LevelMap.SwimBand, e.Position.Y), -2f, 0.1f);
+                    _sfx.PlayBubble();
                     _haptics.Pulse(0.3f, 0.4f, 0.15f);
                 }
                 else if (e.Type == PlaneEventType.VaseBroken)
@@ -3908,7 +3912,8 @@ public partial class TopDownMain : Node3D
                 _camera.Shake(0.3f);
                 break;
             case PlaneEventType.BombSplash:
-                _sfx.PlayPitched("merge", 0.45f, -8f);
+                // A wet splat, fainter the farther off it is.
+                if (Heard(e.Position) is float splatDb) _sfx.PlaySplat(-2f + splatDb);
                 if (System.Numerics.Vector2.Distance(e.Position, _world.Player.Position) < 8f) _camera.Shake(0.15f);
                 break;
             case PlaneEventType.GeyserSpray:
@@ -4030,6 +4035,14 @@ public partial class TopDownMain : Node3D
     /// <summary>Corruption a light spring has washed off her since she entered it (shown as one number when she is done).</summary>
     float _springHealed;
 
+
+    /// <summary>A sound at a place is heard full near her, fainter to −14 dB at HeardFar, not past it (null).</summary>
+    float? Heard(System.Numerics.Vector2 at)
+    {
+        float far = System.Numerics.Vector2.Distance(at, _world.Player.Position);
+        return far < HeardFar ? -14f * Mathf.Clamp((far - HeardNear) / (HeardFar - HeardNear), 0f, 1f) : null;
+    }
+    const float HeardNear = 8f, HeardFar = 26f;
 
     /// <summary>Her light's energy and growth back from a save (PlaneGrowth.cs).</summary>
     void LoadGrowth(float energy, Dictionary<string, float> growth)

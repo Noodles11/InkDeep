@@ -396,21 +396,25 @@ public partial class HudView : Control
     /// The dive clock (docs/proposals/CROSSOVER.md §3): a ring round her bell, filling with her warm light from the top
     /// over the dive clock (DiveClock.Seconds, 30 s); once full it breathes, the way down open.
     /// </summary>
+    /// <summary>Where the dive clock's ring stands: round her bell, or (the plain bars) right of the bars, clear of the pearl.</summary>
+    Vector2 ClockAt => _plain ? HealthAt + new Vector2(BarWidth * _maxShare + 62f, 15f) : BellAt;
+    float ClockR => _plain ? 13f : BellRadius + 9f;
+
     void DrawDiveClock()
     {
-        float r = BellRadius + 9f;
-        DrawArc(BellAt, r, 0f, Mathf.Tau, 72, new Color(0.02f, 0.03f, 0.05f, 0.45f), 5f, true);
-        if (_diveClock > 0f) DrawArc(BellAt, r, -Mathf.Pi * 0.5f, -Mathf.Pi * 0.5f + Mathf.Tau * _diveClock, 72, new Color(1f, 0.86f, 0.58f, 0.85f), 3f, true);
+        float r = ClockR;
+        DrawArc(ClockAt, r, 0f, Mathf.Tau, 72, new Color(0.02f, 0.03f, 0.05f, 0.45f), 5f, true);
+        if (_diveClock > 0f) DrawArc(ClockAt, r, -Mathf.Pi * 0.5f, -Mathf.Pi * 0.5f + Mathf.Tau * _diveClock, 72, new Color(1f, 0.86f, 0.58f, 0.85f), 3f, true);
         if (_diveClock < 1f) return;
         if (_tide)
         {
             // The current runs: the ring goes dark, ink drawn round it.
             float swirl = (float)(Time.GetTicksMsec() * 0.002 % Mathf.Tau);
-            DrawArc(BellAt, r, swirl, swirl + Mathf.Pi * 1.4f, 48, new Color(0.03f, 0.01f, 0.05f, 0.85f), 5f, true);
+            DrawArc(ClockAt, r, swirl, swirl + Mathf.Pi * 1.4f, 48, new Color(0.03f, 0.01f, 0.05f, 0.85f), 5f, true);
             return;
         }
         float breath = 0.5f + 0.5f * Mathf.Sin(Time.GetTicksMsec() * 0.003f);
-        DrawArc(BellAt, r, 0f, Mathf.Tau, 72, new Color(1f, 0.95f, 0.82f, 0.18f + 0.22f * breath), 7f, true);
+        DrawArc(ClockAt, r, 0f, Mathf.Tau, 72, new Color(1f, 0.95f, 0.82f, 0.18f + 0.22f * breath), 7f, true);
     }
 
     /// <summary>What the shells still in flight are worth (not counted yet).</summary>
@@ -435,7 +439,7 @@ public partial class HudView : Control
     {
         if (Danger <= 0) return;
         const int fs = 26;
-        var start = BellAt + new Vector2(BellRadius + 16f, 40f);
+        var start = _plain ? ShellIcon + new Vector2(70f, 9f) : BellAt + new Vector2(BellRadius + 16f, 40f);
         float shake = 0.7f + 0.9f * Danger;
         var col = new Color(1f, 0.38f, 0.26f);
         for (int i = 0; i < Danger; i++)
