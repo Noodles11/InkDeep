@@ -333,10 +333,11 @@ the tests of the dive still test the dive.
   what is drawn before that pass (the reef, the rock, the floor's things); Clementine, her shots and the particles,
   drawn after it, keep their own look. Outside her light the world is **flat washes**: the rock in ash greys, the water
   and the floor under it near-black blue ink, the light stepped into four tones with a **halftone** (a 45° dot screen)
-  at each step's soft edge, so a shadow is a flat fill, never a gradient. **Dithered (0.74.0):** the unlit world is
-  drawn in six tones of brightness, the steps between them an ordered 8 × 8 Bayer dither fixed to the world (0.1 m a
-  cell, so it never crawls as the camera moves), its hue kept so the biome's tint never speckles; the washes' soft
-  edges dither too, in place of the dots (`topdown_post`'s `dither`, `bayer8`, `dither_world`; `CameraRig.SetDither`;
+  at each step's soft edge, so a shadow is a flat fill, never a gradient. **Dithered (0.74.0; 0.74.1 the rock only, softer):** out
+  of her light the rock and what stands on it (never the water and the floor under it, which keep their washes and
+  dots) are drawn in nine tones of brightness, the steps between them an ordered 8 × 8 Bayer dither fixed to the world
+  (0.1 m a cell, so it never crawls as the camera moves), blended in at 75%, its hue kept so the biome's tint never
+  speckles; the rock's washes' soft edges dither too, in place of the dots (`topdown_post`'s `dither`, `bayer8`, `dither_world`; `CameraRig.SetDither`;
   `--no-dither` to compare). Her light, her shots and the HUD are never dithered. **Brush lines** in ink: the caves' outline
   where the rock rises through her plane (its weight wavering along it, fixed to the rock so it never crawls, with
   dry-brush gaps), a lighter floor contour a few metres down, and a line round whatever lies at her plane. In **her
