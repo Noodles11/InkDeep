@@ -28,7 +28,8 @@ public static class LightSprings
         var rng = new Rng(map.Seed ^ 0x5B21C5UL ^ ((ulong)map.Level << 18) ^ ((ulong)map.Depth << 26) ^ ((ulong)map.Cycle << 34) ^ ((ulong)map.Attempt << 50));
         // At most one: a template's say, else the general chance, likelier with her luck. An adventure's abyss reef always has it.
         float bonus = OctoShoots.Core.Items.LuckTuning.SpringBonus(map.Luck);
-        int want = map.Abyss ? 1 : Math.Min(map.Template?.Rules.Springs ?? (rng.NextFloat() < MathF.Min(SpringTuning.Chance + bonus, 0.95f) ? 1 : 0), 1);
+        // (A crossover level always has one, short of a boss's: it is where she grows with her light's energy, PlaneGrowth.cs.)
+        int want = map.Abyss || map.Templated && !map.HasBoss ? 1 : Math.Min(map.Template?.Rules.Springs ?? (rng.NextFloat() < MathF.Min(SpringTuning.Chance + bonus, 0.95f) ? 1 : 0), 1);
         if (want <= 0) return found;
         var candidates = map.Plazas.Select(p => p.Center).ToList();
         foreach (var c in map.Corridors.Where(c => c.Kind is CorridorKind.Main or CorridorKind.Side))

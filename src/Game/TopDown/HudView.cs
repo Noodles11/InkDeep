@@ -293,6 +293,14 @@ public partial class HudView : Control
         }
         _run = world.Run;
         _shells = world.Run.Shells;
+        // (Her light's energy, the specks she has gathered: PlaneSpecks.cs.)
+        if (world.Options.Specks)
+        {
+            if (world.Run.Energy > _energy + 1e-3f) _energyPulse = 1f;
+            _energy = world.Run.Energy;
+        }
+        _energyShown = world.Options.Specks;
+        _energyPulse = Mathf.Max(0f, _energyPulse - dt * 2.5f);
         _time += dt;
         _adventure = world.Options.Adventure;
         Danger = world.Danger;
@@ -482,6 +490,20 @@ public partial class HudView : Control
     }
 
     /// <summary>The middle of the counter's shell icon (in the adventure, beside her bell).</summary>
+    float _energy, _energyPulse;
+    bool _energyShown;
+
+    /// <summary>Her light's energy (the specks gathered, PlaneSpecks.cs): a mote of light and its count, under her bell.</summary>
+    void DrawEnergy(Font font)
+    {
+        var c = ShellIcon + new Vector2(0f, 40f);
+        float k = _energyPulse * _energyPulse;
+        float tw = 0.75f + 0.25f * Mathf.Sin(_time * 3.1f);
+        DrawCircle(c, 13f * (1f + 0.4f * k), new Color(1f, 0.85f, 0.5f, (0.18f + 0.3f * k) * tw));
+        DrawCircle(c, 5.5f * (1f + 0.3f * k), new Color(1f, 0.96f, 0.85f, 0.95f));
+        Outlined(font, c + new Vector2(26f, 8f), $"{_energy:0.#}", (int)(22f * (1f + 0.25f * k)), new Color(1f, 0.93f, 0.78f));
+    }
+
     Vector2 ShellIcon => _adventure ? BellAt + new Vector2(BellRadius + 26f, -4f) : new(Margin + 12f, Size.Y - Margin - 22f);
 
     /// <summary>Where a flight is at progress e (0 → 1): a quadratic arc from its start to the counter, bowed to one side.</summary>
@@ -750,6 +772,7 @@ public partial class HudView : Control
             DrawGauge(font);
             DrawDanger(font);
         }
+        if (_energyShown && !Diving) DrawEnergy(font);
         if (_diveClock >= 0f && !Diving) DrawDiveClock();
         // Shells, bottom left (her pearls circle her bell instead: PearlOrbitView): brightens and swells with each one
         // collected.

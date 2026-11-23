@@ -28,6 +28,23 @@ public sealed class PlaneRun
         "fire_coral", "glowing_moss", "frost_kelp", "ghost_jelly", "pearl_diver", "glow_burst", "electric_eel_tail", "fire_urchin_spine", "lamprey_mouth", "bubble_gland", "anemone_pump", "sunbeam", "nautilus_spiral", "rear_fin",
     };
 
+    /// <summary>
+    /// The pearls in play (docs/GAME.md: the shot pearls): only those that change her shots, how many fly at once, their
+    /// size, their spread, their damage, their speed, their range, their shove, how they fire (a shotgun's, a rifle's, a
+    /// machine gun's), how many they pass through or bounce off. Every other pearl stays in the code, dormant: never
+    /// offered, found or dealt (the debug menu can still switch one on). Her light's own characteristics grow from the
+    /// light specks she gathers instead (PlaneGrowth.cs).
+    /// </summary>
+    public static readonly string[] ShotPearls =
+    {
+        "triple_tentacle", "hammerhead", "double_helix", "plankton_swarm", "shark_tooth", "pufferfish_pout", "cuttlebone",
+        "cannonball", "whale_lung", "captains_hook", "giant_squid_eye", "sardine_run", "pearl_diver", "swordfish_bill",
+        "mirror_scale",
+    };
+
+    /// <summary>The pearls offered anywhere (a place's pool, a boss's, a shrine's, the crab's): the shot pearls.</summary>
+    public static readonly string[] InPlay = PortedPearls.Where(id => ShotPearls.Contains(id)).ToArray();
+
     /// <summary>The pearls found only in a Crab Deal (never offered anywhere else).</summary>
     public static readonly string[] CrabPearls = { "severed_nerve", "molten_carapace", "last_light", "claw_tithe", "black_sun" };
 
@@ -52,7 +69,7 @@ public sealed class PlaneRun
     public List<string> Offer(string place, IEnumerable<string> lying)
     {
         var held = lying.ToHashSet();
-        var all = PortedPearls.Where(id => CanOffer(id) && !held.Contains(id)).ToList();
+        var all = InPlay.Where(id => CanOffer(id) && !held.Contains(id)).ToList();
         if (Catalog is null) return all;
         bool In(string id, System.Func<ItemDef, bool> rule) => Catalog.TryGet(id, out var item) && rule(item);
         var pool = place switch
@@ -87,6 +104,42 @@ public sealed class PlaneRun
     public LevelId Level { get; set; } = LevelId.First;
 
     public float MaxHp => (Loadout.Stats.MaxHp + ExtraHp) * System.MathF.Pow(1f - CrabTuning.Cut, ArmCuts);
+
+    /// <summary>
+    /// Her light's energy (PlaneSpecks.cs): the light specks she has gathered and not yet spent, a float (a speck may be
+    /// worth more or less than one).
+    /// </summary>
+    public float Energy { get; set; }
+
+    /// <summary>What she has grown with it, by characteristic (PlaneGrowth.cs): the energy laid on each, for good.</summary>
+    public Dictionary<GrowthStat, float> Growth { get; } = new();
+
+    /// <summary>The energy laid on one characteristic (0 none).</summary>
+    public float Grown(GrowthStat stat) => Growth.GetValueOrDefault(stat);
+
+    /// <summary>
+    /// Lays energy on her characteristics for good (the upgrade drawer's Mutate): each amount added to what is laid on it,
+    /// their sum taken from her energy. False (nothing changes): more than she has, or a negative amount.
+    /// </summary>
+    public bool Grow(IReadOnlyDictionary<GrowthStat, float> amounts)
+    {
+        float total = 0f;
+        foreach (var (_, a) in amounts)
+        {
+            if (a < 0f) return false;
+            total += a;
+        }
+        if (total <= 0f || total > Energy + 1e-4f) return false;
+        foreach (var (stat, a) in amounts)
+            if (a > 0f) Growth[stat] = Grown(stat) + a;
+        Energy = System.MathF.Max(0f, Energy - total);
+        float before = MaxHp;
+        Rebuild();
+        // (More health grown: the new room comes filled.)
+        if (MaxHp > before) Hp += MaxHp - before;
+        Hp = System.MathF.Min(Hp, MaxHp);
+        return true;
+    }
 
     /// <summary>Health beyond her loadout's for the run (the Spare Bell's pip).</summary>
     public float ExtraHp { get; set; }
@@ -250,7 +303,9 @@ public sealed class PlaneRun
     public void Refresh() => Rebuild();
 
     void Rebuild() => Loadout = Loadout.Build(Catalog, Items, Tuning, OctoShoots.Core.Plane.Skills.Mods(Skills, Tuning)
-        .Append(new StatMod { Stat = Stat.MaxHp, Op = StatOp.Add, Value = ExperienceTuning.HpPerPoint * Upgrades }), pearlStats: true);
+        .Append(new StatMod { Stat = Stat.MaxHp, Op = StatOp.Add, Value = ExperienceTuning.HpPerPoint * Upgrades })
+        // (What she has grown with her light's energy: her health, her swim and her dash, PlaneGrowth.cs.)
+        .Concat(GrowthTuning.Mods(this)), pearlStats: true);
 
     /// <summary>
     /// The achievements earned (the profile's, shared: one earned mid-run unlocks its pearl from then on). Locked pearls

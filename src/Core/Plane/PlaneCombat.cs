@@ -283,7 +283,7 @@ public sealed partial class PlaneWorld
             if (poi.Kind != PoiKind.TreasureCave) continue;
             // (A template level's clam offers from the treasure pool: CROSSOVER.md §7.)
             var offer = Map.Templated ? Run.Offer("treasure", Pearls.Select(q => q.ItemId))
-                : PlaneRun.PortedPearls.Where(id => Run.CanOffer(id) && Pearls.All(q => q.ItemId != id)).ToList();
+                : PlaneRun.InPlay.Where(id => Run.CanOffer(id) && Pearls.All(q => q.ItemId != id)).ToList();
             if (offer.Count == 0) break;
             Pearls.Add(new PlanePearl { ItemId = Run.Pick(offer, rng), Position = poi.Position });
         }

@@ -68,6 +68,8 @@ public sealed class PlaneOptions
     /// through bent, or are drunk and leave it glowing). On in the crossover.
     /// </summary>
     public bool Optics;
+    /// <summary>Light specks (PlaneSpecks.cs): scattered and dropped, gathered as her energy, drunk by murklings. On in the crossover.</summary>
+    public bool Specks;
     /// <summary>The reef's bubble geysers (PlaneGeysers.cs): off (none are placed or spray); on only for their own tests.</summary>
     public bool Geysers;
 

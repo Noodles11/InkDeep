@@ -149,6 +149,47 @@ emptied, it is freed, leaving a core of light.
 
 ## 8. Pearls and builds
 
+- **Only the shot pearls are in play (0.77.0).** The pearls offered anywhere (`PlaneRun.InPlay`, from `ShotPearls`) are
+  only those that change her shots:
+  - how many fly at once and their spread: Triple Tentacle, Hammerhead, Double Helix, Plankton Swarm;
+  - their size, damage, speed and range: Shark Tooth, Pufferfish Pout, Cuttlebone, Cannonball, Whale Lung;
+  - their shove: Captain's Hook;
+  - critical hits: Giant Squid Eye;
+  - how the gun fires: Sardine Run, a machine gun; Pearl Diver, a rifle;
+  - how many they pass through or bounce off: Swordfish Bill, Mirror Scale.
+
+  Every other pearl stays in the code, dormant: never offered, found or dealt (the F1 menu can still switch one on).
+  Her light's own characteristics grow from light specks instead (below).
+- **Light specks and growth (0.77.0)** (`PlaneSpecks.cs`, `PlaneGrowth.cs`; `PlaneOptions.Specks`, on in the
+  crossover):
+  - **Specks:** motes of light worth 0.5–1.5 energy each.
+    - Ten lie on a level, two more a depth, in its open water at least 6 m from her start.
+    - A freed creature drops one 70% of the time (worth 0.4–1.2); a freed boss drops six.
+    - Each glows faintly with its own light, drawn after the ink look (`SpeckView`), so it shows from across the level.
+    - It is a light like any other in the registry (a 4 m reach): it shows the murklings near it (`SpeckSees`), and
+      they come to drink it.
+    - She gathers one by touching it; within 2.6 m it drifts to her. Its worth is added to her **energy** (the HUD
+      shows it under her bell).
+  - **Murklings and specks:** a murkling that drinks a speck keeps what it drank and grows stronger by it. Each unit
+    raises its corruption by 30%, its size by 7% (to 1.6 × a murkling's) and its drain by 15%. Freed, it throws it all
+    out again as specks.
+  - **Growth:** her energy is laid, any amount (a float), on what she would grow, for good (`PlaneRun.Grow`,
+    `GrowthStat`).
+    - Her light: power (+8% a unit), coherence (+0.04), pulse (+0.3 Hz), beam width (+5%), and her red, green and blue
+      bands (+0.12 a unit, the mix only). These are laid over the light her pearls make, or the F1 gauges', and so
+      reach her beam, her shots and her colours.
+    - Her body: max health (+4), dash cooldown (−3%, to no less than 35%), swim speed (+3%).
+    - She may grow only while she has energy and is at a light spring (her healing pool), spent or not. Every crossover
+      level short of a boss's now has one.
+  - **The upgrade drawer** (`GrowthMenu`) slides in when she swims into a spring with energy to lay:
+    - At its top a bubble of light, its specks swirling inside as many as the energy left, the number beside it.
+    - Below, every characteristic with its bar. A click sends a speck's worth (one, or what is left) flying from the
+      bubble into the bar; the bar fills and its number climbs (gold until it is kept) as the specks arrive.
+    - **Reset** sends what is not kept back into the bubble. **Mutate** keeps it, and the energy is spent. Leaving
+      unkept is a reset.
+  - Her energy and growth are saved with her dive and with her jelly, as her skills are.
+  - `--dbg-grow=N` opens the drawer with N energy; `--dbg-lay=Power,Blue,…` clicks its rows. Tests: `GrowthTests`.
+
 - **Pearls are swallowed, for good**, in a short ritual, and circle her bell (PEARLS). 72 are designed and 41 work on the
   plane; 13 are actives (she carries one). A pearl looks like what it does: its colour from its strongest effect, an
   icon engraved for its kind (`PearlKey`).

@@ -220,6 +220,8 @@ public sealed class Murkling
     public int ShoalSlot = -1;
     /// <summary>Its body's radius (a lesser one's follows the fish it was), and what it drains a second while clinging.</summary>
     public float Radius = BlightTuning.MurkRadius, ClingDrain = BlightTuning.ClingDrain;
+    /// <summary>The light specks' energy it has drunk (PlaneSpecks.cs): let go again when it is freed.</summary>
+    public float Specks;
     /// <summary>The body it moves as (a prime collides smaller than it looks, so it can squeeze through the passes).</summary>
     public float Body = BlightTuning.MurkRadius;
     /// <summary>
@@ -930,7 +932,9 @@ public sealed partial class PlaneWorld
                 {
                     m.Position = food.Position + m.ClingOffset;
                     m.Velocity = Vector2.Zero;
-                    DrinkLight(food, m.ClingDrain * Dt);
+                    float got = DrinkLight(food, m.ClingDrain * Dt * (food.Owner is LightSpeck ? SpeckTuning.DrinkRate : 1f));
+                    // (A light speck: what it drinks is its own, and makes it stronger: PlaneSpecks.cs.)
+                    if (food.Owner is LightSpeck) MurklingAte(m, got);
                     continue;
                 }
                 m.Feeding = null;
@@ -1223,6 +1227,12 @@ public sealed partial class PlaneWorld
     void BurstMurkling(Murkling m, bool ember, float damage = 0f)
     {
         m.Alive = false;
+        // (The specks' light it drank, let go again: PlaneSpecks.cs.)
+        if (m.Specks > 0f)
+        {
+            DropSpecks(m.Position, m.Specks);
+            m.Specks = 0f;
+        }
         Stats.MobsDefeated++;
         m.Feeding = m.Light = null;
         LeaveCore(m);

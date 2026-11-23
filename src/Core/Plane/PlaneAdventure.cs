@@ -793,7 +793,7 @@ public sealed partial class PlaneWorld
     void RewardDiveCave(PlaneLeak v)
     {
         Player.Hp = Run.MaxHp;
-        var offer = PlaneRun.PortedPearls.Where(id => Run.CanOffer(id) && Pearls.All(q => q.ItemId != id)).ToList();
+        var offer = PlaneRun.InPlay.Where(id => Run.CanOffer(id) && Pearls.All(q => q.ItemId != id)).ToList();
         if (offer.Count == 0) return;
         var toHer = Player.Position - v.Position;
         var dir = toHer.LengthSquared() > 1e-4f ? Vector2.Normalize(toHer) : Vector2.UnitY;

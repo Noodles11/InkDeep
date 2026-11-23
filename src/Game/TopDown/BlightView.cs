@@ -164,7 +164,8 @@ public partial class BlightView : Node3D
             bool beamSees = world.BeamSees(m, m.Position, m.Radius);
             body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("beam_seen"), beamSees ? 1f : 0f);
             // A lit charge stone's light shows it too, as much as it glows.
-            float chargeSees = world.ChargeStoneSees(m.Position, m.Radius);
+            // (And a light speck's faint light, near one: PlaneSpecks.cs.)
+            float chargeSees = Mathf.Max(world.ChargeStoneSees(m.Position, m.Radius), world.SpeckSees(m.Position, m.Radius));
             body.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("charge_seen"), chargeSees);
             // Light on its core shows all of it (eased in quickly, out a little slower).
             bool core = world.CoreLit(m, m.Position);

@@ -2,7 +2,8 @@
 
 > Every pearl in the item catalogue (`data/items.json`), by the kind of word it is in her light's grammar
 > (docs/proposals/LIGHT-GRAMMAR.md; `PearlWords`): what it does, where it is found and what unlocks it. "In play" are
-> the pearls offered on the reef (`PlaneRun.PortedPearls`, and the crab's): they lie in clam rooms, are sold in shops
+> the pearls ported to the plane (`PlaneRun.PortedPearls`, and the crab's); since 0.77.0 only the shot pearls among them
+> are offered (`PlaneRun.InPlay`, docs/GAME.md §8), the rest dormant: they lie in clam rooms, are sold in shops
 > and fall from bosses. The effect lines are the game's own captions (`ItemCaption`), as the absorbing card, the pause
 > menu and the Sea-pedia read them. The tables below are generated from the catalogue (`PearlsPageTests`, which fails
 > when this page falls behind); the prose is this page's own.

@@ -772,7 +772,7 @@ void fragment() {
     {
         tinted = true;
         if (shot.Hue != PrismHue.None) return LightOf(shot.Hue);
-        if (_world?.ManualLight is not null) return BeamView.HandTint(_world);
+        if (_world is { LightSet: true }) return BeamView.HandTint(_world);
         if (shot.Light != LightHue.None) return OctoShoots.Game.Fx.LightColour.Beam(shot.Light, TopDownMain.ShowcaseOn);
         tinted = false;
         return HerColor.Light;
@@ -1161,6 +1161,9 @@ void fragment() {
                 }
                 _candidates.Add((ray.End, GroundStrength * 1.4f * surge.Power, GroundRadius * 1.6f));
             }
+        // Light specks' faint light round them (PlaneSpecks.cs).
+        foreach (var s in world.Specks)
+            _candidates.Add((s.Position, GroundStrength * 0.35f, GroundRadius * 0.7f));
         // Walls glowing with the light they stored (PlaneOptics.cs): warm, fading, never brighter than her.
         foreach (var g in world.WallGlows)
             _candidates.Add((g.At, GroundStrength * 0.9f * g.Glow, GroundRadius * 1.2f));

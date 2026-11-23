@@ -120,6 +120,8 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     ShotBounced, ShotRefracted,
     /// <summary>A lightglass pane shatters, rung by its own colour long enough (at its centre; Direction: its long way; Size: its half length).</summary>
     GlassShattered,
+    /// <summary>Light specks: she gathers one (Size: its worth); a murkling drinks of one (Size: how much); specks thrown out where something was freed (Size: their worth).</summary>
+    SpeckGathered, SpeckEaten, SpecksDropped,
     /// <summary>Her light on the boss's sealed wall while leaks stand open: it takes none (at the carving; Size: the leaks left).</summary>
     SealRefused,
     /// <summary>A corrupted creature comes into her light and is dazzled (Direction: from her to it; Size: its radius).</summary>
@@ -194,6 +196,8 @@ public sealed partial class PlaneWorld
         if (Map.Templated) PlaceVaults();
         // Mirror plates and lightglass (PlaneOpticWalls.cs).
         if (Options.Optics && Map.Templated && !Map.Rift) PlaceOpticWalls();
+        // Light specks through its water (PlaneSpecks.cs).
+        if (Options.Specks && !Map.Rift) PlaceSpecks();
         PlaceSprings();
         PlaceChargeStones();
         PlaceSeals();
@@ -386,6 +390,8 @@ public sealed partial class PlaneWorld
         StepPushWave();
         StepHaven();
         StepDiveCave();
+        // Light specks: gathered, drawn to her, dropped where her light freed something (PlaneSpecks.cs).
+        StepSpecks();
         // Murklings made during the step (a prime's pieces) join the others now, never while a loop walks them.
         Murklings.AddRange(_madeLater);
         _madeLater.Clear();

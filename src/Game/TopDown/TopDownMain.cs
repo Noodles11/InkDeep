@@ -68,6 +68,7 @@ public partial class TopDownMain : Node3D
     AbyssView _abyss = null!;
     VaseView _vases = null!;
     OpticWallView _opticWalls = null!;
+    SpeckView _specks = null!;
     VaultView _vaults = null!;
     /// <summary>Achievements: their data, what earns them on this run, and the banner that announces them (§8).</summary>
     AchievementCatalog? _achievementData;
@@ -218,7 +219,7 @@ public partial class TopDownMain : Node3D
     /// <summary>The run's play time so far (sim time: still while paused or diving), for the HUD clock.</summary>
     float _elapsed;
     bool _fireBlocked;
-    bool Paused => _pause.Visible || _mirror.Visible || _fanMenu.Visible || _folkMenu.Visible || _debug.Visible || _menuBlend > 0f;
+    bool Paused => _pause.Visible || _mirror.Visible || _fanMenu.Visible || _folkMenu.Visible || _growth.Visible || _debug.Visible || _menuBlend > 0f;
     /// <summary>F1: the debug menu (level jump, pearls). Once used, the run is neither saved nor recorded.</summary>
     DebugMenu _debug = null!;
     bool _f1Latched, _debugRun;
@@ -447,7 +448,7 @@ public partial class TopDownMain : Node3D
         // 0.13.0; in the crossover her glow is gone and her beam is her light to see by, mostly (PlaneOptions).
         PlaneOptions.Default = new PlaneOptions
         {
-            Adventure = true, Shots = true, Glow = !Crossover.On, Gun = Crossover.On, Optics = Crossover.On,
+            Adventure = true, Shots = true, Glow = !Crossover.On, Gun = Crossover.On, Optics = Crossover.On, Specks = Crossover.On,
             BeamBurn = Crossover.On ? HerLightTuning.LightOnlyBurn : 1f,
         };
         // The bundled fonts: Nunito is every screen's default (THEME-BIBLE §6.8).
@@ -506,6 +507,8 @@ public partial class TopDownMain : Node3D
         AddChild(_vases);
         _opticWalls = new OpticWallView();
         AddChild(_opticWalls);
+        _specks = new SpeckView();
+        AddChild(_specks);
         _vaults = new VaultView();
         AddChild(_vaults);
         _relics = new RelicView();
@@ -676,6 +679,9 @@ public partial class TopDownMain : Node3D
             else if (arg == "--paused") _startPaused = true;
             // (The F1 menu opened 20 frames in; her light set by hand: red,green,blue,power,coherence,width,pulse.)
             else if (arg == "--dbg-f1") _dbgF1 = true;
+            // (The upgrade drawer opened 20 frames in with this much energy; rows clicked from frame 30, four frames apart.)
+            else if (arg.StartsWith("--dbg-grow=")) _dbgGrow = float.Parse(Value("--dbg-grow="), CultureInfo.InvariantCulture);
+            else if (arg.StartsWith("--dbg-lay=")) _dbgLay = Value("--dbg-lay=").Split(',', StringSplitOptions.RemoveEmptyEntries);
             else if (arg.StartsWith("--dbg-light=") && Value("--dbg-light=").Split(',') is { Length: 7 } hand)
             {
                 float F(int i) => float.Parse(hand[i], CultureInfo.InvariantCulture);
@@ -828,6 +834,8 @@ public partial class TopDownMain : Node3D
             XpLevel = _run.XpLevel,
             Points = _run.Points,
             Skills = _run.Skills.ToDictionary(k => k.Key.ToString(), k => k.Value),
+            Energy = _run.Energy,
+            Growth = _run.Growth.ToDictionary(k => k.Key.ToString(), k => k.Value),
             Luck = _map.Luck,
             Elapsed = _elapsed,
             Foes = _runMobs,
@@ -908,6 +916,9 @@ public partial class TopDownMain : Node3D
         jelly.Xp = _run.Xp;
         jelly.Points = _run.Points;
         jelly.Skills = _run.Skills.ToDictionary(k => k.Key.ToString(), k => k.Value);
+        // (Her energy and her growth are hers for good, as her skills are.)
+        jelly.Energy = _run.Energy;
+        jelly.Growth = _run.Growth.ToDictionary(k => k.Key.ToString(), k => k.Value);
         if (ended)
         {
             jelly.Dive = null;
@@ -1256,6 +1267,16 @@ public partial class TopDownMain : Node3D
         // The bay's mirror: her look changed as she watches, kept on her jelly, or put back.
         _mirror = new MirrorMenu();
         pauseLayer.AddChild(_mirror);
+        // The upgrade drawer at a light spring: her light's energy laid on what she grows (PlaneGrowth.cs).
+        _growth = new GrowthMenu();
+        pauseLayer.AddChild(_growth);
+        _growth.Closed += CloseGrowth;
+        _growth.Mutated += laid =>
+        {
+            if (_world is null || !_world.Grow(laid)) return;
+            _sfx.PlayPitched("synergy", 1.1f, -6f);
+            _hud.Track(_world, _catalog, 0f);
+        };
         _mirror.Preview += OctoShoots.Game.Fx.HerColor.SetLook;
         _mirror.Kept += look =>
         {
@@ -1661,6 +1682,7 @@ public partial class TopDownMain : Node3D
                 _run.Points = saved.Points;
                 foreach (var (name, n) in saved.Skills)
                     if (Enum.TryParse<OctoShoots.Core.Items.Stat>(name, out var stat) && n > 0) _run.Skills[stat] = n;
+                LoadGrowth(saved.Energy, saved.Growth);
                 _run.Refresh();
                 _run.Hp = Mathf.Min(saved.Hp, _run.MaxHp);
                 _run.Shells = saved.Shells;
@@ -1759,6 +1781,7 @@ public partial class TopDownMain : Node3D
         _abyss.Build(map, LookOf(map));
         _vases.Show(_world);
         _opticWalls.Show(_world);
+        _specks.Clear();
         _vaults.Show(_world);
         _relics.Show(_world);
         _props.Show(_map, ReefLook.Of(_map.Id));
@@ -1874,6 +1897,7 @@ public partial class TopDownMain : Node3D
         _run.Points = jelly.Points;
         foreach (var (name, n) in jelly.Skills)
             if (Enum.TryParse<OctoShoots.Core.Items.Stat>(name, out var stat) && n > 0) _run.Skills[stat] = n;
+        LoadGrowth(jelly.Energy, jelly.Growth);
         _run.Refresh();
         _run.Hp = _run.MaxHp;
         _run.Shells = jelly.Shells;
@@ -2872,6 +2896,12 @@ public partial class TopDownMain : Node3D
                 // Her light on rock (PlaneOptics.cs): a spark where a shot rings off a mirror wall, a flash where it leaves a crystal bent.
                 else if (e.Type == PlaneEventType.ShotBounced) _combat.LightBurst(e.Position, 0.3f);
                 else if (e.Type == PlaneEventType.ShotRefracted) _combat.LightBurst(e.Position, 0.45f);
+                // A light speck gathered: a small flash, a soft chime (PlaneSpecks.cs).
+                else if (e.Type == PlaneEventType.SpeckGathered)
+                {
+                    _combat.LightBurst(e.Position, 0.25f);
+                    _sfx.PlayPitched("bell_ring", 1.9f + 0.1f * e.Size, -16f);
+                }
                 // A lightglass pane shattered by its own colour.
                 else if (e.Type == PlaneEventType.GlassShattered)
                 {
@@ -3014,6 +3044,9 @@ public partial class TopDownMain : Node3D
         // The Tide Fan's requests: its drawer at its foot, what she does in the caves, the ribbons and the maps' marks.
         StepRequests();
         StepFolk(dt);
+        // Into a light spring with energy to lay: the upgrade drawer (PlaneGrowth.cs), once each time she comes in.
+        if (!_world.AtGrowthPlace) _growthArmed = true;
+        else if (_growthArmed && _world.CanGrow && !_pause.IsOpen && !_debug.Visible && !_mirror.IsOpen) OpenGrowth();
         // Onto the bay's mirror: it shows her, and her look can change.
         if (_jelly is not null && _map.Mirror is not null && BayOpen(BayService.Mirror))
         {
@@ -3078,6 +3111,7 @@ public partial class TopDownMain : Node3D
         Guard("abyss", () => _abyss.Sync(_world, dt));
         Guard("vases", () => _vases.Sync(dt));
         Guard("optic walls", () => _opticWalls.Sync());
+        Guard("specks", () => _specks.Sync(_world, dt));
         // Her colours follow her light (HerColor.FollowLight): her body, glow, light and tips, as her beam and shots.
         if (_world is not null)
         {
@@ -3988,9 +4022,37 @@ public partial class TopDownMain : Node3D
     float _springHealed;
 
 
+    /// <summary>Her light's energy and growth back from a save (PlaneGrowth.cs).</summary>
+    void LoadGrowth(float energy, Dictionary<string, float> growth)
+    {
+        _run!.Energy = energy;
+        _run.Growth.Clear();
+        foreach (var (name, v) in growth)
+            if (Enum.TryParse<GrowthStat>(name, out var stat) && v > 0f) _run.Growth[stat] = v;
+    }
+
+    GrowthMenu _growth = null!;
+    bool _growthArmed = true;
+
+    void OpenGrowth()
+    {
+        if (_run is null) return;
+        _growthArmed = false;
+        _sfx.PlayPitched("bell_ring", 1.2f, -10f);
+        _growth.Open(_run.Energy, _run.Growth);
+    }
+
+    void CloseGrowth()
+    {
+        _growth.Close();
+        _fireBlocked = true;
+    }
+
     /// <summary>Her light as set by hand in the F1 menu (null: her pearls make it).</summary>
     LightSettings? _manualLight;
     bool _dbgF1;
+    float _dbgGrow;
+    string[]? _dbgLay;
 
     void CloseDebug()
     {
@@ -4075,7 +4137,7 @@ public partial class TopDownMain : Node3D
     /// <summary>The pause menu's close framing: the camera closes in as the drawer slides in, and eases back as it slides away.</summary>
     void StepMenu(float dt)
     {
-        _menuBlend = _pause.IsOpen || _mirror.IsOpen || _fanMenu.IsOpen || _folkMenu.IsOpen ? Mathf.Min(1f, _menuBlend + dt / MenuIn) : Mathf.Max(0f, _menuBlend - dt / MenuOut);
+        _menuBlend = _pause.IsOpen || _mirror.IsOpen || _fanMenu.IsOpen || _folkMenu.IsOpen || _growth.IsOpen ? Mathf.Min(1f, _menuBlend + dt / MenuIn) : Mathf.Max(0f, _menuBlend - dt / MenuOut);
         if (!_dbgLevelUp || _world.Run.Points <= 0) return;
         // Verification (--dbg-levelup): the menu opens and spends her points, one every 1.2 s.
         if (!_pause.IsOpen) TogglePause();
@@ -4102,6 +4164,7 @@ public partial class TopDownMain : Node3D
         _mirror.Shut();
         _fanMenu.Shut();
         _folkMenu.Shut();
+        _growth.Close();
         _camera.Zoom = 1f;
     }
 
@@ -4134,6 +4197,11 @@ public partial class TopDownMain : Node3D
         else if (_folkMenu.IsOpen)
         {
             if (esc && !_escLatched || back && !_backLatched) CloseFolkMenu();
+        }
+        // The upgrade drawer: Esc and B leave it (what is not kept goes back).
+        else if (_growth.IsOpen)
+        {
+            if (esc && !_escLatched || back && !_backLatched) CloseGrowth();
         }
         else if (esc && !_escLatched)
         {
@@ -4660,6 +4728,13 @@ public partial class TopDownMain : Node3D
     {
         _frame++;
         if (_dbgF1 && _frame == 20 && _world is not null && _run is not null) _debug.Open(_run, _catalog, _seed, _id, _floorFog, _world);
+        if (_dbgGrow > 0f && _frame == 20 && _run is not null)
+        {
+            _run.Energy = _dbgGrow;
+            _growth.Open(_run.Energy, _run.Growth);
+        }
+        if (_dbgLay is { } lay && _frame >= 30 && (_frame - 30) % 4 == 0 && (_frame - 30) / 4 < lay.Length
+            && Enum.TryParse<GrowthStat>(lay[(_frame - 30) / 4], out var layOn)) _growth.LayOn(layOn);
         if (_dbgPop && _frame == 30)
         {
             // Verification (`--dbg-pop`): a murkling, a prime, a Thumpsquirt and a Lashjaw freed round her at once.

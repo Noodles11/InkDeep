@@ -46,7 +46,7 @@ public sealed partial class PlaneWorld
         var side = new Vector2(-cave.Facing.Y, cave.Facing.X);
         var rng = new Rng(Map.Seed ^ 0xC2ABUL ^ ((ulong)Map.Level << 28) ^ ((ulong)Map.Depth << 36) ^ ((ulong)Map.Attempt << 50));
         var rare = PlaneRun.CrabPearls.Where(id => catalog.TryGet(id, out _) && !Run.Items.Contains(id)).ToList();
-        var best = PlaneRun.PortedPearls.Where(id => Run.CanOffer(id) && catalog.TryGet(id, out var item) && item.Quality >= 3).ToList();
+        var best = PlaneRun.InPlay.Where(id => Run.CanOffer(id) && catalog.TryGet(id, out var item) && item.Quality >= 3).ToList();
         var offers = new List<string>();
         if (rare.Count > 0) offers.Add(rare[rng.Int(rare.Count)]);
         if (best.Count > 0) offers.Add(Run.Pick(best, rng));

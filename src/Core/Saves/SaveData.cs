@@ -33,6 +33,9 @@ public sealed class Jelly
     /// <summary>Skill points not yet spent, and the points spent (by stat name): the only way her stats change.</summary>
     public int Points { get; set; }
     public Dictionary<string, int> Skills { get; set; } = new();
+    /// <summary>Her light's energy not yet laid, and what she has grown with it (by GrowthStat name): PlaneGrowth.cs.</summary>
+    public float Energy { get; set; }
+    public Dictionary<string, float> Growth { get; set; } = new();
     /// <summary>Silver shells on her, and those she has left with Fennel in the bay (BroodBed: never lost).</summary>
     public int Shells { get; set; }
     public int Banked { get; set; }
@@ -266,6 +269,9 @@ public sealed class SuspendedRun
     public int XpLevel { get; set; } = 1;
     public int Points { get; set; }
     public Dictionary<string, int> Skills { get; set; } = new();
+    /// <summary>Her light's energy not yet laid, and what she has grown with it (by GrowthStat name): PlaneGrowth.cs.</summary>
+    public float Energy { get; set; }
+    public Dictionary<string, float> Growth { get; set; } = new();
     /// <summary>Her luck as the level was made: it is made again with it (her luck can bring a light spring).</summary>
     public float Luck { get; set; }
     /// <summary>Play time of the run so far (the HUD clock).</summary>

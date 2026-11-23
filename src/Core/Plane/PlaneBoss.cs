@@ -426,7 +426,7 @@ public sealed partial class PlaneWorld
             ExitOpen = Corruption is null || ArenaCleansed >= CorruptionTuning.ArenaToOpen;
             if (ExitOpen && Corruption is not null) Events.Add(new PlaneEvent(PlaneEventType.CrackOpened, ArenaCenter, Vector2.Zero));
         }
-        var offer = PlaneRun.PortedPearls.Where(id => Run.CanOffer(id) && Pearls.All(q => q.ItemId != id || q.Taken)).ToList();
+        var offer = PlaneRun.InPlay.Where(id => Run.CanOffer(id) && Pearls.All(q => q.ItemId != id || q.Taken)).ToList();
         var boss_ = offer.Where(id => Run.Catalog!.TryGet(id, out var item) && item.Pools.Contains("boss")).ToList();
         var pick = boss_.Count > 0 ? boss_ : offer;
         var pearlAt = boss.PearlAt;

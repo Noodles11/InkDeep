@@ -265,8 +265,18 @@ public sealed partial class PlaneWorld
     /// Her light's spectrum now, with or without optics: set by hand, or her colour words' (SpectrumOf). Every jelly's
     /// colours follow it (the view's HerColor.FollowLight), as her beam and her shots do.
     /// </summary>
-    public Spectrum HerSpectrum => Options.Optics || ManualLight is not null ? HerLightPhysics.Spectrum
+    public Spectrum HerSpectrum => Options.Optics || LightSet ? HerLightPhysics.Spectrum
         : SpectrumOf(Run.Loadout.Shot.Ember, Run.Loadout.Shot.Bloom, Run.Loadout.Shot.Frost);
+
+    /// <summary>Her light set (by hand in the F1 menu, or grown with her energy: PlaneGrowth.cs), not only her pearls'.</summary>
+    public bool LightSet => ManualLight is not null || GrowthTuning.LightGrown(Run);
+
+    /// <summary>Her light's settings this step: the F1 gauges' or her pearls', her growth laid over them; null if neither is set.</summary>
+    LightSettings? SetLight()
+    {
+        if (!GrowthTuning.LightGrown(Run)) return ManualLight;
+        return GrowthTuning.Grow(ManualLight ?? PearlLight(), Run);
+    }
 
     /// <summary>Her light set by hand (the F1 menu's gauges), or null: her pearls make it.</summary>
     public LightSettings? ManualLight { get; set; }
@@ -292,7 +302,7 @@ public sealed partial class PlaneWorld
     /// <summary>Her light's properties, and what this water does to them: reach, punch at mid reach, halo.</summary>
     void StepOptics()
     {
-        var manual = ManualLight;
+        var manual = SetLight();
         if (!Options.Optics && manual is null)
         {
             HerLightPhysics = LightPhysics.Neutral;
@@ -361,7 +371,7 @@ public sealed partial class PlaneWorld
         foreach (var h in Primaries()) all |= h;
         if (NeonHue != LightHue.None) all = NeonHue;
         for (int i = first; i < Shots.Count; i++) Shots[i].Light = all;
-        if (!Options.Optics && ManualLight is null) return;
+        if (!Options.Optics && !LightSet) return;
         var l = HerLightPhysics;
         float potency = Optics.Potency(l.Spectrum) * l.Power * l.Pulse, slow = 1f / MathF.Sqrt(MathF.Max(Water.Density, 0.5f));
         for (int i = first; i < Shots.Count; i++)
