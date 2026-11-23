@@ -120,6 +120,10 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     ShotBounced, ShotRefracted,
     /// <summary>A lightglass pane shatters, rung by its own colour long enough (at its centre; Direction: its long way; Size: its half length).</summary>
     GlassShattered,
+    /// <summary>A stone stands (sun-stone lit, shadow-stone in the dark) or fades (Size: its kind), at its middle.</summary>
+    StoneStood, StoneFaded,
+    /// <summary>Local water: a silt cloud kicked up (at it; Size: its radius); a plankton bloom lit (at it).</summary>
+    SiltRaised, BloomLit,
     /// <summary>Light specks: she gathers one (Size: its worth); a murkling drinks of one (Size: how much); specks thrown out where something was freed (Size: their worth).</summary>
     SpeckGathered, SpeckEaten, SpecksDropped,
     /// <summary>The flora (PlaneFlora.cs): a plant gives what it held (Size: its kind); a plant wakes (a sponge fills: Size its kind); a light room opens (Size: its plants).</summary>
@@ -203,6 +207,8 @@ public sealed partial class PlaneWorld
         PlaceSprings();
         // Plants that answer light and the light rooms (PlaneFlora.cs).
         if (Options.Flora && Map.Templated && !Map.Rift) PlaceFlora();
+        // Local water (PlaneWaterPockets.cs).
+        if (Options.Pockets && Map.Templated && !Map.Rift) PlacePockets();
         PlaceChargeStones();
         PlaceSeals();
         PlacePrismStones();
@@ -398,6 +404,8 @@ public sealed partial class PlaneWorld
         StepSpecks();
         // The plants answer the light on them (PlaneFlora.cs).
         StepFlora();
+        // Local water: silt settling, blooms lit, vents' shimmer (PlaneWaterPockets.cs).
+        if (Options.Pockets) StepPockets();
         // Murklings made during the step (a prime's pieces) join the others now, never while a loop walks them.
         Murklings.AddRange(_madeLater);
         _madeLater.Clear();
@@ -474,7 +482,7 @@ public sealed partial class PlaneWorld
         foreach (var rock in _rocks)
             if (rock.Contains(p, radius)) return false;
         if (ShutMouths.Count > 0 && Plug(p, radius) is not null) return false;
-        if (OpticWalls.Count > 0 && OpticAt(p, radius) is not null) return false;
+        if (OpticWalls.Count > 0 && OpticAt(p, radius, bodies: true) is not null) return false;
         return VaseAt(p, radius) is null;
     }
 

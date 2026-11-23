@@ -355,7 +355,8 @@ public sealed partial class PlaneWorld
             if (!Map.IsOpen(q) || _rocks.Any(r => r.Contains(q))) return false;
         }
         // (A grown kelp's stalk stands in the way: PlaneFlora.cs.)
-        return Flora.Count == 0 || !KelpBlocks(a, b);
+        // (And local water: a brine pool's surface, thick silt: PlaneWaterPockets.cs.)
+        return (Flora.Count == 0 || !KelpBlocks(a, b)) && (Pockets.Count == 0 || !PocketHides(a, b));
     }
 
     void StepCombat(in PlaneInput input)

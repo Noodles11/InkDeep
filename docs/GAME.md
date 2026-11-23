@@ -698,4 +698,12 @@ the tests of the dive still test the dive.
     - fluorescent corals drink blue light and glow green.
   - Each level has 1 or 2 light rooms: a ring of the biome's plant round a prize (shells and light specks) that opens
     when they are all awake at once.
+- **The lit world, phase 4 (0.82.0): local water, sun-stone and shadow-stone** (LIGHT-AND-GRAPH.md §20):
+  - **Stones:** sun-stone stands across a passage only while lit; shadow-stone only in the dark (light it to pass).
+  - **Haloclines:** her light bends crossing them, and is thrown back from their dense side at a grazing angle.
+  - **Brine pools:** nothing is seen across them.
+  - **Silt:** it lies in the Shipwreck and the Ruins, and her dash kicks it up there; while thick it hides what lies
+    across it.
+  - **Vent shimmer:** it wobbles her shots.
+  - **Plankton blooms:** they glow when lit, a decoy for the murklings.
 

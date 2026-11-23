@@ -70,6 +70,7 @@ public partial class TopDownMain : Node3D
     OpticWallView _opticWalls = null!;
     SpeckView _specks = null!;
     FloraView _flora = null!;
+    PocketView _pockets = null!;
     VaultView _vaults = null!;
     /// <summary>Achievements: their data, what earns them on this run, and the banner that announces them (§8).</summary>
     AchievementCatalog? _achievementData;
@@ -449,7 +450,7 @@ public partial class TopDownMain : Node3D
         // 0.13.0; in the crossover her glow is gone and her beam is her light to see by, mostly (PlaneOptions).
         PlaneOptions.Default = new PlaneOptions
         {
-            Adventure = true, Shots = true, Glow = !Crossover.On, Gun = Crossover.On, Optics = Crossover.On, Specks = Crossover.On, Flora = Crossover.On,
+            Adventure = true, Shots = true, Glow = !Crossover.On, Gun = Crossover.On, Optics = Crossover.On, Specks = Crossover.On, Flora = Crossover.On, Pockets = Crossover.On,
             BeamBurn = Crossover.On ? HerLightTuning.LightOnlyBurn : 1f,
         };
         // The bundled fonts: Nunito is every screen's default (THEME-BIBLE §6.8).
@@ -512,6 +513,8 @@ public partial class TopDownMain : Node3D
         AddChild(_specks);
         _flora = new FloraView();
         AddChild(_flora);
+        _pockets = new PocketView();
+        AddChild(_pockets);
         _vaults = new VaultView();
         AddChild(_vaults);
         _relics = new RelicView();
@@ -1786,6 +1789,7 @@ public partial class TopDownMain : Node3D
         _opticWalls.Show(_world);
         _specks.Clear();
         _flora.Show(_world);
+        _pockets.Clear();
         _vaults.Show(_world);
         _relics.Show(_world);
         _props.Show(_map, ReefLook.Of(_map.Id));
@@ -2921,6 +2925,10 @@ public partial class TopDownMain : Node3D
                 }
                 else if (e.Type == PlaneEventType.FloraGave) _sfx.PlayPitched("bell_ring", 1.4f, -12f);
                 else if (e.Type == PlaneEventType.FloraWoke) _sfx.PlayPitched("bell_ring", 1.1f, -14f);
+                // Phase 4 (LIGHT-WORLD.md): a stone standing or fading, silt kicked up, a bloom lit.
+                else if (e.Type is PlaneEventType.StoneStood or PlaneEventType.StoneFaded)
+                    _sfx.PlayPitched("bell_ring", e.Type == PlaneEventType.StoneStood ? 0.7f : 0.95f, -12f);
+                else if (e.Type == PlaneEventType.BloomLit) _sfx.PlayPitched("bell_ring", 1.6f, -16f);
                 // A light speck gathered: a small flash, a soft chime (PlaneSpecks.cs).
                 else if (e.Type == PlaneEventType.SpeckGathered)
                 {
@@ -3138,6 +3146,7 @@ public partial class TopDownMain : Node3D
         Guard("optic walls", () => _opticWalls.Sync());
         Guard("specks", () => _specks.Sync(_world, dt));
         Guard("flora", () => _flora.Sync(_world, dt));
+        Guard("pockets", () => _pockets.Sync(_world, dt));
         // Her colours follow her light (HerColor.FollowLight): her body, glow, light and tips, as her beam and shots.
         if (_world is not null)
         {

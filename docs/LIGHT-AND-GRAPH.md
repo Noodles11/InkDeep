@@ -659,3 +659,29 @@ band's share against her plain light's, `BandShare`).
   shut room has a faint ring on the floor and a "~" emblem.
 - `--at=room` starts her beside the first light room. Tests: `FloraTests`.
 
+## 20. Local water, sun-stone and shadow-stone (built: phase 4 of proposals/LIGHT-WORLD.md)
+
+**Stones and haloclines** are optic walls (`PlaneOpticWalls.cs`, `OpticKind`), placed with them (`OpticWallTuning.Stones`):
+
+| | Biome (sun / shadow / halocline) | Rule |
+|---|---|---|
+| Sun-stone | Ruins 1, Temple 1, Atlantis 1 | Across a passage. Stands only while lit: the light on its faces ≥ 0.25 (`StepStone`), holding 1.5 s after, rising 3/s, fading 4/s. Stands, it blocks bodies and light, and drinks her shots |
+| Shadow-stone | Ruins 2, Temple 1, Atlantis 1 | Across a passage. Stands only in the dark: the same light makes it fade, and it stands again 1.2 s after the light leaves. Neither stone ever stands over her |
+| Halocline | Temple 2, Atlantis 2 | A layer of denser water (+0.12 index), 9 m long, lying in the open water. Bodies pass it; her light does not, unchanged. Her beam and shots crossing it bend by Snell's law (a ray born beyond it, 90% of the light). From its dense side at a grazing angle they are thrown back (total internal reflection) (`HaloWay`) |
+
+**Local water** (`PlaneWaterPockets.cs`, `PlaneOptions.Pockets`, on in the crossover): discs of 2.5–4 m in the open
+water (`PocketTuning.For`):
+
+| Pocket | Biome | Rule |
+|---|---|---|
+| Brine pool | Temple 3, Atlantis 1 | No light is seen across it (`LineOfSight`): a creature cannot see her through it |
+| Silt | Shipwreck 3, Ruins 2; and her dash there kicks one up where she is (2.6 m, settling over 6 s) | While thick (≥ 0.35), no light is seen across it |
+| Vent shimmer | Alien Wreckage 3, Atlantis 2 | Her shots crossing it wobble off their way (±2.5 rad/s) |
+| Plankton bloom | Reef 3, Kelp 3 | Lit ≥ 0.3, it glows cyan (a light of its own, 0.7: a decoy the murklings come to), fading 0.3/s after |
+
+- **The view:** a sun-stone is warm sandstone and a shadow-stone dark slate, a faint ghost of either while it is
+  gone; a halocline a pale shimmering sheet at her plane (`OpticWallView`). A brine pool is a dark, glossy pool on the
+  floor; silt soft brown billows thinning as they settle; vent shimmer a pale trembling haze; a bloom a faint drift that
+  glows cyan in light (`PocketView`). Events: `StoneStood`, `StoneFaded`, `SiltRaised`, `BloomLit`.
+- Tests: `LocalWaterTests`.
+

@@ -22,7 +22,29 @@ public partial class OpticWallView : Node3D
         foreach (var w in world.OpticWalls)
         {
             var m = new StandardMaterial3D();
-            if (w.Kind == OpticKind.Mirror)
+            float height = Height;
+            if (w.Kind is OpticKind.SunStone or OpticKind.ShadowStone)
+            {
+                // Sun-stone: warm sandstone that hardens in light (a faint warmth while it stands); shadow-stone: dark slate.
+                bool sun = w.Kind == OpticKind.SunStone;
+                m.Transparency = BaseMaterial3D.TransparencyEnum.Alpha;
+                m.AlbedoColor = sun ? new Color(0.86f, 0.7f, 0.42f) : new Color(0.16f, 0.15f, 0.2f);
+                m.Roughness = 0.9f;
+                if (sun)
+                {
+                    m.EmissionEnabled = true;
+                    m.Emission = new Color(1f, 0.78f, 0.4f);
+                }
+            }
+            else if (w.Kind == OpticKind.Halocline)
+            {
+                // A layer of denser water: a faint shimmering sheet at her plane.
+                m.Transparency = BaseMaterial3D.TransparencyEnum.Alpha;
+                m.ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded;
+                m.AlbedoColor = new Color(0.75f, 0.92f, 1f, 0.22f);
+                height = 0.04f;
+            }
+            else if (w.Kind == OpticKind.Mirror)
             {
                 m.AlbedoColor = new Color(0.78f, 0.8f, 0.82f);
                 m.Metallic = 1f;
@@ -45,7 +67,7 @@ public partial class OpticWallView : Node3D
             }
             var mesh = new MeshInstance3D
             {
-                Mesh = new BoxMesh { Size = new Vector3(w.HalfLength * 2f, Height, w.HalfThick * 2f) },
+                Mesh = new BoxMesh { Size = new Vector3(w.HalfLength * 2f, height, w.HalfThick * (w.Kind == OpticKind.Halocline ? 4f : 2f)) },
                 MaterialOverride = m,
                 CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             };
@@ -82,6 +104,14 @@ public partial class OpticWallView : Node3D
                 float rung = Mathf.Clamp(w.Charge / OpticWallTuning.Shatter, 0f, 1f);
                 m.EmissionEnergyMultiplier = 0.35f + 1.1f * rung * rung;
             }
+            else if (w.Kind is OpticKind.SunStone or OpticKind.ShadowStone)
+            {
+                // (Gone, a faint ghost of it stays, so its place still reads.)
+                m.AlbedoColor = m.AlbedoColor with { A = 0.12f + 0.88f * w.Solid };
+                if (w.Kind == OpticKind.SunStone) m.EmissionEnergyMultiplier = 0.5f * w.Solid;
+            }
+            else if (w.Kind == OpticKind.Halocline)
+                m.AlbedoColor = m.AlbedoColor with { A = 0.16f + 0.08f * Mathf.Sin((float)Time.GetTicksMsec() * 0.0015f + w.Seed) };
         }
     }
 }

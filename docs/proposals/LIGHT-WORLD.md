@@ -6,7 +6,7 @@ water filters and scatters light its own way, its walls drink it, throw it back,
 there opens, closes, grows, flees, follows, attacks or changes colour by what light falls on it. The player learns
 each place the way a diver learns a reef: by shining into it and watching what it does.
 
-This page is the design. **Phases 1 to 3 are built** on the `inkdeep-crossover` branch (§13): her light's physics, each
+This page is the design. **Phases 1 to 4 are built** on the `inkdeep-crossover` branch (§13): her light's physics, each
 biome's water and rock, and her shots meeting rock. Everything else is the plan. Values marked *(tune)* are starting
 points.
 
@@ -445,7 +445,7 @@ The standing rules (CLAUDE.md) hold:
 - The light room cell type.
 - Fluorescence.
 
-**Phase 4.**
+**Phase 4: built (0.82.0)**, as LIGHT-AND-GRAPH.md §20 says.
 
 - Local water: haloclines, brine pools, silt clouds, vent shimmer, plankton blooms.
 - Sun-stone and shadow-stone.

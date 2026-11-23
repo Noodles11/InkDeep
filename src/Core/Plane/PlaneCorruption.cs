@@ -72,6 +72,8 @@ public sealed class PlaneOptions
     public bool Specks;
     /// <summary>Plants that answer light and light rooms (PlaneFlora.cs, LIGHT-WORLD.md phase 3). On in the crossover.</summary>
     public bool Flora;
+    /// <summary>Local water (PlaneWaterPockets.cs, LIGHT-WORLD.md phase 4): brine pools, silt, vent shimmer, plankton blooms. On in the crossover.</summary>
+    public bool Pockets;
     /// <summary>The reef's bubble geysers (PlaneGeysers.cs): off (none are placed or spray); on only for their own tests.</summary>
     public bool Geysers;
 

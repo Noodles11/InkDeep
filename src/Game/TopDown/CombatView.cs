@@ -1165,6 +1165,10 @@ void fragment() {
         foreach (var f in world.Flora)
             if (f.Light is { Shining: true } l)
                 _candidates.Add((f.Position, GroundStrength * Mathf.Min(l.Intensity, 1f), GroundRadius * Mathf.Clamp(l.Range / 4f, 0.6f, 1.6f)));
+        // A plankton bloom's light round it (PlaneWaterPockets.cs).
+        foreach (var w in world.Pockets)
+            if (w.Light is { Shining: true } bl)
+                _candidates.Add((w.Centre, GroundStrength * Mathf.Min(bl.Intensity, 1f), GroundRadius * Mathf.Clamp(w.Radius / 2f, 0.8f, 2f)));
         // Light specks' faint light round them (PlaneSpecks.cs).
         foreach (var s in world.Specks)
             _candidates.Add((s.Position, GroundStrength * 0.35f, GroundRadius * 0.7f));
