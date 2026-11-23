@@ -446,7 +446,7 @@ public partial class TopDownMain : Node3D
         // 0.13.0; in the crossover her glow is gone and her beam is her light to see by, mostly (PlaneOptions).
         PlaneOptions.Default = new PlaneOptions
         {
-            Adventure = true, Shots = true, Glow = !Crossover.On,
+            Adventure = true, Shots = true, Glow = !Crossover.On, Gun = Crossover.On,
             BeamBurn = Crossover.On ? HerLightTuning.LightOnlyBurn : 1f,
         };
         // The bundled fonts: Nunito is every screen's default (THEME-BIBLE §6.8).
@@ -767,7 +767,7 @@ public partial class TopDownMain : Node3D
         if (spec is null) return null;
         var d = PlaneOptions.Default;
         GD.Print($"Debug boss: {spec.Name} ({spec.Tier} {spec.Form}, {spec.Concept}, {spec.Theme}, {spec.Exposure}, {spec.Signature})");
-        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Shots = d.Shots, Glow = d.Glow, BeamBurn = d.BeamBurn, Boss = spec };
+        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Shots = d.Shots, Glow = d.Glow, BeamBurn = d.BeamBurn, Gun = d.Gun, Boss = spec };
     }
 
     /// <summary>
@@ -780,7 +780,7 @@ public partial class TopDownMain : Node3D
         if (!_map.HasBoss || _map.Rift || OctoShoots.Core.Run.Crossover.On || _jelly is not { } jelly || Dives.FolkBossOf(_id, jelly) is not { } folk || Folk.Get(folk) is not { } n
             || OctoShoots.Core.Bosses.FolkBosses.For(n.Id, n.Level, _map.Menace) is not { } spec) return null;
         var d = PlaneOptions.Default;
-        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Shots = d.Shots, Glow = d.Glow, BeamBurn = d.BeamBurn, Boss = spec };
+        return new PlaneOptions { Corruption = d.Corruption, Pufferlings = d.Pufferlings, Vases = d.Vases, Adventure = d.Adventure, Shots = d.Shots, Glow = d.Glow, BeamBurn = d.BeamBurn, Gun = d.Gun, Boss = spec };
     }
 
     /// <summary>Saves the run as it stands at the start of this level (continuing puts her back here).</summary>
@@ -2837,6 +2837,12 @@ public partial class TopDownMain : Node3D
                     // A pop as her light leaves her, through the water, a touch louder for a stronger volley.
                     _sfx.PlayThrow(Mathf.Clamp(-8f + 4f * Mathf.Log(Mathf.Max(_world.LastVolleyDamage / PlaneCombatTuning.ShotDamage, 0.5f)), -12f, -1f));
                     ShotKick(_world.LastVolleyDamage / PlaneCombatTuning.ShotDamage);
+                    // A gun's shot (PlaneGun.cs): a flash of her light at the muzzle and the view kicked a touch.
+                    if (_world.Options.Gun)
+                    {
+                        _combat.LightBurst(_world.HerOrigin + e.Direction * 0.7f, 0.35f + 0.08f * e.Size);
+                        if (!_view.ReducedMotion) _camera.Shake(Mathf.Min(0.03f + 0.012f * e.Size, 0.09f));
+                    }
                 }
                 else if (e.Type is PlaneEventType.MobHit or PlaneEventType.BossHit) _damage.Show(e);
                 else if (e.Type == PlaneEventType.ShotPopped) _combat.Pop(e.Position, e.Size * 1.7f, e.Direction);

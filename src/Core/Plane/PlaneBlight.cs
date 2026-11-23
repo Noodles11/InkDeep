@@ -1075,7 +1075,7 @@ public sealed partial class PlaneWorld
                 float dealt = Ward(m, m.Position, light);
                 bool emptied = dealt > 0f && m.Corruption.Hit(dealt);
                 Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, m.Position, SafeNormalize(shot.Velocity), dealt));
-                Shove(ref m.Knock, shot.Velocity, m.Radius);
+                Shove(ref m.Knock, shot.Velocity, m.Radius, shot.Knock);
                 if (emptied) BurstMurkling(m, ember: true);
                 if (shot.Pierce) shot.Struck = m;
                 else

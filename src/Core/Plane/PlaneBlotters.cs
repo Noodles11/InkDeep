@@ -265,7 +265,7 @@ public sealed partial class PlaneWorld
                 float dealt = Ward(b, b.Position, light);
                 bool emptied = dealt > 0f && b.Corruption.Hit(dealt);
                 Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, b.Position, SafeNormalize(shot.Velocity), dealt));
-                Shove(ref b.Knock, shot.Velocity, BlotterTuning.ShellRadius);
+                Shove(ref b.Knock, shot.Velocity, BlotterTuning.ShellRadius, shot.Knock);
                 if (emptied) BurstBlotter(b, field);
                 if (shot.Pierce) shot.Struck = b;
                 else

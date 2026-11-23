@@ -56,6 +56,12 @@ public sealed class PlaneOptions
     /// pearl in full (lighting the pearl is how a boss is beaten); her bubble shots do the freeing.
     /// </summary>
     public float BeamBurn = 1f;
+    /// <summary>
+    /// Her shots as a gun's (GunTuning, PlaneGun.cs): fast and straight to their range, a hard shove on what they hit and
+    /// a kick back on her; her pearls make it a shotgun, a rifle, a machine gun. Off: the light bubbles that ease out,
+    /// hover and merge. On in the game.
+    /// </summary>
+    public bool Gun;
     /// <summary>The reef's bubble geysers (PlaneGeysers.cs): off (none are placed or spray); on only for their own tests.</summary>
     public bool Geysers;
 

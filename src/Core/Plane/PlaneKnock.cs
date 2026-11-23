@@ -22,10 +22,11 @@ public sealed partial class PlaneWorld
         KnockTuning.Speed * Math.Clamp(KnockTuning.Reference / MathF.Max(radius, 0.05f), KnockTuning.Least, KnockTuning.Most) * Run.Loadout.Stats[Stat.Knockback];
 
     /// <summary>A shot along <paramref name="dir"/> shoves a creature of this radius (its knock velocity, capped).</summary>
-    void Shove(ref Vector2 knock, Vector2 dir, float radius)
+    void Shove(ref Vector2 knock, Vector2 dir, float radius, float scale = 1f)
     {
         if (dir.LengthSquared() < 1e-8f) return;
-        float speed = KnockFor(radius);
+        // (scale: a gun's shot shoves harder, PlaneShot.Knock.)
+        float speed = KnockFor(radius) * scale;
         knock += Vector2.Normalize(dir) * speed;
         float most = speed * KnockTuning.Stack;
         if (knock.LengthSquared() > most * most) knock = Vector2.Normalize(knock) * most;

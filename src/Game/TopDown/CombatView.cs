@@ -1043,6 +1043,13 @@ void fragment() {
                     * (shot.Split || shot.Grow ? 1.6f : 1f);
                 _shots[i].Mesh = _spark;
                 _shots[i].Scale = Vector3.One * mote;
+                // A gun's shot (PlaneGun.cs) stretched along its flight, the faster the longer: a bolt of light.
+                if (shot.Gun && shot.Velocity.LengthSquared() > 1f)
+                {
+                    var along = new Vector3(shot.Velocity.X, 0f, shot.Velocity.Y);
+                    float stretch = 1f + Mathf.Min(along.Length() * 0.045f, 2.2f);
+                    _shots[i].Basis = new Basis(new Quaternion(Vector3.Up, along.Normalized())) * Basis.FromScale(new Vector3(mote, mote * stretch, mote));
+                }
                 _shots[i].MaterialOverride = _sparkMat;
 
                 // Merged since the last frame: a pulse of light and a chime.

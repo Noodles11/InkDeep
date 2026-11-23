@@ -188,6 +188,9 @@ public sealed class PlaneShot
     public float Charged;
     /// <summary>Bubbles: thrown at Speed0, slowing as if to stop at Range, then easing off with drag (0: a plain shot at constant speed).</summary>
     public float Speed0, Range;
+    /// <summary>A gun's shot (PlaneGun.cs): straight at Speed0 to Range, then out; its shove on a creature, × the bubbles' (1 for a bubble).</summary>
+    public bool Gun;
+    public float Knock = 1f;
     /// <summary>How long a bubble has hovered (drifting below BubbleStop), and how long it will before it pops.</summary>
     public float Rest, Hover = 1f;
     /// <summary>Merging: the volley it came from, its unmerged radius, and how many bubbles it is made of.</summary>
@@ -781,6 +784,7 @@ public sealed partial class PlaneWorld
         // Sardine Run: the stream strays a little off her aim, shot by shot.
         if (minigun) aim = Rotate(aim, _bubbleRng.Range(-1f, 1f) * PlaneCombatTuning.MinigunJitterDeg * MathUtil.Deg2Rad);
         _volleys++;
+        int first = Shots.Count;
         for (int i = 0; i < count; i++)
         {
             // Wave shots all fly along the aim, weaving out of phase; the rest fan out (a cone spreads wider).
@@ -822,6 +826,8 @@ public sealed partial class PlaneWorld
             Shots.Add(shot);
             LastVolleyDamage += shot.Damage;
         }
+        // (A gun's volley: fast and straight, kicking her back, PlaneGun.cs.)
+        ShapeGunVolley(first, aim, charge);
         return count;
     }
 
@@ -1048,9 +1054,18 @@ public sealed partial class PlaneWorld
             Pop(shot);
             return;
         }
+        // A gun's shot flies straight at its speed and goes out at its range.
+        if (shot.Gun && !shot.Boomerang)
+        {
+            if (shot.Traveled >= shot.Range)
+            {
+                Pop(shot);
+                return;
+            }
+        }
         // It eases out (a boomerang flies out and back at its speed instead): steady slowing while fast, the water's drag
         // once that is gentler; slow, it floats its own time, then pops.
-        if (shot.Range > 0f && !shot.Boomerang)
+        else if (shot.Range > 0f && !shot.Boomerang)
         {
             float decel = shot.Speed0 * shot.Speed0 / (2f * (shot.Lingers ? MathF.Min(shot.Range, PlaneCombatTuning.LingerRange) : shot.Range));
             speed = MathF.Max(speed - MathF.Min(decel, PlaneCombatTuning.LingerDrag * speed) * Dt, 0f);

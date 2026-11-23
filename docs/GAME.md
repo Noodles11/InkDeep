@@ -524,3 +524,13 @@ the tests of the dive still test the dive.
   - where her light traces the reef's edges in the ink look, the line is the **biome's own colour** (its ink's tint
     made bright, wavering a little toward white): the Sunlit Reef blue, the Kelp Forest green, the Shipwreck red, the
     Ruins yellow, the Alien Wreckage cyan, the Drowned Temple orange, Atlantis violet; no longer always coral and magenta.
+- **Her shots as a gun (0.71.0)** (`PlaneGun.cs`, `GunTuning`, `PlaneOptions.Gun`, on in the game), her light its
+  ammunition: a shot flies straight and fast (2.3× the bubbles' speed) to its range (1.6× theirs) and goes out there,
+  no easing, hovering or merging; it shoves what it hits hard (4× a bubble's shove) and kicks her back against her aim
+  (2.6 m/s for a plain shot). **Her pearls set how it fires:** a plain shot is a pistol; more shots a throw (Multishot,
+  a cone) make a **shotgun**, its pellets scattered ±4° and ±12% in speed, short (55% of the range), its kick 2.2× a
+  plain shot's; a charged throw (Pearl Diver) is a **rifle** round, faster and farther (× 1 + 0.8 × the charge), shoving
+  harder (× 1 + 2 × the charge), through what it hits once fully charged, its kick × 1 + 2.5 × the charge; the stream
+  (Sardine Run) a **machine gun**, each shot's kick a third of a plain one's. The look is the same bolt of light,
+  stretched along its flight the faster it goes, its trail a tracer; each shot flashes her light at the muzzle and
+  kicks the view a touch.
