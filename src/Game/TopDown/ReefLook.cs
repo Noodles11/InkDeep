@@ -103,7 +103,7 @@ public sealed record ReefLook
     /// depth's as it was.
     /// </summary>
     public static ReefLook Of(LevelId id) =>
-        !OctoShoots.Core.Run.Crossover.On || id.IsTutorial || id.Haven ? For(id.Depth) : ForBiome(OctoShoots.Core.Run.Biomes.Of(id), id.Depth);
+        !OctoShoots.Core.Run.Crossover.On || id.IsTutorial && id.Level >= OctoShoots.Core.Gen.TopDown.LevelStocking.TutorialLevels || id.Haven ? For(id.Depth) : ForBiome(OctoShoots.Core.Run.Biomes.Of(id), id.Depth);
 
     static readonly System.Collections.Generic.Dictionary<(OctoShoots.Core.Run.Biome, int, bool), ReefLook> BiomeLooks = new();
 

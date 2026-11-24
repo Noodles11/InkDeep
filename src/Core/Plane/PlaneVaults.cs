@@ -12,7 +12,7 @@ public static class VaultTuning
     public const float Taken = 0.7f;
     public const int Most = 6;
     /// <summary>A vault's bubble on the swim plane, and the rock it keeps to (it hangs in the lee of a wall).</summary>
-    public const float Radius = 0.85f, WallSearch = 3.5f, WallGap = 0.12f;
+    public const float Radius = 0.85f, WallSearch = 3.5f + OctoShoots.Core.Gen.TopDown.CaveLayout.Widen, WallGap = 0.12f;
     /// <summary>Kept clear of the start.</summary>
     public const float StartClear = 8f;
     /// <summary>Her beam's light it takes to burst (about a second of her beam); it settles back without it.</summary>
@@ -75,8 +75,9 @@ public sealed partial class PlaneWorld
                 }
             }
             if (wall == Vector2.Zero) continue;
+            // (Against the rock, or a little off it where a corner crowds it; never left hanging in open water.)
             var at = mark + wall * (near - VaultTuning.Radius - VaultTuning.WallGap);
-            if (!Clear(at, VaultTuning.Radius * 0.8f)) at = mark;
+            if (!Clear(at, VaultTuning.Radius * 0.8f)) at -= wall * 0.3f;
             if (!Clear(at, VaultTuning.Radius * 0.8f)) continue;
             var vault = new PlaneVault { Position = at, Wall = wall };
             int shells = VaultTuning.ShellsMin + rng.Int(VaultTuning.ShellsMax - VaultTuning.ShellsMin + 1);

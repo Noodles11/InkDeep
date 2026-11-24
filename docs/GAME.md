@@ -296,9 +296,10 @@ the tests of the dive still test the dive.
   (18, not the proposal's 22, so the grid fits inside the level's rim), a Spelunky walk from one row to the far one,
   side cells up to two deep and the odd loop, the whole grid turned or mirrored any of eight ways. Each used cell takes
   a template that opens where it is joined (sockets 6 m wide in the middle of a side), turned and mirrored, its chunk
-  slots filled at random; then the open water is grown 1.5 m into the rock everywhere (0.84.0: roomier passages and
-  chambers than the cells draw, `CaveLayout.Widen`; its water band ×1.45, `WidenedWater`) and the rock edges are
-  eroded with noise, and the generator's own stages (walls, passes,
+  slots filled at random; then the walls are pushed back 3 m from the water (0.85.0: roomier passages and chambers than
+  the cells draw, `CaveLayout.Widen`; only rock joined to the level's edge gives way, so rock islands, the rooms' cells
+  and the arena keep their size, the arena's doorways 12 m wide; its water band ×1.45, `WidenedWater`) and the rock
+  edges are eroded with noise, and the generator's own stages (walls, passes,
   arches, decoration) build on it. Ten Sunlit Reef cells and one room cell so far. A room cell holds a place that
   lives in a cave (a treasure clam, a Crab Deal) behind a short spur; an open place (a shell cache) takes a POI mark;
   a place that finds neither is left out. Mob marks fill the spawn table by tag (lone, pack, thrower, ambusher,
@@ -340,7 +341,8 @@ the tests of the dive still test the dive.
     Crab Deal, which cuts her most health. `--at=shrine` / `--at=shrine-on` (verification).
   - Step 3 is now built but for the active pearl charging by freeing creatures (§6), which comes with the rosters.
 - **Step 4 (0.53.0), the boss level:** a boss level is a template level too (`LevelPlan.Templated` now holds for
-  every crossover level but the tutorial's). Its walk ends in the **arena**: the 2 × 2 block of the last two rows
+  every crossover level but the tutorial's rift; since 0.85.0 the tutorial's first level is a template level too, free
+  swimming with no leak to seal). Its walk ends in the **arena**: the 2 × 2 block of the last two rows
   round where the walk would end, carved as one round cave (`CaveLayout.ArenaRadius`, 15 m, its wall wavering a
   little) with a doorway to each cell joined to it; the walk's cells past where it first enters the block are left
   out. The generator's own boss stages work on it unchanged: the sealed boss walls across each doorway, the Crack in

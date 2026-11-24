@@ -156,7 +156,8 @@ public sealed class LevelPlan
         plan.Curses = 0;
         // (A secret room's labyrinth is a second layer: the crossover has none, CROSSOVER.md §3.)
         plan.Secrets = 0;
-        plan.Templated = !id.IsTutorial && !plan.LeakCave;
+        // (The tutorial's first level is a template level like the rest: free swimming, no leak; its rift stays its own.)
+        plan.Templated = !plan.Rift && !plan.LeakCave;
         // Its biome and where it leads (CROSSOVER.md §8): the next row of its depth, or from a boss's arena the next
         // depth, one way for each biome below.
         plan.Biome = Biomes.Of(plan.Id);

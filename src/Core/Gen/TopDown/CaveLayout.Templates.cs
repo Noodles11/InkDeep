@@ -36,13 +36,17 @@ public sealed partial class CaveLayout
     const int TemplateTries = 40;
     /// <summary>The erosion (metres): two octaves of noise on the signed distance to the rock.</summary>
     const float Erode = 1.5f, ErodeFine = 0.6f;
-    /// <summary>How far the open water is grown into the rock everywhere (metres): roomier passages and chambers than the cells draw.</summary>
-    public const float Widen = 1.5f;
+    /// <summary>
+    /// How far the walls are pushed back from the water (metres): roomier passages and chambers than the cells draw. Only
+    /// the walls (rock joined to the level's edge) give way: rock islands in the water, the rooms' cells and the arena keep
+    /// their size.
+    /// </summary>
+    public const float Widen = 3f;
     /// <summary>The water a template level holds against a grown one's (its area band × this): what Widen adds.</summary>
     public const float WidenedWater = 1.45f;
 
     /// <summary>The boss's arena (CROSSOVER.md §4): a round cave this wide in a 2 × 2 block of cells, its doorways this wide.</summary>
-    public const float ArenaRadius = 15f, ArenaDoor = 6f;
+    public const float ArenaRadius = 15f, ArenaDoor = 6f + 2f * Widen;
 
     /// <summary>
     /// One template cave for the level, or why none could be made. <paramref name="kinds"/> are the plan's places:
@@ -262,6 +266,39 @@ public sealed partial class CaveLayout
             }
         }
 
+        // 6b. The walls pushed back (Widen): rock joined to the level's edge, within Widen of the water, becomes water,
+        // outside the rooms' cells and the arena (islands, rooms and the arena keep their size).
+        {
+            var wall = new bool[NN * NN];
+            var stack = new Stack<int>();
+            stack.Push(0);
+            wall[0] = !raw[0];
+            while (stack.Count > 0)
+            {
+                int i = stack.Pop(), x = i % NN, y = i / NN;
+                foreach (var (dx, dy) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                {
+                    int nx = x + dx, ny = y + dy;
+                    if (nx < 0 || ny < 0 || nx >= NN || ny >= NN) continue;
+                    int j = ny * NN + nx;
+                    if (raw[j] || wall[j]) continue;
+                    wall[j] = true;
+                    stack.Push(j);
+                }
+            }
+            var kept = new bool[NN * NN];
+            for (int i = 0; i < C * C; i++)
+            {
+                if (use[i] is not (Use.Room or Use.Arena)) continue;
+                int ox = GridOrigin + At(i).X * CS, oy = GridOrigin + At(i).Y * CS;
+                for (int y = oy; y < oy + CS; y++)
+                for (int x = ox; x < ox + CS; x++) kept[y * NN + x] = true;
+            }
+            var near = Chamfer(raw, true);
+            for (int i = 0; i < NN * NN; i++)
+                if (wall[i] && !kept[i] && near[i] < Widen + 0.5f) raw[i] = true;
+        }
+
         // 7. Erosion: the signed distance to the rock, roughened by noise, smoothed twice; the rim kept rock.
         uint seed = (uint)(rng.NextU64() >> 34);
         var toRock = Chamfer(raw, false);
@@ -272,7 +309,7 @@ public sealed partial class CaveLayout
         {
             int i = y * NN + x;
             float sd = raw[i] ? 0.5f - toRock[i] : toWater[i] - 0.5f;
-            float v = sd - Widen + Fbm(x * 0.13f, y * 0.13f, seed) * Erode + Fbm(x * 0.41f, y * 0.41f, seed + 31) * ErodeFine;
+            float v = sd + Fbm(x * 0.13f, y * 0.13f, seed) * Erode + Fbm(x * 0.41f, y * 0.41f, seed + 31) * ErodeFine;
             float edge = MathF.Min(MathF.Min(x, y), MathF.Min(g.Size - x, g.Size - y));
             if (edge < Rim + 1f) v = MathF.Max(v, Rim + 1f - edge);
             open[i] = v < 0f;

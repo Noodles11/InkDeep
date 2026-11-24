@@ -107,15 +107,17 @@ public class CrossoverTests
     }
 
     [Fact]
-    public void Every_crossover_level_but_the_tutorial_s_is_templated()
+    public void Every_crossover_level_but_the_rift_is_templated()
     {
         foreach (var id in Ids)
         {
             var plan = LevelPlan.For(TestLevels.Seed, id, crossover: true);
-            Assert.Equal(!id.IsTutorial, plan.Templated);
+            Assert.Equal(!plan.Rift, plan.Templated);
             Assert.False(LevelPlan.For(TestLevels.Seed, id).Templated);
         }
-        Assert.False(LevelPlan.For(TestLevels.Seed, LevelId.First, crossover: true).Templated);
+        // (The tutorial's first level is a template level like the rest; its rift is not.)
+        Assert.True(LevelPlan.For(TestLevels.Seed, LevelId.First, crossover: true).Templated);
+        Assert.False(LevelPlan.For(TestLevels.Seed, LevelId.First with { Level = 2 }, crossover: true).Templated);
     }
 
     [Fact]
@@ -410,14 +412,15 @@ public class CrossoverTests
         // A free-swimming creature just outside the arena's mouth, on open water toward the start.
         var path = LevelValidator.ShortestPath(w.Map, w.ArenaCenter, w.Map.Start.Position, clearance: 1f);
         var at = path.First(q => Vector2.Distance(q, w.ArenaCenter) > CaveLayout.ArenaRadius + TideTuning.Mouth + 1.5f);
-        w.Mobs.Add(new PlaneMob { Position = at, Home = at, Rng = new Rng(1) });
+        var mob = new PlaneMob { Position = at, Home = at, Rng = new Rng(1) };
+        w.Mobs.Add(mob);
         int dissolved = 0;
         for (int i = 0; i < 600 && dissolved == 0; i++)
         {
             w.Step(default);
             dissolved = w.Dissolved;
         }
-        Assert.True(dissolved > 0, "nothing dissolved");
+        Assert.True(dissolved > 0, $"nothing dissolved: from {at} ({Vector2.Distance(at, w.ArenaCenter)} m) to {mob.Position} ({Vector2.Distance(mob.Position, w.ArenaCenter)} m), her {w.Player.Position}, flow there {w.TideAt(at)}");
         Assert.True(w.Boss.MaxHp > max);
         Assert.True(w.Boss.MaxHp <= max * (1f + TideTuning.FeedMost) + 0.01f);
     }

@@ -78,6 +78,8 @@ public class DangerTests
                 if (!w.Clear(spot, 0.6f)) continue;
                 var m = w.DebugBud(spot, prime: false);
                 m.Bud = 0f;
+                // (The light-seekers: a thrower or a hunter keeps its own ways.)
+                m.Kind = MurkKind.Basic;
                 near.Add(m);
             }
             Assert.NotEmpty(near);
