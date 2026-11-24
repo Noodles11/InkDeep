@@ -12,6 +12,8 @@
 - `fire.ogg` — her beam's fire, looped while it burns a creature (`Sfx.Burning`), supplied for the project.
 - `electric_discharge.mp3` — "Electric Discharge" by Dragon Studio (Pixabay, id 386160), supplied for the project; not played now.
 - `shots.mp3` — her shots: a short slice of it, from a random place, for each projectile (`Sfx.PlayShots`), supplied for the project.
+- `kick-hit.mp3` — a creature taking her hit (`Sfx.PlayKick`), supplied for the project.
+- `mob-down.mp3` — a creature defeated (`Sfx.PlayMobDown`), supplied for the project.
 - `big_bubble.mp3` — "Big Bubble 2" by floraphonic (Pixabay, id 169074), supplied for the project; not played now.
 
 The last two are used under the Pixabay Content License.

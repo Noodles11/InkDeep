@@ -2712,7 +2712,7 @@ public partial class TopDownMain : Node3D
             _elapsed += PlaneWorld.Dt;
             _accumulator -= PlaneWorld.Dt;
             steps++;
-            bool struck = false, emerged = false;
+            bool struck = false, emerged = false, kicked = false, downed = false;
             foreach (var e in _world.Events)
             {
                 NoteRequest(e);
@@ -2735,8 +2735,17 @@ public partial class TopDownMain : Node3D
                 if (e.Type is PlaneEventType.MobHit or PlaneEventType.MobDefeated or PlaneEventType.BossHit or PlaneEventType.VaseHit && e.Direction != default)
                 {
                     _combat.Flares(e.Position, Outline(e), e.Direction, e.Type == PlaneEventType.VaseHit ? 1f : e.Size / PlaneCombatTuning.ShotDamage);
-                    // A squishy pop as it strikes (once a step, however many it struck).
-                    if (!struck)
+                    // A creature struck: a kick (once a step, however many it struck; its freeing has its own sound below).
+                    // Anything else (a boss, a vase): a squishy pop.
+                    if (e.Type == PlaneEventType.MobHit)
+                    {
+                        if (!kicked)
+                        {
+                            kicked = true;
+                            _sfx.PlayKick();
+                        }
+                    }
+                    else if (e.Type != PlaneEventType.MobDefeated && !struck)
                     {
                         struck = true;
                         _sfx.PlayStrike(-6f);
@@ -2897,6 +2906,12 @@ public partial class TopDownMain : Node3D
                 }
                 else if (e.Type == PlaneEventType.MobDefeated)
                 {
+                    // A creature defeated (once a step, however many fell).
+                    if (!downed)
+                    {
+                        downed = true;
+                        _sfx.PlayMobDown();
+                    }
                     _damage.Show(e);
                     // Freed by light: the flash grows with the bubble that did it; a big one rings her bell and lifts
                     // the screen's edges (not with reduced motion).

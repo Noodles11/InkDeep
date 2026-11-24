@@ -38,6 +38,9 @@ public partial class Sfx : Node
     /// faded in and out, the volley's slices a touch apart (ShotStagger), each at ShotDb, softer the more fly at once.
     /// </summary>
     const string ShotsPath = "res://audio/sfx/shots.mp3";
+    /// <summary>A creature struck by her (kick-hit.mp3), and a creature freed (mob-down.mp3).</summary>
+    const string KickPath = "res://audio/sfx/kick-hit.mp3", DownPath = "res://audio/sfx/mob-down.mp3";
+    AudioStream? _kick, _down;
     const float ShotSlice = 0.32f, ShotFadeIn = 0.012f, ShotFadeOut = 0.14f, ShotStagger = 0.025f, ShotDb = -15f;
     const int ShotVoices = 12;
     AudioStream? _shots;
@@ -96,6 +99,8 @@ public partial class Sfx : Node
             if (ResourceLoader.Exists(path)) _gathers.Add(GD.Load<AudioStream>(path));
         _fire = ResourceLoader.Exists(FirePath) ? GD.Load<AudioStream>(FirePath) : null;
         if (_fire is AudioStreamOggVorbis ogg) ogg.Loop = true;
+        _kick = ResourceLoader.Exists(KickPath) ? GD.Load<AudioStream>(KickPath) : null;
+        _down = ResourceLoader.Exists(DownPath) ? GD.Load<AudioStream>(DownPath) : null;
         _shots = ResourceLoader.Exists(ShotsPath) ? GD.Load<AudioStream>(ShotsPath) : null;
         if (_shots is AudioStreamMP3 mp3) mp3.Loop = false;
         _shotsLength = (float)(_shots?.GetLength() ?? 0.0);
@@ -255,6 +260,18 @@ public partial class Sfx : Node
             t.TweenCallback(Callable.From(p.Stop));
             _shotPlayers[slot] = (p, t);
         }
+    }
+
+    /// <summary>A creature taking her hit (kick-hit.mp3), a touch apart in pitch each time; heard whatever OnlyToggle says.</summary>
+    public void PlayKick(float volumeDb = -8f)
+    {
+        if (_kick is not null) PlayRecorded(_kick, volumeDb, 0.92f + (float)_random.NextDouble() * 0.16f);
+    }
+
+    /// <summary>A creature defeated, freed by her light (mob-down.mp3), a touch apart in pitch each time.</summary>
+    public void PlayMobDown(float volumeDb = -6f)
+    {
+        if (_down is not null) PlayRecorded(_down, volumeDb, 0.95f + (float)_random.NextDouble() * 0.1f);
     }
 
     /// <summary>Her light striking something it can harm: a squish, a touch apart in pitch each time.</summary>
