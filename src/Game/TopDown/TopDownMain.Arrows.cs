@@ -10,8 +10,9 @@ namespace OctoShoots.Game.TopDown;
 /// <summary>
 /// What the emblems at the screen's edges show in the crossover (EdgeArrows, the cubes branch's: a ringed sign in its
 /// place's colour that waits at the screen's edge and slides onto its place once that is on the screen, in place of the
-/// minimap): the level's places (its rooms, caches, shrines), its light springs (where she heals and grows) while they hold
-/// healing or she has energy to lay, and the boss's arena while its boss waits.
+/// minimap). The boss's arena while its boss waits and the shop are shown from the start; every other place (its caches,
+/// clams, shrines, dens, light rooms, light springs) only once she has found it (been there); and none once it is done
+/// (PlaneWorld.PoiDone: nothing left there; a light room opened; a spring spent with no energy of hers to lay).
 /// </summary>
 public partial class TopDownMain
 {
@@ -36,8 +37,9 @@ public partial class TopDownMain
 
     IEnumerable<(System.Numerics.Vector2 At, Color Colour, string Sign, float Reach)> ArrowTargets()
     {
-        foreach (var poi in _map.Pois)
+        for (int i = 0; i < _map.Pois.Count; i++)
         {
+            var poi = _map.Pois[i];
             if (!_map.Shown(poi) || poi.Kind is PoiKind.Start or PoiKind.Relic or PoiKind.Secret or PoiKind.Hole) continue;
             // A boss's arena while its boss waits; no other way out (she dives anywhere).
             if (poi.Kind == PoiKind.Exit)
@@ -45,11 +47,13 @@ public partial class TopDownMain
                 if (_map.HasBoss && _world.Boss is { Freed: false }) yield return (poi.Position, ReefKinds.Colour(ReefKind.Boss), "X", poi.Radius);
                 continue;
             }
+            bool found = poi.Kind == PoiKind.Shop || i < _world.Visited.Length && _world.Visited[i];
+            if (!found || _world.PoiDone(i)) continue;
             yield return (poi.Position, LevelView.PoiColor(poi.Kind), Sign(poi.Kind), Mathf.Max(poi.Radius, SpringReach));
         }
         // Light rooms while they are shut ("~").
         foreach (var room in _world.LightRooms)
-            if (!room.Opened) yield return (room.Centre, LightRoomColour, "~", FloraTuning.Ring + 1f);
+            if (room.Found && !room.Opened) yield return (room.Centre, LightRoomColour, "~", FloraTuning.Ring + 1f);
         // Her light springs: where she heals and grows ("+"), once she has found one (before, it lies faint on the floor).
         foreach (var sp in _world.Springs)
             if (sp.Found && (!sp.Spent || _world.Run.Energy > 0f)) yield return (sp.Position, SpringColour, "+", SpringReach);

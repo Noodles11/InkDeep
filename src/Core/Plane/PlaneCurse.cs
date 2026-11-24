@@ -57,6 +57,25 @@ public sealed partial class PlaneWorld
     /// <summary>The places she has been to on this level (by index into the map's places).</summary>
     public bool[] Visited { get; private set; } = Array.Empty<bool>();
 
+    /// <summary>
+    /// A place is done: nothing left there for her (a cache's shells all gathered, a clam's pearl taken, every stand of a
+    /// shop, a shrine or a crab's deal sold or crumbled, a curse den cleared). Its arrow and emblem are gone then.
+    /// A haven, a leak cave and the way down are never done.
+    /// </summary>
+    public bool PoiDone(int index)
+    {
+        var poi = Map.Pois[index];
+        bool Within(Vector2 at) => Vector2.Distance(at, poi.Position) <= poi.Radius + 1f;
+        return poi.Kind switch
+        {
+            PoiKind.ShellCache => !Shells.Exists(s => !s.Taken && Within(s.Position)),
+            PoiKind.TreasureCave => !Pearls.Exists(q => !q.Taken && Within(q.Position)),
+            PoiKind.Shop or PoiKind.Shrine or PoiKind.CrabDeal => !Stands.Exists(s => !s.Sold && Within(s.Position)),
+            PoiKind.CurseDen => Curse is { Cleared: true } den && den.Poi == index,
+            _ => false,
+        };
+    }
+
     void PlaceCurse()
     {
         Visited = new bool[Map.Pois.Count];

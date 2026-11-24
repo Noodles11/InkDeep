@@ -77,4 +77,53 @@ public class TidyTests
         Assert.True(spring.Found);
         Assert.Contains(w.Events, e => e.Type == PlaneEventType.SpringFound);
     }
+
+    [Fact]
+    public void A_place_is_done_once_nothing_is_left_there_and_a_light_room_is_found_by_coming_to_it()
+    {
+        bool cache = false, clam = false, shop = false;
+        for (int level = 1; level <= 5 && !(cache && clam && shop); level++)
+            foreach (var biome in new[] { Biome.SunlitReef, Biome.Atlantis })
+            {
+                var w = World(biome, tidy: true, level);
+                for (int i = 0; i < w.Map.Pois.Count; i++)
+                {
+                    var poi = w.Map.Pois[i];
+                    bool Near(Vector2 at) => Vector2.Distance(at, poi.Position) <= poi.Radius + 1f;
+                    switch (poi.Kind)
+                    {
+                        case PoiKind.ShellCache when w.Shells.Any(x => Near(x.Position)):
+                            Assert.False(w.PoiDone(i));
+                            foreach (var x in w.Shells.Where(x => Near(x.Position))) x.Taken = true;
+                            Assert.True(w.PoiDone(i));
+                            cache = true;
+                            break;
+                        case PoiKind.TreasureCave when w.Pearls.Any(q => Near(q.Position)):
+                            Assert.False(w.PoiDone(i));
+                            foreach (var q in w.Pearls.Where(q => Near(q.Position))) q.Taken = true;
+                            Assert.True(w.PoiDone(i));
+                            clam = true;
+                            break;
+                        case PoiKind.Shop when w.Stands.Any(x => Near(x.Position)):
+                            Assert.False(w.PoiDone(i));
+                            foreach (var x in w.Stands.Where(x => Near(x.Position))) x.Sold = true;
+                            Assert.True(w.PoiDone(i));
+                            shop = true;
+                            break;
+                        case PoiKind.Haven:
+                            Assert.False(w.PoiDone(i));
+                            break;
+                    }
+                }
+            }
+        Assert.True(cache && clam && shop, $"cache {cache} clam {clam} shop {shop}");
+
+        var reef = World(Biome.SunlitReef, tidy: false);
+        var room = reef.LightRooms.First();
+        reef.Step(default);
+        Assert.False(room.Found);
+        reef.Player.Position = reef.Player.PrevPosition = room.Centre + new Vector2(FloraTuning.Ring + 1f, 0f);
+        reef.Step(default);
+        Assert.True(room.Found);
+    }
 }

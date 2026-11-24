@@ -29,7 +29,7 @@ public partial class SpringView : Node3D
 
     const float SpentFade = 0.8f;
     /// <summary>Dormant: the emblem's strength in her full light (her light on it ≥ FaintLight), and how fast it follows her light; found, how long it takes to light up.</summary>
-    const float Faint = 0.14f, FaintLight = 0.35f, WakeSeconds = 1.4f;
+    const float Faint = 0.09f, FaintLight = 0.35f, WakeSeconds = 1.4f;
     /// <summary>The ray: where the surface is above the floor, how far from upright it falls, and from which side (north-west, so it rises up the screen).</summary>
     const float RayHeight = 17f, RaySlant = 32f;
     static readonly Vector2 RayFrom = new Vector2(-0.45f, -0.89f).Normalized();

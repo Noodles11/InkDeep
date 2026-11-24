@@ -673,7 +673,11 @@ the tests of the dive still test the dive.
     pearl's charge with the pearl beside it, and shells and energy under them. The bell gauge stays dormant.
   - Arrows at the screen's edges point to places off screen in their colours (`EdgeArrows`,
     `TopDownMain.Arrows.cs`): rooms, caches, shrines, light springs, and the boss's arena while its boss waits. They
-    replace the minimap in the crossover.
+    replace the minimap in the crossover. Since 0.92.0 only the boss's arena and the shop show from the start; every
+    other place (a cache, a clam, a shrine, a den, a crab's deal, a haven, a light room, a light spring) only once she
+    has been there (`PlaneWorld.Visited`, `LightRoom.Found`, `LightSpring.Found`), and none once it is done
+    (`PlaneWorld.PoiDone`: a cache's shells all gathered, a clam's pearl taken, every stand of a shop, a shrine or a
+    deal sold, a curse den cleared; a light room opened; a spring spent with no energy of hers to lay).
   - In the reef's soft edge nothing is cut away round her (no see-through). She rises twice as high (`GooLift` 2.2)
     and is drawn up to 35% larger.
   - Her shots pop bubble vaults at once (`VaultShotTests`).

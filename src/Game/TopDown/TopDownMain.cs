@@ -358,7 +358,7 @@ public partial class TopDownMain : Node3D
     /// <summary>Verification (--dbg-diveclock=s): each level's clock starts this far on (DiveClock), so the dive opens sooner.</summary>
     float _dbgDiveClock;
     /// <summary>Verification (--dbg-vault): she shines at the nearest bubble vault.</summary>
-    bool _dbgVault;
+    bool _dbgVault, _dbgShineSpring;
     /// <summary>Verification (--dbg-loose=id): that pearl lies loose on the reef a few metres from her at the start.</summary>
     string? _dbgLoose;
     /// <summary>
@@ -656,6 +656,8 @@ public partial class TopDownMain : Node3D
             else if (arg == "--dbg-ward") _dbgWard = true;
             else if (arg == "--dbg-exit") _dbgExit = true;
             else if (arg == "--dbg-vault") _dbgVault = true;
+            // (Verification: she holds still and shines her beam on the nearest light spring.)
+            else if (arg == "--dbg-shine-spring") _dbgShineSpring = true;
             else if (arg.StartsWith("--dbg-diveclock=") && float.TryParse(Value("--dbg-diveclock="), NumberStyles.Float, CultureInfo.InvariantCulture, out float dc)) _dbgDiveClock = dc;
             else if (arg.StartsWith("--dbg-loose=")) _dbgLoose = Value("--dbg-loose=");
             else if (arg == "--dbg-prism") _dbgPrism = true;
@@ -4453,6 +4455,13 @@ public partial class TopDownMain : Node3D
         if (_dbgSteer is { } steerTo && !(_dbgSteerFight && _world.Boss is not { Stage: BossStage.Fight }))
         {
             input.Move = new System.Numerics.Vector2(steerTo.X, steerTo.Y);
+            return input;
+        }
+        if (_dbgShineSpring && _world.Springs.Count > 0)
+        {
+            var sp = _world.Springs.OrderBy(v => System.Numerics.Vector2.Distance(v.Position, _world.Player.Position)).First();
+            input.Aim = System.Numerics.Vector2.Normalize(sp.Position - _world.Player.Position);
+            input.Beam = _frame > 30;
             return input;
         }
         // Verification (--dbg-vault): she holds still and, after a moment, shines at the nearest bubble vault till it bursts.

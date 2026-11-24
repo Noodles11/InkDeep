@@ -70,6 +70,8 @@ public sealed class LightRoom
     public Vector2 Centre;
     public readonly List<PlaneFlora> Plants = new();
     public bool Opened;
+    /// <summary>She has come to it (within FloraTuning.Ring + FoundReach): its arrow shows from then on, while it is shut.</summary>
+    public bool Found;
     /// <summary>An orrery: its mirrors, and its heart's light (0..1: full lights it).</summary>
     public bool Orrery;
     public readonly List<OpticWall> Mirrors = new();
@@ -95,7 +97,7 @@ public static class FloraTuning
     public const float Touch = 1.3f;
     /// <summary>Light rooms: how many a level (1 to Rooms), the open water round one, how far from her start and from each other, the ring's radius.</summary>
     public const int Rooms = 2;
-    public const float RoomClear = 4.6f, RoomFromStart = 16f, RoomApart = 22f, Ring = 3.2f;
+    public const float FoundReach = 3f, RoomClear = 4.6f, RoomFromStart = 16f, RoomApart = 22f, Ring = 3.2f;
     /// <summary>A room's prize: shells, and light specks' energy.</summary>
     public const int RoomShells = 6;
     public const float RoomSpecks = 3f;
@@ -305,6 +307,7 @@ public sealed partial class PlaneWorld
         }
         foreach (var room in LightRooms)
         {
+            if (!room.Found && Vector2.Distance(her, room.Centre) <= FloraTuning.Ring + FloraTuning.FoundReach) room.Found = true;
             if (room.Opened) continue;
             if (room.Orrery)
             {

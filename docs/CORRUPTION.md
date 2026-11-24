@@ -567,7 +567,7 @@ the field never seeds there.
   swims in is put back at its edge, and one clinging to her is thrown off as she enters (`WardSprings`). Once it is
   spent they move through the place freely. Their throws and spikes still fly through it.
 - **Found by swimming over it** (0.91.0, `LightSpring.Found`, `SpringFound`): until she first swims into it, it lies
-  dormant: no ray, no light, no motes, only its emblem faint on the floor (14% of its strength) where her own light
+  dormant: no ray, no light, no motes, only its emblem faint on the floor (9% of its strength) where her own light
   falls on it, and no arrow or map mark points to it. The first time she is inside it, it lights up over 1.4 s with a
   burst of sparkles, and from then on it shows as below.
 - When it starts healing her it raises `SpringEntered`: a chime. When she is whole it raises `SpringCleansed`: a bell
