@@ -2909,8 +2909,8 @@ public partial class TopDownMain : Node3D
                 else if (e.Type == PlaneEventType.Shot)
                 {
                     _bell.Spend(e.Size);
-                    // A pop as her light leaves her, through the water, a touch louder for a stronger volley.
-                    _sfx.PlayThrow(Mathf.Clamp(-8f + 4f * Mathf.Log(Mathf.Max(_world.LastVolleyDamage / PlaneCombatTuning.ShotDamage, 0.5f)), -12f, -1f));
+                    // Her shots leaving her: a slice of shots.mp3 for each projectile of the volley (Sfx.PlayShots).
+                    _sfx.PlayShots(Mathf.Max(1, Mathf.RoundToInt(e.Size)));
                     ShotKick(_world.LastVolleyDamage / PlaneCombatTuning.ShotDamage);
                     // A gun's shot (PlaneGun.cs): a flash of her light at the muzzle and the view kicked a touch.
                     if (_world.Options.Gun)

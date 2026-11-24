@@ -1229,9 +1229,8 @@ The FP staging ("look up through the surface") is replaced:
 - Music: post-v1 (inherited decision). The soundtrack is off for now (`MusicManager.SoundtrackOn`): no track is loaded or played, only the sound effects.
 - **Heard through water** (`Sfx`): every game sound goes through the Sfx bus, whose low-pass filter takes the treble off
   as water does — 7 kHz in the Shallows, falling off to 1.5 kHz at the deepest (`SetDepth`, by the depth shown).
-- **Her light thrown pops** (`Sfx.PlayThrow`, on every volley): one of ten recorded pops (audio/sfx/pop1–pop10.wav)
-  at random, never the same twice running, its pitch a little apart each time, muffled by the water. A stronger volley
-  is a little louder.
+- **Her shots are heard one by one** (`Sfx.PlayShots`, GAME.md §14): a slice of audio/sfx/shots.mp3 for each
+  projectile. (The recorded pops of `Sfx.PlayThrow` are no longer played.)
 - **Her light striking pops squishily** (`Sfx.PlayStrike`): whenever a shot of hers hits anything it can harm (a
   creature, a boss, a vase), the squishy pop (audio/sfx/squishpop.mp3), once a step however many it struck, through
   the same water.

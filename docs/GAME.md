@@ -674,6 +674,9 @@ the tests of the dive still test the dive.
     shell cache, "%" a crab's deal, "^" a shrine, "+" a light spring, "X" the boss's arena while its boss waits.
   - **Its sounds** (`Sfx`, `audio/sfx/CREDITS.md`): a squish as her light strikes, a bloop as a murkling emerges
     (fainter the farther off), a swish as she dashes, a big bubble as a vault pops, a wet splat as an ink bomb lands.
+    Since 0.86.0 her shots are heard one by one (`Sfx.PlayShots`): for each projectile of a volley a 0.32 s slice of
+    `audio/sfx/shots.mp3` from a random place in it, faded in and out, 25 ms apart, a touch apart in pitch, at −15 dB
+    (−3 dB more each time the count doubles); it replaces the recorded pops.
   - **Its title menu** (`TitleMain`, `TitleMain.Phases`, `MenuSpray`): it opens out of the whitening gonad loader onto
     Clementine in open water with fish. Her beam lights the items, the chosen one dissolves, her push wave clears the
     rest, and Play dives to her jellies.

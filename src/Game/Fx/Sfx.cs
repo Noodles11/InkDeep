@@ -33,6 +33,18 @@ public partial class Sfx : Node
     static readonly string[] GatherVariants = { "res://audio/sfx/gather2.ogg", "res://audio/sfx/gather3.ogg" };
     /// <summary>Gathers no closer together than this (s): a handful of shells at once is one gather, not a pile of them.</summary>
     const float GatherGap = 0.07f;
+    /// <summary>
+    /// Her shots (shots.mp3, a run of them): for each projectile a slice of ShotSlice seconds from a random place in it,
+    /// faded in and out, the volley's slices a touch apart (ShotStagger), each at ShotDb, softer the more fly at once.
+    /// </summary>
+    const string ShotsPath = "res://audio/sfx/shots.mp3";
+    const float ShotSlice = 0.32f, ShotFadeIn = 0.012f, ShotFadeOut = 0.14f, ShotStagger = 0.025f, ShotDb = -15f;
+    const int ShotVoices = 12;
+    AudioStream? _shots;
+    float _shotsLength;
+    readonly List<(AudioStreamPlayer Player, Tween? Tween)> _shotPlayers = new();
+    int _nextShot;
+
     /// <summary>The beam's fire: its loudness at full (dB), and how fast it swells in and dies away (per second, of its 0..1).</summary>
     const float FireDb = -6f, FireIn = 6f, FireOut = 3f;
 
@@ -84,6 +96,15 @@ public partial class Sfx : Node
             if (ResourceLoader.Exists(path)) _gathers.Add(GD.Load<AudioStream>(path));
         _fire = ResourceLoader.Exists(FirePath) ? GD.Load<AudioStream>(FirePath) : null;
         if (_fire is AudioStreamOggVorbis ogg) ogg.Loop = true;
+        _shots = ResourceLoader.Exists(ShotsPath) ? GD.Load<AudioStream>(ShotsPath) : null;
+        if (_shots is AudioStreamMP3 mp3) mp3.Loop = false;
+        _shotsLength = (float)(_shots?.GetLength() ?? 0.0);
+        for (int i = 0; i < ShotVoices && _shots is not null; i++)
+        {
+            var p = new AudioStreamPlayer { Bus = Bus, Stream = _shots, VolumeDb = -80f };
+            AddChild(p);
+            _shotPlayers.Add((p, null));
+        }
         if (_fire is not null)
         {
             _firePlayer = new AudioStreamPlayer { Bus = Bus, Stream = _fire, VolumeDb = -80f };
@@ -203,6 +224,37 @@ public partial class Sfx : Node
         if (pick == _lastPop && _pops.Count > 1) pick = (pick + 1 + _random.Next(_pops.Count - 1)) % _pops.Count;
         _lastPop = pick;
         PlayRecorded(_pops[pick], volumeDb, 0.92f + (float)_random.NextDouble() * 0.18f);
+    }
+
+    /// <summary>
+    /// Her shots leaving her (heard whatever OnlyToggle says): a slice of shots.mp3 for each of the <paramref name="count"/>
+    /// projectiles, from a random place in it, faded in and out, a touch apart and a touch apart in pitch.
+    /// </summary>
+    public void PlayShots(int count, float volumeDb = 0f)
+    {
+        if (_shotPlayers.Count == 0 || _shotsLength <= ShotSlice) return;
+        count = Math.Clamp(count, 1, ShotVoices);
+        // (Softer the more fly at once, so a spread is never much louder than one shot.)
+        float db = ShotDb + volumeDb - 3f * MathF.Log2(count);
+        for (int k = 0; k < count; k++)
+        {
+            int slot = _nextShot;
+            _nextShot = (_nextShot + 1) % _shotPlayers.Count;
+            var (p, old) = _shotPlayers[slot];
+            old?.Kill();
+            p.Stop();
+            p.VolumeDb = -80f;
+            p.PitchScale = 0.94f + (float)_random.NextDouble() * 0.14f;
+            float from = (float)_random.NextDouble() * (_shotsLength - ShotSlice);
+            var t = CreateTween();
+            if (k > 0) t.TweenInterval(k * ShotStagger);
+            t.TweenCallback(Callable.From(() => p.Play(from)));
+            t.TweenProperty(p, "volume_db", db, ShotFadeIn);
+            t.TweenInterval(ShotSlice - ShotFadeIn - ShotFadeOut);
+            t.TweenProperty(p, "volume_db", -80f, ShotFadeOut).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.In);
+            t.TweenCallback(Callable.From(p.Stop));
+            _shotPlayers[slot] = (p, t);
+        }
     }
 
     /// <summary>Her light striking something it can harm: a squish, a touch apart in pitch each time.</summary>
