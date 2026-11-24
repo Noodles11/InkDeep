@@ -23,6 +23,19 @@ public sealed class PlaneProfileRecorder
     public Profile Profile { get; }
 
     readonly HashSet<string> _runPearls = new();
+    readonly List<string> _newEntries = new();
+
+    /// <summary>Whether a codex entry is found (or was, in the Sea-pedia's old records).</summary>
+    public static bool Knows(Profile p, string id) =>
+        p.Discovered.Contains(id) || p.SeenCreatures.Concat(p.SeenBosses).Any(s => Codex.Legacy(s) == id);
+
+    /// <summary>The codex entries found for the first time since this was last asked (for the "new in the Sea-pedia" line).</summary>
+    public List<string> TakeNewEntries()
+    {
+        var taken = new List<string>(_newEntries);
+        _newEntries.Clear();
+        return taken;
+    }
     long _landedTick = -1;
 
     /// <summary>What a damage source is called in the statistics' "how runs ended".</summary>
@@ -84,6 +97,8 @@ public sealed class PlaneProfileRecorder
     {
         var s = Profile.Stats;
         if (!world.Defeated) s.PlaySeconds += PlaneWorld.Dt;
+        foreach (string id in world.Discoveries)
+            if (!Knows(Profile, id) && Profile.Discovered.Add(id)) _newEntries.Add(id);
         foreach (var e in world.Events)
         {
             switch (e.Type)

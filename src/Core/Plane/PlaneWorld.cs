@@ -414,6 +414,8 @@ public sealed partial class PlaneWorld
         // The animals answer the light on them; the murklings' traits (PlaneFauna.cs, PlaneInkTraits.cs).
         StepFauna();
         StepTraits();
+        // What she found for the Sea-pedia this step (PlaneCodex.cs).
+        StepCodex();
         // Murklings made during the step (a prime's pieces) join the others now, never while a loop walks them.
         Murklings.AddRange(_madeLater);
         _madeLater.Clear();

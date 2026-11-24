@@ -11,32 +11,20 @@ using OctoShoots.Game.Ui;
 namespace OctoShoots.Game.Title;
 
 /// <summary>
-/// The glossary (proposal §4.4): two tabs, Pearls and Creatures, each a grid of tiles with a detail pane for the
-/// selected one: what it is, what it does, and its record against Clementine.
+/// The glossary (proposal §4.4): the Pearls tab and a tab for each of the codex's sections (Codex.cs: places,
+/// creatures, bosses, reef life, plants, waters and stones, biomes), each a grid of tiles with a detail pane for the
+/// selected one: what it is, what it does, and (a pearl, a creature with one) its record. A codex entry stays locked
+/// ("?") until she first finds it in play (Profile.Discovered).
 /// </summary>
 public partial class SeaPediaCard : PanelContainer
 {
-    /// <summary>The creatures on the plane today: name, field-guide line, plain notes, and whether it is a boss.</summary>
-    public static readonly IReadOnlyDictionary<string, (string Name, string Line, string Notes, bool Boss)> Creatures =
-        new Dictionary<string, (string, string, string, bool)>
-        {
-            [PlaneProfileRecorder.MobId] = ("Pufferling",
-                "Round, spotty and easily offended. The Leak dyed this one red and clipped a price tag to its tail.",
-                "Notices you within 10 m and drifts closer, facing you. Within 8 m it blows up into a spiny ball (0.8 s), fires eight needles in a ring, turned differently every time (8 each; hot pink, they pop your bubbles), and stays round for a moment. Then it backs off and shrinks for 3 s: your window. Its raised spines sting on touch (4). 60 HP. Freed, it swims off in its own sand-and-olive colours.",
-                false),
-            [PlaneProfileRecorder.QueenClamId] = ("Queen Clam",
-                "Sits on the rift. Hates visitors. Loves pearls, as long as they are hers.",
-                "Hurt only while her shell is open. Rings and walls of pearls; at half health a spinning helix, a slow homing royal pearl, and a snap if you come within 7 m. Any bubble pops a pearl. 800 HP.",
-                true),
-        };
-
     readonly Profile _profile;
     readonly ItemCatalog? _catalog;
     readonly Action _close;
     GridContainer _grid = null!;
     VBoxContainer _detail = null!;
-    Button _pearlTab = null!, _creatureTab = null!;
-    bool _pearls = true;
+    Button _pearlTab = null!;
+    readonly Dictionary<CodexSection, Button> _sectionTabs = new();
     readonly List<ShaderMaterial> _spinning = new();
     float _time;
 
@@ -60,7 +48,9 @@ public partial class SeaPediaCard : PanelContainer
     }
 
     public static int PearlsFound(Profile p) => PlaneRun.PortedPearls.Concat(PlaneRun.CrabPearls).Count(id => p.SeenItems.Contains(id));
-    public static int CreaturesMet(Profile p) => Creatures.Keys.Count(id => p.SeenCreatures.Contains(id) || p.SeenBosses.Contains(id));
+    /// <summary>Codex entries found (all of them, or one section's).</summary>
+    public static int EntriesFound(Profile p, CodexSection? section = null) =>
+        Codex.All.Count(e => (section is null || e.Section == section) && PlaneProfileRecorder.Knows(p, e.Id));
 
     public override void _Ready()
     {
@@ -79,15 +69,20 @@ public partial class SeaPediaCard : PanelContainer
         close.Pressed += _close;
         head.AddChild(close);
 
-        var tabs = new HBoxContainer();
-        tabs.AddThemeConstantOverride("separation", 10);
+        var tabs = new HFlowContainer();
+        tabs.AddThemeConstantOverride("h_separation", 10);
+        tabs.AddThemeConstantOverride("v_separation", 8);
         box.AddChild(tabs);
-        _pearlTab = DrawerStyle.Button($"Pearls  {PearlsFound(_profile)} / {PlaneRun.PortedPearls.Length + PlaneRun.CrabPearls.Length}", 16);
-        _creatureTab = DrawerStyle.Button($"Creatures  {CreaturesMet(_profile)} / {Creatures.Count}", 16);
-        _pearlTab.Pressed += () => ShowTab(true);
-        _creatureTab.Pressed += () => ShowTab(false);
+        _pearlTab = DrawerStyle.Button($"Pearls  {PearlsFound(_profile)} / {PlaneRun.PortedPearls.Length + PlaneRun.CrabPearls.Length}", 15);
+        _pearlTab.Pressed += () => ShowTab(null);
         tabs.AddChild(_pearlTab);
-        tabs.AddChild(_creatureTab);
+        foreach (var section in Enum.GetValues<CodexSection>())
+        {
+            var tab = DrawerStyle.Button($"{Codex.Name(section)}  {EntriesFound(_profile, section)} / {Codex.In(section).Count()}", 15);
+            tab.Pressed += () => ShowTab(section);
+            tabs.AddChild(tab);
+            _sectionTabs[section] = tab;
+        }
 
         var body = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
         body.AddThemeConstantOverride("separation", 28);
@@ -104,7 +99,7 @@ public partial class SeaPediaCard : PanelContainer
         _detail.AddThemeConstantOverride("separation", 10);
         body.AddChild(_detail);
 
-        ShowTab(true);
+        ShowTab(null);
     }
 
     public override void _Process(double delta)
@@ -114,13 +109,14 @@ public partial class SeaPediaCard : PanelContainer
     }
 
     /// <summary>Opens on the Creatures tab.</summary>
-    public void ShowCreatures() => ShowTab(false);
+    public void ShowCreatures() => ShowTab(CodexSection.Creatures);
 
-    void ShowTab(bool pearls)
+    /// <summary>A tab: the pearls (null), or a codex section.</summary>
+    void ShowTab(CodexSection? section)
     {
-        _pearls = pearls;
+        bool pearls = section is null;
         Restyle(_pearlTab, pearls);
-        Restyle(_creatureTab, !pearls);
+        foreach (var (s, tab) in _sectionTabs) Restyle(tab, s == section);
         foreach (var child in _grid.GetChildren()) child.QueueFree();
         _spinning.Clear();
         Button? first = null;
@@ -135,9 +131,9 @@ public partial class SeaPediaCard : PanelContainer
         }
         else
         {
-            foreach (string id in Creatures.Keys)
+            foreach (var entry in Codex.In(section!.Value))
             {
-                var tile = CreatureTile(id);
+                var tile = EntryTile(entry);
                 _grid.AddChild(tile);
                 first ??= tile;
             }
@@ -205,13 +201,18 @@ public partial class SeaPediaCard : PanelContainer
         return tile;
     }
 
-    Button CreatureTile(string id)
+    /// <summary>A codex entry's art: a drawn portrait where there is one (the Pufferling, The Lid), else its glyph.</summary>
+    static Control EntryArt(CodexEntry entry, bool known, float size) =>
+        Codex.RecordOf(entry.Id) is { } record
+            ? new Portrait(record, known) { CustomMinimumSize = new Vector2(size, size) }
+            : new Glyph(entry, known) { CustomMinimumSize = new Vector2(size, size) };
+
+    Button EntryTile(CodexEntry entry)
     {
-        bool known = _profile.SeenCreatures.Contains(id) || _profile.SeenBosses.Contains(id);
-        var info = Creatures[id];
-        var tile = Tile(new Portrait(id, known) { CustomMinimumSize = new Vector2(70f, 70f) }, info.Name, known);
-        tile.Pressed += () => ShowCreature(id, known);
-        tile.FocusEntered += () => ShowCreature(id, known);
+        bool known = PlaneProfileRecorder.Knows(_profile, entry.Id);
+        var tile = Tile(EntryArt(entry, known, 70f), entry.Name, known);
+        tile.Pressed += () => ShowEntry(entry, known);
+        tile.FocusEntered += () => ShowEntry(entry, known);
         return tile;
     }
 
@@ -248,35 +249,36 @@ public partial class SeaPediaCard : PanelContainer
             ("Runs lost holding it", r.RunsLost.ToString("N0")), ("Levels cleared with it", r.RoomsCleared.ToString("N0"))));
     }
 
-    void ShowCreature(string id, bool known)
+    void ShowEntry(CodexEntry entry, bool known)
     {
         ClearDetail();
-        var info = Creatures[id];
         var top = new HBoxContainer();
         top.AddThemeConstantOverride("separation", 18);
         _detail.AddChild(top);
-        top.AddChild(new Portrait(id, known) { CustomMinimumSize = new Vector2(120f, 120f) });
+        top.AddChild(EntryArt(entry, known, 120f));
         var names = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, Alignment = BoxContainer.AlignmentMode.Center };
         top.AddChild(names);
         if (!known)
         {
-            names.AddChild(TitleStyle.Text("Not met yet", 28, DrawerStyle.Text, TitleStyle.Display));
-            names.AddChild(Wrapped(info.Boss ? "Waits somewhere deeper." : "Lurks somewhere in the canyons.", 15, DrawerStyle.Soft, width: 230f));
+            names.AddChild(TitleStyle.Text("Not found yet", 28, DrawerStyle.Text, TitleStyle.Display));
+            names.AddChild(Wrapped(Codex.Hint(entry.Section), 15, DrawerStyle.Soft, width: 230f));
             return;
         }
-        names.AddChild(TitleStyle.Text(info.Name, 30, DrawerStyle.Text, TitleStyle.Display));
-        if (info.Boss) names.AddChild(Chip("BOSS", DrawerStyle.Gold, DrawerStyle.OnGold));
-        _detail.AddChild(Wrapped("“" + info.Line + "”", 17, DrawerStyle.Soft));
-        _detail.AddChild(Wrapped(info.Notes, 15, DrawerStyle.Text));
+        names.AddChild(TitleStyle.Text(entry.Name, 30, DrawerStyle.Text, TitleStyle.Display));
+        names.AddChild(Chip(Codex.Name(entry.Section).ToUpperInvariant(), DrawerStyle.Gold, DrawerStyle.OnGold));
+        _detail.AddChild(Wrapped("\u201c" + entry.Line + "\u201d", 17, DrawerStyle.Soft));
+        _detail.AddChild(Wrapped(entry.Notes, 15, DrawerStyle.Text));
+        if (Codex.RecordOf(entry.Id) is not { } id) return;
         _detail.AddChild(new HSeparator());
+        bool boss = entry.Section == CodexSection.Bosses;
         var r = _profile.Creatures.GetValueOrDefault(id) ?? new CreatureRecord();
         var cells = new List<(string, string)>
         {
-            (info.Boss ? "Freed" : "Defeated", r.Defeated.ToString("N0")),
+            (boss ? "Freed" : "Defeated", r.Defeated.ToString("N0")),
             ("Defeated you", r.DefeatedYou.ToString("N0")),
             ("Encounters", r.Encounters.ToString("N0")),
         };
-        if (info.Boss) cells.Add(("Best time", r.BestSeconds > 0 ? TitleStyle.Clock(r.BestSeconds) : "—"));
+        if (boss) cells.Add(("Best time", r.BestSeconds > 0 ? TitleStyle.Clock(r.BestSeconds) : "\u2014"));
         _detail.AddChild(Record(cells.ToArray()));
     }
 
@@ -314,6 +316,47 @@ public partial class SeaPediaCard : PanelContainer
             grid.AddChild(cell);
         }
         return grid;
+    }
+
+    /// <summary>
+    /// A codex entry's glyph: a disc in its section's colour with the entry's first letter (a dark disc and "?" while it
+    /// is locked).
+    /// </summary>
+    public partial class Glyph : Control
+    {
+        readonly CodexEntry _entry;
+        readonly bool _known;
+
+        public Glyph(CodexEntry entry, bool known)
+        {
+            _entry = entry;
+            _known = known;
+            MouseFilter = MouseFilterEnum.Ignore;
+        }
+
+        static Color Of(CodexSection s) => s switch
+        {
+            CodexSection.Places => new Color(0.95f, 0.8f, 0.45f),
+            CodexSection.Creatures => new Color(0.32f, 0.3f, 0.38f),
+            CodexSection.Bosses => new Color(0.5f, 0.25f, 0.45f),
+            CodexSection.ReefLife => new Color(0.4f, 0.75f, 0.85f),
+            CodexSection.Plants => new Color(0.45f, 0.8f, 0.5f),
+            CodexSection.Waters => new Color(0.55f, 0.65f, 0.9f),
+            _ => new Color(0.3f, 0.55f, 0.75f),
+        };
+
+        public override void _Draw()
+        {
+            var c = Size * 0.5f;
+            float r = Mathf.Min(Size.X, Size.Y) * 0.5f;
+            DrawCircle(c, r, _known ? Of(_entry.Section) : new Color(0.2f, 0.22f, 0.26f));
+            DrawArc(c, r * 0.92f, 0f, Mathf.Tau, 48, new Color(1f, 1f, 1f, _known ? 0.35f : 0.12f), 2f, true);
+            string text = _known ? _entry.Name[..1].ToUpperInvariant() : "?";
+            var font = TitleStyle.Display;
+            int size = (int)(r * 1.1f);
+            var at = c + new Vector2(-font.GetStringSize(text, HorizontalAlignment.Left, -1, size).X * 0.5f, size * 0.36f);
+            DrawString(font, at, text, HorizontalAlignment.Left, -1, size, _known ? new Color(1f, 1f, 1f, 0.92f) : new Color(0.75f, 0.75f, 0.8f));
+        }
     }
 
     /// <summary>A creature's portrait, drawn: the Pufferling as a red, lime-spotted ball of spines, Queen Clam as her crowned shell.</summary>

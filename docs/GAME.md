@@ -257,6 +257,9 @@ emptied, it is freed, leaving a core of light.
   its full colour back.
 - **The pause menu**: Level up, Stats, Pearls, Achievements, Requests, Chart.
 - **The title** (TITLE-MENU): the three jellies over a live sea; statistics; the Sea-pedia; settings.
+- **The codex** (0.89.0, TITLE-MENU §4.4): the Sea-pedia's places, creatures, bosses, reef life, plants, waters and
+  stones, and biomes, each entry locked until she first finds it in play (enters the place, faces the creature, sees
+  the fish or plant, reaches the biome), which unlocks its details.
 
 ## 12. Decided and not yet built
 

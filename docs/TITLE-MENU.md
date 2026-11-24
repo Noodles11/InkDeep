@@ -194,7 +194,18 @@ her snap, and so on), sorted by count. Each bar is coral with the count at its e
 
 ### 4.4 Sea-pedia (the glossary)
 
-A pearl card with two tabs, **Pearls** and **Creatures**. Each tab is a grid of entries on the left (about
+**Built (0.89.0): the codex.** Beside **Pearls**, a tab for each section of the codex (`Codex.cs`): **Places**,
+**Creatures**, **Bosses**, **Reef life**, **Plants**, **Waters & stones** and **Biomes**, each with its count found
+(the title's line reads "pearls · found"). An entry is locked ("?" on a dark disc, "Not found yet" and a hint) until she
+first finds it in play, then shows its name, a line and what it does (a disc in its section's colour with its first
+letter; the Pufferling and The Lid keep their drawn portraits and their records). What finds an entry
+(`PlaneCodex.cs`, `PlaneWorld.Discoveries`, kept in `Profile.Discovered` by `PlaneProfileRecorder`): swimming into a
+place (within its radius + 1.5 m: a shop, a secret, a treasure clam, a light spring, a light room…; a bubble vault seen
+within 5 m or burst), a creature, a fish, an animal, a plant, a water or a stone in sight within 9 m (a boss within
+18 m; a murkling's trait with it), and reaching a biome's level. Each new one says "New in the Sea-pedia: …" in play.
+The old Pufferling and Queen Clam records count as found (Pufferling, The Lid).
+
+(The design below, from before the codex.) A pearl card with two tabs, **Pearls** and **Creatures**. Each tab is a grid of entries on the left (about
 60%) and a detail pane on the right (about 40%) for the selected entry. A filter row sits above the grid.
 
 **Pearls tab**

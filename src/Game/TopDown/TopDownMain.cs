@@ -2686,6 +2686,11 @@ public partial class TopDownMain : Node3D
             _world.Step(ReadInput());
             if (_perf) PerfAdd("sim", simStart, simBytes);
             _recorder.Observe(_world);
+            // Something found for the first time: its Sea-pedia entry unlocked (Codex.cs).
+            if (_recorder.TakeNewEntries() is { Count: > 0 } found)
+            {
+                Say("New in the Sea-pedia: " + string.Join(", ", found.Select(id => Codex.Get(id)?.Name ?? id)));
+            }
             Earned(_achievements.Observe(_world));
             // The curse den's dark closing round her: a low drone.
             bool cursed = _world.CurseDarkDepth > CurseTuning.Inside;

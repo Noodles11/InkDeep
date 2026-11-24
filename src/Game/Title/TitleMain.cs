@@ -684,7 +684,7 @@ public partial class TitleMain : Node3D
         var save = GameSave.Current;
         var p = save.Profile;
         Item("reef").Detail.Text = save.Jellies.Count > 0 ? $"{save.Jellies.Count} of {JellyNames.MaxJellies} jellies" : "make your jelly";
-        Item("pedia").Detail.Text = $"{SeaPediaCard.PearlsFound(p)} / {PlaneRun.PortedPearls.Length + PlaneRun.CrabPearls.Length} pearls · {SeaPediaCard.CreaturesMet(p)} / {SeaPediaCard.Creatures.Count} creatures";
+        Item("pedia").Detail.Text = $"{SeaPediaCard.PearlsFound(p)} / {PlaneRun.PortedPearls.Length + PlaneRun.CrabPearls.Length} pearls · {SeaPediaCard.EntriesFound(p)} / {Codex.All.Count} found";
         Item("stats").Detail.Text = p.Stats.Runs > 0 ? $"best: {StatsCard.Reach(p.Stats)} · {p.Stats.Runs} runs" : "no runs yet";
     }
 
@@ -995,6 +995,7 @@ public partial class TitleMain : Node3D
             Achievements = new HashSet<string> { "untouchable" },
             SeenItems = new HashSet<string> { "triple_tentacle", "hammerhead", "mirror_scale", "swordfish_bill", "double_helix" },
             SeenCreatures = new HashSet<string> { PlaneProfileRecorder.MobId },
+            Discovered = new HashSet<string> { "murk:basic", "trait:ChitinMirror", "place:Shop", "biome:SunlitReef", "flora:SunAnemone", "fish:Chromis" },
             SeenBosses = new HashSet<string> { PlaneProfileRecorder.QueenClamId },
             RecentSeeds = new List<string> { "KELP 7Q2Z", "REEF 2SEA", "MANT 4RAY" },
             Stats = new ProfileStats
