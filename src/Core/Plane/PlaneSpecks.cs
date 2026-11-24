@@ -68,12 +68,20 @@ public sealed partial class PlaneWorld
     {
         var rng = SpeckRng;
         int want = SpeckTuning.Scatter + SpeckTuning.PerDepth * Math.Max(0, Map.Depth - LevelPlan.Tutorial - 1);
+        // (Tidy: fewer specks, each worth the more, out of the quiet water.)
+        float worth = 1f;
+        if (Options.Tidy)
+        {
+            int fewer = Math.Max(1, (int)MathF.Round(want * TidyTuning.SpeckShare));
+            worth = want / (float)fewer;
+            want = fewer;
+        }
         var spots = new List<Vector2>();
         for (float y = LevelMap.RimWidth + 2f; y < Map.Size - LevelMap.RimWidth - 2f; y += 3f)
         for (float x = LevelMap.RimWidth + 2f; x < Map.Size - LevelMap.RimWidth - 2f; x += 3f)
         {
             var p = new Vector2(x, y);
-            if (Clear(p, SpeckTuning.Clearance) && !Map.InShaft(p) && Vector2.Distance(p, Map.Start.Position) >= SpeckTuning.FromStart) spots.Add(p);
+            if (Clear(p, SpeckTuning.Clearance) && !Map.InShaft(p) && Vector2.Distance(p, Map.Start.Position) >= SpeckTuning.FromStart && !InQuietWater(p)) spots.Add(p);
         }
         for (int i = spots.Count - 1; i > 0; i--)
         {
@@ -83,8 +91,8 @@ public sealed partial class PlaneWorld
         for (int i = 0; i < Math.Min(want, spots.Count); i++)
         {
             var jitter = new Vector2(rng.Range(-1f, 1f), rng.Range(-1f, 1f));
-            var at = Clear(spots[i] + jitter, SpeckTuning.Clearance) ? spots[i] + jitter : spots[i];
-            AddSpeck(at, rng.Range(SpeckTuning.Least, SpeckTuning.Most), Vector2.Zero);
+            var at = Clear(spots[i] + jitter, SpeckTuning.Clearance) && !InQuietWater(spots[i] + jitter) ? spots[i] + jitter : spots[i];
+            AddSpeck(at, rng.Range(SpeckTuning.Least, SpeckTuning.Most) * worth, Vector2.Zero);
         }
     }
 
@@ -94,7 +102,9 @@ public sealed partial class PlaneWorld
         var s = new LightSpeck { Position = at, Velocity = velocity, Value = value, Seed = SpeckRng.Range(0f, 100f) };
         s.Light = Lights.Add(new LightEmitter
         {
-            Owner = s, Position = at, Range = SpeckTuning.Reach, Intensity = SpeckTuning.Intensity, Colour = new Vector3(1f, 0.92f, 0.7f),
+            Owner = s, Position = at, Colour = new Vector3(1f, 0.92f, 0.7f),
+            Range = SpeckTuning.Reach * (Options.Tidy ? TidyTuning.SpeckReach : 1f),
+            Intensity = SpeckTuning.Intensity * (Options.Tidy ? TidyTuning.SpeckLight : 1f),
         });
         Specks.Add(s);
         return s;

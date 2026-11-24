@@ -83,8 +83,8 @@ public sealed partial class PlaneWorld
     /// <summary>Her light's pulse this step (Hz; 0 steady): what a lantern shoal and a firefly squid read.</summary>
     public float HerPulseHz { get; private set; }
 
-    /// <summary>Her light on a point (her beam's and her glow's).</summary>
-    float HerLightOn(Vector2 at)
+    /// <summary>Her light on a point (her beam's and her glow's): the view's too (a spring not yet found shows in it).</summary>
+    public float HerLightOn(Vector2 at)
     {
         float sum = 0f;
         foreach (var e in Lights.All)
@@ -105,11 +105,12 @@ public sealed partial class PlaneWorld
         }
         Shuffle(spots, rng);
         int next = 0;
+        if (!HasFeature(LightFeature.Animals)) return;
         foreach (var (kind, count) in FaunaTuning.For(Map.Biome))
             for (int k = 0; k < count && next < spots.Count; next++)
             {
                 var p = spots[next];
-                if (Fauna.Exists(o => Vector2.Distance(o.Home, p) < FaunaTuning.Apart)) continue;
+                if (Fauna.Exists(o => Vector2.Distance(o.Home, p) < FaunaTuning.Apart) || !TidySpot(p)) continue;
                 AddFauna(kind, p, rng.Range(0f, 100f));
                 k++;
             }
@@ -177,6 +178,8 @@ public sealed partial class PlaneWorld
                 case FaunaKind.LanternShoal:
                     f.Follow = MathF.Max(0f, f.Follow - Dt);
                     f.Scatter = MathF.Max(0f, f.Scatter - Dt);
+                    // (Tidy: its light shows only while it answers her: lit by her, or following.)
+                    f.Light!.Active = !Options.Tidy || f.Follow > 0f || f.HerLit >= FaunaTuning.ShoalSense;
                     if (f.HerLit >= FaunaTuning.ShoalSense)
                     {
                         if (HerPulseHz >= FaunaTuning.ShoalScatterHz) (f.Scatter, f.Follow) = (2f, 0f);

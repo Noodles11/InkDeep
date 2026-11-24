@@ -451,7 +451,7 @@ public partial class TopDownMain : Node3D
         // 0.13.0; in the crossover her glow is gone and her beam is her light to see by, mostly (PlaneOptions).
         PlaneOptions.Default = new PlaneOptions
         {
-            Adventure = true, Shots = true, Glow = !Crossover.On, Gun = Crossover.On, Optics = Crossover.On, Specks = Crossover.On, Flora = Crossover.On, Pockets = Crossover.On, Fauna = Crossover.On,
+            Adventure = true, Shots = true, Glow = !Crossover.On, Gun = Crossover.On, Optics = Crossover.On, Specks = Crossover.On, Flora = Crossover.On, Pockets = Crossover.On, Fauna = Crossover.On, Tidy = Crossover.On,
             BeamBurn = Crossover.On ? HerLightTuning.LightOnlyBurn : 1f,
         };
         // The bundled fonts: Nunito is every screen's default (THEME-BIBLE §6.8).
@@ -2207,7 +2207,7 @@ public partial class TopDownMain : Node3D
             _world.Leaks[0].Light = Mathf.Min(_dbgLeakHits, _world.Leaks[0].StapleCount - 1) * AdventureTuning.StapleSeconds + 0.01f;
             _world.Leaks[0].Since = 0f;
         }
-        _springs.Sync(dt, _camera.Camera, Focus(alpha) with { Y = LevelMap.SwimBand });
+        _springs.Sync(dt, _camera.Camera, Focus(alpha) with { Y = LevelMap.SwimBand }, _world);
         _cleanse.Track(_world, dt);
         MinimapView.FillSprings(_fullMap, _world);
         _minimap.SetSprings(_world);

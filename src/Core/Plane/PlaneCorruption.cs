@@ -79,6 +79,8 @@ public sealed class PlaneOptions
     /// (PlaneInkTraits.cs, with Optics). On in the crossover.
     /// </summary>
     public bool Fauna;
+    /// <summary>A tidy level (PlaneTidy.cs): a few of its biome's light features, quiet water, fewer and softer small lights. On in the crossover.</summary>
+    public bool Tidy;
     /// <summary>The reef's bubble geysers (PlaneGeysers.cs): off (none are placed or spray); on only for their own tests.</summary>
     public bool Geysers;
 

@@ -86,6 +86,8 @@ public sealed class LightSpring
     public float Pool, PoolMax;
     /// <summary>Its healing is all given: it heals no more, and fades away; the creatures of ink may cross it again.</summary>
     public bool Spent;
+    /// <summary>She has swum over it (it lights up from then on; before, it lies faint on the floor, seen only in her light).</summary>
+    public bool Found;
 }
 
 public sealed partial class PlaneWorld
@@ -113,6 +115,11 @@ public sealed partial class PlaneWorld
             bool was = spring.Bathing;
             spring.Bathing = inside;
             spring.Healing = false;
+            if (inside && !spring.Found)
+            {
+                spring.Found = true;
+                Events.Add(new PlaneEvent(PlaneEventType.SpringFound, spring.Position, Vector2.Zero));
+            }
             if (!inside || Defeated) continue;
             float max = Run.MaxHp;
             if (p.Hp >= max) continue;

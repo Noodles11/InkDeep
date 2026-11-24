@@ -12,6 +12,8 @@ namespace OctoShoots.Game.TopDown;
 /// there (the gonads and a circle, still), motes drifting down the shaft. While it heals her it glows brighter and
 /// warmer, sparkles stream up round it and twirl round her bell (the screen trembles and the controller hums:
 /// TopDownMain); the ray dims a little as its store of healing is used. Once spent, the ray and the emblem fade quickly away (SpentFade).
+/// Until she first swims over it (LightSpring.Found) it lies dormant: no ray, no light, no motes, only the emblem faint on
+/// the floor where her own light falls on it (Faint); found, it lights up over WakeSeconds with a burst of sparkles.
 /// </summary>
 public partial class SpringView : Node3D
 {
@@ -22,10 +24,12 @@ public partial class SpringView : Node3D
         public required SpotLight3D Light;
         public required float Floor;
         public required Vector3 Down;
-        public float Glow, Spark, Mote, Halo, Fade = 1f;
+        public float Glow, Spark, Mote, Halo, Fade = 1f, Wake, Seen;
     }
 
     const float SpentFade = 0.8f;
+    /// <summary>Dormant: the emblem's strength in her full light (her light on it ≥ FaintLight), and how fast it follows her light; found, how long it takes to light up.</summary>
+    const float Faint = 0.14f, FaintLight = 0.35f, WakeSeconds = 1.4f;
     /// <summary>The ray: where the surface is above the floor, how far from upright it falls, and from which side (north-west, so it rises up the screen).</summary>
     const float RayHeight = 17f, RaySlant = 32f;
     static readonly Vector2 RayFrom = new Vector2(-0.45f, -0.89f).Normalized();
@@ -140,7 +144,7 @@ public partial class SpringView : Node3D
     }
 
     /// <summary>A frame: each spring's light, and its sparkles (round her bell, at her, while it heals her).</summary>
-    public void Sync(float dt, Camera3D? camera, Vector3 her)
+    public void Sync(float dt, Camera3D? camera, Vector3 her, PlaneWorld world)
     {
         foreach (var v in _views)
         {
@@ -148,8 +152,31 @@ public partial class SpringView : Node3D
             bool shown = v.Fade > 0f;
             v.Pool.Visible = v.Ray.Visible = v.Light.Visible = shown;
             if (!shown) continue;
-            // Fading, it eases out (slow at first, then gone).
-            float k = v.Fade * v.Fade;
+            if (!v.Spring.Found)
+            {
+                // Dormant: only the emblem, faint, where her light falls on it.
+                float seen = Mathf.Clamp(world.HerLightOn(v.Spring.Position) / FaintLight, 0f, 1f);
+                v.Seen = Mathf.MoveToward(v.Seen, seen, dt * 2f);
+                v.Ray.Visible = v.Light.Visible = false;
+                v.Pool.SetInstanceShaderParameter(SN.Of("glow"), 0f);
+                v.Pool.SetInstanceShaderParameter(SN.Of("fade"), Faint * v.Seen);
+                continue;
+            }
+            if (v.Wake <= 0f)
+            {
+                // Found: a burst of sparkles as it lights up.
+                var c = new Vector3(v.Spring.Position.X, v.Floor + 0.1f, v.Spring.Position.Y);
+                for (int i = 0; i < 60; i++)
+                {
+                    float a = _sparkles.RandRange(0f, Mathf.Tau), d = Mathf.Sqrt(_sparkles.RandRange(0f, 1f)) * SpringTuning.Radius;
+                    var col = _sparkles.RandRange(0f, 1f) < 0.5f ? new Color(1f, 0.88f, 0.55f) : new Color(0.75f, 0.97f, 1f);
+                    _sparkles.Emit(c + new Vector3(Mathf.Cos(a) * d, 0f, Mathf.Sin(a) * d), new Vector3(0f, _sparkles.RandRange(1.5f, 3.5f), 0f) + _sparkles.RandDir() * 0.5f,
+                        _sparkles.RandRange(1f, 2f), _sparkles.RandRange(0.08f, 0.16f), 0.01f, col, col with { A = 0f }, drag: 0.6f, buoyancy: 0.4f);
+                }
+            }
+            v.Wake = Mathf.MoveToward(v.Wake, 1f, dt / WakeSeconds);
+            // Fading (spent), it eases out (slow at first, then gone); found, it eases in from its faint emblem.
+            float k = v.Fade * v.Fade * Mathf.Max(v.Wake * v.Wake, Faint * v.Seen);
             float store = v.Spring.PoolMax > 0f ? v.Spring.Pool / v.Spring.PoolMax : 0f;
             v.Glow = Mathf.MoveToward(v.Glow, v.Spring.Healing ? 1f : 0f, dt * 2.5f);
             v.Pool.SetInstanceShaderParameter(SN.Of("glow"), v.Glow);

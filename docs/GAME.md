@@ -260,6 +260,10 @@ emptied, it is freed, leaving a core of light.
 - **The codex** (0.89.0, TITLE-MENU §4.4): the Sea-pedia's places, creatures, bosses, reef life, plants, waters and
   stones, and biomes, each entry locked until she first finds it in play (enters the place, faces the creature, sees
   the fish or plant, reaches the biome), which unlocks its details.
+- **A tidy level** (0.91.0, LIGHT-AND-GRAPH.md §23): each level holds only 2–3 of its biome's light features, about a
+  third of its water is left quiet (no features or specks), loose things stand in chambers not passages, and specks,
+  wall glows and lantern shoals give off less light. A light spring lies faint and dormant on the floor until she swims
+  over it, then lights up (CORRUPTION.md, light springs).
 - **The spectral survey and the keystones** (0.90.0, LIGHT-AND-GRAPH.md §22): every plant and animal that answers light
   fills in as she lights it by ember, bloom, frost and white light, watches it in the dark and lights it with a pulse; a
   complete entry gives its lore in the Sea-pedia, and a biome surveyed whole raises its depth's Atlantean keystone piece

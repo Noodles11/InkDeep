@@ -63,7 +63,8 @@ public partial class SpeckView : Node3D
                 _shown[s] = view = (halo, core);
             }
             float tw = 0.8f + 0.2f * Mathf.Sin(_time * 3.3f + s.Seed * 7f) + 0.1f * Mathf.Sin(_time * 7.9f + s.Seed);
-            float worth = Mathf.Clamp(0.55f + 0.45f * s.Value, 0.3f, 1.3f);
+            // (A speck worth more is drawn no bigger than a full one's: fewer, richer specks stay small lights.)
+            float worth = Mathf.Clamp(0.55f + 0.45f * s.Value, 0.3f, 1f);
             var at = new Vector3(s.Position.X, LevelMap.SwimBand + 0.15f + 0.12f * Mathf.Sin(_time * 1.7f + s.Seed), s.Position.Y);
             view.Halo.Position = at;
             view.Core.Position = at + Vector3.Up * 0.02f;

@@ -758,3 +758,22 @@ animals) has six facets, each lit once ever ("flora:NightLily/frost"), when she 
   open (Atlantis's sealed heart and the true ending, CROSSOVER.md §8), the orrery's quartz windows and prism (Atlantis's
   own lightglass and prism stones lie in its levels).
 - Tests: `SurveyTests`.
+
+## 23. A tidy level (built 0.91.0)
+
+The lit world's features crowded every level with all of its biome's at once. A tidy level (`PlaneTidy.cs`,
+`PlaneOptions.Tidy`, on in the crossover) holds fewer, in fewer places, with fewer small lights:
+
+- **A budget**: of the features its biome has (mirror plates, lightglass panes, sun- and shadow-stones, haloclines,
+  water pockets, light rooms, loose plants, animals: `LightFeature`), a level holds 2 or 3, chosen by its own seed
+  (`PlaneWorld.Features`). One level is the mirrors' and the haloclines', the next the stones' and the light rooms'. The
+  rest are not placed; a level of another feature brings them back.
+- **Quiet water**: the level is split 5 × 5, and each cell is quiet by a 35% chance (`InQuietWater`): no light feature,
+  light room or speck is placed in it, only the creatures and fish. A pane or a stone is kept out by where it ends up
+  across its passage. Loose things (plants, animals, pockets, mirror plates) stand only in a chamber's open water, 3.5 m
+  clear round them, not in a passage.
+- **Fewer small lights**: 60% of the specks, each worth the more (her energy on a level about the same), none in the
+  quiet water; a speck's light 70% as bright over 75% of its reach, and a richer speck drawn no bigger. A wall's stored
+  glow lasts 60% as long. A lantern shoal's light (and its halo) shows only while it answers her: lit by her, or
+  following.
+- Tests: `TidyTests`.

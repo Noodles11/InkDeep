@@ -110,11 +110,12 @@ public sealed partial class PlaneWorld
             (spots[i], spots[j]) = (spots[j], spots[i]);
         }
         int next = 0;
+        if (!HasFeature(LightFeature.Pockets)) return;
         foreach (var (kind, count) in PocketTuning.For(Map.Biome))
             for (int k = 0; k < count && next < spots.Count; next++)
             {
                 var p = spots[next];
-                if (Pockets.Exists(o => Vector2.Distance(o.Centre, p) < PocketTuning.Apart)) continue;
+                if (Pockets.Exists(o => Vector2.Distance(o.Centre, p) < PocketTuning.Apart) || !TidySpot(p)) continue;
                 AddPocket(kind, p, rng.Range(PocketTuning.RadiusMin, PocketTuning.RadiusMax));
                 k++;
             }

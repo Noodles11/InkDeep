@@ -171,11 +171,11 @@ public sealed partial class PlaneWorld
             int j = rng.Int(i + 1);
             (spots[i], spots[j]) = (spots[j], spots[i]);
         }
-        int rooms = 1 + rng.Int(FloraTuning.Rooms);
+        int rooms = HasFeature(LightFeature.Rooms) ? 1 + rng.Int(FloraTuning.Rooms) : 0;
         foreach (var p in spots)
         {
             if (LightRooms.Count >= rooms) break;
-            if (Vector2.Distance(p, Map.Start.Position) < FloraTuning.RoomFromStart || !Fits(p, FloraTuning.RoomClear)) continue;
+            if (Vector2.Distance(p, Map.Start.Position) < FloraTuning.RoomFromStart || !Fits(p, FloraTuning.RoomClear) || InQuietWater(p)) continue;
             if (LightRooms.Exists(r => Vector2.Distance(r.Centre, p) < FloraTuning.RoomApart)) continue;
             bool orrery = FloraTuning.Orrery(Map.Biome);
             if (orrery && OpticWalls.Exists(w => w.Distance(p) < FloraTuning.RoomClear + 1f)) continue;
@@ -210,8 +210,8 @@ public sealed partial class PlaneWorld
         int placed = 0;
         foreach (var p in spots)
         {
-            if (placed >= FloraTuning.Loose) break;
-            if (Vector2.Distance(p, Map.Start.Position) < 8f || !Fits(p, 1.6f)) continue;
+            if (placed >= FloraTuning.Loose || !HasFeature(LightFeature.Plants)) break;
+            if (Vector2.Distance(p, Map.Start.Position) < 8f || !Fits(p, 1.6f) || !TidySpot(p)) continue;
             if (LightRooms.Exists(r => Vector2.Distance(r.Centre, p) < FloraTuning.RoomClear + 3f) || Flora.Exists(f => Vector2.Distance(f.Position, p) < 9f)) continue;
             var f = AddFlora(loose[rng.Int(loose.Length)], p, rng);
             float a = rng.Range(0f, MathF.Tau);

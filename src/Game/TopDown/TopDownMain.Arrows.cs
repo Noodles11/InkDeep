@@ -50,9 +50,9 @@ public partial class TopDownMain
         // Light rooms while they are shut ("~").
         foreach (var room in _world.LightRooms)
             if (!room.Opened) yield return (room.Centre, LightRoomColour, "~", FloraTuning.Ring + 1f);
-        // Her light springs: where she heals and grows ("+").
+        // Her light springs: where she heals and grows ("+"), once she has found one (before, it lies faint on the floor).
         foreach (var sp in _world.Springs)
-            if (!sp.Spent || _world.Run.Energy > 0f) yield return (sp.Position, SpringColour, "+", SpringReach);
+            if (sp.Found && (!sp.Spent || _world.Run.Energy > 0f)) yield return (sp.Position, SpringColour, "+", SpringReach);
     }
 
     /// <summary>The arrows each frame (the crossover's, in place of the minimap).</summary>

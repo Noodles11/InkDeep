@@ -196,7 +196,8 @@ public partial class FaunaView : Node3D
                     ((StandardMaterial3D)s.Halo!.MaterialOverride).AlbedoColor = new Color(0.3f, 0.55f, 1f, 0.6f * glow);
                     break;
             }
-            if (f.Kind == FaunaKind.LanternShoal) ((StandardMaterial3D)s.Halo!.MaterialOverride).AlbedoColor = new Color(0.35f, 0.6f, 1f, 0.3f * glow);
+            // (A shoal's halo only while its light is on: a tidy level's shoal lights up as it answers her.)
+            if (f.Kind == FaunaKind.LanternShoal) ((StandardMaterial3D)s.Halo!.MaterialOverride).AlbedoColor = new Color(0.35f, 0.6f, 1f, f.Light is { Active: true } ? 0.3f * glow : 0f);
         }
         List<PlaneFauna>? gone = null;
         foreach (var f in _shown.Keys)

@@ -511,7 +511,7 @@ public sealed partial class PlaneWorld
     public void AddWallGlow(Vector2 at, float strength)
     {
         if (strength <= 0.02f) return;
-        var g = new WallGlow { At = at, Most = OpticsTuning.GlowSeconds * strength };
+        var g = new WallGlow { At = at, Most = OpticsTuning.GlowSeconds * strength * (Options.Tidy ? TidyTuning.GlowShare : 1f) };
         g.Life = g.Most;
         g.Light = Lights.Add(new LightEmitter
         {

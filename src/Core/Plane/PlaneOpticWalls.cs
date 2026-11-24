@@ -159,6 +159,10 @@ public sealed partial class PlaneWorld
     {
         var (mirrors, panes) = OpticWallTuning.For(Map.Biome);
         var (sunStones, shadowStones, haloclines) = OpticWallTuning.Stones(Map.Biome);
+        if (!HasFeature(LightFeature.Mirrors)) mirrors = 0;
+        if (!HasFeature(LightFeature.Panes)) panes = 0;
+        if (!HasFeature(LightFeature.Stones)) sunStones = shadowStones = 0;
+        if (!HasFeature(LightFeature.Haloclines)) haloclines = 0;
         if (mirrors + panes + sunStones + shadowStones + haloclines == 0) return;
         var rng = new Rng(Map.Seed ^ 0x0971C5UL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Attempt << 46));
         var spots = new List<Vector2>();
@@ -177,9 +181,9 @@ public sealed partial class PlaneWorld
         foreach (var p in spots)
         {
             if (panes <= 0 && mirrors <= 0 && sunStones <= 0 && shadowStones <= 0 && haloclines <= 0) break;
-            if (OpticWalls.Exists(w => Vector2.Distance(w.Centre, p) < OpticWallTuning.Spacing)) continue;
+            if (OpticWalls.Exists(w => Vector2.Distance(w.Centre, p) < OpticWallTuning.Spacing) || InQuietWater(p)) continue;
             // Stones across passages (phase 4): sun-stone, there only while lit; shadow-stone, there only in the dark.
-            if ((sunStones > 0 || shadowStones > 0) && Across(p) is { } stone)
+            if ((sunStones > 0 || shadowStones > 0) && Across(p) is { } stone && !InQuietWater(stone.Centre))
             {
                 bool sun = sunStones > 0 && (shadowStones <= 0 || rng.Int(2) == 0);
                 stone.Kind = sun ? OpticKind.SunStone : OpticKind.ShadowStone;
@@ -202,7 +206,7 @@ public sealed partial class PlaneWorld
                 haloclines--;
                 continue;
             }
-            if (panes > 0 && Across(p) is { } pane)
+            if (panes > 0 && Across(p) is { } pane && !InQuietWater(pane.Centre))
             {
                 pane.Band = bands[rng.Int(3)];
                 pane.Seed = rng.Range(0f, 100f);
@@ -210,7 +214,7 @@ public sealed partial class PlaneWorld
                 panes--;
                 continue;
             }
-            if (mirrors <= 0 || !Fits(p, 2.4f)) continue;
+            if (mirrors <= 0 || !Fits(p, 2.4f) || !TidySpot(p)) continue;
             var plate = new OpticWall
             {
                 Kind = OpticKind.Mirror, Centre = p, Angle = rng.Range(0f, MathF.PI), HalfLength = OpticWallTuning.MirrorHalf,

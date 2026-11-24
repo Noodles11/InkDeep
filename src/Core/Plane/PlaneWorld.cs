@@ -143,7 +143,9 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     /// <summary>She puts her glow out (Size 0) or lights it again (Size 1).</summary>
     GlowToggled,
     /// <summary>Her beam lights a dark charge stone (at its face, Direction the way out of the wall).</summary>
-    ChargeStoneLit }
+    ChargeStoneLit,
+    /// <summary>She swam over a light spring for the first time: it lights up (LightSpring.Found).</summary>
+    SpringFound }
 
 /// <summary>What hurt Clementine (the killing blow names what ended a run; saved by number, so Gloomvine stays though nothing deals it now).</summary>
 public enum DamageSource { None, PufferNeedle, PufferSpines, BossPearl, RoyalPearl, BossSnap, BossContact, Murkling, MurkShot, Gloomvine, Blightroot, Blotter, Thumpsquirt, Lashjaw, Curse, Hearthguard, Leak, LeakWater, Debris, Dart, Mantis }
@@ -203,6 +205,8 @@ public sealed partial class PlaneWorld
         // (The Sunken Ruins' amphorae: its own pots, CROSSOVER.md §8.)
         if (Options.Vases || Map.Templated && Map.Biome == OctoShoots.Core.Run.Biome.SunkenRuins) PlaceVases();
         if (Map.Templated) PlaceVaults();
+        // A tidy level's few light features and its quiet water (PlaneTidy.cs).
+        ChooseFeatures();
         // Mirror plates and lightglass (PlaneOpticWalls.cs).
         if (Options.Optics && Map.Templated && !Map.Rift) PlaceOpticWalls();
         // Light specks through its water (PlaneSpecks.cs).
