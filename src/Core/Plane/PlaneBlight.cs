@@ -541,7 +541,7 @@ public sealed partial class PlaneWorld
             if (!m.Alive || m.Clinging || Vector2.Distance(m.Position, at) > reach + m.Radius) continue;
             float dealt = Ward(m, m.Position, light);
             bool emptied = dealt > 0f && m.Corruption.Hit(dealt);
-            Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, m.Position, Vector2.Zero, dealt));
+            Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, m.Position, Vector2.Zero, dealt, Health: m.Corruption.Max));
             if (emptied) BurstMurkling(m, ember: true);
         }
         foreach (var b in Blotters.ToArray())
@@ -550,7 +550,7 @@ public sealed partial class PlaneWorld
             b.SinceStruck = 0f;
             float dealt = Ward(b, b.Position, light);
             bool emptied = dealt > 0f && b.Corruption.Hit(dealt);
-            Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, b.Position, Vector2.Zero, dealt));
+            Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, b.Position, Vector2.Zero, dealt, Health: b.Corruption.Max));
             if (emptied) BurstBlotter(b, field);
         }
         foreach (var l in Lashjaws)
@@ -558,14 +558,14 @@ public sealed partial class PlaneWorld
             if (!l.Alive || Vector2.Distance(l.Position, at) > reach + LashTuning.Head) continue;
             float dealt = Ward(l, l.Position, light);
             bool emptied = dealt > 0f && l.Corruption.Hit(dealt);
-            Events.Add(new PlaneEvent(emptied && l.Phase == 2 ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, l.Position, Vector2.Zero, dealt));
+            Events.Add(new PlaneEvent(emptied && l.Phase == 2 ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, l.Position, Vector2.Zero, dealt, Health: l.Corruption.Max));
             if (emptied) BreakLashjaw(l);
         }
         foreach (var w in Inkwardens)
         {
             if (!w.Alive || Vector2.Distance(w.Position, at) > reach + WardenTuning.Radius) continue;
             bool emptied = w.Corruption.Hit(light);
-            Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, w.Position, Vector2.Zero, light));
+            Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, w.Position, Vector2.Zero, light, Health: w.Corruption.Max));
             if (emptied) FreeWarden(w);
         }
         foreach (var f in Flounders)
@@ -578,7 +578,7 @@ public sealed partial class PlaneWorld
             if (!t.Alive || t.Airborne || Vector2.Distance(t.Position, at) > reach + ThumpTuning.Radius) continue;
             float dealt = Ward(t, t.Position, light);
             bool emptied = dealt > 0f && t.Corruption.Hit(dealt);
-            Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, t.Position, Vector2.Zero, dealt));
+            Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, t.Position, Vector2.Zero, dealt, Health: t.Corruption.Max));
             if (emptied) BurstThump(t);
         }
         foreach (var root in Blightroots)
@@ -620,7 +620,7 @@ public sealed partial class PlaneWorld
             m.ScanTimer = 0f;
             float dealt = Ward(m, m.Position, BlightTuning.ShakeLight);
             bool emptied = dealt > 0f && m.Corruption.Hit(dealt);
-            Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, m.Position, Vector2.Zero, dealt));
+            Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, m.Position, Vector2.Zero, dealt, Health: m.Corruption.Max));
             if (emptied) BurstMurkling(m, ember: true);
         }
     }
@@ -1087,7 +1087,7 @@ public sealed partial class PlaneWorld
                 if (m.Trait != MurkTrait.None && TraitMeets(shot, m, ref light)) continue;
                 float dealt = Ward(m, m.Position, light);
                 bool emptied = dealt > 0f && m.Corruption.Hit(dealt);
-                Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, m.Position, SafeNormalize(shot.Velocity), dealt));
+                Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, m.Position, SafeNormalize(shot.Velocity), dealt, Health: m.Corruption.Max));
                 Shove(ref m.Knock, shot.Velocity, m.Radius, shot.Knock);
                 if (emptied) BurstMurkling(m, ember: true);
                 if (shot.Pierce) shot.Struck = m;
@@ -1255,7 +1255,7 @@ public sealed partial class PlaneWorld
             Events.Add(new PlaneEvent(PlaneEventType.MurklingBurst, m.Position, Vector2.Zero, 0f));
             FreeFish(m);
             Shells.Add(new PlaneShell { Position = m.Position, Velocity = Fling(2f, 4f) });
-            if (damage > 0f) Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, m.Position, Vector2.Zero, damage));
+            if (damage > 0f) Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, m.Position, Vector2.Zero, damage, Health: m.Corruption.Max));
             return;
         }
         if (m.Prime)
@@ -1289,7 +1289,7 @@ public sealed partial class PlaneWorld
             // In a leak cave, the school it swallowed comes out with it and swims home (docs/archive/QUESTS-PROPOSAL.md §3.2).
             int school = Map.LeakCave ? ReleaseSchool(m.Position) : 0;
             Events.Add(new PlaneEvent(PlaneEventType.PrimeFreed, m.Position, Vector2.Zero, school));
-            if (damage > 0f) Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, m.Position, Vector2.Zero, damage));
+            if (damage > 0f) Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, m.Position, Vector2.Zero, damage, Health: m.Corruption.Max));
             return;
         }
         Corruption?.Release(matter);
@@ -1299,7 +1299,7 @@ public sealed partial class PlaneWorld
         bool blooms = ember && Corruption is { } field && field.At(m.Position) < CorruptionTuning.Clean;
         if (blooms) Corruption!.Cleanse(m.Position, CorruptionTuning.EmberRadius, 1f);
         Events.Add(new PlaneEvent(PlaneEventType.MurklingBurst, m.Position, Vector2.Zero, blooms ? CorruptionTuning.EmberRadius : 0f));
-        if (damage > 0f) Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, m.Position, Vector2.Zero, damage));
+        if (damage > 0f) Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, m.Position, Vector2.Zero, damage, Health: m.Corruption.Max));
     }
 
     // ───────────────────────── the arena ─────────────────────────

@@ -137,7 +137,7 @@ public sealed partial class PlaneWorld
             // against the knock's easing off).
             Press(ref m.Knock, LightPressure(m, m.Position, m.Radius));
             if (n == 0 || Guarded(m.Position) || !m.Corruption.Sear(m.Trait == MurkTrait.None ? burn * n : TraitBurn(m, burn * n))) continue;
-            Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, m.Position, Vector2.Zero, burn));
+            Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, m.Position, Vector2.Zero, burn, Health: m.Corruption.Max));
             BurstMurkling(m, ember: true);
             FreedInColour(m, m.Position);
         }
@@ -147,7 +147,7 @@ public sealed partial class PlaneWorld
             if (!w.Alive) continue;
             float n = Touch(w, w.Position, 0f, WardenTuning.Radius);
             if (n == 0 || !w.Corruption.Sear(burn * n)) continue;
-            Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, w.Position, Vector2.Zero, burn));
+            Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, w.Position, Vector2.Zero, burn, Health: w.Corruption.Max));
             FreeWarden(w);
             FreedInColour(w, w.Position);
         }
@@ -157,7 +157,7 @@ public sealed partial class PlaneWorld
             if (!f.Corrupted || f.Freed) continue;
             float n = Touch(f, f.Position, FlounderTuning.Bed(Map, f.Home) - LevelMap.SwimBand, FlounderTuning.Radius);
             if (n == 0 || Guarded(f.Position) || !f.Corruption.Sear(burn * n)) continue;
-            Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, FlounderSeen(f), Vector2.Zero, burn));
+            Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, FlounderSeen(f), Vector2.Zero, burn, Health: f.Corruption.Max));
             FreeFlounder(f);
             FreedInColour(f, f.Position);
         }
@@ -170,7 +170,7 @@ public sealed partial class PlaneWorld
                 float n = Touch(b, b.Position, 0f, BlotterTuning.Radius, dazzles: false);
                 Press(ref b.Knock, LightPressure(b, b.Position, BlotterTuning.Radius));
                 if (n == 0 || Guarded(b.Position) || !b.Corruption.Sear(burn * n)) continue;
-                Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, b.Position, Vector2.Zero, burn));
+                Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, b.Position, Vector2.Zero, burn, Health: b.Corruption.Max));
                 BurstBlotter(b, field);
                 FreedInColour(b, b.Position);
             }
@@ -180,7 +180,7 @@ public sealed partial class PlaneWorld
                 if (!t.Alive || t.Airborne) continue;
                 float n = Touch(t, t.Position, 0f, ThumpTuning.Radius, dazzles: false);
                 if (n == 0 || Guarded(t.Position) || !t.Corruption.Sear(burn * n)) continue;
-                Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, t.Position, Vector2.Zero, burn));
+                Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, t.Position, Vector2.Zero, burn, Health: t.Corruption.Max));
                 BurstThump(t);
                 FreedInColour(t, t.Position);
             }
@@ -189,7 +189,7 @@ public sealed partial class PlaneWorld
                 if (!l.Alive) continue;
                 float n = Touch(l, l.Position, 0f, LashTuning.Head, dazzles: false);
                 if (n == 0 || Guarded(l.Position) || !l.Corruption.Sear(burn * n)) continue;
-                if (l.Phase == 2) Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, l.Position, Vector2.Zero, burn));
+                if (l.Phase == 2) Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, l.Position, Vector2.Zero, burn, Health: l.Corruption.Max));
                 BreakLashjaw(l);
             }
             // An emptied Blightroot bursts on its own next step (its sac stands high on its pole).

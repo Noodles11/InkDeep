@@ -155,7 +155,8 @@ public enum DamageSource { None, PufferNeedle, PufferSpines, BossPearl, RoyalPea
 /// (CurseEndReached, as a CurseReward); 0 otherwise. For FountainSpout, Direction is the way the shell flies. Source: what
 /// hurt her (PlayerHit, PlayerDefeated).
 /// </summary>
-public readonly record struct PlaneEvent(PlaneEventType Type, Vector2 Position, Vector2 Direction, float Size = 0f, DamageSource Source = DamageSource.None);
+/// <param name="Health">A creature defeated (MobDefeated): its full health (its corruption meter's Max); 0 otherwise.</param>
+public readonly record struct PlaneEvent(PlaneEventType Type, Vector2 Position, Vector2 Direction, float Size = 0f, DamageSource Source = DamageSource.None, float Health = 0f);
 
 /// <summary>
 /// The plane-locked simulation (DESIGN-TOPDOWN §0, §11): fixed 60 Hz, deterministic, engine-free. Positions are 2D map

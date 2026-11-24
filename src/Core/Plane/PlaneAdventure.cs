@@ -1105,7 +1105,7 @@ public sealed partial class PlaneWorld
             m.ArmCooldown = AdventureTuning.ArmEvery;
             float dealt = Ward(m, m.Position, light);
             bool emptied = dealt > 0f && m.Corruption.Hit(dealt);
-            Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, m.Position, SafeNormalize(m.Position - p.Position), dealt));
+            Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, m.Position, SafeNormalize(m.Position - p.Position), dealt, Health: m.Corruption.Max));
             if (emptied) BurstMurkling(m, ember: true);
         }
         foreach (var w in Inkwardens)
@@ -1114,7 +1114,7 @@ public sealed partial class PlaneWorld
             if (!w.Alive || w.ArmCooldown > 0f || ArmDistance(w.Position) > WardenTuning.Radius + AdventureTuning.ArmWidth) continue;
             w.ArmCooldown = AdventureTuning.ArmEvery;
             bool emptied = w.Corruption.Hit(light);
-            Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, w.Position, SafeNormalize(w.Position - p.Position), light));
+            Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, w.Position, SafeNormalize(w.Position - p.Position), light, Health: w.Corruption.Max));
             if (emptied) FreeWarden(w);
         }
         foreach (var f in Flounders)

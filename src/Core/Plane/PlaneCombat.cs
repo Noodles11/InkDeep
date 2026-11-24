@@ -559,7 +559,7 @@ public sealed partial class PlaneWorld
         mob.HitFlash = PlaneCombatTuning.HitFlash;
         mob.Knock += SafeNormalize(dir) * Tuning.ShotKnockback * Run.Loadout.Stats[Stat.Knockback];
         if (!quiet || !mob.Alive)
-            Events.Add(new PlaneEvent(mob.Alive ? PlaneEventType.MobHit : PlaneEventType.MobDefeated, mob.Position, dir, damage));
+            Events.Add(new PlaneEvent(mob.Alive ? PlaneEventType.MobHit : PlaneEventType.MobDefeated, mob.Position, dir, damage, Health: PlaneCombatTuning.MobHp));
         if (mob.Alive) return;
         Stats.MobsDefeated++;
         Drop(mob.Position);

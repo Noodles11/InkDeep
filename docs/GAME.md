@@ -678,7 +678,10 @@ the tests of the dive still test the dive.
     `audio/sfx/shots.mp3` from a random place in it, faded in and out, 25 ms apart, a touch apart in pitch, at −15 dB
     (−3 dB more each time the count doubles); it replaces the recorded pops. A creature her light hits kicks
     (`kick-hit.mp3`, `Sfx.PlayKick`, −8 dB, in place of the squish, which bosses and vases keep), and one she defeats
-    goes down (`mob-down.mp3`, `Sfx.PlayMobDown`, −6 dB); each at most once a step (0.87.0).
+    goes down (`mob-down.mp3`, `Sfx.PlayMobDown`, −6 dB); each at most once a step (0.87.0). The going-down is pitched
+    by the creature's full health (0.88.0, `Sfx.DownPitch`, from the defeat event's `Health`): a basic murkling's at its
+    own pitch, three semitones lower each time the health doubles and higher for smaller ones (×0.5 to ×1.6); the
+    biggest defeated that step sets it.
   - **Its title menu** (`TitleMain`, `TitleMain.Phases`, `MenuSpray`): it opens out of the whitening gonad loader onto
     Clementine in open water with fish. Her beam lights the items, the chosen one dissolves, her push wave clears the
     rest, and Play dives to her jellies.

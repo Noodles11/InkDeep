@@ -2713,6 +2713,10 @@ public partial class TopDownMain : Node3D
             _accumulator -= PlaneWorld.Dt;
             steps++;
             bool struck = false, emerged = false, kicked = false, downed = false;
+            // (The biggest creature defeated this step: its defeat sound's pitch.)
+            float downHealth = 0f;
+            foreach (var e in _world.Events)
+                if (e.Type == PlaneEventType.MobDefeated) downHealth = Mathf.Max(downHealth, e.Health);
             foreach (var e in _world.Events)
             {
                 NoteRequest(e);
@@ -2910,7 +2914,7 @@ public partial class TopDownMain : Node3D
                     if (!downed)
                     {
                         downed = true;
-                        _sfx.PlayMobDown();
+                        _sfx.PlayMobDown(Sfx.DownPitch(downHealth / BlightTuning.MurkCorruption));
                     }
                     _damage.Show(e);
                     // Freed by light: the flash grows with the bubble that did it; a big one rings her bell and lifts

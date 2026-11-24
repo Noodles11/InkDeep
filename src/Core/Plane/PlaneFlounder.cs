@@ -204,7 +204,7 @@ public sealed partial class PlaneWorld
     {
         bool emptied = light > 0f && f.Corruption.Hit(light);
         // (Told where it shows: its burst and its number are seen on the fish.)
-        Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, FlounderSeen(f), dir, light));
+        Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, FlounderSeen(f), dir, light, Health: f.Corruption.Max));
         if (emptied) FreeFlounder(f);
     }
 

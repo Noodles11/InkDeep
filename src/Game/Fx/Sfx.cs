@@ -268,11 +268,19 @@ public partial class Sfx : Node
         if (_kick is not null) PlayRecorded(_kick, volumeDb, 0.92f + (float)_random.NextDouble() * 0.16f);
     }
 
-    /// <summary>A creature defeated, freed by her light (mob-down.mp3), a touch apart in pitch each time.</summary>
-    public void PlayMobDown(float volumeDb = -6f)
+    /// <summary>A creature defeated, freed by her light (mob-down.mp3), at <paramref name="pitch"/> (DownPitch), a touch apart each time.</summary>
+    public void PlayMobDown(float pitch = 1f, float volumeDb = -6f)
     {
-        if (_down is not null) PlayRecorded(_down, volumeDb, 0.95f + (float)_random.NextDouble() * 0.1f);
+        if (_down is not null) PlayRecorded(_down, volumeDb, pitch * (0.97f + (float)_random.NextDouble() * 0.06f));
     }
+
+    /// <summary>The defeat sound's pitch, at a creature's full health against a basic murkling's: each doubling of it
+    /// DownStep lower (a quarter of it is a fifth higher), between DownLeast and DownMost.</summary>
+    public static float DownPitch(float health) =>
+        health <= 0f ? 1f : Mathf.Clamp(Mathf.Pow(2f, -DownStep * Mathf.Log(health) / Mathf.Log(2f)), DownLeast, DownMost);
+
+    /// <summary>Octaves the defeat sound drops each time a creature's health doubles, and its pitch's bounds.</summary>
+    const float DownStep = 0.25f, DownLeast = 0.5f, DownMost = 1.6f;
 
     /// <summary>Her light striking something it can harm: a squish, a touch apart in pitch each time.</summary>
     public void PlayStrike(float volumeDb = 0f)

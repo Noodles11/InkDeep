@@ -469,7 +469,7 @@ public sealed partial class PlaneWorld
                     if (light > 0f && m.Corruption.Hit(light))
                     {
                         _surgeTally.Remove(target);
-                        Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, m.Position, Vector2.Zero, told + light));
+                        Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, m.Position, Vector2.Zero, told + light, Health: m.Corruption.Max));
                         BurstMurkling(m, ember: true);
                     }
                     break;
@@ -481,7 +481,7 @@ public sealed partial class PlaneWorld
                     if (light > 0f && b.Corruption.Hit(light))
                     {
                         _surgeTally.Remove(target);
-                        Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, b.Position, Vector2.Zero, told + light));
+                        Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, b.Position, Vector2.Zero, told + light, Health: b.Corruption.Max));
                         BurstBlotter(b, field);
                     }
                     break;
@@ -492,7 +492,7 @@ public sealed partial class PlaneWorld
                     if (light > 0f && l.Corruption.Hit(light))
                     {
                         _surgeTally.Remove(target);
-                        if (l.Phase == 2) Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, l.Position, Vector2.Zero, told + light));
+                        if (l.Phase == 2) Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, l.Position, Vector2.Zero, told + light, Health: l.Corruption.Max));
                         BreakLashjaw(l);
                     }
                     break;
@@ -502,7 +502,7 @@ public sealed partial class PlaneWorld
                     if (w.Corruption.Hit(light))
                     {
                         _surgeTally.Remove(target);
-                        Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, w.Position, Vector2.Zero, told + light));
+                        Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, w.Position, Vector2.Zero, told + light, Health: w.Corruption.Max));
                         FreeWarden(w);
                     }
                     break;
@@ -513,7 +513,7 @@ public sealed partial class PlaneWorld
                     if (light > 0f && t.Corruption.Hit(light))
                     {
                         _surgeTally.Remove(target);
-                        Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, t.Position, Vector2.Zero, told + light));
+                        Events.Add(new PlaneEvent(PlaneEventType.MobDefeated, t.Position, Vector2.Zero, told + light, Health: t.Corruption.Max));
                         BurstThump(t);
                     }
                     break;

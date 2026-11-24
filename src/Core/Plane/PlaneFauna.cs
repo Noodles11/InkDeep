@@ -255,7 +255,7 @@ public sealed partial class PlaneWorld
         {
             if (!m.Alive || m.Budding || m.Clinging || Vector2.Distance(f.Position, m.Position) > FaunaTuning.MantisReach + m.Radius) continue;
             bool emptied = m.Corruption.Hit(m.Corruption.Max * FaunaTuning.MantisMurk);
-            Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, m.Position, SafeNormalize(m.Position - f.Position), m.Corruption.LastHit));
+            Events.Add(new PlaneEvent(emptied ? PlaneEventType.MobDefeated : PlaneEventType.MobHit, m.Position, SafeNormalize(m.Position - f.Position), m.Corruption.LastHit, Health: m.Corruption.Max));
             if (emptied) BurstMurkling(m, ember: false);
             Strike(f, m.Position);
             return;
