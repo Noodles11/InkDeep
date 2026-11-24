@@ -60,12 +60,20 @@ public sealed class PlaneFlora : ILightOwner
     };
 }
 
-/// <summary>A light room (LIGHT-WORLD.md §9.2): a ring of one biome's plants round a prize, that opens once they are all awake at once.</summary>
+/// <summary>
+/// A light room (LIGHT-WORLD.md §9.2): a ring of one biome's plants round a prize, that opens once they are all awake at
+/// once. Atlantis's is an orrery (phase 6): its ring of corals round a quartz heart, and turnable orichalcum mirrors
+/// outside the ring; it opens only while the corals glow and the heart is lit by her light thrown off its own mirrors.
+/// </summary>
 public sealed class LightRoom
 {
     public Vector2 Centre;
     public readonly List<PlaneFlora> Plants = new();
     public bool Opened;
+    /// <summary>An orrery: its mirrors, and its heart's light (0..1: full lights it).</summary>
+    public bool Orrery;
+    public readonly List<OpticWall> Mirrors = new();
+    public float Heart;
 }
 
 /// <summary>The flora's numbers (LIGHT-WORLD.md §6). (tune)</summary>
@@ -93,6 +101,12 @@ public static class FloraTuning
     public const float RoomSpecks = 3f;
     /// <summary>Loose plants on a level, and the shells an anemone hides.</summary>
     public const int Loose = 6, AnemoneShells = 3;
+    /// <summary>An orrery (Atlantis's light room): its mirrors, how far out they stand, the mirror light its heart answers, how fast the heart fills and fades (/s), and its prize's shells.</summary>
+    public const int OrreryMirrors = 2, OrreryShells = 12;
+    public const float OrreryOut = 4.1f, HeartSense = 0.15f, HeartFill = 1.2f, HeartFade = 0.6f;
+
+    /// <summary>A biome's light rooms are orreries (Atlantis).</summary>
+    public static bool Orrery(Biome biome) => biome == Biome.Atlantis;
 
     /// <summary>A biome's light room plant and how many ring it, and its loose plants.</summary>
     public static (FloraKind Room, int Count, FloraKind[] Loose) For(Biome biome) => biome switch
@@ -163,7 +177,9 @@ public sealed partial class PlaneWorld
             if (LightRooms.Count >= rooms) break;
             if (Vector2.Distance(p, Map.Start.Position) < FloraTuning.RoomFromStart || !Fits(p, FloraTuning.RoomClear)) continue;
             if (LightRooms.Exists(r => Vector2.Distance(r.Centre, p) < FloraTuning.RoomApart)) continue;
-            var room = new LightRoom { Centre = p };
+            bool orrery = FloraTuning.Orrery(Map.Biome);
+            if (orrery && OpticWalls.Exists(w => w.Distance(p) < FloraTuning.RoomClear + 1f)) continue;
+            var room = new LightRoom { Centre = p, Orrery = orrery };
             float turn = rng.Range(0f, MathF.Tau);
             for (int k = 0; k < ring; k++)
             {
@@ -175,6 +191,19 @@ public sealed partial class PlaneWorld
                 f.Room = LightRooms.Count;
                 f.Shells = 0;
                 room.Plants.Add(f);
+            }
+            // An orrery's mirrors, between the ring's plants, each turned its own way (she turns them by pushing an end).
+            for (int k = 0; orrery && k < FloraTuning.OrreryMirrors; k++)
+            {
+                float a = turn + (k * ring / (float)FloraTuning.OrreryMirrors + 0.5f) * MathF.Tau / ring;
+                var plate = new OpticWall
+                {
+                    Kind = OpticKind.Mirror, Centre = p + new Vector2(MathF.Cos(a), MathF.Sin(a)) * FloraTuning.OrreryOut,
+                    Angle = rng.Range(0f, MathF.PI), HalfLength = OpticWallTuning.MirrorHalf, HalfThick = OpticWallTuning.MirrorThick,
+                    Seed = rng.Range(0f, 100f),
+                };
+                OpticWalls.Add(plate);
+                room.Mirrors.Add(plate);
             }
             LightRooms.Add(room);
         }
@@ -276,12 +305,29 @@ public sealed partial class PlaneWorld
         }
         foreach (var room in LightRooms)
         {
-            if (room.Opened || room.Plants.Count == 0 || !room.Plants.TrueForAll(p => p.Awake)) continue;
+            if (room.Opened) continue;
+            if (room.Orrery)
+            {
+                float thrown = OrreryLight(room);
+                room.Heart = thrown >= FloraTuning.HeartSense ? MathF.Min(1f, room.Heart + FloraTuning.HeartFill * Dt) : MathF.Max(0f, room.Heart - FloraTuning.HeartFade * Dt);
+                if (room.Heart < 1f) continue;
+            }
+            if (room.Plants.Count == 0 || !room.Plants.TrueForAll(p => p.Awake)) continue;
             room.Opened = true;
             Events.Add(new PlaneEvent(PlaneEventType.LightRoomOpened, room.Centre, Vector2.Zero, room.Plants.Count));
-            for (int i = 0; i < FloraTuning.RoomShells; i++) Shells.Add(FoundShell(room.Centre, ShellWorth.Pot, Fling(2f, 4.5f)));
+            for (int i = 0; i < (room.Orrery ? FloraTuning.OrreryShells : FloraTuning.RoomShells); i++) Shells.Add(FoundShell(room.Centre, ShellWorth.Pot, Fling(2f, 4.5f)));
             if (Options.Specks) DropSpecks(room.Centre, FloraTuning.RoomSpecks);
         }
+    }
+
+    /// <summary>An orrery's heart's light: her rays born on its own mirrors (thrown off them), as they fall on it.</summary>
+    float OrreryLight(LightRoom room)
+    {
+        float sum = 0f;
+        foreach (var b in Born)
+            if (b.Word == PathWord.Mirror && room.Mirrors.Exists(m => m.Distance(b.At) < 0.4f))
+                sum += LightQuery.Brightness(b.Emitter, room.Centre, LineOfSight);
+        return sum;
     }
 
     void GiveShells(PlaneFlora f)

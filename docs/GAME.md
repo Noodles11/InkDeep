@@ -260,6 +260,10 @@ emptied, it is freed, leaving a core of light.
 - **The codex** (0.89.0, TITLE-MENU §4.4): the Sea-pedia's places, creatures, bosses, reef life, plants, waters and
   stones, and biomes, each entry locked until she first finds it in play (enters the place, faces the creature, sees
   the fish or plant, reaches the biome), which unlocks its details.
+- **The spectral survey and the keystones** (0.90.0, LIGHT-AND-GRAPH.md §22): every plant and animal that answers light
+  fills in as she lights it by ember, bloom, frost and white light, watches it in the dark and lights it with a pulse; a
+  complete entry gives its lore in the Sea-pedia, and a biome surveyed whole raises its depth's Atlantean keystone piece
+  (four, in the Sea-pedia's Keystones tab).
 
 ## 12. Decided and not yet built
 
@@ -729,4 +733,7 @@ the tests of the dive still test the dive.
     only by her other colours) or light-eaters (fed by weak light: focus them).
   - **Pearls:** Abyssal Blue, Ember Coal and Lens of the Deep are offered; Polariser Lens and Siltwalker are built but
     dormant (they don't change her shots).
+- **The lit world, phase 6 (0.90.0): the spectral survey, the keystones, the orrery** (LIGHT-AND-GRAPH.md §22):
+  Atlantis's light rooms are orreries: a ring of corals round a quartz heart, with two turnable mirror plates; it opens
+  when the corals glow and her beam is thrown off its mirrors onto the heart.
 

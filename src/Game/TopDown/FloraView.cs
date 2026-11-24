@@ -34,6 +34,8 @@ public partial class FloraView : Node3D
 
     readonly List<Plant> _plants = new();
     readonly List<(LightRoom Room, MeshInstance3D Ring)> _rings = new();
+    /// <summary>An orrery's quartz heart and its glow.</summary>
+    readonly List<(LightRoom Room, MeshInstance3D Orb, StandardMaterial3D Glow)> _hearts = new();
     float _time;
 
     static StandardMaterial3D Body(Color c, float rough = 0.85f) => new() { AlbedoColor = c, Roughness = rough };
@@ -60,6 +62,8 @@ public partial class FloraView : Node3D
     {
         foreach (var p in _plants) p.Root.QueueFree();
         foreach (var (_, ring) in _rings) ring.QueueFree();
+        foreach (var (_, orb, _) in _hearts) orb.QueueFree();
+        _hearts.Clear();
         _plants.Clear();
         _rings.Clear();
         foreach (var f in world.Flora) _plants.Add(Make(world, f));
@@ -76,6 +80,17 @@ public partial class FloraView : Node3D
             };
             AddChild(ring);
             _rings.Add((room, ring));
+            if (!room.Orrery) continue;
+            // The orrery's heart: a clear quartz orb on a short plinth, glowing as her light is thrown into it.
+            var glow = new StandardMaterial3D
+            {
+                AlbedoColor = new Color(0.85f, 0.9f, 0.95f, 0.55f), Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+                Metallic = 0.1f, Roughness = 0.08f, EmissionEnabled = true, Emission = new Color(1f, 0.88f, 0.6f), EmissionEnergyMultiplier = 0f,
+            };
+            var orb = Mesh(new SphereMesh { Radius = 0.55f, Height = 1.1f, RadialSegments = 24, Rings = 12 }, glow, new Vector3(room.Centre.X, floor + 1.2f, room.Centre.Y));
+            orb.AddChild(Mesh(new CylinderMesh { TopRadius = 0.3f, BottomRadius = 0.45f, Height = 0.7f, RadialSegments = 12 }, Body(new Color(0.72f, 0.6f, 0.35f), 0.35f), new Vector3(0f, -0.85f, 0f)));
+            AddChild(orb);
+            _hearts.Add((room, orb, glow));
         }
     }
 
@@ -248,5 +263,7 @@ public partial class FloraView : Node3D
             }
         }
         foreach (var (room, ring) in _rings) ring.Visible = !room.Opened;
+        // (Below her own light: at most a soft glow, full once the orrery opens.)
+        foreach (var (room, _, glow) in _hearts) glow.EmissionEnergyMultiplier = room.Opened ? 1.2f : 0.9f * room.Heart;
     }
 }

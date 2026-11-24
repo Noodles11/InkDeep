@@ -144,6 +144,8 @@ public sealed class Profile
     public HashSet<string> SeenBosses { get; set; } = new();
     /// <summary>The Sea-pedia's codex entries she has found (Codex ids: places, creatures, reef life, plants, biomes…).</summary>
     public HashSet<string> Discovered { get; set; } = new();
+    /// <summary>The spectral survey's facets she has lit (Survey.Mark: "flora:NightLily/frost").</summary>
+    public HashSet<string> Surveyed { get; set; } = new();
     public ProfileStats Stats { get; set; } = new();
     /// <summary>Per pearl id: how it has done.</summary>
     public Dictionary<string, PearlRecord> Pearls { get; set; } = new();

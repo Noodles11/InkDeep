@@ -203,7 +203,9 @@ letter; the Pufferling and The Lid keep their drawn portraits and their records)
 place (within its radius + 1.5 m: a shop, a secret, a treasure clam, a light spring, a light room…; a bubble vault seen
 within 5 m or burst), a creature, a fish, an animal, a plant, a water or a stone in sight within 9 m (a boss within
 18 m; a murkling's trait with it), and reaching a biome's level. Each new one says "New in the Sea-pedia: …" in play.
-The old Pufferling and Queen Clam records count as found (Pufferling, The Lid).
+The old Pufferling and Queen Clam records count as found (Pufferling, The Lid). (0.90.0) A plant's or an animal's entry
+also shows its spectral survey (its six facets, ✓ once lit) and, complete, its line of lore; a **Keystones** tab holds
+the four Atlantean keystone pieces the survey raises (LIGHT-AND-GRAPH.md §22).
 
 (The design below, from before the codex.) A pearl card with two tabs, **Pearls** and **Creatures**. Each tab is a grid of entries on the left (about
 60%) and a detail pane on the right (about 40%) for the selected entry. A filter row sits above the grid.

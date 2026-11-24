@@ -2691,6 +2691,17 @@ public partial class TopDownMain : Node3D
             {
                 Say("New in the Sea-pedia: " + string.Join(", ", found.Select(id => Codex.Get(id)?.Name ?? id)));
             }
+            if (_recorder.TakeNewSurveys() is { Count: > 0 } surveyed)
+            {
+                // The spectral survey: each facet lit (and the entries it makes whole).
+                var subjects = surveyed.Select(m => m[..m.IndexOf('/')]).Distinct().ToList();
+                Say("Surveyed: " + string.Join(", ", subjects.Select(s =>
+                {
+                    int done = Survey.Done(_recorder.Profile.Surveyed, s);
+                    string name = Codex.Get(s)?.Name ?? s;
+                    return done == Survey.Facets.Length ? name + " (complete: its lore is in the Sea-pedia)" : $"{name} {done}/{Survey.Facets.Length}";
+                })));
+            }
             Earned(_achievements.Observe(_world));
             // The curse den's dark closing round her: a low drone.
             bool cursed = _world.CurseDarkDepth > CurseTuning.Inside;

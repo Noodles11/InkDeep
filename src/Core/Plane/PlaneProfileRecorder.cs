@@ -24,6 +24,7 @@ public sealed class PlaneProfileRecorder
 
     readonly HashSet<string> _runPearls = new();
     readonly List<string> _newEntries = new();
+    readonly List<string> _newSurveys = new();
 
     /// <summary>Whether a codex entry is found (or was, in the Sea-pedia's old records).</summary>
     public static bool Knows(Profile p, string id) =>
@@ -34,6 +35,13 @@ public sealed class PlaneProfileRecorder
     {
         var taken = new List<string>(_newEntries);
         _newEntries.Clear();
+        return taken;
+    }
+    /// <summary>The survey's facets lit for the first time since this was last asked (Survey.Mark ids).</summary>
+    public List<string> TakeNewSurveys()
+    {
+        var taken = new List<string>(_newSurveys);
+        _newSurveys.Clear();
         return taken;
     }
     long _landedTick = -1;
@@ -99,6 +107,17 @@ public sealed class PlaneProfileRecorder
         if (!world.Defeated) s.PlaySeconds += PlaneWorld.Dt;
         foreach (string id in world.Discoveries)
             if (!Knows(Profile, id) && Profile.Discovered.Add(id)) _newEntries.Add(id);
+        bool surveyed = false;
+        foreach (string mark in world.SurveyFinds)
+            if (Profile.Surveyed.Add(mark))
+            {
+                _newSurveys.Add(mark);
+                surveyed = true;
+            }
+        // A biome surveyed whole raises its depth's keystone piece (a codex entry).
+        if (surveyed)
+            foreach (string key in Survey.KeystonesRaised(Profile.Surveyed))
+                if (Profile.Discovered.Add(key)) _newEntries.Add(key);
         foreach (var e in world.Events)
         {
             switch (e.Type)

@@ -8,7 +8,7 @@ using OctoShoots.Core.Run;
 namespace OctoShoots.Core.Plane;
 
 /// <summary>The Sea-pedia's sections beside the pearls (docs/GAME.md: the codex).</summary>
-public enum CodexSection { Places, Creatures, Bosses, ReefLife, Plants, Waters, Biomes }
+public enum CodexSection { Places, Creatures, Bosses, ReefLife, Plants, Waters, Biomes, Keystones }
 
 /// <summary>A Sea-pedia entry: locked until she first finds it in play (PlaneWorld.Discoveries).</summary>
 public sealed record CodexEntry(string Id, CodexSection Section, string Name, string Line, string Notes);
@@ -185,6 +185,16 @@ public static class Codex
             "Dense brine in a sunken temple: haloclines, brine pools and stones that answer light."),
         E("biome:Atlantis", CodexSection.Biomes, "Atlantis", "The bottom of everything.",
             "Deep clear water, the last depth, with every trick of light the reef knows."),
+
+        // ── Keystones (raised by the spectral survey: Survey.cs) ──
+        E("keystone:1", CodexSection.Keystones, "Keystone of the Reef", "A piece of the stone that pinned the old catfish.",
+            "Raised by surveying the Sunlit Reef whole: every plant and animal of it lit by each colour, in the dark and with a pulse. One of four pieces of the Atlantean keystone."),
+        E("keystone:2", CodexSection.Keystones, "Keystone of the Middle Water", "Green-stained, or rust-stained.",
+            "Raised by surveying the Kelp Forest or the Shipwreck whole. One of four pieces of the Atlantean keystone."),
+        E("keystone:3", CodexSection.Keystones, "Keystone of the Ruins", "Gilt worn off by hands.",
+            "Raised by surveying the Sunken Ruins whole. One of four pieces of the Atlantean keystone."),
+        E("keystone:4", CodexSection.Keystones, "Keystone of the Deep", "Cold, and faintly glowing.",
+            "Raised by surveying the Alien Wreckage or the Drowned Temple whole. One of four pieces of the Atlantean keystone: together they open the way to Atlantis's sealed heart."),
     };
 
     static readonly Dictionary<string, CodexEntry> ById = All.ToDictionary(e => e.Id);
@@ -212,6 +222,7 @@ public static class Codex
         CodexSection.ReefLife => "Lives somewhere in the reef.",
         CodexSection.Plants => "Grows somewhere in the reef.",
         CodexSection.Waters => "Lies somewhere in the deep.",
+        CodexSection.Keystones => "Survey a biome's plants and animals whole to raise it.",
         _ => "Dive deeper to reach it.",
     };
 

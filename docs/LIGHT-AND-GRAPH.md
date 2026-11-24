@@ -728,3 +728,33 @@ trait (`InkTraitTuning.For`; none in the Sunlit Reef):
   butterflies, deep angler), the silt-born trait, pressure plates for the shrimp, a squid's flash pattern beyond its
   beat. A leading squid swims straight (no path round rock).
 - Tests: `FaunaTests`.
+
+## 22. The spectral survey, the keystones, the orrery (built: phase 6 of proposals/LIGHT-WORLD.md)
+
+**The spectral survey** (`Survey.cs`; found in `PlaneCodex.cs` with the codex's look round, every 6 steps; kept in
+`Profile.Surveyed` by `PlaneProfileRecorder`). Each plant and animal that answers light (the six plants, the five
+animals) has six facets, each lit once ever ("flora:NightLily/frost"), when she has it in sight within 9 m:
+
+| Facet | When |
+|---|---|
+| Ember, bloom, frost | Her light on it ≥ 0.15, its colour leaning to red, green or blue (that band's share ≥ 1.15 × her plain light's: a colour word does it) |
+| White | Her light on it ≥ 0.15 and leaning to no band |
+| In the dark | The light on it (every light but its own kind's) ≤ 0.08, the night lily's dark |
+| A pulse | Her light on it ≥ 0.15 while it pulses (`HerPulseHz` > 0) |
+
+- In play each new facet says "Surveyed: Night lily 3/6"; the sixth says it is complete. A complete entry shows its
+  **line of lore** in the Sea-pedia (`Survey.Lore`), under its facets.
+- **The keystones**: four pieces, one to each depth above Atlantis, each raised when either of its biomes is surveyed
+  whole (`Survey.Of`: its light room's plant, its loose plants, its animals): 1 the Sunlit Reef; 2 the Kelp Forest or
+  the Shipwreck; 3 the Sunken Ruins; 4 the Alien Wreckage or the Drowned Temple. A raised piece is a codex entry
+  ("keystone:1", the Sea-pedia's Keystones tab) and says "New in the Sea-pedia".
+- **The orrery** (`LightRoom.Orrery`, `FloraTuning.Orrery`: Atlantis's light rooms): its ring of fluorescent coral round
+  a quartz heart, and two orichalcum mirror plates 4.1 m out between the ring's plants, each turned its own way (she
+  turns them by pushing an end, as any mirror plate). Its heart fills (1.2/s, fading 0.6/s) only while her rays born on
+  its own mirrors (thrown off them) fall on it at ≥ 0.15; it opens when the heart is full and every coral glows at once
+  (blue light), for 12 shells and the room's specks. The view: a clear quartz orb on a gilt plinth, glowing softly as
+  it fills (never above her own light).
+- Not built from the proposal: a complete entry's shells or hint pearl (its reward is its lore), what the four pieces
+  open (Atlantis's sealed heart and the true ending, CROSSOVER.md §8), the orrery's quartz windows and prism (Atlantis's
+  own lightglass and prism stones lie in its levels).
+- Tests: `SurveyTests`.

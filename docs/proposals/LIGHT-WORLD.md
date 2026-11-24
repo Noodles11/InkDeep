@@ -6,8 +6,8 @@ water filters and scatters light its own way, its walls drink it, throw it back,
 there opens, closes, grows, flees, follows, attacks or changes colour by what light falls on it. The player learns
 each place the way a diver learns a reef: by shining into it and watching what it does.
 
-This page is the design. **Phases 1 to 4 are built** on the `inkdeep-crossover` branch (§13): her light's physics, each
-biome's water and rock, and her shots meeting rock. Everything else is the plan. Values marked *(tune)* are starting
+This page is the design. **Phases 1 to 6 are built** on the `inkdeep-crossover` branch (§13, each phase's list of what was
+left out); the rest is the plan. Values marked *(tune)* are starting
 points.
 
 Contents:
@@ -456,7 +456,10 @@ The standing rules (CLAUDE.md) hold:
 - Corrupted traits (chitin-mirror, refractor, band-ward, light-eater).
 - The new pearls.
 
-**Phase 6.** The spectral survey, the keystones, the orrery rooms.
+**Phase 6: built (0.90.0)**, as LIGHT-AND-GRAPH.md §22 says (a complete entry's reward is its lore; what the keystones
+open is not built).
+
+- The spectral survey, the keystones, the orrery rooms.
 
 ---
 

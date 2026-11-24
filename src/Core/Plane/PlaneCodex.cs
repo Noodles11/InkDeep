@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using OctoShoots.Core.Gen.TopDown;
@@ -16,6 +17,35 @@ public sealed partial class PlaneWorld
 
     readonly HashSet<string> _codexFound = new();
 
+    /// <summary>The spectral survey's facets lit this step (Survey.Mark ids, each once a level).</summary>
+    public List<string> SurveyFinds { get; } = new();
+
+    readonly HashSet<string> _surveyFound = new();
+
+    void Surveyed(string subject, string facet)
+    {
+        string mark = Survey.Mark(subject, facet);
+        if (_surveyFound.Add(mark)) SurveyFinds.Add(mark);
+    }
+
+    /// <summary>Her light's colour as the survey reads it: the band it leans to (ember, bloom, frost), else white.</summary>
+    string HerFacet()
+    {
+        float r = BandShare(LightHue.Red), g = BandShare(LightHue.Green), b = BandShare(LightHue.Blue);
+        float most = MathF.Max(r, MathF.Max(g, b));
+        return most < Survey.Tint ? "white" : most == b ? "frost" : most == g ? "bloom" : "ember";
+    }
+
+    /// <summary>A survey's look at a plant or an animal in sight: in the dark (no light on it), or lit by her (her colour, a pulse).</summary>
+    void SurveyLook(string subject, Vector2 at, float lit)
+    {
+        if (!Sees(at)) return;
+        if (lit <= FloraTuning.LilyDark) Surveyed(subject, "dark");
+        if (HerLightOn(at) < Survey.Lit) return;
+        Surveyed(subject, HerFacet());
+        if (HerPulseHz > 0f) Surveyed(subject, "pulse");
+    }
+
     /// <summary>How near (in sight) a thing must be to be seen; how far inside a place's own radius she must be; how often (steps) the world is looked over.</summary>
     public const float SeeReach = 9f, EnterReach = 1.5f;
     const int LookEvery = 6;
@@ -32,6 +62,7 @@ public sealed partial class PlaneWorld
     void StepCodex()
     {
         Discoveries.Clear();
+        SurveyFinds.Clear();
         if (Map.Templated) Found(Codex.Biome(Map.Biome));
         foreach (var e in Events)
             if (e.Type == PlaneEventType.VaultBurst) Found("place:Vault");
@@ -65,8 +96,18 @@ public sealed partial class PlaneWorld
 
         foreach (var fish in ReefFish)
             if (!fish.Gone && Sees(fish.Position)) Found(fish.Corrupted ? "murk:lesser" : "fish:" + fish.Kind);
-        foreach (var a in Fauna) if (Sees(a.Position)) Found("fauna:" + a.Kind);
-        foreach (var f in Flora) if (Sees(f.Position)) Found("flora:" + f.Kind);
+        foreach (var a in Fauna)
+            if (Sees(a.Position))
+            {
+                Found("fauna:" + a.Kind);
+                SurveyLook("fauna:" + a.Kind, a.Position, a.Lit);
+            }
+        foreach (var f in Flora)
+            if (Sees(f.Position))
+            {
+                Found("flora:" + f.Kind);
+                SurveyLook("flora:" + f.Kind, f.Position, f.Lit);
+            }
         foreach (var w in Pockets) if (Sees(w.Centre, SeeReach + w.Radius)) Found("water:" + w.Kind);
         foreach (var o in OpticWalls) if (Sees(o.Centre)) Found("wall:" + o.Kind);
     }

@@ -268,6 +268,16 @@ public partial class SeaPediaCard : PanelContainer
         names.AddChild(Chip(Codex.Name(entry.Section).ToUpperInvariant(), DrawerStyle.Gold, DrawerStyle.OnGold));
         _detail.AddChild(Wrapped("\u201c" + entry.Line + "\u201d", 17, DrawerStyle.Soft));
         _detail.AddChild(Wrapped(entry.Notes, 15, DrawerStyle.Text));
+        if (Survey.IsSubject(entry.Id))
+        {
+            // The spectral survey (Survey.cs): its facets lit, and its lore once whole.
+            _detail.AddChild(new HSeparator());
+            int done = Survey.Done(_profile.Surveyed, entry.Id);
+            _detail.AddChild(Wrapped($"Spectral survey  {done} / {Survey.Facets.Length}", 16, DrawerStyle.Text, TitleStyle.BodyBold));
+            _detail.AddChild(Wrapped(string.Join("   ", Survey.Facets.Select(f =>
+                (_profile.Surveyed.Contains(Survey.Mark(entry.Id, f)) ? "✓ " : "· ") + Survey.FacetName(f))), 14, DrawerStyle.Soft));
+            if (done == Survey.Facets.Length) _detail.AddChild(Wrapped(Survey.Lore(entry.Id), 15, DrawerStyle.Gold, TitleStyle.BodyBold));
+        }
         if (Codex.RecordOf(entry.Id) is not { } id) return;
         _detail.AddChild(new HSeparator());
         bool boss = entry.Section == CodexSection.Bosses;
@@ -342,6 +352,7 @@ public partial class SeaPediaCard : PanelContainer
             CodexSection.ReefLife => new Color(0.4f, 0.75f, 0.85f),
             CodexSection.Plants => new Color(0.45f, 0.8f, 0.5f),
             CodexSection.Waters => new Color(0.55f, 0.65f, 0.9f),
+            CodexSection.Keystones => new Color(0.8f, 0.68f, 0.45f),
             _ => new Color(0.3f, 0.55f, 0.75f),
         };
 
