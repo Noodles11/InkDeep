@@ -91,7 +91,7 @@ public sealed partial class PlaneWorld
         for (int i = 0; i < Math.Min(want, spots.Count); i++)
         {
             var jitter = new Vector2(rng.Range(-1f, 1f), rng.Range(-1f, 1f));
-            var at = Clear(spots[i] + jitter, SpeckTuning.Clearance) && !InQuietWater(spots[i] + jitter) ? spots[i] + jitter : spots[i];
+            var at = Clear(spots[i] + jitter, SpeckTuning.Clearance) && !InQuietWater(spots[i] + jitter) && Vector2.Distance(spots[i] + jitter, Map.Start.Position) >= SpeckTuning.FromStart ? spots[i] + jitter : spots[i];
             AddSpeck(at, rng.Range(SpeckTuning.Least, SpeckTuning.Most) * worth, Vector2.Zero);
         }
     }

@@ -13,6 +13,11 @@ public sealed class PlaneOptions
     public bool Corruption = true;
     /// <summary>The pufferling enemies (retracted for now: none are placed).</summary>
     public bool Pufferlings = false;
+    /// <summary>
+    /// An open level's sea (OpenSea, phase 1): only her and the water. Its map is a window onto the endless sea that
+    /// follows her (ShiftWindow); nothing is placed on it.
+    /// </summary>
+    public bool OpenSea;
     /// <summary>Sunken pots with loot (retracted with the corruption on: loot lies buried under the ink instead).</summary>
     public bool Vases = false;
     /// <summary>The boss to meet on a boss level (null: the boss generator's for its loop and depth). Tests and debug starts name one.</summary>

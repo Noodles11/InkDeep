@@ -121,7 +121,25 @@ the reef was never being called home. It was being kept.
   upper valve swings back with an overshoot and shows what it kept, a pearl (90%) with its light pouring out of the
   clam's mouth, or a murkling (10%) that comes out at her. Every pearl lying loose anywhere glows the same way: its
   light in its colours and pattern on the floor all round it, and magic particles rising.
-- **Holes down** (0.95.0, `TopDownGenerator.OpenHoles`, `LevelPlan.DiveHoles`): a template level but a boss's has one
+- **Open levels** (0.96.0, phase 1; `OpenSea`, `TopDownMain.Sea.cs`): in the crossover every level but a boss's is an
+  endless sea, made only as she swims. It is laid in 2 × 1 chunks in a herringbone (lying and standing chunks of two
+  18 m cells). Each chunk takes the cell templates made for its openings, turned and mirrored to fit, so its shape
+  comes from them and its look from the biome and the seed; a wall runs along every side it shares with another chunk,
+  its face wandering, opened by a 6 m socket in the middle of each side where the two are joined. Every chunk is joined
+  to a neighbour nearer the sea's first cell (so every chunk is reachable and has a way out) and to the others now and
+  then (55%). A chunk holds a hole down a fifth of the time, where it has the room.
+  - **Made as she goes:** a level starts (or a dive lands) with only her chunk and those within two cells of it made, off
+    the main thread. Each time she comes into a chunk, those round it are made on workers and each, when done, is shown
+    in a frame of its own (about 1.5 ms of the main thread: its mesh, and its heights in the sim's window). Showing the
+    level below at a dive costs about 10 ms and arriving about 30 ms (a whole level's 200 ms and 300 ms before).
+  - **The sim's window:** the sim's map is a 110 m window onto the sea that follows her: once she is a cell from its
+    middle it moves on a cell and the whole world moves back with it (about 3 ms), so no coordinate grows large; the
+    sun's shade is cast again for it off the main thread.
+  - **Phase 1 is her and the water:** no creatures, places, pickups, light features, corruption or hazards yet (phases
+    2 and 3 bring them back chunk by chunk). The holes she has found keep their emblems (an arrow pointing down).
+  - **The debug chunk map** (F3): the chunks round her, the one she is in, those she has visited, those made and not
+    yet visited, the ways between them, each one's template and its holes.
+- **Holes down** (0.95.0, `TopDownGenerator.OpenHoles`, `LevelPlan.DiveHoles`; on open levels since 0.96.0, a chunk's own): a template level but a boss's has one
   to three holes down (one always, a second half the time, a third on about one level in six), each a place on the
   path. She may dive down any of them at any time, and nowhere else (no dive clock). Each is an opening in the reef
   floor: the floor sags into it over 5 m, its rim wavers (no circle), the lip rounds over into the drop, the slope

@@ -1,0 +1,205 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Godot;
+using OctoShoots.Core.Gen.TopDown;
+using OctoShoots.Core.Run;
+
+namespace OctoShoots.Game.TopDown;
+
+/// <summary>
+/// An open level (docs/GAME.md §5, Open levels; OpenSea): an endless sea made chunk by chunk as she swims. Only the chunk
+/// she starts or lands in and those round it are made with the level (off the main thread); as she comes into a chunk,
+/// those round it are made on workers and each, when done, is shown in a frame of its own (its mesh, and its heights in
+/// the sim's window). The sim's map is a window onto the sea that follows her: when she is a cell from its middle it
+/// moves on a cell, and the whole world with it (as a dive's arrival moves it back to the origin), so no coordinate ever
+/// grows large.
+/// </summary>
+public partial class TopDownMain
+{
+    OpenSea? Sea => _levelShape?.Sea;
+    /// <summary>The window's corner in the sea (sea metres, whole cells).</summary>
+    System.Numerics.Vector2 _seaW;
+    readonly Dictionary<(int X, int Y), OpenSea.Chunk> _seaBuilt = new();
+    readonly Dictionary<(int X, int Y), Task<(OpenSea.Chunk, LevelShape.Surface?)>> _seaPending = new();
+    /// <summary>The chunks she has been in, the one she is in, and the holes she has found (sea metres).</summary>
+    readonly HashSet<(int X, int Y)> _seaVisited = new();
+    (int X, int Y)? _seaHere;
+    readonly List<System.Numerics.Vector2> _seaFound = new();
+    SeaChunkMap _seaMap = null!;
+    /// <summary>Verification (--dbg-explore): she swims on from chunk to chunk through their ways, the unvisited first.</summary>
+    bool _dbgExplore;
+
+    /// <summary>Whether a level is an open one: a crossover template level but a boss's.</summary>
+    static bool OpenLevel(SeedCode seed, LevelId id) =>
+        Crossover.On && !id.Haven && LevelPlan.For(seed, id, crossover: true) is { Templated: true, HasBoss: false };
+
+    /// <summary>
+    /// An open level made: its sea (seeded by the run and the level), the chunk of her start and those round it, and
+    /// the sim's window round her start. Pure: any thread.
+    /// </summary>
+    static LevelShape SeaShape(SeedCode seed, LevelId id)
+    {
+        var plan = LevelPlan.For(seed, id, crossover: true);
+        var sea = new OpenSea(new RunStreams(seed).TopDown(id, 0, "open sea").NextU64(), plan.Biome);
+        var home = sea.ChunkOfCell((0, 0));
+        var chunks = Around(sea, home).AsParallel().Select(k => BuildSeaChunk(sea, k)).ToList();
+        var built = chunks.ToDictionary(c => c.Item1.Key, c => c.Item1);
+        // Her start: the open water nearest the middle of the first cell.
+        var middle = new System.Numerics.Vector2(OpenSea.Cell / 2f);
+        var start = middle;
+        float best = float.MaxValue;
+        var first = built[home];
+        for (int y = (int)first.Min.Y; y < first.Max.Y; y++)
+        for (int x = (int)first.Min.X; x < first.Max.X; x++)
+        {
+            var p = new System.Numerics.Vector2(x, y);
+            float d = System.Numerics.Vector2.Distance(p, middle);
+            if (d < best && first.At(x, y) < -0.7f && first.At(x + 1, y) < -0.7f && first.At(x - 1, y) < -0.7f && first.At(x, y + 1) < -0.7f && first.At(x, y - 1) < -0.7f)
+            {
+                best = d;
+                start = p;
+            }
+        }
+        var w = WindowFor(start);
+        var map = new LevelMap { Seed = seed.Value, Id = id, Templated = true, Biome = plan.Biome, Menace = plan.Menace, AreaScale = plan.AreaScale };
+        map.Pois.Add(new Poi { Kind = PoiKind.Start, Position = start - w, Radius = 6f });
+        map.Pois.Add(new Poi { Kind = PoiKind.Exit, Position = start - w, Radius = 6f });
+        sea.Fill(map, w, k => built.GetValueOrDefault(k));
+        return LevelShape.OfSea(map, sea, w, chunks);
+    }
+
+    /// <summary>The window round a point: its corner a whole number of cells, the point within a cell of its middle.</summary>
+    static System.Numerics.Vector2 WindowFor(System.Numerics.Vector2 at)
+    {
+        float half = LevelMap.Seeded / 2f;
+        return new System.Numerics.Vector2(Mathf.Round((at.X - half) / OpenSea.Cell) * OpenSea.Cell, Mathf.Round((at.Y - half) / OpenSea.Cell) * OpenSea.Cell);
+    }
+
+    /// <summary>How many cells round her chunk are made ahead: enough that the screen (about ±35 m across, ±20 m up and down) never reaches past them.</summary>
+    const int SeaReach = 2;
+
+    /// <summary>A chunk and those round it (every chunk within SeaReach cells of it, corners too).</summary>
+    static IEnumerable<(int X, int Y)> Around(OpenSea sea, (int X, int Y) key)
+    {
+        var cells = sea.CellsOf(key);
+        var seen = new HashSet<(int X, int Y)>();
+        int x0 = cells.Min(c => c.X) - SeaReach, x1 = cells.Max(c => c.X) + SeaReach, y0 = cells.Min(c => c.Y) - SeaReach, y1 = cells.Max(c => c.Y) + SeaReach;
+        for (int y = y0; y <= y1; y++)
+        for (int x = x0; x <= x1; x++)
+            if (seen.Add(sea.ChunkOfCell((x, y)))) yield return sea.ChunkOfCell((x, y));
+    }
+
+    static (OpenSea.Chunk, LevelShape.Surface?) BuildSeaChunk(OpenSea sea, (int X, int Y) key)
+    {
+        var chunk = sea.Build(key);
+        return (chunk, LevelView.SeaSurface(chunk));
+    }
+
+    /// <summary>An open level entered: what was made with it, and nothing found yet.</summary>
+    void EnterSea()
+    {
+        _seaBuilt.Clear();
+        _seaPending.Clear();
+        _seaVisited.Clear();
+        _seaFound.Clear();
+        _seaHere = null;
+        RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_rim"), Sea is null ? 1f : 0f);
+        // (F3's map of the window is hidden on an open level: its chunk map stands in for it.)
+        _debugMap.SelfModulate = Sea is null ? Colors.White : Colors.Transparent;
+        if (_levelShape is not { Sea: not null } shape) return;
+        _seaW = shape.SeaOrigin;
+        foreach (var (chunk, _) in shape.SeaChunks) _seaBuilt[chunk.Key] = chunk;
+    }
+
+    /// <summary>Once a frame on an open level: the chunks round hers asked for, one made chunk shown, the window moved on, the holes she has found.</summary>
+    void StepSea()
+    {
+        if (Sea is not { } sea || _diving) return;
+        var her = _world.Player.Position;
+        var here = sea.ChunkAt(her + _seaW);
+        if (here != _seaHere)
+        {
+            _seaHere = here;
+            _seaVisited.Add(here);
+            foreach (var k in Around(sea, here))
+                if (!_seaBuilt.ContainsKey(k) && !_seaPending.ContainsKey(k))
+                    _seaPending[k] = Task.Run(() => BuildSeaChunk(sea, k));
+        }
+        // One made chunk a frame: its mesh shown, its heights into the window.
+        foreach (var (key, task) in _seaPending)
+        {
+            if (!task.IsCompleted) continue;
+            _seaPending.Remove(key);
+            if (task.IsFaulted)
+            {
+                GD.PushError(task.Exception?.ToString());
+                break;
+            }
+            var (chunk, ground) = task.Result;
+            _seaBuilt[key] = chunk;
+            _level.ShowSeaChunk(chunk, ground);
+            var (min, max) = (chunk.Min - _seaW, chunk.Max - _seaW);
+            if (max.X > 0f && max.Y > 0f && min.X < LevelMap.Seeded && min.Y < LevelMap.Seeded)
+            {
+                sea.Fill(_map, _seaW, k => _seaBuilt.GetValueOrDefault(k), key);
+                OctoShoots.Game.Fx.SunMap.Shifted(_map, OctoShoots.Game.Fx.SunLight.Direction, Vector3.Zero);
+            }
+            break;
+        }
+        if (_dbgExplore && (_route.Count == 0 || _routeProgress >= _route.Count - 3)) Explore(sea, here);
+        // The window moves on a cell once she is a cell from its middle.
+        var off = her - new System.Numerics.Vector2(LevelMap.Seeded / 2f);
+        int dx = off.X > OpenSea.Cell ? 1 : off.X < -OpenSea.Cell ? -1 : 0, dy = off.Y > OpenSea.Cell ? 1 : off.Y < -OpenSea.Cell ? -1 : 0;
+        if (dx != 0 || dy != 0) ShiftSea(new System.Numerics.Vector2(dx, dy) * OpenSea.Cell);
+        foreach (var hole in _map.Holes)
+        {
+            var at = hole.Shaft.Center + _seaW;
+            if (System.Numerics.Vector2.Distance(her, hole.Shaft.Center) < 7f && !_seaFound.Contains(at)) _seaFound.Add(at);
+        }
+        // (F3 shows the chunk map in place of the window's own, which moves.)
+        _seaMap.Visible = _debugMap.Visible;
+        if (_seaMap.Visible) _seaMap.Sync(sea, her + _seaW, here, _seaVisited, _seaBuilt, _seaFound);
+    }
+
+    /// <summary>The window moved on by <paramref name="by"/> (sea metres): the sim's map refilled, she and the whole world moved back by as much.</summary>
+    void ShiftSea(System.Numerics.Vector2 by)
+    {
+        _seaW += by;
+        Sea!.Fill(_map, _seaW, k => _seaBuilt.GetValueOrDefault(k));
+        _world.ShiftWindow(by);
+        for (int i = 0; i < _route.Count; i++) _route[i] -= by;
+        var shift = new Vector3(-by.X, 0f, -by.Y);
+        _origin += new Vector2(by.X, by.Y);
+        _camera.Shift(shift);
+        _camera.SetWorldOrigin(_origin);
+        _snow.Shift(shift);
+        _plankton.Shift(shift);
+        _bell.Shift(shift);
+        _wakes.Clear();
+        _level.Place(Vector3.Zero, _origin);
+        _level.SetSeaOrigin(_seaW);
+        OctoShoots.Game.Fx.SunMap.Shifted(_map, OctoShoots.Game.Fx.SunLight.Direction, new Vector3(by.X, 0f, by.Y));
+    }
+
+    void Explore(OpenSea sea, (int X, int Y) here)
+    {
+        var ways = sea.Neighbours(here).Where(n => sea.Linked(here, n) && _seaBuilt.ContainsKey(n)).OrderBy(n => _seaVisited.Contains(n)).ThenBy(n => (n.X * 7919 + n.Y * 104729 + _frame / 600) & 7).ToList();
+        foreach (var n in ways)
+        {
+            var c = _seaBuilt[n];
+            var mid = (c.Min + c.Max) * 0.5f;
+            var target = Enumerable.Range(0, 400).Select(i => mid + new System.Numerics.Vector2(i % 20 - 10, i / 20 - 10)).Where(p => c.At((int)p.X, (int)p.Y) < -0.7f)
+                .OrderBy(p => System.Numerics.Vector2.Distance(p, mid)).Cast<System.Numerics.Vector2?>().FirstOrDefault();
+            if (target is not { } t) continue;
+            var route = LevelValidator.ShortestPath(_map, _world.Player.Position, t - _seaW, clearance: 0.8f);
+            if (route.Count == 0) continue;
+            _route = route;
+            _routeProgress = 0;
+            return;
+        }
+    }
+
+    /// <summary>The holes she has found on an open level, in the window (their emblems at the screen's edge).</summary>
+    IEnumerable<System.Numerics.Vector2> FoundSeaHoles() => Sea is null ? Enumerable.Empty<System.Numerics.Vector2>() : _seaFound.Select(h => h - _seaW);
+}

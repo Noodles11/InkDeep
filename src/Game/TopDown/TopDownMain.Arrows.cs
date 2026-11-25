@@ -56,6 +56,8 @@ public partial class TopDownMain
             if (!found || _world.PoiDone(i)) continue;
             yield return (poi.Position, LevelView.PoiColor(poi.Kind), Sign(poi.Kind), Mathf.Max(poi.Radius, SpringReach));
         }
+        // An open level's holes down, once she has found them.
+        foreach (var hole in FoundSeaHoles()) yield return (hole, LevelView.PoiColor(PoiKind.Hole), EdgeArrows.Down, 3f);
         // Light rooms while they are shut ("~").
         foreach (var room in _world.LightRooms)
             if (room.Found && !room.Opened) yield return (room.Centre, LightRoomColour, "~", FloraTuning.Ring + 1f);

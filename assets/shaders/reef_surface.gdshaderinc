@@ -15,6 +15,8 @@
 
 global uniform vec3 reef_water_shallow;
 global uniform vec3 reef_water_deep;
+// (0 on an open level: its sea has no edge.)
+global uniform float reef_rim;
 global uniform vec3 reef_murk;
 global uniform vec3 reef_sand;
 global uniform vec3 reef_rock;
@@ -166,7 +168,7 @@ ReefSkin reef_surface(vec3 local, vec3 n, float time, float px) {
 	// The impassable reef wall around the square: darker and cooler toward the edge of the world.
 	float edge = min(min(local.x, local.z), min(reef_extent.x - local.x, reef_extent.y - local.z));
 	float rim = 1.0 - smoothstep(0.0, 9.0, edge);
-	c = mix(c, c * 0.55 + reef_murk * 0.2, rim * 0.6);
+	c = mix(c, c * 0.55 + reef_murk * 0.2, rim * 0.6 * reef_rim);
 
 	s.albedo = c;
 

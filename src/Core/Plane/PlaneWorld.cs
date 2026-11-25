@@ -190,6 +190,12 @@ public sealed partial class PlaneWorld
         _rocks = new List<WeakRock>(map.WeakRocks);
         _bubbleRng = new Rng(map.Seed ^ 0xB0BB1EUL ^ ((ulong)map.Level << 24) ^ ((ulong)map.Depth << 32) ^ ((ulong)map.Attempt << 48));
         Director = new ReefDirector(map, Options.Geysers);
+        if (Options.OpenSea)
+        {
+            PlaceCurse();
+            Revealed = new bool[Map.Pois.Count];
+            return;
+        }
         if (Options.Pufferlings) PlaceMobs();
         PlaceFish();
         PlaceReefFish();
@@ -231,6 +237,18 @@ public sealed partial class PlaneWorld
     }
 
     public LevelMap Map { get; }
+
+    /// <summary>
+    /// An open level's window moved on by <paramref name="by"/> (its map refilled for its new place, OpenSea.Fill): she
+    /// keeps her place in the sea, so her place in the window moves back by as much; her shots in flight are let go.
+    /// </summary>
+    public void ShiftWindow(Vector2 by)
+    {
+        Player.Position -= by;
+        Player.PrevPosition -= by;
+        Shots.Clear();
+        Clouds.Clear();
+    }
     public Tuning Tuning { get; set; }
     public long Tick { get; private set; }
     /// <summary>Time on this level (s), from when it was entered.</summary>

@@ -81,6 +81,8 @@ public static class SunMap
     /// <summary>Starts casting the level's sun map on a worker; <see cref="Poll"/> puts it in place when it is done.</summary>
     public static void Build(LevelMap map, Vector3 sunDir)
     {
+        _since = Vector3.Zero;
+        _recast = null;
         SetOffset(Vector3.Zero);
         // (Cast ahead for this level, as she dived to it: in place at once, or as soon as it is done.)
         if (ReferenceEquals(_shown, map) && _pending is null)
@@ -108,8 +110,49 @@ public static class SunMap
     }
 
     /// <summary>Once a frame: a finished map goes to the shaders (if it is still this level's) and the shade turns on.</summary>
+    /// <summary>How far an open level's window has moved since the map in place was cast, and its recast (on a copy of the window as it was).</summary>
+    static Vector3 _since, _recastAt;
+    static System.Threading.Tasks.Task<byte[]>? _recast;
+    static bool _stale;
+
+    /// <summary>
+    /// An open level's window moved on (OpenSea): the map in place is looked up from where it now lies until the window
+    /// is cast again, on a worker, from a copy of its heights (at most one cast at a time; a move meanwhile casts again).
+    /// </summary>
+    public static void Shifted(LevelMap map, Vector3 sunDir, Vector3 by)
+    {
+        _since += by;
+        SetOffset(-_since);
+        if (_recast is not null)
+        {
+            _stale = true;
+            return;
+        }
+        Recast(map, sunDir);
+    }
+
+    static void Recast(LevelMap map, Vector3 sunDir)
+    {
+        var copy = new LevelMap(map.Size);
+        System.Array.Copy(map.Heights, copy.Heights, map.Heights.Length);
+        _recastAt = _since;
+        _stale = false;
+        _recast = System.Threading.Tasks.Task.Run(() => Cast(copy, sunDir));
+    }
+
     public static void Poll(LevelMap current)
     {
+        if (_recast is { IsCompleted: true } recast)
+        {
+            _recast = null;
+            if (!recast.IsFaulted)
+            {
+                Install(recast.Result, current);
+                _since -= _recastAt;
+                SetOffset(-_since);
+            }
+            if (_stale) Recast(current, SunLight.Direction);
+        }
         if (_pending is not { IsCompleted: true } task) return;
         _pending = null;
         if (task.IsFaulted || _pendingFor != current)

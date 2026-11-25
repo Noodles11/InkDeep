@@ -79,6 +79,10 @@ sea_surface_y={
 "type": "float",
 "value": 18.0
 }
+reef_rim={
+"type": "float",
+"value": 1.0
+}
 reef_extent={
 "type": "vec2",
 "value": Vector2(150, 150)

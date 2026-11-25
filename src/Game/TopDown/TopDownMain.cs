@@ -637,6 +637,7 @@ public partial class TopDownMain : Node3D
             else if (arg == "--calm") _calm = true;
             else if (arg.StartsWith("--at=")) _startAt = Value("--at=");
             else if (arg == "--autopilot") _autopilot = true;
+            else if (arg == "--dbg-explore") _autopilot = _dbgExplore = true;
             else if (arg.StartsWith("--boss-hp=") && float.TryParse(Value("--boss-hp="), NumberStyles.Float, CultureInfo.InvariantCulture, out float bhp)) _bossHp = bhp;
             else if (arg == "--fire") _autoFire = true;
             // (Verification: as --fire, with her bubble shots in place of her beam.)
@@ -811,6 +812,13 @@ public partial class TopDownMain : Node3D
     /// A dive's boss level: the neighbour waiting there as the Leak made her (docs/DIVE.md §5), at her own level; null for
     /// the depth's own boss.
     /// </summary>
+    /// <summary>An open level's sim (phase 1): her and the water, her shots and glow as ever.</summary>
+    static PlaneOptions SeaOptions()
+    {
+        var d = PlaneOptions.Default;
+        return new PlaneOptions { OpenSea = true, Corruption = false, Adventure = false, InkMurklings = false, Shots = d.Shots, Glow = d.Glow, BeamBurn = d.BeamBurn, Gun = d.Gun };
+    }
+
     PlaneOptions? DiveBoss()
     {
         // (The crossover's bosses are its biomes', CROSSOVER.md §8: BossRoster's, no neighbour waiting.)
@@ -992,6 +1000,8 @@ public partial class TopDownMain : Node3D
             var exits = graph.ExitsOf(id).OrderBy(e => graph.Node(e).X).ToList();
             return Task.Run(() => LevelShape.Prepare(TopDownGenerator.FromHand(hand, asLevel: id, exits: exits, kinds: exits.Select(graph.KindOf).ToList())));
         }
+        // An open level: its sea, only round her start (TopDownMain.Sea.cs).
+        if (OpenLevel(seed, id)) return Task.Run(() => SeaShape(seed, id));
         var streams = new RunStreams(seed);
         // Its sub-levels made with it (docs/LIGHT-AND-GRAPH.md §7).
         return Task.Run(() =>
@@ -1211,6 +1221,9 @@ public partial class TopDownMain : Node3D
         AddChild(layer);
         _debugMap = new DebugMapOverlay { Visible = OS.GetCmdlineUserArgs().Contains("--f3") };
         layer.AddChild(_debugMap);
+        _seaMap = new SeaChunkMap { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
+        _seaMap.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        layer.AddChild(_seaMap);
         // The controller's crosshair: her own, the way she aims (SyncCrosshair). Under the HUD.
         _padCross = new TextureRect
         {
@@ -1479,7 +1492,7 @@ public partial class TopDownMain : Node3D
             _seed = parsed;
         }
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        var shape = _id.Haven ? Shape(_id).Result : LevelShape.Prepare(Abyss(TopDownGenerator.Generate(new RunStreams(_seed), _id, luck: Luck, crossover: Crossover.On)));
+        var shape = _id.Haven ? Shape(_id).Result : OpenLevel(_seed, _id) ? SeaShape(_seed, _id) : LevelShape.Prepare(Abyss(TopDownGenerator.Generate(new RunStreams(_seed), _id, luck: Luck, crossover: Crossover.On)));
         ShowLevel(shape, keepRun, watch.ElapsedMilliseconds);
     }
 
@@ -1728,7 +1741,8 @@ public partial class TopDownMain : Node3D
         if (!InDiveCave) _reefs.Add(_id with { Haven = false });
         // Waking in a haven (Lantern Bay): she is healed whole.
         if (map.InHaven(arriveAt ?? map.Start.Position)) _run.Hp = _run.MaxHp;
-        _world = new PlaneWorld(_map, _tuning, _run, InDiveCave ? DiveCaveOptions(_map) : DebugBoss() ?? DiveBoss());
+        EnterSea();
+        _world = new PlaneWorld(_map, _tuning, _run, InDiveCave ? DiveCaveOptions(_map) : Sea is not null ? SeaOptions() : DebugBoss() ?? DiveBoss());
         // (Her light as set by hand in the F1 menu, if it is.)
         _world.ManualLight = _manualLight;
         if (_dbgDiveClock > 0f) _world.DebugClockTo(_dbgDiveClock);
@@ -1811,7 +1825,9 @@ public partial class TopDownMain : Node3D
         _fauna.Clear();
         _vaults.Show(_world);
         _relics.Show(_world);
-        _props.Show(_map, ReefLook.Of(_map.Id));
+        // (An open level's sea has none yet: its window moves.)
+        if (Sea is null) _props.Show(_map, ReefLook.Of(_map.Id));
+        else _props.Show(new LevelMap(), ReefLook.Of(_map.Id));
         _puffers.Show(_world);
         _reefFish.Show(_world);
         _curseDen.Show(_world);
@@ -2630,6 +2646,7 @@ public partial class TopDownMain : Node3D
             }
         }
         if (_transition == Transition.None) StepHoles();
+        StepSea();
         if (_diving)
         {
             StepDive(dt);

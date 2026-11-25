@@ -35,6 +35,19 @@ public sealed class LevelShape
     /// </summary>
     public IReadOnlyList<LevelShape> Caves { get; set; } = Array.Empty<LevelShape>();
 
+    /// <summary>An open level's sea (its map a window onto it, its corner at SeaOrigin), and the chunks made with it (round her start).</summary>
+    public OpenSea? Sea { get; private init; }
+    public System.Numerics.Vector2 SeaOrigin { get; private init; }
+    public List<(OpenSea.Chunk Chunk, Surface? Ground)> SeaChunks { get; } = new();
+
+    /// <summary>An open level's shape: no ground of its own, its first chunks and their meshes.</summary>
+    public static LevelShape OfSea(LevelMap map, OpenSea sea, System.Numerics.Vector2 origin, IEnumerable<(OpenSea.Chunk, Surface?)> chunks)
+    {
+        var shape = new LevelShape { Map = map, Sea = sea, SeaOrigin = origin };
+        shape.SeaChunks.AddRange(chunks);
+        return shape;
+    }
+
     /// <summary>Pure work on the map: safe to run on any thread.</summary>
     public static LevelShape Prepare(LevelMap map)
     {
@@ -311,6 +324,8 @@ public partial class LevelView : Node3D
         if (map.HasBoss) ShowCover(map);
         ShowHoleCovers(map);
         if (!below) ShowCrack(map);
+        _seaRoot = null;
+        if (shape.Sea is not null) ShowSea(shape);
         if (OS.GetCmdlineUserArgs().Contains("--dbg-nocanopy")) foreach (var c in _canopies) c.Material.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("fade"), 0f);
     }
 
