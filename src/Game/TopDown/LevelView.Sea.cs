@@ -13,6 +13,7 @@ public partial class LevelView
 {
     Node3D? _seaRoot;
     readonly HashSet<(int X, int Y)> _seaShown = new();
+    readonly Dictionary<(int X, int Y), MeshInstance3D> _seaMeshes = new();
 
     /// <summary>A chunk's ground, in its own coordinates (its corner at 0): its padding read for the spline and the normals at its edge, so neighbouring chunks meet without a seam. Pure: any thread.</summary>
     internal static LevelShape.Surface? SeaSurface(OpenSea.Chunk c)
@@ -28,17 +29,21 @@ public partial class LevelView
         _seaRoot = new Node3D();
         AddChild(_seaRoot);
         _seaShown.Clear();
+        _seaMeshes.Clear();
         SetSeaOrigin(shape.SeaOrigin);
         foreach (var (chunk, ground) in shape.SeaChunks) ShowSeaChunk(chunk, ground);
     }
 
     public bool HasSeaChunk((int X, int Y) k) => _seaShown.Contains(k);
 
-    /// <summary>A chunk of the sea shown (once).</summary>
-    public void ShowSeaChunk(OpenSea.Chunk c, LevelShape.Surface? ground)
+    /// <summary>A chunk of the sea shown (once; <paramref name="again"/>: drawn afresh, its heights changed).</summary>
+    public void ShowSeaChunk(OpenSea.Chunk c, LevelShape.Surface? ground, bool again = false)
     {
-        if (_seaRoot is null || !_seaShown.Add(c.Key) || ground is null) return;
-        _seaRoot.AddChild(new MeshInstance3D { Mesh = ToMesh(ground), MaterialOverride = _ground, Position = new Vector3(c.Min.X, 0f, c.Min.Y) });
+        if (_seaRoot is null || !_seaShown.Add(c.Key) && !again || ground is null) return;
+        if (_seaMeshes.Remove(c.Key, out var old)) old.QueueFree();
+        var mesh = new MeshInstance3D { Mesh = ToMesh(ground), MaterialOverride = _ground, Position = new Vector3(c.Min.X, 0f, c.Min.Y) };
+        _seaRoot.AddChild(mesh);
+        _seaMeshes[c.Key] = mesh;
     }
 
     /// <summary>Where the sea's window lies (its corner, sea metres): the chunks are drawn in its coordinates.</summary>

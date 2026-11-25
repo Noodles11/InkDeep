@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using OctoShoots.Core.Gen.TopDown;
@@ -54,8 +55,12 @@ public sealed partial class PlaneWorld
     /// A chunk's life, once it lies whole in the window (its heights there): the reef's own fish, each kind by its chance
     /// (SeaLife), at open spots of it apart from its place and from her. Seeded by where it lies in the sea.
     /// </summary>
-    public void AddSeaLife(Vector2 min, Vector2 max, Vector2 inSea, Vector2? place)
+    /// <param name="ways">Its ways out (in the window): where, which way out, the way's half width, whether it is this chunk's (a curtain's).</param>
+    /// <param name="sealed">It is a secret room: its ways sealed.</param>
+    public void AddSeaLife(Vector2 min, Vector2 max, Vector2 inSea, Vector2? place,
+        IReadOnlyList<(Vector2 At, Vector2 Way, float Half, bool Own)>? ways = null, bool @sealed = false)
     {
+        ways ??= Array.Empty<(Vector2, Vector2, float, bool)>();
         var rng = new Rng(Map.Seed ^ 0x11FE_5EAUL ^ ((ulong)(uint)(int)MathF.Round(inSea.X) << 32) ^ (uint)(int)MathF.Round(inSea.Y));
         var taken = new System.Collections.Generic.List<Vector2>();
         if (place is { } pl) taken.Add(pl);
@@ -72,7 +77,16 @@ public sealed partial class PlaneWorld
             return null;
         }
         // Its light features first (they keep their own dice: phase 4, PlaneSeaFeatures.cs).
-        AddSeaFeatures(min, max, inSea, r => Spot(r, false));
+        AddSeaFeatures(min, max, inSea, r => Spot(r, false), @sealed ? ways.Select(w => (w.At, w.Way, w.Half)).ToList() : new List<(Vector2, Vector2, float)>());
+        // The Kelp Forest's curtains: across some of its ways (each way is one chunk's), never a secret room's.
+        if (HasHazards(OctoShoots.Core.Run.Biome.KelpForest) && !@sealed)
+            foreach (var (at, way, half, own) in ways)
+                if (own && rng.NextFloat() < SeaCurtain && !Curtains.Exists(c => Vector2.Distance(c.Rock.Center, at) < 1f))
+                {
+                    var rock = new WeakRock(at, half + HazardTuning.CurtainPast, -1, way, HazardTuning.CurtainThick, SealKind.Path);
+                    Curtains.Add(new PlaneKelpCurtain { Rock = rock });
+                    _rocks.Add(rock);
+                }
         if (rng.NextFloat() < SeaAnemone && Spot(ReefFishTuning.ClownRange, true) is { } a) AddAnemone(a, rng);
         if (rng.NextFloat() < SeaTangs && Spot(ReefFishTuning.TangRadius + 0.6f, false) is { } t) AddTangs(t, 1 + rng.Int(2), rng);
         // (A school the adventure's size: a template level's few big ones would crowd a sea of chunks.)
@@ -90,6 +104,8 @@ public sealed partial class PlaneWorld
         for (int i = 0; i < count && Spot(SpeckTuning.Clearance, false) is { } at; i++) AddSpeck(at, rng.Range(SpeckTuning.Least, SpeckTuning.Most) * worth, Vector2.Zero);
     }
 
+    /// <summary>The chance a chunk's way holds a kelp curtain (the Kelp Forest).</summary>
+    public const float SeaCurtain = 0.2f;
     /// <summary>About how many chunks' life lies in the window at once (each chunk brings its share of a level's traps and specks).</summary>
     const float SeaChunks = 12f;
     /// <summary>The chunks (by where they lie in the sea) whose specks have come.</summary>
@@ -155,6 +171,7 @@ public sealed partial class PlaneWorld
         foreach (var e in Lights.All) e.Position -= by;
         foreach (var s in Specks) s.Position -= by;
         foreach (var t in DartTraps) t.Position -= by;
+        foreach (var c in Curtains) c.Rock = c.Rock with { Center = c.Rock.Center - by };
         Darts.Clear();
         Debris.Clear();
         for (int i = 0; i < _trail.Count; i++) _trail[i] = (_trail[i].At - by, _trail[i].Time);
@@ -172,6 +189,11 @@ public sealed partial class PlaneWorld
         Fish.RemoveAll(f => Out(f.Position));
         Murklings.RemoveAll(m => !m.Clinging && Out(m.Position));
         DartTraps.RemoveAll(t => Out(t.Position));
+        foreach (var c in Curtains.Where(c => Out(c.Rock.Center)).ToList())
+        {
+            _rocks.Remove(c.Rock);
+            Curtains.Remove(c);
+        }
         foreach (var s in Specks.Where(s => Out(s.Position)).ToList())
         {
             Lights.Remove(s.Light);

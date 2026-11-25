@@ -171,9 +171,18 @@ the reef was never being called home. It was being kept.
     on any level; besides, its share of a level's charge stones, and by one chance in 12 a light spring (about one to
     the window, where she grows). A chunk out of the window altogether takes them with it, lights and all, and brings
     them back as she left them (a shattered pane stays so, a spring spent, an anemone's shells given).
-  - **Not there yet:** vaults, secret seals and prism stones (they need a template's marks and secret rocks), the
-    charge stones' trio, the Ruins' amphorae, and the Kelp Forest's curtains and tangles (they need its passages and
-    beds). The holes she has found keep their emblems (an arrow pointing down).
+  - **The rest of a level's world** (0.101.0): each chunk also brings its share of the bubble vaults (on spots by its
+    rock, in place of a template's marks), of the Ruins' amphorae, and by a chance shared out over the chunks the one
+    charge stones' trio of the whole level. **Secret rooms**: a chunk holding a treasure (a clam, a shell cache, a relic)
+    is one by `OpenSea.SecretChance` (0.3, never the lair or her first): a sealed wall stands across each of its ways,
+    raised in its own heights (and in its neighbours' padding, so they meet), with the sim's seal over it; now and then
+    (`SeaPrism`, 0.4) it takes only coloured light, its prism stones bedded out before it. Opened, its chunk takes its
+    heights without the wall, the window is filled again and its ground redrawn; seals and stones come and go with
+    their chunk, kept as she left them. **Kelp beds** are made with each chunk (a quarter of them; the Kelp Forest's
+    more), copied into the window as its holes are, so the Kelp Forest tangles her in them; and a fifth of its ways
+    between chunks hold a **kelp curtain** (`SeaCurtain`; none on a secret room's).
+  - **Still apart from a template level:** no shop gates, crab's fake walls, tunnels or caves with roofs (the chunks
+    have none). The holes she has found keep their emblems (an arrow pointing down).
   - **The debug chunk map** (F3): the chunks round her, the one she is in, those she has visited, those made and not
     yet visited, the ways between them, each one's template and its holes.
 - **Holes down** (0.95.0, `TopDownGenerator.OpenHoles`, `LevelPlan.DiveHoles`; on open levels since 0.96.0, a chunk's own): a template level but a boss's has one
@@ -468,8 +477,8 @@ the tests of the dive still test the dive.
   the washes' soft edges dither too, in place of the dots (`topdown_post`'s `dither`, `dither_scope` 2, `bayer8`,
   `dither_world`; `CameraRig.SetDither`). `--no-dither` turns it off, `--dither-rock` and `--dither-water` narrow it,
   to compare. Clementine, her shots and the HUD are drawn after the pass and stay clean. **Brush lines** in ink: the caves' outline
-  where the rock rises through her plane (its weight wavering along it, fixed to the rock so it never crawls, with
-  dry-brush gaps), a lighter floor contour a few metres down, and a line round whatever lies at her plane. In **her
+  where the rock rises through her plane (a fine pen's, about a pixel wide since 0.101.0, its weight barely wavering,
+  fixed to the rock so it never crawls, with dry-brush gaps), a lighter floor contour a few metres down, and a line round whatever lies at her plane. In **her
   light** (and what she has cleansed) the world keeps its colour, stepped a little, and the caves' outline is traced
   in **coral and magenta light**; only the rock's is (the terrain's height from the sun's map tells it apart): a
   creature or a boss in her light keeps its ink line, never a neon one. Her glow in the water is a **sunset**: white at

@@ -135,6 +135,15 @@ public partial class HazardView : Node3D
         }
     }
 
+    /// <summary>The curtains drawn again where they stand (an open level's come and go with their chunks).</summary>
+    public void ShowCurtains(PlaneWorld world)
+    {
+        if (!ReferenceEquals(world.Map, _map)) return;
+        foreach (var c in _curtains) c.Strands.GetParent().QueueFree();
+        _curtains.Clear();
+        foreach (var c in world.Curtains) _curtains.Add(MakeCurtain(c));
+    }
+
     void Reset(PlaneWorld world)
     {
         _falls.Clear();
@@ -206,7 +215,7 @@ public partial class HazardView : Node3D
             Mesh = new PlaneMesh { Size = new Vector2(r.Radius * 2.2f, 1.6f) }, MaterialOverride = glow, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             Position = mid + Vector3.Up * (LevelMap.SwimBand + 0.1f), Basis = new Basis(Vector3.Up, Mathf.Atan2(-across.Z, across.X)),
         };
-        AddChild(band);
+        holder.AddChild(band);
         return (c, strands, glow, 1f);
     }
 

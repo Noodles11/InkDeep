@@ -108,11 +108,17 @@ public sealed partial class PlaneWorld
         int coloured = 0;
         var beds = new List<Vector2>();
         for (int i = 0; i < Seals.Count && coloured < PrismStoneTuning.MostSeals; i++)
+            if (ColourSeal(i, rng, beds, PrismStoneTuning.SealChance) is not null) coloured++;
+    }
+
+    /// <summary>A seal coloured by this chance, with its bed and stones out before it; its stones, if it is.</summary>
+    List<PrismStone>? ColourSeal(int i, Rng rng, List<Vector2> beds, float chance)
+    {
         {
             var seal = Seals[i];
-            if (seal.Kind != SealKind.Secret || seal.Rock.Fake || seal.Open) continue;
-            if (rng.NextFloat() >= PrismStoneTuning.SealChance) continue;
-            if (FindBed(seal, beds) is not { } bed) continue;
+            if (seal.Kind != SealKind.Secret || seal.Rock.Fake || seal.Open) return null;
+            if (rng.NextFloat() >= chance) return null;
+            if (FindBed(seal, beds) is not { } bed) return null;
             // Mostly one colour; now and then two mixed; seldom white (all three).
             float roll = rng.NextFloat();
             var hue = roll < 0.6f ? (LightHue)(1 << rng.Int(3)) : roll < 0.92f ? (LightHue)(7 & ~(1 << rng.Int(3))) : LightHue.White;
@@ -138,11 +144,11 @@ public sealed partial class PlaneWorld
                     break;
                 }
             }
-            if (placed.Count < stones.Count) continue;
+            if (placed.Count < stones.Count) return null;
             seal.Hue = hue;
             PrismStones.AddRange(placed);
             beds.Add(bed);
-            coloured++;
+            return placed;
         }
     }
 
@@ -162,7 +168,7 @@ public sealed partial class PlaneWorld
                 var c = seal.Emblem + new Vector2(MathF.Cos(a), MathF.Sin(a)) * out_;
                 if (Vector2.Dot(c - seal.Emblem, seal.Facing) < 1f || !Clear(c, PrismStoneTuning.Radius)) continue;
                 if (Map.InShaft(c, PrismStoneTuning.Bed + 1f) || beds.Exists(b => Vector2.Distance(b, c) < 10f)) continue;
-                if (Vector2.Distance(c, Map.Start.Position) < PrismStoneTuning.Bed + 2f) continue;
+                if (Vector2.Distance(c, FeatureStart) < PrismStoneTuning.Bed + 2f) continue;
                 if (!LineOfSight(c, seal.Emblem + seal.Facing * 0.4f)) continue;
                 int open = 0, all = 0;
                 for (float x = -1f; x <= 1f; x += 0.5f)

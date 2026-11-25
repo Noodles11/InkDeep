@@ -146,7 +146,7 @@ public partial class TopDownMain
             {
                 sea.Fill(_map, _seaW, k => _seaBuilt.GetValueOrDefault(k), key);
                 OctoShoots.Game.Fx.SunMap.Shifted(_map, OctoShoots.Game.Fx.SunLight.Direction, Vector3.Zero);
-                AddSeaLife();
+                AddSeaLife(moved: true);
             }
             break;
         }
@@ -192,7 +192,8 @@ public partial class TopDownMain
             // (Out of the window altogether, its fish are gone from the sim: they come back with it.)
             if (max.X <= 0f || max.Y <= 0f || min.X >= LevelMap.Seeded || min.Y >= LevelMap.Seeded) _seaLife.Remove(key);
             if (min.X < 0f || min.Y < 0f || max.X > LevelMap.Seeded || max.Y > LevelMap.Seeded || !_seaLife.Add(key)) continue;
-            _world.AddSeaLife(min, max, chunk.Min, chunk.Place is null ? null : chunk.PlaceAt - _seaW);
+            _world.AddSeaLife(min, max, chunk.Min, chunk.Place is null ? null : chunk.PlaceAt - _seaW,
+                chunk.Sockets.Select(s => (s.At - _seaW, s.Way, s.Half, s.Own)).ToList(), chunk.Sealed);
             added = true;
         }
         // (The light features' views are drawn where they lie: shown again as they come, go and move.)
@@ -203,6 +204,23 @@ public partial class TopDownMain
         _fauna.Clear();
         _chargeStones.Show(_world);
         _springs.Show(_world);
+        _vases.Show(_world);
+        _vaults.Show(_world);
+        _prismStones.Show(_world);
+        _seals.Show(_world, _level);
+        _hazards.ShowCurtains(_world);
+        _kelp.Build(_map, LookOf(_map));
+    }
+
+    /// <summary>A secret room's seal opened on an open level: its chunk's wall gone from its heights, the window filled again and its ground redrawn.</summary>
+    void OpenSeaSeal(System.Numerics.Vector2 at)
+    {
+        if (Sea is not { } sea || !_seaBuilt.TryGetValue(sea.ChunkAt(at + _seaW), out var chunk) || !chunk.Sealed) return;
+        chunk.Unseal();
+        sea.Fill(_map, _seaW, k => _seaBuilt.GetValueOrDefault(k), chunk.Key);
+        OctoShoots.Game.Fx.SunMap.Shifted(_map, OctoShoots.Game.Fx.SunLight.Direction, Vector3.Zero);
+        _level.ShowSeaChunk(chunk, LevelView.SeaSurface(chunk), again: true);
+        _seals.Show(_world, _level);
     }
 
     /// <summary>The window moved on by <paramref name="by"/> (sea metres): the sim's map refilled, she and the whole world moved back by as much.</summary>

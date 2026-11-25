@@ -325,9 +325,10 @@ vec3 ink_sunset(float r) {
 // contour a few metres down; y wherever the depth breaks round what lies at her plane (art_outline: the creatures, the
 // bosses, the pots, the stones).
 vec2 ink_line(float h, vec2 wp, vec2 uv, vec2 frag, mat4 ip, mat4 iv, vec2 viewport) {
-	float weight = 1.1 + 2.4 * value_noise(wp * 0.22) * (0.6 + 0.4 * value_noise(wp * 1.7 + 7.0));
+	// (About a pixel wide, a fine pen's: its weight barely wavering.)
+	float weight = 0.8 + 0.4 * value_noise(wp * 0.22);
 	float dh = max(fwidth(h), 1e-4);
-	float rim = 1.0 - smoothstep(weight * 0.5, weight * 0.5 + 1.0, abs(h - 0.35) / dh);
+	float rim = 1.0 - smoothstep(weight * 0.5, weight * 0.5 + 0.6, abs(h - 0.35) / dh);
 	// (The rock's alone: what stands well above the terrain there, a boss's shell, a creature, rises through her plane too,
 	// and is outlined as what it is, below. The sun's map holds the terrain's height, SunMap.)
 	if (sun_has_shadow > 0.5) {

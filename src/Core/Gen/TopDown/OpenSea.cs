@@ -284,6 +284,24 @@ public sealed class OpenSea
         /// <summary>Its template: its cells' templates by name, and how many neighbours it is joined to.</summary>
         public string Template = "";
         public int Ways;
+        /// <summary>
+        /// Its ways out (sockets): on the edge it shares with a joined chunk, the middle of the way (sea metres), the way
+        /// out of it, the way's half width, and whether it is this chunk's to fill (each way is one chunk's: a kelp curtain).
+        /// </summary>
+        public readonly List<(Vector2 At, Vector2 Way, float Half, bool Own)> Sockets = new();
+        /// <summary>A secret room (OpenSea.SecretChance of the chunks holding a treasure): its ways out sealed (a wall of its own heights; Unsealed, its heights without it).</summary>
+        public bool Sealed => Unsealed is not null;
+        public float[]? Unsealed;
+        /// <summary>Its kelp beds (sea metres).</summary>
+        public readonly List<KelpBed> Kelp = new();
+
+        /// <summary>Its seal opened: its heights without the wall (the sea's window is filled again from them).</summary>
+        public void Unseal()
+        {
+            if (Unsealed is null) return;
+            Heights = Unsealed;
+            Unsealed = null;
+        }
 
         public bool Contains(Vector2 p) => p.X >= Min.X && p.Y >= Min.Y && p.X < Max.X && p.Y < Max.Y;
 
@@ -446,10 +464,102 @@ public sealed class OpenSea
             DigHole(chunk, l, new Rng(Mix(Seed, (ulong)(uint)key.X, (ulong)(uint)key.Y, 0x1A13)));
             chunk.Lair = l;
         }
+        // Its ways out; and the walls of any secret room (its own, or a neighbour's standing in its padding), so all meet.
+        chunk.Sockets.AddRange(SocketsOf(key));
+        var near = new HashSet<(int X, int Y)>();
+        for (int cy = FloorDiv((int)chunk.Origin.Y); cy <= FloorDiv((int)chunk.Origin.Y + chunk.Rows); cy++)
+        for (int cx = FloorDiv((int)chunk.Origin.X); cx <= FloorDiv((int)chunk.Origin.X + chunk.Stride); cx++)
+            near.Add(ChunkOfCell((cx, cy)));
+        near.Remove(key);
+        foreach (var k in near)
+            if (Secret(k)) RaiseSeals(chunk, k);
+        if (Secret(key))
+        {
+            chunk.Unsealed = (float[])chunk.Heights.Clone();
+            RaiseSeals(chunk, key);
+        }
+        PlaceKelp(chunk, key, toRock, x0, y0, w);
         var names = CellsOf(key).Select(c => CellGrid(c).Name);
         chunk.Template = string.Join("+", names);
         chunk.Ways = Neighbours(key).Count(o => Linked(key, o));
         return chunk;
+    }
+
+    /// <summary>A sealed way: its wall's half thickness (it stands inside the dead end, from its edge in), how far past the way it reaches either side, and its top.</summary>
+    public const float SealThick = 1.2f, SealPast = 1.5f, SealTop = 2f;
+    /// <summary>The share of the chunks holding a treasure that are secret rooms.</summary>
+    public const float SecretChance = 0.3f;
+
+    /// <summary>A secret room: a chunk holding a treasure (a clam, a cache, a relic), by SecretChance; never the lair or her first.</summary>
+    public bool Secret((int X, int Y) key) =>
+        PlaceOf(key) is PoiKind.TreasureCave or PoiKind.ShellCache or PoiKind.Relic && key != Lair && key != ChunkOfCell((0, 0))
+        && Unit(Mix(Seed, (ulong)(uint)key.X, (ulong)(uint)key.Y, 0x5EA1)) < SecretChance;
+
+    /// <summary>A chunk's ways out: the middle of each on the edge it shares with a joined chunk, the way out, its half width, and whether it is this chunk's.</summary>
+    public List<(Vector2 At, Vector2 Way, float Half, bool Own)> SocketsOf((int X, int Y) key)
+    {
+        var ways = new List<(Vector2, Vector2, float, bool)>();
+        float mid = (CaveTemplates.SocketFrom + CaveTemplates.SocketTo + 1) * 0.5f, half = (CaveTemplates.SocketTo - CaveTemplates.SocketFrom + 1) * 0.5f + 1f;
+        foreach (var c in CellsOf(key))
+            foreach (var (dx, dy) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+            {
+                var nb = ChunkOfCell((c.X + dx, c.Y + dy));
+                if (nb == key || !Linked(key, nb)) continue;
+                var at = dx != 0 ? new Vector2((c.X + (dx > 0 ? 1 : 0)) * Cell, c.Y * Cell + mid) : new Vector2(c.X * Cell + mid, (c.Y + (dy > 0 ? 1 : 0)) * Cell);
+                ways.Add((at, new Vector2(dx, dy), half, nb.X > key.X || nb.X == key.X && nb.Y > key.Y));
+            }
+        return ways;
+    }
+
+    /// <summary>A secret room's walls across its ways (inside it, from its edge in) raised in a chunk's heights, padding and all.</summary>
+    void RaiseSeals(Chunk chunk, (int X, int Y) room)
+    {
+        var (min, max) = RectOf(room);
+        foreach (var (at, way, half, _) in SocketsOf(room))
+            for (int j = 0; j < chunk.Rows; j++)
+            for (int i = 0; i < chunk.Stride; i++)
+            {
+                var p = chunk.Origin + new Vector2(i, j);
+                if (p.X < min.X || p.Y < min.Y || p.X >= max.X || p.Y >= max.Y) continue;
+                var d = p - at;
+                float inward = -Vector2.Dot(d, way), across = MathF.Abs(d.X * -way.Y + d.Y * way.X);
+                if (inward >= -0.5f && inward <= SealThick * 2f && across <= half + SealPast)
+                    chunk.Heights[j * chunk.Stride + i] = MathF.Max(chunk.Heights[j * chunk.Stride + i], SealTop);
+            }
+    }
+
+    /// <summary>
+    /// A chunk's kelp beds, as a template level's (TopDownGenerator.PlaceKelpIn): by its chance (the Kelp Forest's more
+    /// and thicker), in open water away from its holes and its place, rooted on the floor.
+    /// </summary>
+    void PlaceKelp(Chunk chunk, (int X, int Y) key, float[] toRock, int x0, int y0, int w)
+    {
+        var rng = new Rng(Mix(Seed, (ulong)(uint)key.X, (ulong)(uint)key.Y, 0x6E1F));
+        bool forest = Biome == OctoShoots.Core.Run.Biome.KelpForest;
+        int beds = (rng.NextFloat() < (forest ? 0.55f : 0.25f) ? 1 : 0) + (forest && rng.NextFloat() < 0.2f ? 1 : 0);
+        uint seed = (uint)(rng.NextU64() >> 32);
+        for (int tried = 0; tried < 60 && chunk.Kelp.Count < beds; tried++)
+        {
+            var c = new Vector2(rng.Range(chunk.Min.X + 4f, chunk.Max.X - 4f), rng.Range(chunk.Min.Y + 4f, chunk.Max.Y - 4f));
+            int ci = ((int)MathF.Round(c.Y) - y0) * w + (int)MathF.Round(c.X) - x0;
+            if (toRock[ci] < TopDownGenerator.KelpClear || chunk.At((int)MathF.Round(c.X), (int)MathF.Round(c.Y)) > LevelMap.BlockHeight - 0.5f) continue;
+            float r = rng.Range(TopDownGenerator.KelpRadiusMin, TopDownGenerator.KelpRadiusMax);
+            if (chunk.Holes.Exists(h => Vector2.Distance(h, c) < r + 6f) || chunk.Place is not null && Vector2.Distance(chunk.PlaceAt, c) < r + 8f) continue;
+            if (chunk.Kelp.Exists(k => Vector2.Distance(k.Center, c) < k.Radius + r + TopDownGenerator.KelpApart)) continue;
+            var bed = new KelpBed { Center = c, Radius = r };
+            for (float y = -r; y <= r; y += TopDownGenerator.KelpSpacing)
+            for (float x = -r; x <= r; x += TopDownGenerator.KelpSpacing)
+            {
+                var p = c + new Vector2(x + rng.Range(-0.45f, 0.45f) * TopDownGenerator.KelpSpacing, y + rng.Range(-0.45f, 0.45f) * TopDownGenerator.KelpSpacing);
+                float edge = r * (0.8f + 0.3f * TerrainNoise.Fbm(p.X * 0.22f, p.Y * 0.22f, seed, 2));
+                float d = Vector2.Distance(p, c) / MathF.Max(edge, 0.5f);
+                if (d > 1f || rng.NextFloat() > 1f - 0.65f * d * d) continue;
+                if (!chunk.Contains(p) || chunk.At((int)MathF.Round(p.X), (int)MathF.Round(p.Y)) > LevelMap.BlockHeight - 0.3f) continue;
+                bed.Roots.Add(p);
+                bed.Lengths.Add(rng.Range(TopDownGenerator.KelpLengthMin, TopDownGenerator.KelpLengthMax));
+            }
+            if (bed.Roots.Count >= TopDownGenerator.KelpLeast) chunk.Kelp.Add(bed);
+        }
     }
 
     /// <summary>
@@ -502,6 +612,7 @@ public sealed class OpenSea
     {
         int missing = 0, n = map.Samples, ox = (int)origin.X, oy = (int)origin.Y;
         map.Holes.Clear();
+        map.Kelp.Clear();
         var keys = new HashSet<(int X, int Y)>();
         for (int cy = FloorDiv(oy); cy <= FloorDiv(oy + n - 1); cy++)
         for (int cx = FloorDiv(ox); cx <= FloorDiv(ox + n - 1); cx++)
@@ -513,6 +624,11 @@ public sealed class OpenSea
                 foreach (var hole in chunk.Holes)
                     if (hole.X - ox is > 4f and < LevelMap.Seeded - 4f && hole.Y - oy is > 4f and < LevelMap.Seeded - 4f)
                         map.Holes.Add(new MapHole { Shaft = new Shaft(hole - origin, Vector2.UnitX, 3f, 3f), Kind = hole == chunk.Lair ? OctoShoots.Core.Run.ReefKind.Boss : default });
+            // (Its kelp beds, those wholly in the window, in its coordinates.)
+            if (chunk is not null)
+                foreach (var bed in chunk.Kelp)
+                    if (bed.Center.X - bed.Radius - ox > 0f && bed.Center.Y - bed.Radius - oy > 0f && bed.Center.X + bed.Radius - ox < n - 1 && bed.Center.Y + bed.Radius - oy < n - 1)
+                        map.Kelp.Add(new KelpBed { Center = bed.Center - origin, Radius = bed.Radius, Roots = bed.Roots.Select(q => q - origin).ToList(), Lengths = bed.Lengths });
             if (only is { } o && o != key) continue;
             var (min, max) = RectOf(key);
             int x0 = Math.Max((int)min.X, ox), x1 = Math.Min((int)max.X, ox + n), y0 = Math.Max((int)min.Y, oy), y1 = Math.Min((int)max.Y, oy + n);

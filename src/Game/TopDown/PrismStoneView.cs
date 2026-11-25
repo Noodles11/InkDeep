@@ -58,6 +58,9 @@ public partial class PrismStoneView : Node3D
         return st.Commit();
     }
 
+    /// <summary>Its stones drawn again (an open level's come and go with their chunks).</summary>
+    public void Show(PlaneWorld world) => Build(world);
+
     void Build(PlaneWorld world)
     {
         foreach (var child in GetChildren()) child.QueueFree();

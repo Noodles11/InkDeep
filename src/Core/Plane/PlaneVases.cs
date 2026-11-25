@@ -51,7 +51,7 @@ public sealed class PlaneVase
 public sealed partial class PlaneWorld
 {
     public List<PlaneVase> Vases { get; } = new();
-    Rng _vaseRng = null!;
+    Rng? _vaseRng;
 
     /// <summary>
     /// Groups of pots on the seabed by the walls, seeded: where the floor is shallow enough that they stand up into her
@@ -59,21 +59,18 @@ public sealed partial class PlaneWorld
     /// </summary>
     void PlaceVases()
     {
-        _vaseRng = new Rng(Map.Seed ^ 0x7A5E5UL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Attempt << 46));
-        var rng = _vaseRng;
+        _vaseRng ??= new Rng(Map.Seed ^ 0x7A5E5UL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Attempt << 46));
+        var rng = _areaRng ?? _vaseRng;
         var spots = new List<Vector2>();
-        for (float y = LevelMap.RimWidth + 2f; y < Map.Size - LevelMap.RimWidth - 2f; y += 3f)
-        for (float x = LevelMap.RimWidth + 2f; x < Map.Size - LevelMap.RimWidth - 2f; x += 3f)
-        {
-            var p = new Vector2(x, y);
+        foreach (var p in GridSpots(2f, 3f))
             if (Fine(p, VaseTuning.RadiusMax + 0.3f) && NearWall(p)) spots.Add(p);
-        }
         for (int i = spots.Count - 1; i > 0; i--)
         {
             int j = rng.Int(i + 1);
             (spots[i], spots[j]) = (spots[j], spots[i]);
         }
         int groups = VaseTuning.GroupsMin + rng.Int(VaseTuning.GroupsMax - VaseTuning.GroupsMin + 1);
+        if (_area is not null) groups = AreaShare(groups, rng);
         var centres = new List<Vector2>();
         foreach (var at in spots)
         {
@@ -96,8 +93,8 @@ public sealed partial class PlaneWorld
         {
             float h = Map.HeightAt(p);
             if (h < VaseTuning.FloorMin || h > VaseTuning.FloorMax || !Clear(p, radius)) return false;
-            if (Vector2.Distance(p, Map.Start.Position) < VaseTuning.StartClear) return false;
-            if (Vector2.Distance(p, Map.Exit.Position) < Map.Exit.Radius + VaseTuning.PlaceClear) return false;
+            if (Vector2.Distance(p, FeatureStart) < VaseTuning.StartClear) return false;
+            if (_area is null && Vector2.Distance(p, Map.Exit.Position) < Map.Exit.Radius + VaseTuning.PlaceClear) return false;
             if (Map.InShaft(p)) return false;
             foreach (var poi in Map.Pois)
                 if (poi.Kind != PoiKind.Start && Vector2.Distance(p, poi.Position) < poi.Radius + VaseTuning.PlaceClear) return false;

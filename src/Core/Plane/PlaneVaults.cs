@@ -45,18 +45,29 @@ public sealed class PlaneVault
 public sealed partial class PlaneWorld
 {
     public List<PlaneVault> Vaults { get; } = new();
-    Rng _vaultRng = null!;
+    Rng? _vaultRng;
 
     /// <summary>A template level's bubble vaults, on its vault marks (LevelMap.VaultMarks), each snug against its wall.</summary>
     void PlaceVaults()
     {
-        _vaultRng = new Rng(Map.Seed ^ 0xB0BBA17UL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Attempt << 46));
-        var rng = _vaultRng;
-        foreach (var mark in Map.VaultMarks)
+        _vaultRng ??= new Rng(Map.Seed ^ 0xB0BBA17UL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Attempt << 46));
+        var rng = _areaRng ?? _vaultRng;
+        // (An open level's chunk has no marks: spots by its rock, as many as its share.)
+        var marks = Map.VaultMarks;
+        int most = VaultTuning.Most, had = Vaults.Count;
+        if (_area is not null)
         {
-            if (Vaults.Count >= VaultTuning.Most) break;
+            marks = new List<Vector2>();
+            foreach (var q in GridSpots(2f, 2f))
+                if (Clear(q, 1f) && !Clear(q, 2.2f) && !Map.InShaft(q, 2f)) marks.Add(q);
+            Shuffle(marks, rng);
+            most = AreaShare((int)(VaultTuning.Most / VaultTuning.Taken), rng);
+        }
+        foreach (var mark in marks)
+        {
+            if (Vaults.Count - had >= most) break;
             if (rng.NextFloat() >= VaultTuning.Taken) continue;
-            if (Vector2.Distance(mark, Map.Start.Position) < VaultTuning.StartClear) continue;
+            if (Vector2.Distance(mark, FeatureStart) < VaultTuning.StartClear || _area is not null && Vaults.Exists(v => Vector2.Distance(v.Position, mark) < 6f)) continue;
             // The nearest rock, by sixteen ways: the vault hangs against it.
             Vector2 wall = Vector2.Zero;
             float near = float.MaxValue;
@@ -130,8 +141,8 @@ public sealed partial class PlaneWorld
         Events.Add(new PlaneEvent(PlaneEventType.VaultBurst, vault.Position, -vault.Wall, vault.Radius));
         Vector2 Out(float min, float max)
         {
-            float a = MathF.Atan2(-vault.Wall.Y, -vault.Wall.X) + _vaultRng.Range(-1.1f, 1.1f);
-            return new Vector2(MathF.Cos(a), MathF.Sin(a)) * _vaultRng.Range(min, max);
+            float a = MathF.Atan2(-vault.Wall.Y, -vault.Wall.X) + _vaultRng!.Range(-1.1f, 1.1f);
+            return new Vector2(MathF.Cos(a), MathF.Sin(a)) * _vaultRng!.Range(min, max);
         }
         foreach (var kind in vault.Shells)
             Shells.Add(new PlaneShell { Position = vault.Position, Velocity = Out(2f, 4.5f), Kind = kind, Value = ShellWorth.Of(kind) });

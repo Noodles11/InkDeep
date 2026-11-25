@@ -89,7 +89,9 @@ public class OpenSeaTests
                 for (int x = (int)ca.Min.X; x < ca.Max.X && !crossing; x++)
                     crossing = ca.At(x, y) <= 0f && new[] { (1, 0), (0, 1), (-1, 0), (0, -1) }
                         .Any(d => cb.Contains(new Vector2(x + d.Item1, y + d.Item2)) && cb.At(x + d.Item1, y + d.Item2) <= 0f);
-                Assert.True(crossing == Sea.Linked(a, b), $"{a} and {b}: joined {Sea.Linked(a, b)}, water across {crossing}");
+                // (A secret room's ways are sealed till she opens them.)
+                bool open = Sea.Linked(a, b) && !Sea.Secret(a) && !Sea.Secret(b);
+                Assert.True(crossing == open, $"{a} and {b}: joined {Sea.Linked(a, b)}, sealed {Sea.Secret(a) || Sea.Secret(b)}, water across {crossing}");
             }
         }
     }
@@ -310,6 +312,73 @@ public class OpenSeaTests
         Assert.Contains(stone.Light, w.Lights.All);
         Assert.Equal(stoneInSea, stone.Position + origin);
         Assert.Equal(stones, w.ChargeStones.Count);
+    }
+
+    [Fact]
+    public void A_chunk_holding_a_treasure_may_be_sealed_by_its_own_wall_till_it_opens()
+    {
+        var all = ChunksWithin(14).Select(Sea.Build).ToList();
+        var shut = all.Where(c => c.Sealed).ToList();
+        Assert.NotEmpty(shut);
+        foreach (var c in shut)
+        {
+            Assert.True(c.Place is PoiKind.TreasureCave or PoiKind.ShellCache or PoiKind.Relic && c.Key != Sea.Lair);
+            Assert.NotEmpty(c.Sockets);
+            foreach (var (at, way, _, _) in c.Sockets)
+            {
+                var inside = at - way * OpenSea.SealThick;
+                Assert.True(c.At((int)inside.X, (int)inside.Y) >= OpenSea.SealTop);
+            }
+        }
+        // Opened: its own heights again, the way through.
+        var one = shut[0];
+        var (wayAt, wayOut, _, _) = one.Sockets[0];
+        one.Unseal();
+        Assert.False(one.Sealed);
+        var through = wayAt - wayOut * OpenSea.SealThick;
+        Assert.True(one.At((int)through.X, (int)through.Y) < LevelMap.SwimBand);
+        // Some chunks hold kelp beds, rooted on their floor, and the window takes those wholly in it.
+        var kelp = all.Where(c => c.Kelp.Count > 0).ToList();
+        Assert.NotEmpty(kelp);
+        Assert.All(kelp.SelectMany(c => c.Kelp.SelectMany(b => b.Roots.Select(r => (c, r)))), x => Assert.True(x.c.Contains(x.r)));
+        var map = new LevelMap();
+        Sea.Fill(map, new Vector2(-54f), k => all.FirstOrDefault(c => c.Key == k));
+        Assert.All(map.Kelp, b => Assert.InRange(b.Center.X, b.Radius, map.Size - b.Radius));
+    }
+
+    [Fact]
+    public void A_secret_rooms_seal_leaves_and_comes_back_with_its_chunk_as_she_left_it()
+    {
+        var catalog = OctoShoots.Core.Items.ItemCatalog.FromJson(System.IO.File.ReadAllText(System.IO.Path.Combine(AppContext.BaseDirectory, "data", "items.json")));
+        var built = ChunksWithin(12).ToDictionary(k => k, Sea.Build);
+        var map = new LevelMap { Templated = true, Seed = 7 };
+        var origin = new Vector2(-54f, -54f);
+        map.Pois.Add(new Poi { Kind = PoiKind.Start, Position = new Vector2(55f), Radius = 6f });
+        map.Pois.Add(new Poi { Kind = PoiKind.Exit, Position = new Vector2(55f), Radius = 6f });
+        Sea.Fill(map, origin, k => built.GetValueOrDefault(k));
+        var w = new PlaneWorld(map, new Tuning(), new PlaneRun(catalog, new Tuning()), new PlaneOptions { OpenSea = true, Corruption = false, Adventure = false });
+        // A chunk in the window, as if sealed (its ways sealed by the sim's walls).
+        var c = built.Values.First(c => c.Min.X - origin.X >= 0f && c.Min.Y - origin.Y >= 0f && c.Max.X - origin.X <= 54f && c.Max.Y - origin.Y <= 110f && c.Sockets.Count > 0);
+        w.AddSeaLife(c.Min - origin, c.Max - origin, c.Min, null, c.Sockets.Select(s => (s.At - origin, s.Way, s.Half, s.Own)).ToList(), @sealed: true);
+        Assert.Equal(c.Sockets.Count, w.Seals.Count);
+        var seal = w.Seals[0];
+        Assert.Contains(seal.Rock, w.WeakRocks);
+        w.DebugOpenSeal(seal);
+        // Far on: it goes with its chunk, its wall too; and back, open still, where it was.
+        var by = new Vector2(4 * OpenSea.Cell, 0f);
+        var emblemInSea = seal.Emblem + origin;
+        Sea.Fill(map, origin + by, k => built.GetValueOrDefault(k));
+        w.ShiftWindow(by);
+        Assert.Empty(w.Seals);
+        Assert.Empty(w.WeakRocks);
+        Sea.Fill(map, origin, k => built.GetValueOrDefault(k));
+        w.ShiftWindow(-by);
+        w.AddSeaLife(c.Min - origin, c.Max - origin, c.Min, null, c.Sockets.Select(s => (s.At - origin, s.Way, s.Half, s.Own)).ToList(), @sealed: true);
+        Assert.Equal(c.Sockets.Count, w.Seals.Count);
+        Assert.Same(seal, w.Seals[0]);
+        Assert.True(seal.Open);
+        Assert.DoesNotContain(seal.Rock, w.WeakRocks);
+        Assert.Equal(emblemInSea, seal.Emblem + origin);
     }
 
     [Fact]

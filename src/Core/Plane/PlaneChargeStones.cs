@@ -89,13 +89,15 @@ public sealed partial class PlaneWorld
     /// </summary>
     void PlaceChargeTrio()
     {
-        var rng = new Rng(Map.Seed ^ 0x7121057EUL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Id.Lane << 40) ^ ((ulong)Map.Attempt << 50));
-        if (Map.Labyrinth || rng.NextFloat() >= ChargeStoneTuning.TrioChance) return;
+        var rng = _areaRng ?? new Rng(Map.Seed ^ 0x7121057EUL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Id.Lane << 40) ^ ((ulong)Map.Attempt << 50));
+        // (An open level holds one in all: each chunk its share of the chance till it has.)
+        if (Map.Labyrinth || Trio is not null || rng.NextFloat() >= ChargeStoneTuning.TrioChance / (_area is null ? 1f : SeaChunks)) return;
+        var (lo, hi) = _area ?? (new Vector2(8f), new Vector2(Map.Size - 8f));
         var walls = new List<(float Angle, Vector2 Dir, float At)>();
-        for (int tries = 0; tries < 800; tries++)
+        for (int tries = 0; tries < (_area is null ? 800 : 150); tries++)
         {
-            var p = new Vector2(rng.Range(8f, Map.Size - 8f), rng.Range(8f, Map.Size - 8f));
-            if (!Clear(p, 2f) || Map.InShaft(p, 5f) || Vector2.Distance(p, Map.Start.Position) < 12f) continue;
+            var p = new Vector2(rng.Range(lo.X, hi.X), rng.Range(lo.Y, hi.Y));
+            if (!Clear(p, 2f) || Map.InShaft(p, 5f) || Vector2.Distance(p, FeatureStart) < 12f) continue;
             walls.Clear();
             for (int k = 0; k < 24; k++)
             {

@@ -25,6 +25,27 @@ public sealed partial class PlaneWorld
     /// <summary>A level's count of a feature, or a chunk's share of it (half, at least one).</summary>
     int AreaCount(int n) => _area is null || n <= 0 ? n : (n + 1) / 2;
 
+    /// <summary>A chunk's share of a level's count (about SeaChunks to the window), its fraction rolled.</summary>
+    static int AreaShare(int n, Rng rng)
+    {
+        float f = n / SeaChunks;
+        return (int)f + (rng.NextFloat() < f - (int)f ? 1 : 0);
+    }
+
+    static void Shuffle(List<Vector2> list, Rng rng)
+    {
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = rng.Int(i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
+        }
+    }
+
+    /// <summary>The chance a sealed chunk's seal takes only coloured light (its prism stones out before it).</summary>
+    public const float SeaPrism = 0.4f;
+    /// <summary>The prism stones' seals (an open level's seals come and go: their indices are set again from these).</summary>
+    readonly Dictionary<PrismStone, SecretSeal> _prismSeal = new();
+
     /// <summary>A grid of spots through the area, <paramref name="edge"/> in from its sides (from the level's rim on a whole level).</summary>
     IEnumerable<Vector2> GridSpots(float edge, float step)
     {
@@ -52,7 +73,7 @@ public sealed partial class PlaneWorld
     /// time, by its chance one of its biome's light features, its share of the level's charge stones, and perhaps a
     /// light spring (one to a window, about).
     /// </summary>
-    void AddSeaFeatures(Vector2 min, Vector2 max, Vector2 inSea, Func<float, Vector2?> spot)
+    void AddSeaFeatures(Vector2 min, Vector2 max, Vector2 inSea, Func<float, Vector2?> spot, IReadOnlyList<(Vector2 At, Vector2 Way, float Half)> seals)
     {
         if (_seaLive.ContainsKey(inSea)) return;
         if (_seaParked.Remove(inSea, out var back))
@@ -69,10 +90,12 @@ public sealed partial class PlaneWorld
                 Hold(o, true);
             }
             _seaLive[inSea] = back;
+            Reindex();
             return;
         }
         var rng = new Rng(Map.Seed ^ 0x5EAF_EA7UL ^ ((ulong)(uint)(int)MathF.Round(inSea.X) << 32) ^ (uint)(int)MathF.Round(inSea.Y));
         var had = (OpticWalls.Count, Flora.Count, LightRooms.Count, Pockets.Count, Fauna.Count, ChargeStones.Count, Springs.Count);
+        var more = (Vases.Count, Vaults.Count, Seals.Count, PrismStones.Count, Trio);
         if (rng.NextFloat() < 1f / SeaChunks && spot(SpringTuning.Clearance) is { } at)
         {
             float pool = SpringTuning.Pool * (1f + OctoShoots.Core.Items.LuckTuning.SpringPool(Map.Luck));
@@ -94,6 +117,19 @@ public sealed partial class PlaneWorld
             }
             float n = ChargeStoneTuning.Count / SeaChunks;
             PlaceChargeStones(min + new Vector2(2f), max - new Vector2(2f), (int)n + (rng.NextFloat() < n - (int)n ? 1 : 0), 300, rng);
+            PlaceChargeTrio();
+            if (Options.Vases || Map.Biome == OctoShoots.Core.Run.Biome.SunkenRuins) PlaceVases();
+            PlaceVaults();
+            // A secret room's ways in: a sealed wall across each (its heights are the chunk's own), now and then coloured.
+            var beds = new List<Vector2>();
+            foreach (var (wayAt, way, half) in seals)
+            {
+                var rock = new WeakRock(wayAt - way * OpenSea.SealThick, MathF.Min(half + 0.5f, WeakRock.GateHalf + WeakRock.GateMore), -1, way, OpenSea.SealThick, SealKind.Secret);
+                Seals.Add(new SecretSeal { Rock = rock, Facing = way, Emblem = rock.Center + way * rock.Thick });
+                _rocks.Add(rock);
+                if (ColourSeal(Seals.Count - 1, rng, beds, SeaPrism) is { } stones)
+                    foreach (var s in stones) _prismSeal[s] = Seals[^1];
+            }
         }
         finally
         {
@@ -109,6 +145,11 @@ public sealed partial class PlaneWorld
         mine.Items.AddRange(Fauna.GetRange(had.Item5, Fauna.Count - had.Item5));
         mine.Items.AddRange(ChargeStones.GetRange(had.Item6, ChargeStones.Count - had.Item6));
         mine.Items.AddRange(Springs.GetRange(had.Item7, Springs.Count - had.Item7));
+        mine.Items.AddRange(Vases.GetRange(more.Item1, Vases.Count - more.Item1));
+        mine.Items.AddRange(Vaults.GetRange(more.Item2, Vaults.Count - more.Item2));
+        mine.Items.AddRange(Seals.GetRange(more.Item3, Seals.Count - more.Item3));
+        mine.Items.AddRange(PrismStones.GetRange(more.Item4, PrismStones.Count - more.Item4));
+        if (Trio is { } trio && more.Item5 is null) mine.Items.Add(trio);
         _seaLive[inSea] = mine;
     }
 
@@ -116,6 +157,8 @@ public sealed partial class PlaneWorld
     void ShiftSeaFeatures(Vector2 by)
     {
         _shifted += by;
+        // (Every wall in the sim's rocks is a chunk's: a seal's, a curtain's.)
+        for (int i = 0; i < _rocks.Count; i++) _rocks[i] = _rocks[i] with { Center = _rocks[i].Center - by };
         foreach (var s in _seaLive.Values)
             foreach (var o in s.Items) MoveFeature(o, by);
         foreach (var (key, s) in new List<KeyValuePair<Vector2, SeaFeatures>>(_seaLive))
@@ -131,6 +174,14 @@ public sealed partial class PlaneWorld
             _seaLive.Remove(key);
             _seaParked[key] = s;
         }
+        Reindex();
+    }
+
+    /// <summary>Each prism stone's seal by its place in the seals (they come and go with their chunks).</summary>
+    void Reindex()
+    {
+        foreach (var s in PrismStones)
+            if (_prismSeal.TryGetValue(s, out var seal)) s.Seal = Seals.IndexOf(seal);
     }
 
     /// <summary>A feature into the sim's lists, or out of them.</summary>
@@ -145,6 +196,20 @@ public sealed partial class PlaneWorld
             case PlaneFauna f: Toggle(Fauna, f, keep); break;
             case ChargeStone c: Toggle(ChargeStones, c, keep); break;
             case LightSpring s: Toggle(Springs, s, keep); break;
+            case PlaneVase v: Toggle(Vases, v, keep); break;
+            case PlaneVault v: Toggle(Vaults, v, keep); break;
+            case PrismStone s: Toggle(PrismStones, s, keep); break;
+            case ChargeTrio t:
+                if (keep) Trio = t;
+                else if (Trio == t) Trio = null;
+                break;
+            case SecretSeal s:
+                Toggle(Seals, s, keep);
+                // (Its wall, or what of it stands once open, comes and goes with it.)
+                foreach (var r in s.Open ? s.Rock.Remains() : new[] { s.Rock })
+                    if (keep) _rocks.Add(r);
+                    else _rocks.Remove(r);
+                break;
         }
     }
 
@@ -182,6 +247,18 @@ public sealed partial class PlaneWorld
                 c.Face -= by;
                 break;
             case LightSpring s: s.Position -= by; break;
+            case PlaneVase v: v.Position -= by; break;
+            case PlaneVault v: v.Position -= by; break;
+            case PrismStone s:
+                s.Position -= by;
+                s.Bed -= by;
+                break;
+            case ChargeTrio t: t.Middle -= by; break;
+            case SecretSeal s:
+                // (Its wall in the sim's rocks moves with them: only the seal's own copy here.)
+                s.Rock = s.Rock with { Center = s.Rock.Center - by };
+                s.Emblem -= by;
+                break;
         }
     }
 }

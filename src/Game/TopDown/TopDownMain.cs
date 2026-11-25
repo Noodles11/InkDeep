@@ -4121,8 +4121,9 @@ public partial class TopDownMain : Node3D
                 _sfx.PlayPitched("bell_ring", 1.3f + 0.7f * e.Size, -12f);
                 break;
             case PlaneEventType.SealOpened:
-                // The wall slides down into the sand; the charts show the way in.
+                // The wall slides down into the sand; the charts show the way in. (An open level's is its chunk's own heights.)
                 _level.Slide(e.Position);
+                OpenSeaSeal(e.Position);
                 _camera.Shake(0.45f);
                 _haptics.Pulse(0.7f, 0.5f, 0.45f);
                 _sfx.PlayPitched("pop", 0.35f, -2f);
