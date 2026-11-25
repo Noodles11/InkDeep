@@ -39,6 +39,18 @@ public partial class TopDownMain
 
     IEnumerable<(System.Numerics.Vector2 At, Color Colour, string Sign, float Reach)> ArrowTargets()
     {
+        // (An open level shows the nearest shop she has not been to from the start, not every shop of its endless sea.)
+        int nearestShop = -1;
+        if (Sea is not null)
+        {
+            float best = float.MaxValue;
+            for (int i = 0; i < _map.Pois.Count; i++)
+                if (_map.Pois[i].Kind == PoiKind.Shop && !_world.Visited[i] && System.Numerics.Vector2.Distance(_map.Pois[i].Position, _world.Player.Position) is var d && d < best)
+                {
+                    best = d;
+                    nearestShop = i;
+                }
+        }
         for (int i = 0; i < _map.Pois.Count; i++)
         {
             var poi = _map.Pois[i];
@@ -52,7 +64,7 @@ public partial class TopDownMain
                 if (_map.HasBoss && _world.Boss is { Freed: false }) yield return (poi.Position, ReefKinds.Colour(ReefKind.Boss), "X", poi.Radius);
                 continue;
             }
-            bool found = poi.Kind == PoiKind.Shop || shown || i < _world.Visited.Length && _world.Visited[i];
+            bool found = poi.Kind == PoiKind.Shop && (Sea is null || i == nearestShop) || shown || i < _world.Visited.Length && _world.Visited[i];
             if (!found || _world.PoiDone(i)) continue;
             yield return (poi.Position, LevelView.PoiColor(poi.Kind), Sign(poi.Kind), Mathf.Max(poi.Radius, SpringReach));
         }

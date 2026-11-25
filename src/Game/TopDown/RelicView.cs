@@ -37,7 +37,11 @@ public partial class RelicView : Node3D
     {
         foreach (var s in _shown) s.Root.QueueFree();
         _shown.Clear();
-        foreach (var relic in world.Relics)
+        foreach (var relic in world.Relics) Add(relic);
+    }
+
+    void Add(PlaneRelic relic)
+    {
         {
             var root = new Node3D { Position = new Vector3(relic.Position.X, 0f, relic.Position.Y), Rotation = new Vector3(0f, (float)GD.RandRange(0.0, Mathf.Tau), 0f) };
             // (The bell and the urn lie on their side, the urn spilled: from above that reads as what they are.)
@@ -113,8 +117,11 @@ public partial class RelicView : Node3D
     public void Sync(PlaneWorld world, float dt, CombatView combat)
     {
         _time += dt;
+        // (An open level's relics come in with their chunks, and keep their place as its window moves on.)
+        while (_shown.Count < world.Relics.Count) Add(world.Relics[_shown.Count]);
         foreach (var s in _shown)
         {
+            s.Root.Position = new Vector3(s.Sim.Position.X, s.Root.Position.Y, s.Sim.Position.Y);
             if (s.Gone) continue;
             if (!s.Sim.InStartCave && s.Sim.Taken)
             {

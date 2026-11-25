@@ -43,19 +43,22 @@ public sealed partial class PlaneWorld
     /// </summary>
     void PlaceRelics()
     {
-        int depth = Map.Depth - LevelPlan.Tutorial;
         foreach (var poi in Map.Pois.Where(p => p.Kind == PoiKind.Relic))
+            RelicAt(poi, new Rng(Map.Seed ^ 0x2E11C5UL ^ ((ulong)Map.Level << 24) ^ ((ulong)Map.Depth << 32) ^ ((ulong)Map.Attempt << 48)));
+    }
+
+    /// <summary>A relic place: its depth's treasure, or (found already, or on its level once) a pearl.</summary>
+    void RelicAt(Poi poi, Rng rng)
+    {
+        int depth = Map.Depth - LevelPlan.Tutorial;
+        string? id = (Map.Templated ? Run.TreasureCatalog?.InBiome(Map.Biome) : Run.TreasureCatalog?.AtDepth(depth))?.Id;
+        if (id is not null && !Run.Treasures.Contains(id) && !Relics.Exists(r => r.Id == id))
         {
-            string? id = (Map.Templated ? Run.TreasureCatalog?.InBiome(Map.Biome) : Run.TreasureCatalog?.AtDepth(depth))?.Id;
-            if (id is not null && !Run.Treasures.Contains(id))
-            {
-                Relics.Add(new PlaneRelic { Id = id, Position = poi.Position });
-                continue;
-            }
-            var rng = new Rng(Map.Seed ^ 0x2E11C5UL ^ ((ulong)Map.Level << 24) ^ ((ulong)Map.Depth << 32) ^ ((ulong)Map.Attempt << 48));
-            var offer = Run.Offer("secret", Pearls.Select(q => q.ItemId));
-            if (offer.Count > 0) Pearls.Add(new PlanePearl { ItemId = Run.Pick(offer, rng), Position = poi.Position });
+            Relics.Add(new PlaneRelic { Id = id, Position = poi.Position });
+            return;
         }
+        var offer = Run.Offer("secret", Pearls.Select(q => q.ItemId));
+        if (offer.Count > 0) Pearls.Add(new PlanePearl { ItemId = Run.Pick(offer, rng), Position = poi.Position });
     }
 
     /// <summary>

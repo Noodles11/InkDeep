@@ -127,7 +127,19 @@ the reef was never being called home. It was being kept.
   comes from them and its look from the biome and the seed; a wall runs along every side it shares with another chunk,
   its face wandering, opened by a 6 m socket in the middle of each side where the two are joined. Every chunk is joined
   to a neighbour nearer the sea's first cell (so every chunk is reachable and has a way out) and to the others now and
-  then (55%). A chunk holds a hole down a fifth of the time, where it has the room.
+  then (55%).
+  - **Its places** (0.97.0, `OpenSea.PlaceRules`): each kind of place has its own rule, at most one in A chunks and at
+    least one in B: a hole down 6–12, a shop 5–10, a clam 4–8, a shell cache 6–12, a light shrine 8–16, a crab's deal
+    10–20, a relic 25–50. The sea is cut into regions of about 2B chunks for each kind; each region rolls how many it
+    holds within those bounds, each in a chunk of its own, never two of a kind side by side (a chunk touching a later
+    region holds none, so none meet across a border), and one place to a chunk (the kind higher in the list has it).
+    Her first chunk and those round it hold none. A place stands on one of its chunk's POI marks with room round it,
+    else where its water is widest; a hole where it is widest, well inside the chunk.
+  - **Places come in with their chunks** (`PlaneWorld.AddSeaPlace`): each is set up as on any level (a clam with its
+    pearl or murkling, a cache's shells, a shop's, a shrine's or a crab's stands, a relic or a pearl), seeded by where
+    it lies in the sea; its views pick it up the next frame (about 1 ms more a frame in all; no hitch measured over
+    1,500 frames). Everything on the level moves with the window. The nearest shop she has not been to shows its
+    emblem from the start; every other place once she has found it (or a school has shown it her).
   - **Made as she goes:** a level starts (or a dive lands) with only her chunk and those within two cells of it made, off
     the main thread. Each time she comes into a chunk, those round it are made on workers and each, when done, is shown
     in a frame of its own (about 1.5 ms of the main thread: its mesh, and its heights in the sim's window). Showing the
@@ -137,8 +149,8 @@ the reef was never being called home. It was being kept.
     sun's shade is cast again for it off the main thread, read from where it lies till then by everything that reads it
     (the ink's relief and rock rims too, 0.96.1: they had read it a cell off, a flicker as she crossed into a chunk),
     and her light's afterimage moves with the window.
-  - **Phase 1 is her and the water:** no creatures, places, pickups, light features, corruption or hazards yet (phases
-    2 and 3 bring them back chunk by chunk). The holes she has found keep their emblems (an arrow pointing down).
+  - **Not there yet:** creatures and the level's boss (the rest of phase 2), light features, corruption and hazards
+    (phase 3). The holes she has found keep their emblems (an arrow pointing down).
   - **The debug chunk map** (F3): the chunks round her, the one she is in, those she has visited, those made and not
     yet visited, the ways between them, each one's template and its holes.
 - **Holes down** (0.95.0, `TopDownGenerator.OpenHoles`, `LevelPlan.DiveHoles`; on open levels since 0.96.0, a chunk's own): a template level but a boss's has one

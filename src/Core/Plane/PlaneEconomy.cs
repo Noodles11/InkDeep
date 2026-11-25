@@ -126,21 +126,27 @@ public sealed partial class PlaneWorld
                     continue;
                 }
             }
-            (int min, int max) = poi.Kind switch
-            {
-                PoiKind.ShellCache => (PlaneEconomyTuning.CacheMin, PlaneEconomyTuning.CacheMax),
-                PoiKind.Secret => (PlaneEconomyTuning.SecretMin, PlaneEconomyTuning.SecretMax),
-                _ => (0, 0),
-            };
-            int count = min + (max > min ? _drops.Int(max - min + 1) : 0);
-            // Pirate's Doubloon: shell caches hold half as many again.
-            if (poi.Kind == PoiKind.ShellCache && Run.Loadout.Flags.Contains("richCaches")) count = (int)MathF.Round(count * PlaneEconomyTuning.RichCaches);
-            for (int i = 0; i < count; i++)
-            {
-                float a = _drops.Range(0f, MathF.Tau), r = _drops.Range(0.8f, MathF.Min(3f, poi.Radius - 1f));
-                var at = poi.Position + new Vector2(MathF.Cos(a), MathF.Sin(a)) * r;
-                Shells.Add(FoundShell(Clear(at, 0.2f) ? at : poi.Position, ShellWorth.Cache, Vector2.Zero));
-            }
+            PlaceCache(poi);
+        }
+    }
+
+    /// <summary>A cache's (or a secret room's) shells, scattered round its middle.</summary>
+    void PlaceCache(Poi poi)
+    {
+        (int min, int max) = poi.Kind switch
+        {
+            PoiKind.ShellCache => (PlaneEconomyTuning.CacheMin, PlaneEconomyTuning.CacheMax),
+            PoiKind.Secret => (PlaneEconomyTuning.SecretMin, PlaneEconomyTuning.SecretMax),
+            _ => (0, 0),
+        };
+        int count = min + (max > min ? _drops.Int(max - min + 1) : 0);
+        // Pirate's Doubloon: shell caches hold half as many again.
+        if (poi.Kind == PoiKind.ShellCache && Run.Loadout.Flags.Contains("richCaches")) count = (int)MathF.Round(count * PlaneEconomyTuning.RichCaches);
+        for (int i = 0; i < count; i++)
+        {
+            float a = _drops.Range(0f, MathF.Tau), r = _drops.Range(0.8f, MathF.Min(3f, poi.Radius - 1f));
+            var at = poi.Position + new Vector2(MathF.Cos(a), MathF.Sin(a)) * r;
+            Shells.Add(FoundShell(Clear(at, 0.2f) ? at : poi.Position, ShellWorth.Cache, Vector2.Zero));
         }
     }
 
@@ -153,8 +159,13 @@ public sealed partial class PlaneWorld
         var shop = Map.Pois.FirstOrDefault(p => p.Kind == PoiKind.Shop);
         if (shop is null) return;
         Vector2 facing = shop.Cave >= 0 ? Map.Caves[shop.Cave].Facing : Vector2.UnitY;
+        ShopAt(shop, facing, new Rng(Map.Seed ^ 0x5409UL ^ ((ulong)Map.Level << 28) ^ ((ulong)Map.Depth << 36) ^ ((ulong)Map.Attempt << 50)));
+    }
+
+    /// <summary>A shop's stands in its slots across its place, facing its way in.</summary>
+    void ShopAt(Poi shop, Vector2 facing, Rng rng)
+    {
         Vector2 side = new(-facing.Y, facing.X);
-        var rng = new Rng(Map.Seed ^ 0x5409UL ^ ((ulong)Map.Level << 28) ^ ((ulong)Map.Depth << 36) ^ ((ulong)Map.Attempt << 50));
         // (A template level's shop offers from the shop pool, priced by quality: CROSSOVER.md §7.)
         var offer = Map.Templated ? Run.Offer("shop", Pearls.Select(q => q.ItemId))
             : PlaneRun.PortedPearls.Where(id => Run.CanOffer(id) && Pearls.All(q => q.ItemId != id)).ToList();
@@ -185,12 +196,15 @@ public sealed partial class PlaneWorld
     void PlaceShrines()
     {
         var rng = new Rng(Map.Seed ^ 0x5481AEUL ^ ((ulong)Map.Level << 28) ^ ((ulong)Map.Depth << 36) ^ ((ulong)Map.Attempt << 50));
-        foreach (var poi in Map.Pois.Where(p => p.Kind == PoiKind.Shrine))
-        {
-            var offer = Run.Offer("shrine", Pearls.Select(q => q.ItemId).Concat(Stands.Select(s => s.ItemId)));
-            if (offer.Count == 0) continue;
-            Stands.Add(new ShopStand { Kind = StandKind.Shrine, ItemId = Run.Pick(offer, rng), Price = LightPips.ShrineHalves, Position = poi.Position });
-        }
+        foreach (var poi in Map.Pois.Where(p => p.Kind == PoiKind.Shrine)) ShrineAt(poi, rng);
+    }
+
+    /// <summary>A shrine's stone with its pearl.</summary>
+    void ShrineAt(Poi poi, Rng rng)
+    {
+        var offer = Run.Offer("shrine", Pearls.Select(q => q.ItemId).Concat(Stands.Select(s => s.ItemId)));
+        if (offer.Count == 0) return;
+        Stands.Add(new ShopStand { Kind = StandKind.Shrine, ItemId = Run.Pick(offer, rng), Price = LightPips.ShrineHalves, Position = poi.Position });
     }
 
     /// <summary>A defeated mob leaves shells, flung a little way.</summary>

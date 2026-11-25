@@ -1743,6 +1743,7 @@ public partial class TopDownMain : Node3D
         if (map.InHaven(arriveAt ?? map.Start.Position)) _run.Hp = _run.MaxHp;
         EnterSea();
         _world = new PlaneWorld(_map, _tuning, _run, InDiveCave ? DiveCaveOptions(_map) : Sea is not null ? SeaOptions() : DebugBoss() ?? DiveBoss());
+        AddSeaPlaces();
         // (Her light as set by hand in the F1 menu, if it is.)
         _world.ManualLight = _manualLight;
         if (_dbgDiveClock > 0f) _world.DebugClockTo(_dbgDiveClock);

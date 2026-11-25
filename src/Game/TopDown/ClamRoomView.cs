@@ -20,6 +20,9 @@ public partial class ClamRoomView : Node3D
     {
         public PlaneClam Sim = null!;
         public Node3D Hinge = null!;
+        /// <summary>Its root, and where its sim stood when it was built (an open level's window moves it since).</summary>
+        public Node3D Root = null!;
+        public System.Numerics.Vector2 BuiltAt;
         public ShaderMaterial? Floor;
         public SpotLight3D? Inner;
         public float Light, Magic;
@@ -31,6 +34,17 @@ public partial class ClamRoomView : Node3D
         public Node3D Root = null!;
         public ShaderMaterial Floor = null!;
         public float Light, Magic;
+        public System.Numerics.Vector2 BuiltAt;
+    }
+
+    /// <summary>A built thing's root kept over where its sim now stands (an open level's window moves on), its floor light with it.</summary>
+    static void Follow(Node3D root, ShaderMaterial? floor, System.Numerics.Vector2 builtAt, System.Numerics.Vector2 now)
+    {
+        var d = now - builtAt;
+        var at = new Vector3(d.X, 0f, d.Y);
+        if (root.Position.IsEqualApprox(at)) return;
+        root.Position = at;
+        floor?.SetShaderParameter(SN.Of("glow_pos"), new Vector3(now.X, RestHeight, now.Y));
     }
 
     const float InnerEnergy = 1.2f;
@@ -135,7 +149,7 @@ public partial class ClamRoomView : Node3D
         upper.SetInstanceShaderParameter(SN.Of("drained"), 0f);
         hinge.AddChild(upper);
 
-        var c = new Clam { Sim = sim, Hinge = hinge };
+        var c = new Clam { Sim = sim, Hinge = hinge, Root = root, BuiltAt = at };
         if (sim.Pearl is { } pearl)
         {
             // Its pearl's light, out of the clam's mouth only, and a shadowed spotlight of its colour the same way.
@@ -217,8 +231,11 @@ public partial class ClamRoomView : Node3D
         float bright = Mathf.Clamp(0.6f + 0.3f * (world.Map.Depth - 1), 0.6f, 2.2f);
         Glows.Clear();
         GlowColors.Clear();
+        // (An open level's clams come in with their chunks.)
+        while (_clams.Count < world.Clams.Count) _clams.Add(Build(world, world.Clams[_clams.Count]));
         foreach (var c in _clams)
         {
+            Follow(c.Root, c.Floor, c.BuiltAt, c.Sim.Position);
             float t = c.Sim.Open ? Mathf.Clamp(c.Sim.Opened / OpenSeconds, 0f, 1f) : 0f;
             c.Hinge.Rotation = new Vector3(0f, 0f, Mathf.DegToRad(OpenDeg) * EaseOutBack(t));
             if (c.Floor is null || c.Inner is null || c.Sim.Pearl is not { } pearl) continue;
@@ -240,7 +257,7 @@ public partial class ClamRoomView : Node3D
             if (_loose.ContainsKey(pearl) || !Waiting(pearl) || world.Clams.Exists(c => c.Pearl == pearl)) continue;
             var root = new Node3D();
             AddChild(root);
-            var l = new Loose { Root = root, Floor = FloorLight(root, world.Map, pearl.Position, Vector3.Back, Mathf.Pi + 0.5f, LooseReach) };
+            var l = new Loose { Root = root, Floor = FloorLight(root, world.Map, pearl.Position, Vector3.Back, Mathf.Pi + 0.5f, LooseReach), BuiltAt = pearl.Position };
             Colour(world, pearl, l.Floor, out _);
             _loose[pearl] = l;
         }
@@ -248,6 +265,7 @@ public partial class ClamRoomView : Node3D
         foreach (var (pearl, l) in _loose)
         {
             bool waiting = Waiting(pearl);
+            Follow(l.Root, l.Floor, l.BuiltAt, pearl.Position);
             l.Light = Mathf.MoveToward(l.Light, waiting ? 1f : 0f, dt / (waiting ? 0.6f : 0.8f));
             l.Floor.SetShaderParameter(SN.Of("glow_strength"), 1.1f * Mathf.Min(bright, 1.2f) * l.Light);
             if (waiting) Sparkle(ref l.Magic, pearl.Position, 4f, dt);

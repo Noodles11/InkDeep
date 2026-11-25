@@ -139,6 +139,7 @@ public partial class TopDownMain
             var (chunk, ground) = task.Result;
             _seaBuilt[key] = chunk;
             _level.ShowSeaChunk(chunk, ground);
+            AddSeaPlace(chunk);
             var (min, max) = (chunk.Min - _seaW, chunk.Max - _seaW);
             if (max.X > 0f && max.Y > 0f && min.X < LevelMap.Seeded && min.Y < LevelMap.Seeded)
             {
@@ -160,6 +161,19 @@ public partial class TopDownMain
         // (F3 shows the chunk map in place of the window's own, which moves.)
         _seaMap.Visible = _debugMap.Visible;
         if (_seaMap.Visible) _seaMap.Sync(sea, her + _seaW, here, _seaVisited, _seaBuilt, _seaFound);
+    }
+
+    /// <summary>A chunk's place (OpenSea.PlaceRules) into the sim, once: a hole is the map's own.</summary>
+    void AddSeaPlace(OpenSea.Chunk chunk)
+    {
+        if (chunk.Place is { } kind && kind != PoiKind.Hole) _world.AddSeaPlace(kind, chunk.PlaceAt - _seaW, chunk.PlaceAt);
+    }
+
+    /// <summary>The places of the chunks made with the level, once its sim is made (its views are shown after).</summary>
+    void AddSeaPlaces()
+    {
+        if (_levelShape is not { Sea: not null } shape) return;
+        foreach (var (chunk, _) in shape.SeaChunks) AddSeaPlace(chunk);
     }
 
     /// <summary>The window moved on by <paramref name="by"/> (sea metres): the sim's map refilled, she and the whole world moved back by as much.</summary>

@@ -217,6 +217,8 @@ public partial class CombatView : Node3D
     }
 
     readonly List<Node3D> _shrines = new();
+    /// <summary>Each shrine stone's stand (it keeps its place under its pearl as an open level's window moves on).</summary>
+    readonly Dictionary<Node3D, ShopStand> _stoneOf = new();
 
     static Node3D PriceTag(string price)
     {
@@ -293,6 +295,47 @@ public partial class CombatView : Node3D
         return ImageTexture.CreateFromImage(img);
     }
 
+    ISet<string>? _fresh;
+    int _shopsOf;
+    ItemCatalog? _standCatalog;
+
+    /// <summary>A stand's goods (a shop's, a deal's, a shrine's): built when the stand is there (a new level, or an open level's place come in with its chunk).</summary>
+    void AddStand(ShopStand stand)
+    {
+        var catalog = _standCatalog;
+        var fresh = _fresh;
+        var node = new Node3D { Position = new Vector3(stand.Position.X, LevelMap.SwimBand, stand.Position.Y) };
+        if (stand.Kind is StandKind.Pearl or StandKind.Deal or StandKind.Shrine)
+        {
+            Color a = new(1f, 0.95f, 0.85f), b = new(0.8f, 0.85f, 1f);
+            if (catalog is not null && catalog.TryGet(stand.ItemId, out var item) && item.Pearl is { } look)
+            {
+                a = new Color(look.Colors[0]);
+                b = new Color(look.Colors[^1]);
+            }
+            node.AddChild(new MeshInstance3D
+            {
+                Mesh = new SphereMesh { Radius = 0.42f, Height = 0.84f, RadialSegments = 24, Rings = 12 },
+                MaterialOverride = new StandardMaterial3D { AlbedoColor = a, EmissionEnabled = true, Emission = b, EmissionEnergyMultiplier = 1.4f, Roughness = 0.15f, Metallic = 0.3f, RimEnabled = true, Rim = 1f },
+            });
+            node.AddChild(new OmniLight3D { LightColor = b.Lerp(Colors.White, 0.3f), LightEnergy = WorldPearlLight, OmniRange = WorldPearlReach, ShadowEnabled = false });
+        }
+        else
+        {
+            // The top-up: the very light orb the creatures leave, a little larger on its stand.
+            node.AddChild(LightOrb(1.5f));
+        }
+        if (stand.Kind == StandKind.Pearl && fresh?.Contains(stand.ItemId) == true) node.AddChild(NewChip());
+        // A light shrine: its old stone under the pearl (CROSSOVER.md §5), and what it asks is her light, not shells.
+        if (stand.Kind == StandKind.Shrine) AddChild(ShrineStone(stand.Position));
+        var tag = PriceTag(stand.Kind == StandKind.Deal ? $"-{Mathf.RoundToInt(CrabTuning.Cut * 100f)}% HP"
+            : stand.Kind == StandKind.Shrine ? $"{stand.Price / 2} light" : stand.Price.ToString());
+        node.AddChild(tag);
+        _prices.Add(tag);
+        AddChild(node);
+        _stands.Add(node);
+    }
+
     /// <param name="fresh">Pearls offered for the first time since an achievement unlocked them: they wear a NEW chip.</param>
     public void Show(PlaneWorld world, ItemCatalog? catalog, ISet<string>? fresh = null)
     {
@@ -304,6 +347,7 @@ public partial class CombatView : Node3D
         foreach (var st in _stands) st.QueueFree();
         foreach (var st in _shrines) st.QueueFree();
         _shrines.Clear();
+        _stoneOf.Clear();
         foreach (var h in _hearts) h.QueueFree();
         _hearts.Clear();
         _shells.Clear();
@@ -311,41 +355,12 @@ public partial class CombatView : Node3D
         _prices.Clear();
         _shops.Clear();
         _shops.AddRange(world.Map.Pois.Where(p => p.Kind is PoiKind.Shop or PoiKind.CrabDeal or PoiKind.Shrine));
+        _shopsOf = world.Map.Pois.Count;
         // The shop's goods float on their own (a clam room's pearl hangs still instead): pearls in their colours, the top-up a light
         // orb (as the creatures leave). Each hangs a little price tag on a string (its price and a shell), shown only while she is inside the shop.
-        foreach (var stand in world.Stands)
-        {
-            var node = new Node3D { Position = new Vector3(stand.Position.X, LevelMap.SwimBand, stand.Position.Y) };
-            if (stand.Kind is StandKind.Pearl or StandKind.Deal or StandKind.Shrine)
-            {
-                Color a = new(1f, 0.95f, 0.85f), b = new(0.8f, 0.85f, 1f);
-                if (catalog is not null && catalog.TryGet(stand.ItemId, out var item) && item.Pearl is { } look)
-                {
-                    a = new Color(look.Colors[0]);
-                    b = new Color(look.Colors[^1]);
-                }
-                node.AddChild(new MeshInstance3D
-                {
-                    Mesh = new SphereMesh { Radius = 0.42f, Height = 0.84f, RadialSegments = 24, Rings = 12 },
-                    MaterialOverride = new StandardMaterial3D { AlbedoColor = a, EmissionEnabled = true, Emission = b, EmissionEnergyMultiplier = 1.4f, Roughness = 0.15f, Metallic = 0.3f, RimEnabled = true, Rim = 1f },
-                });
-                node.AddChild(new OmniLight3D { LightColor = b.Lerp(Colors.White, 0.3f), LightEnergy = WorldPearlLight, OmniRange = WorldPearlReach, ShadowEnabled = false });
-            }
-            else
-            {
-                // The top-up: the very light orb the creatures leave, a little larger on its stand.
-                node.AddChild(LightOrb(1.5f));
-            }
-            if (stand.Kind == StandKind.Pearl && fresh?.Contains(stand.ItemId) == true) node.AddChild(NewChip());
-            // A light shrine: its old stone under the pearl (CROSSOVER.md §5), and what it asks is her light, not shells.
-            if (stand.Kind == StandKind.Shrine) AddChild(ShrineStone(stand.Position));
-            var tag = PriceTag(stand.Kind == StandKind.Deal ? $"-{Mathf.RoundToInt(CrabTuning.Cut * 100f)}% HP"
-                : stand.Kind == StandKind.Shrine ? $"{stand.Price / 2} light" : stand.Price.ToString());
-            node.AddChild(tag);
-            _prices.Add(tag);
-            AddChild(node);
-            _stands.Add(node);
-        }
+        _fresh = fresh;
+        _standCatalog = catalog;
+        foreach (var stand in world.Stands) AddStand(stand);
         foreach (var s in _shots) s.QueueFree();
         foreach (var h in _halos) h.QueueFree();
         foreach (var l in _lamps) l.QueueFree();
@@ -1367,6 +1382,15 @@ void fragment() {
             _hearts[i].Position = new Vector3(heart.Position.X, LevelMap.SwimBand + 0.12f * Mathf.Sin(_time * 1.8f + i), heart.Position.Y);
             _hearts[i].Scale = Vector3.One * (1f + 0.06f * breathe);
         }
+        // (An open level's places come in with their chunks: their stands, and the shops among them.)
+        while (_stands.Count < world.Stands.Count) AddStand(world.Stands[_stands.Count]);
+        if (_shopsOf != world.Map.Pois.Count)
+        {
+            _shopsOf = world.Map.Pois.Count;
+            _shops.Clear();
+            _shops.AddRange(world.Map.Pois.Where(p => p.Kind is PoiKind.Shop or PoiKind.CrabDeal or PoiKind.Shrine));
+        }
+        foreach (var (stone, st) in _stoneOf) stone.Position = new Vector3(st.Position.X, stone.Position.Y, st.Position.Y);
         for (int i = 0; i < _stands.Count && i < world.Stands.Count; i++)
         {
             var stand = world.Stands[i];

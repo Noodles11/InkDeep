@@ -107,6 +107,30 @@ public class OpenSeaTests
     }
 
     [Fact]
+    public void Each_kind_of_place_lies_as_often_as_its_rule_says_none_side_by_side_and_none_by_her_start()
+    {
+        var keys = ChunksWithin(40).ToList();
+        var places = keys.ToDictionary(k => k, Sea.PlaceOf);
+        foreach (var rule in OpenSea.PlaceRules)
+        {
+            var mine = keys.Where(k => places[k] == rule.Kind).ToList();
+            float per = keys.Count / (float)mine.Count;
+            Assert.True(per >= rule.AtMostOnceIn * 0.8f && per <= rule.AtLeastOnceIn * 1.25f, $"{rule.Kind}: one in {per:0.0} chunks (want {rule.AtMostOnceIn}–{rule.AtLeastOnceIn})");
+            Assert.All(mine, k => Assert.DoesNotContain(Sea.Neighbours(k), n => places.GetValueOrDefault(n) == rule.Kind));
+        }
+        var home = Sea.ChunkOfCell((0, 0));
+        Assert.Null(places[home]);
+        Assert.All(Sea.Neighbours(home), n => Assert.Null(Sea.PlaceOf(n)));
+        // Built, a chunk holds its place in its open water (a hole open to the deep).
+        foreach (var k in keys.Where(k => places[k] is not null).Take(30))
+        {
+            var c = Sea.Build(k);
+            if (c.Place is null) continue;
+            Assert.True(c.Contains(c.PlaceAt) && c.At((int)c.PlaceAt.X, (int)c.PlaceAt.Y) < 0f, $"{k}: its {c.Place} not in its water");
+        }
+    }
+
+    [Fact]
     public void A_chunk_is_the_same_every_time_and_quick_to_build()
     {
         var sea = new OpenSea(0xC0FFEEUL, Biome.SunlitReef);
@@ -140,6 +164,40 @@ public class OpenSeaTests
         Assert.Equal(under, map.HeightAt(w.Player.Position), 3);
         for (int i = 0; i < 30; i++) w.Step(default);
         Assert.False(w.Defeated);
+    }
+
+    [Fact]
+    public void A_chunks_place_comes_into_the_sim_whole_and_keeps_its_place_in_the_sea_as_the_window_moves()
+    {
+        var catalog = OctoShoots.Core.Items.ItemCatalog.FromJson(System.IO.File.ReadAllText(System.IO.Path.Combine(AppContext.BaseDirectory, "data", "items.json")));
+        var built = ChunksWithin(12).ToDictionary(k => k, Sea.Build);
+        var map = new LevelMap { Templated = true, Seed = 7 };
+        var origin = new Vector2(-54f, -54f);
+        map.Pois.Add(new Poi { Kind = PoiKind.Start, Position = new Vector2(55f), Radius = 6f });
+        map.Pois.Add(new Poi { Kind = PoiKind.Exit, Position = new Vector2(55f), Radius = 6f });
+        Sea.Fill(map, origin, k => built.GetValueOrDefault(k));
+        var w = new PlaneWorld(map, new Tuning(), new PlaneRun(catalog, new Tuning()), new PlaneOptions { OpenSea = true, Corruption = false, Adventure = false });
+        var at = new Vector2(60f, 50f);
+        foreach (var kind in new[] { PoiKind.TreasureCave, PoiKind.ShellCache, PoiKind.Shop, PoiKind.Shrine, PoiKind.CrabDeal, PoiKind.Relic })
+            w.AddSeaPlace(kind, at, at + origin);
+        Assert.Equal(8, map.Pois.Count);
+        Assert.Equal(8, w.Visited.Length);
+        Assert.Single(w.Clams);
+        Assert.NotEmpty(w.Shells);
+        Assert.Contains(w.Stands, s => s.Kind == StandKind.Health);
+        Assert.Contains(w.Stands, s => s.Kind == StandKind.Shrine);
+        Assert.Contains(w.Stands, s => s.Kind == StandKind.Deal);
+        Assert.NotNull(w.CrabAt);
+        Assert.True(w.Relics.Count + w.Pearls.Count >= 1);
+        // Moved on a cell: every one of them where it was in the sea.
+        var before = map.Pois.Select(p => p.Position + origin).Concat(w.Clams.Select(c => c.Position + origin)).Concat(w.Stands.Select(s => s.Position + origin)).Concat(w.Shells.Select(s => s.Position + origin)).ToList();
+        var by = new Vector2(OpenSea.Cell, -OpenSea.Cell);
+        origin += by;
+        Sea.Fill(map, origin, k => built.GetValueOrDefault(k));
+        w.ShiftWindow(by);
+        var after = map.Pois.Select(p => p.Position + origin).Concat(w.Clams.Select(c => c.Position + origin)).Concat(w.Stands.Select(s => s.Position + origin)).Concat(w.Shells.Select(s => s.Position + origin)).ToList();
+        Assert.Equal(before.Count, after.Count);
+        Assert.All(before.Zip(after), pair => Assert.True(Vector2.Distance(pair.First, pair.Second) < 1e-3f, $"{pair.First} moved to {pair.Second}"));
     }
 
     [Fact]

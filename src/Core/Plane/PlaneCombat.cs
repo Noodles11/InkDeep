@@ -280,20 +280,22 @@ public sealed partial class PlaneWorld
         var rng = new Rng(Map.Seed * 0x9E3779B97F4A7C15UL ^ (ulong)(Map.Cycle * 100000 + Map.Depth * 1000 + Map.Level) ^ ((ulong)Map.Attempt << 40));
         var murk = new Rng(Map.Seed ^ 0xC1A3UL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Attempt << 46));
         for (int pi = 0; pi < Map.Pois.Count; pi++)
-        {
-            var poi = Map.Pois[pi];
-            if (poi.Kind != PoiKind.TreasureCave) continue;
-            // Each a shut clam (PlaneClams.cs): a pearl in it, or now and then a murkling.
-            var clam = new PlaneClam { Position = poi.Position, Poi = pi, Murk = murk.NextFloat() < ClamTuning.MurkShare };
-            Clams.Add(clam);
-            if (clam.Murk) continue;
-            // (A template level's clam offers from the treasure pool: CROSSOVER.md §7.)
-            var offer = Map.Templated ? Run.Offer("treasure", Pearls.Select(q => q.ItemId))
-                : PlaneRun.InPlay.Where(id => Run.CanOffer(id) && Pearls.All(q => q.ItemId != id)).ToList();
-            if (offer.Count == 0) continue;
-            clam.Pearl = new PlanePearl { ItemId = Run.Pick(offer, rng), Position = poi.Position };
-            Pearls.Add(clam.Pearl);
-        }
+            if (Map.Pois[pi].Kind == PoiKind.TreasureCave) PlaceClam(pi, rng, murk);
+    }
+
+    /// <summary>A clam at a place (PlaneClams.cs), shut: a pearl in it, or now and then a murkling.</summary>
+    void PlaceClam(int pi, Rng rng, Rng murk)
+    {
+        var poi = Map.Pois[pi];
+        var clam = new PlaneClam { Position = poi.Position, Poi = pi, Murk = murk.NextFloat() < ClamTuning.MurkShare };
+        Clams.Add(clam);
+        if (clam.Murk) return;
+        // (A template level's clam offers from the treasure pool: CROSSOVER.md §7.)
+        var offer = Map.Templated ? Run.Offer("treasure", Pearls.Select(q => q.ItemId))
+            : PlaneRun.InPlay.Where(id => Run.CanOffer(id) && Pearls.All(q => q.ItemId != id)).ToList();
+        if (offer.Count == 0) return;
+        clam.Pearl = new PlanePearl { ItemId = Run.Pick(offer, rng), Position = poi.Position };
+        Pearls.Add(clam.Pearl);
     }
 
     /// <summary>The way down: open, except on a boss level until the boss is freed.</summary>

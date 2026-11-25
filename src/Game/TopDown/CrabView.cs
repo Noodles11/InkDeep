@@ -124,6 +124,12 @@ void fragment() {
     public void Sync(PlaneWorld world, float dt)
     {
         _time += dt;
+        // (An open level's crab comes in with its deal's chunk, and keeps its place as the window moves on.)
+        if (world.CrabAt is { } crabAt)
+        {
+            if (_crab is null && !_leaving) Show(world);
+            _home = new Vector3(crabAt.X, _home.Y, crabAt.Y);
+        }
         Clues(world, dt);
         SyncRing(world);
         if (world.NerveAt is { } nerve)

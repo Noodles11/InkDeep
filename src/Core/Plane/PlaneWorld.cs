@@ -192,8 +192,10 @@ public sealed partial class PlaneWorld
         Director = new ReefDirector(map, Options.Geysers);
         if (Options.OpenSea)
         {
+            // (Its places come with their chunks: AddSeaPlace.)
             PlaceCurse();
             Revealed = new bool[Map.Pois.Count];
+            PlaceShells();
             return;
         }
         if (Options.Pufferlings) PlaceMobs();
@@ -238,17 +240,6 @@ public sealed partial class PlaneWorld
 
     public LevelMap Map { get; }
 
-    /// <summary>
-    /// An open level's window moved on by <paramref name="by"/> (its map refilled for its new place, OpenSea.Fill): she
-    /// keeps her place in the sea, so her place in the window moves back by as much; her shots in flight are let go.
-    /// </summary>
-    public void ShiftWindow(Vector2 by)
-    {
-        Player.Position -= by;
-        Player.PrevPosition -= by;
-        Shots.Clear();
-        Clouds.Clear();
-    }
     public Tuning Tuning { get; set; }
     public long Tick { get; private set; }
     /// <summary>Time on this level (s), from when it was entered.</summary>

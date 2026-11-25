@@ -26,8 +26,92 @@ public sealed class OpenSea
     public const int Cell = CaveTemplates.Cell;
     /// <summary>Two neighbouring chunks not joined by the tree are joined this often.</summary>
     public const float ChunkLink = 0.55f;
-    /// <summary>A chunk holds a hole down this often (where it has the room).</summary>
-    public const float HoleChance = 0.22f;
+    /// <summary>
+    /// How often each kind of place lies in the sea: at most one in AtMostOnceIn chunks and at least one in AtLeastOnceIn.
+    /// The sea is cut into regions of about twice AtLeastOnceIn chunks for each kind (Region), and each region rolls how many it
+    /// holds, from as many as keep that "at least" to as many as the "at most" allows, each in a chunk of its own and
+    /// never two side by side. A chunk holds one place at most: where two kinds want one, the kind higher in this list
+    /// has it. Her first chunk and those round it hold none.
+    /// </summary>
+    public static readonly IReadOnlyList<PlaceRule> PlaceRules = new PlaceRule[]
+    {
+        new(PoiKind.Hole, 6, 12),
+        new(PoiKind.Shop, 5, 10),
+        new(PoiKind.TreasureCave, 4, 8),
+        new(PoiKind.ShellCache, 6, 12),
+        new(PoiKind.Shrine, 8, 16),
+        new(PoiKind.CrabDeal, 10, 20),
+        new(PoiKind.Relic, 25, 50),
+    };
+
+    /// <summary>One kind of place's chances (see PlaceRules).</summary>
+    public sealed record PlaceRule(PoiKind Kind, int AtMostOnceIn, int AtLeastOnceIn);
+
+    readonly ConcurrentDictionary<(int Rule, int X, int Y), HashSet<(int X, int Y)>> _chosen = new();
+
+    /// <summary>The place a chunk holds (by the rules), or none.</summary>
+    public PoiKind? PlaceOf((int X, int Y) key)
+    {
+        if (Near(key)) return null;
+        for (int r = 0; r < PlaceRules.Count; r++)
+            if (Chosen(r, key).Contains(key)) return PlaceRules[r].Kind;
+        return null;
+    }
+
+    /// <summary>Her first chunk and those touching it.</summary>
+    bool Near((int X, int Y) key)
+    {
+        var home = ChunkOfCell((0, 0));
+        return key == home || Neighbours(home).Contains(key);
+    }
+
+    /// <summary>A rule's region (a block of cells holding about twice AtLeastOnceIn chunks), by a chunk's first cell.</summary>
+    static (int W, int H) Region(PlaceRule rule)
+    {
+        int cells = 4 * rule.AtLeastOnceIn;
+        int w = (int)MathF.Ceiling(MathF.Sqrt(cells));
+        return (w, (int)MathF.Ceiling(cells / (float)w));
+    }
+
+    /// <summary>The chunks a rule has chosen in the region holding a chunk (none taken by a rule above it, none side by side).</summary>
+    HashSet<(int X, int Y)> Chosen(int r, (int X, int Y) key)
+    {
+        var rule = PlaceRules[r];
+        var (w, h) = Region(rule);
+        int bx = (int)MathF.Floor(key.X / (float)w), by = (int)MathF.Floor(key.Y / (float)h);
+        return _chosen.GetOrAdd((r, bx, by), _ =>
+        {
+            var inside = new List<(int X, int Y)>();
+            for (int y = by * h; y < (by + 1) * h; y++)
+            for (int x = bx * w; x < (bx + 1) * w; x++)
+                if (ChunkOfCell((x, y)) == (x, y)) inside.Add((x, y));
+            var rng = new Rng(Mix(Seed, (ulong)r, (ulong)(uint)bx, (ulong)(uint)by, 0x9A1CE));
+            int least = Math.Max(1, (int)MathF.Round(inside.Count / (float)rule.AtLeastOnceIn));
+            int most = Math.Max(least, inside.Count / rule.AtMostOnceIn);
+            int want = least + rng.Int(most - least + 1);
+            for (int i = inside.Count - 1; i > 0; i--)
+            {
+                int j = rng.Int(i + 1);
+                (inside[i], inside[j]) = (inside[j], inside[i]);
+            }
+            var chosen = new HashSet<(int X, int Y)>();
+            foreach (var c in inside)
+            {
+                if (chosen.Count >= want) break;
+                if (Near(c) || Neighbours(c).Any(chosen.Contains)) continue;
+                // (Nor one touching a later region, row by row: of two across a border, one never holds it.)
+                if (Neighbours(c).Any(n =>
+                    {
+                        int nx = (int)MathF.Floor(n.X / (float)w), ny = (int)MathF.Floor(n.Y / (float)h);
+                        return ny > by || ny == by && nx > bx;
+                    })) continue;
+                bool taken = false;
+                for (int above = 0; above < r && !taken; above++) taken = Chosen(above, c).Contains(c);
+                if (!taken) chosen.Add(c);
+            }
+            return chosen;
+        });
+    }
     /// <summary>Heights kept past a chunk's edge (its mesh's spline and normals), and water read past that (its distances).</summary>
     public const int Pad = 3, Context = 12;
     /// <summary>The window's height where no chunk is built yet: just over her plane (it stops her, and casts next to no shade).</summary>
@@ -39,6 +123,8 @@ public sealed class OpenSea
     /// <summary>The floor, and the rock's top (each give or take its noise).</summary>
     const float Floor = -1f, Top = 3f;
     /// <summary>A hole: its opening, its slope, its sag at the rim, its lip; how far its middle keeps from the chunk's edge (its slope then ends Pad inside it: a neighbour's padding never holds it), and how much room it needs.</summary>
+    /// <summary>How much room a place needs round its POI mark (metres to the rock).</summary>
+    const float PlaceRoom = 3f;
     const float HoleOpening = 2.4f, HoleSlope = 3f, HoleSag = 1.2f, HoleLip = 1.4f, HoleKeep = 9f, HoleRoom = 3.5f;
 
     public readonly ulong Seed;
@@ -178,6 +264,9 @@ public sealed class OpenSea
         public int Stride, Rows;
         public Vector2 Origin;
         public readonly List<Vector2> Holes = new();
+        /// <summary>The place it holds (PlaceOf; a hole is in Holes as well), and where: on one of its cells' POI marks in open water, else where its water is widest.</summary>
+        public PoiKind? Place;
+        public Vector2 PlaceAt;
         /// <summary>Its template: its cells' templates by name, and how many neighbours it is joined to.</summary>
         public string Template = "";
         public int Ways;
@@ -268,8 +357,31 @@ public sealed class OpenSea
             // (Rock always stands over her plane and water always lies under it, however thin: a wall is a wall.)
             chunk.Heights[j * chunk.Stride + i] = open[k] ? MathF.Min(hgt, -0.3f) : MathF.Max(hgt, 0.3f);
         }
-        // Its hole down, now and then: where its water is widest, well inside it (so no neighbour's heights change).
-        if (Unit(Mix(Seed, (ulong)(uint)key.X, (ulong)(uint)key.Y, 0x401E)) < HoleChance)
+        // Its place, if it holds one: a hole down where its water is widest, well inside it (so no neighbour's heights
+        // change); anything else on one of its POI marks with room round it, else where its water is widest.
+        chunk.Place = PlaceOf(key);
+        if (chunk.Place is { } kind && kind != PoiKind.Hole)
+        {
+            var marks = new List<Vector2>();
+            Vector2 widest = (min + max) * 0.5f;
+            float room = -1f;
+            for (int j = 0; j < h; j++)
+            for (int i = 0; i < w; i++)
+            {
+                var p = new Vector2(x0 + i, y0 + j);
+                if (!chunk.Contains(p) || p.X < min.X + 4f || p.Y < min.Y + 4f || p.X > max.X - 4f || p.Y > max.Y - 4f) continue;
+                int k = j * w + i;
+                if (!open[k]) continue;
+                if (toRock[k] > room + 0.01f)
+                {
+                    room = toRock[k];
+                    widest = p;
+                }
+                if (toRock[k] >= PlaceRoom && CellGrid((FloorDiv((int)p.X), FloorDiv((int)p.Y))).Grid[Mod((int)p.X, Cell), Mod((int)p.Y, Cell)] == '*') marks.Add(p);
+            }
+            chunk.PlaceAt = marks.Count > 0 ? marks[(int)(Mix(Seed, (ulong)(uint)key.X, (ulong)(uint)key.Y, 0x91AC) % (ulong)marks.Count)] : widest;
+        }
+        if (chunk.Place == PoiKind.Hole)
         {
             float best = HoleRoom;
             Vector2? at = null;
@@ -285,7 +397,12 @@ public sealed class OpenSea
                     at = p;
                 }
             }
-            if (at is { } c) DigHole(chunk, c, new Rng(Mix(Seed, (ulong)(uint)key.X, (ulong)(uint)key.Y, 0x401F)));
+            if (at is { } c)
+            {
+                DigHole(chunk, c, new Rng(Mix(Seed, (ulong)(uint)key.X, (ulong)(uint)key.Y, 0x401F)));
+                chunk.PlaceAt = c;
+            }
+            else chunk.Place = null;
         }
         var names = CellsOf(key).Select(c => CellGrid(c).Name);
         chunk.Template = string.Join("+", names);

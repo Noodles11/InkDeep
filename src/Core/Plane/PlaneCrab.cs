@@ -42,9 +42,14 @@ public sealed partial class PlaneWorld
         var cave = Map.Caves[room.Cave];
         CrabFacing = cave.Facing;
         CrabAt = room.Position - cave.Facing * CrabTuning.Back;
+        DealAt(room, cave.Facing, new Rng(Map.Seed ^ 0xC2ABUL ^ ((ulong)Map.Level << 28) ^ ((ulong)Map.Depth << 36) ^ ((ulong)Map.Attempt << 50)));
+    }
+
+    /// <summary>A crab's deal at a place: its two pearls either side of it.</summary>
+    void DealAt(Poi room, Vector2 facing, Rng rng)
+    {
         if (Run.Catalog is not { } catalog) return;
-        var side = new Vector2(-cave.Facing.Y, cave.Facing.X);
-        var rng = new Rng(Map.Seed ^ 0xC2ABUL ^ ((ulong)Map.Level << 28) ^ ((ulong)Map.Depth << 36) ^ ((ulong)Map.Attempt << 50));
+        var side = new Vector2(-facing.Y, facing.X);
         var rare = PlaneRun.CrabPearls.Where(id => catalog.TryGet(id, out _) && !Run.Items.Contains(id)).ToList();
         var best = PlaneRun.InPlay.Where(id => Run.CanOffer(id) && catalog.TryGet(id, out var item) && item.Quality >= 3).ToList();
         var offers = new List<string>();
