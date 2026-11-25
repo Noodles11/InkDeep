@@ -92,6 +92,11 @@ public sealed class LevelPlan
     public int Shrines { get; private set; }
     /// <summary>A template level's relic place (CROSSOVER.md §5.2), 0 or 1: its depth's treasure hides on one level of the depth.</summary>
     public int Relics { get; private set; }
+    /// <summary>
+    /// A template level's holes down (CROSSOVER.md §3), 1 to 3 (none on a boss's: its Crack): she dives down any of them,
+    /// whenever she likes; one always, a second at HoleSecond, a third (of those) at HoleThird.
+    /// </summary>
+    public int DiveHoles { get; private set; }
     /// <summary>The level above was a boss level: she arrives on its arena's floor.</summary>
     public bool EntryFromArena { get; init; }
     /// <summary>
@@ -180,6 +185,13 @@ public sealed class LevelPlan
         if (plan.Templated && plan.Shops == 0 && id.Level >= 2 && plan.Places < LevelStocking.MaxPlaces
             && new RunStreams(seed).Plan(id).Stream("crossover shop").NextFloat() < CrossoverShop)
             plan.Shops = 1;
+        // Its holes down: one, perhaps a second, rarely a third (each on the same stream of its own).
+        if (plan.Templated && !plan.HasBoss)
+        {
+            var holes = new RunStreams(seed).Plan(id).Stream("crossover holes");
+            float roll = holes.NextFloat();
+            plan.DiveHoles = roll < HoleSecond * HoleThird ? 3 : roll < HoleSecond ? 2 : 1;
+        }
         // Its light shrine, the same way.
         if (plan.Templated && plan.Places < LevelStocking.MaxPlaces
             && new RunStreams(seed).Plan(id).Stream("crossover shrine").NextFloat() < CrossoverShrine)
@@ -195,6 +207,8 @@ public sealed class LevelPlan
     public const float CrossoverShop = 0.45f;
     /// <summary>How often a template level holds a light shrine.</summary>
     public const float CrossoverShrine = 0.35f;
+    /// <summary>How often a template level has a second hole down, and how often one with two has a third.</summary>
+    public const float HoleSecond = 0.5f, HoleThird = 0.35f;
 
     static LevelPlan DivePlan(SeedCode seed, LevelId id, float luck)
     {

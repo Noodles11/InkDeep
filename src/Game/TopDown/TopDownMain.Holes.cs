@@ -32,20 +32,13 @@ public partial class TopDownMain
     {
         _holeShapes.Clear();
         _belowHole = _diveHole = -1;
-        _diveAt = null;
+        foreach (var h in _map.Holes) GD.Print($"DBGHOLE {h.Shaft.Center} {_map.HeightAt(h.Shaft.Center)} {_map.HeightAt(h.Shaft.Center + new System.Numerics.Vector2(3f, 0f))} {_map.HeightAt(h.Shaft.Center + new System.Numerics.Vector2(6f, 0f))} {_map.HeightAt(h.Shaft.Center + new System.Numerics.Vector2(10f, 0f))}");
         StartNextHoleShape();
     }
 
-    /// <summary>
-    /// A hole's middle. A template level has no holes (docs/proposals/CROSSOVER.md §3): she dives where she is, so its one
-    /// way down is wherever she began her dive (before that, where she is).
-    /// </summary>
+    /// <summary>A hole's middle.</summary>
     System.Numerics.Vector2 HoleCenter(int hole) =>
-        _map.Templated && !_map.HasBoss ? _diveAt ?? _world?.Player.Position ?? _map.Start.Position
-        : hole >= 0 && hole < _map.Holes.Count ? _map.Holes[hole].Shaft.Center : _map.Exit.Position;
-
-    /// <summary>Where she began her dive on a template level (null: she has not).</summary>
-    System.Numerics.Vector2? _diveAt;
+        hole >= 0 && hole < _map.Holes.Count ? _map.Holes[hole].Shaft.Center : _map.Exit.Position;
 
     /// <summary>Where a hole leads (a map without its list of holes: the graph's first exit).</summary>
     LevelId DestinationOf(int hole) =>

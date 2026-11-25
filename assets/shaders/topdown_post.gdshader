@@ -135,8 +135,13 @@ uniform vec2 current_origin = vec2(0.0);
 // The leaks (AdventureView): where each is on her plane (x, z) and how open (0..1).
 uniform vec3 leaks[8];
 uniform int leak_count = 0;
-// A way down (x, z, radius of its opening, how much): below the rim there is no seabed, only water.
-uniform vec4 hole = vec4(0.0);
+// The ways down (x, z, radius of its opening, how much): below each one's rim there is no seabed, only water; down a
+// template level's holes the ground fades into it as it falls.
+uniform vec4 holes[4];
+uniform int hole_count = 0;
+// How dark the water down them is against the deep's own colour (1: as the water; a template level's holes darker, so
+// they read against a floor painted in the water's wash).
+uniform float hole_shade = 1.0;
 // Blasts' marks (CameraRig.AddBlur): where a burst of her light went off, a small round smear of the picture on her
 // plane — a zoom blur drawn in toward its middle — that fades: world x, z, age (0 → 1), radius (m).
 uniform vec4 blurs[4];
@@ -391,6 +396,17 @@ vec3 ink_relief(vec3 p) {
 	return vec3(lit, c - around / 8.0, c);
 }
 
+// How far a point lies down a way down's opening (0 out of it or above 2 m down, 1 at 5 m down within its rim).
+float hole_at(vec3 p) {
+	float at = 0.0;
+	for (int i = 0; i < hole_count; i++) {
+		vec4 hole = holes[i];
+		if (hole.w > 0.0)
+			at = max(at, hole.w * (1.0 - smoothstep(hole.z * 0.72, hole.z * 1.02, distance(p.xz, hole.xy))) * (1.0 - smoothstep(-5.0, -2.0, p.y)));
+	}
+	return at;
+}
+
 void fragment() {
 	vec2 uv = SCREEN_UV;
 	float depth = texture(depth_tex, uv).r;
@@ -507,10 +523,7 @@ void fragment() {
 		}
 	}
 
-	float hole_deep = 0.0;
-	if (hole.w > 0.0) {
-		hole_deep = hole.w * (1.0 - smoothstep(hole.z * 0.72, hole.z * 1.02, distance(world.xz, hole.xy))) * (1.0 - smoothstep(-5.0, -2.0, world.y));
-	}
+	float hole_deep = hole_at(world);
 
 	// Painted, the depths below her are stated as flat layers of water (each a step deeper, hazier), barely blurred.
 	float layered = below;
@@ -619,7 +632,7 @@ void fragment() {
 		col *= 1.0 - deep_fish_shade * shadow * smoothstep(0.0, 1.5, below);
 	}
 	// A way down: the ground gives way to the water itself.
-	col = mix(col, reef_water_deep, hole_deep);
+	col = mix(col, reef_water_deep * hole_shade, hole_deep);
 	// Her swells thicken the water a shade where they pass.
 	col = mix(col, reef_water_deep, clamp(swell_density, 0.0, 1.0) * 0.05);
 	// The wakes: a faint shimmer of light along each arm.
@@ -823,6 +836,8 @@ void fragment() {
 		deep *= 1.0 - 0.15 * ink_motif(wp * 0.8 + 11.0);
 		// (The floor darkens into the hollow at a wall's foot, as the rock above shades it.)
 		deep *= clamp(1.0 + min(relief.y, 0.0) * 0.12, 0.55, 1.0) * (0.9 + 0.2 * grain);
+		// (Down a template level's hole the floor falls away into the dark: hole_shade.)
+		deep *= 1.0 - (1.0 - hole_shade) * hole_at(iworld);
 		// (The rock and what stands on it dithered, never the water: a few tones of brightness, an ordered dither between
 		// them, softened by dither_strength. Her light below is not.)
 		if (dither > 0.0) ash = mix(ash, dither_world(ash, wp), dither * dither_strength);

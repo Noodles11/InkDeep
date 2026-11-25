@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using OctoShoots.Game.Fx;
 
@@ -57,6 +58,9 @@ public partial class EdgeArrows : Control
     }
 
     /// <summary>The places to show (world metres on her plane, each one's colour, sign, and how near counts as in it).</summary>
+    /// <summary>The sign of a hole down (drawn as an arrow pointing down).</summary>
+    public const string Down = "down";
+
     public void SetTargets(IEnumerable<(System.Numerics.Vector2 At, Color Colour, string Sign, float Reach)> targets)
     {
         _targets.Clear();
@@ -176,6 +180,14 @@ public partial class EdgeArrows : Control
             DrawArc(at, Radius - 0.6f, 0f, Mathf.Tau, 40, colour, 2.8f, true);
             // Its sign, inked in its colour.
             if (sign == ".") DrawCircle(at, 4.8f, colour);
+            else if (sign == Down)
+            {
+                // A hole down: an arrow pointing down.
+                var arrow = new[] { at + new Vector2(-3f, -9f), at + new Vector2(3f, -9f), at + new Vector2(3f, 0f), at + new Vector2(8f, 0f),
+                    at + new Vector2(0f, 9f), at + new Vector2(-8f, 0f), at + new Vector2(-3f, 0f) };
+                DrawPolyline(arrow.Append(arrow[0]).ToArray(), ink, 3f, true);
+                DrawColoredPolygon(arrow, colour);
+            }
             else
             {
                 float ascent = font.GetAscent(fontSize), descent = font.GetDescent(fontSize);

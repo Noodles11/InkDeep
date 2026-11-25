@@ -442,7 +442,7 @@ public sealed partial class CaveLayout
             g.Places.Add(new Place { Kind = kind, At = at, Radius = r, Spur = tunnel, Facing = facing });
         }
         var marks = spots.Where(p => keep[g.Index(p)]).ToList();
-        foreach (var kind in kinds.Where(k => !Poi.IsCaveHosted(k) && k != PoiKind.Hole))
+        foreach (var kind in kinds.Where(k => !Poi.IsCaveHosted(k)))
         {
             var options = marks.Where(p =>
                 Vector2.Distance(p, g.Start.At) >= PlaceRules.FromStart && Vector2.Distance(p, g.Exit.At) >= PlaceRules.FromExit

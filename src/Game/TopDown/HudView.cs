@@ -260,11 +260,6 @@ public partial class HudView : Control
     int _bossCrust;
     bool _bossFight;
     string _prompt = "";
-    /// <summary>The dive clock run so far, 0 → 1 (−1: a level without one), and how long its prompt shows once it has run.</summary>
-    float _diveClock = -1f;
-    /// <summary>A boss level's clock: when full, the current rises (its ring turns to ink instead of breathing light).</summary>
-    bool _tide;
-    const float DivePromptLinger = 6f;
     bool _promptReady;
     float _promptShown;
 
@@ -364,16 +359,9 @@ public partial class HudView : Control
             }
         }
         SyncShells(dt);
-        // A template level's dive clock (docs/proposals/CROSSOVER.md §3): the ring round her bell, and once it has run,
-        // the prompt for a few seconds.
-        bool templated = world.Map.Templated;
-        _diveClock = templated ? OctoShoots.Core.Plane.DiveClock.Progress(world.Time) : -1f;
-        // Over the shaft: how to dive, or why not yet.
-        // (A boss level's clock raises the current instead: its way down is the Crack, as before.)
-        bool anywhere = templated && !world.Map.HasBoss;
-        _tide = templated && world.Map.HasBoss;
-        bool over = anywhere ? world.CanDive && !Diving && world.Time < OctoShoots.Core.Plane.DiveClock.Seconds + DivePromptLinger
-            : world.OverShaft && !world.Defeated && !Diving;
+        // Over a hole: how to dive, or why not yet (a template level's holes are open at any time: docs/proposals/CROSSOVER.md §3).
+        bool anywhere = world.Map.DiveAnywhere;
+        bool over = world.OverShaft && !world.Defeated && !Diving;
         if (over && anywhere)
         {
             _promptReady = true;
@@ -390,31 +378,6 @@ public partial class HudView : Control
         }
         _promptShown = Mathf.MoveToward(_promptShown, over ? 1f : 0f, dt * 4f);
         QueueRedraw();
-    }
-
-    /// <summary>
-    /// The dive clock (docs/proposals/CROSSOVER.md §3): a ring round her bell, filling with her warm light from the top
-    /// over the dive clock (DiveClock.Seconds, 30 s); once full it breathes, the way down open.
-    /// </summary>
-    /// <summary>Where the dive clock's ring stands: round her bell, or (the plain bars) right of the bars, clear of the pearl.</summary>
-    Vector2 ClockAt => _plain ? HpDot(Mathf.Max(1, (_maxHalves + 1) / 2)) + new Vector2(30f, 0f) : BellAt;
-    float ClockR => _plain ? 13f : BellRadius + 9f;
-
-    void DrawDiveClock()
-    {
-        float r = ClockR;
-        DrawArc(ClockAt, r, 0f, Mathf.Tau, 72, new Color(0.02f, 0.03f, 0.05f, 0.45f), 5f, true);
-        if (_diveClock > 0f) DrawArc(ClockAt, r, -Mathf.Pi * 0.5f, -Mathf.Pi * 0.5f + Mathf.Tau * _diveClock, 72, new Color(1f, 0.86f, 0.58f, 0.85f), 3f, true);
-        if (_diveClock < 1f) return;
-        if (_tide)
-        {
-            // The current runs: the ring goes dark, ink drawn round it.
-            float swirl = (float)(Time.GetTicksMsec() * 0.002 % Mathf.Tau);
-            DrawArc(ClockAt, r, swirl, swirl + Mathf.Pi * 1.4f, 48, new Color(0.03f, 0.01f, 0.05f, 0.85f), 5f, true);
-            return;
-        }
-        float breath = 0.5f + 0.5f * Mathf.Sin(Time.GetTicksMsec() * 0.003f);
-        DrawArc(ClockAt, r, 0f, Mathf.Tau, 72, new Color(1f, 0.95f, 0.82f, 0.18f + 0.22f * breath), 7f, true);
     }
 
     /// <summary>What the shells still in flight are worth (not counted yet).</summary>
@@ -499,15 +462,18 @@ public partial class HudView : Control
     float _energy, _energyPulse;
     bool _energyShown;
 
-    /// <summary>Her light's energy (the specks gathered, PlaneSpecks.cs): a mote of light and its count, under her bell.</summary>
+    /// <summary>
+    /// Her light's energy, its lumens (the specks gathered, PlaneSpecks.cs): the last bead of her health's row (the plain
+    /// HUD's; else under her shells), a mote of light, and its count beside it at the shells' size.
+    /// </summary>
     void DrawEnergy(Font font)
     {
-        var c = ShellIcon + new Vector2(0f, 40f);
+        var c = _plain ? HpDot(Mathf.Max(1, (_maxHalves + 1) / 2)) + new Vector2(6f, 0f) : ShellIcon + new Vector2(0f, 40f);
         float k = _energyPulse * _energyPulse;
         float tw = 0.75f + 0.25f * Mathf.Sin(_time * 3.1f);
         DrawCircle(c, 13f * (1f + 0.4f * k), new Color(1f, 0.85f, 0.5f, (0.18f + 0.3f * k) * tw));
         DrawCircle(c, 5.5f * (1f + 0.3f * k), new Color(1f, 0.96f, 0.85f, 0.95f));
-        Outlined(font, c + new Vector2(26f, 8f), $"{_energy:0.#}", (int)(22f * (1f + 0.25f * k)), new Color(1f, 0.93f, 0.78f));
+        Outlined(font, c + new Vector2(16f, 7f), $"{_energy:0.#}", (int)(19f * (1f + 0.3f * k)), new Color(1f, 0.93f, 0.78f));
     }
 
     Vector2 ShellIcon => _adventure ? _plain ? HpDot(0) + new Vector2(GaugeShell * 0.5f - 9f, 30f) : BellAt + new Vector2(BellRadius + 26f, -4f)
@@ -935,7 +901,6 @@ public partial class HudView : Control
             DrawDanger(font);
         }
         if (_energyShown && !Diving) DrawEnergy(font);
-        if (_diveClock >= 0f && !Diving) DrawDiveClock();
         // Shells, bottom left (her pearls circle her bell instead: PearlOrbitView): brightens and swells with each one
         // collected.
         else

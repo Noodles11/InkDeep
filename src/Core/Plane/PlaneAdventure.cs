@@ -400,7 +400,8 @@ public sealed partial class PlaneWorld
     void PlaceLeaks()
     {
         // A hand-drawn map holds none of its own, nor a labyrinth.
-        if (Map.Station || Map.Labyrinth) return;
+        // (Nor a crossover level: its holes are open from the start.)
+        if (Map.Station || Map.Labyrinth || Map.DiveAnywhere) return;
         if (Map.LeakCave)
         {
             // (A floor above its deepest holds a hole down there instead; a great cave's deepest, its boss in place of a

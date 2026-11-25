@@ -62,6 +62,10 @@ public partial class TopDownMain : Node3D
     CurrentView _currents = null!;
     CrabView _crab = null!;
     float _holeShown;
+    /// <summary>How far round a template level's hole the ground darkens as it falls into the deep (metres).</summary>
+    const float HoleDark = 5.5f;
+    /// <summary>How dark the deep down a template level's hole is, against the water's own colour.</summary>
+    const float HoleShade = 0.2f;
     KelpView _kelp = null!;
     /// <summary>How far each of the reef's holes has opened (0 under sand → 1 open): its sand drains as its leak is sealed.</summary>
     readonly List<float> _holeOpen = new();
@@ -362,7 +366,7 @@ public partial class TopDownMain : Node3D
     int _dbgLeaks;
     /// <summary>Verification (--dbg-exit): the way down is open from the start.</summary>
     bool _dbgExit;
-    /// <summary>Verification (--dbg-diveclock=s): each level's clock starts this far on (DiveClock), so the dive opens sooner.</summary>
+    /// <summary>Verification (--dbg-diveclock=s): each level's clock starts this far on (a boss level's current rises sooner).</summary>
     float _dbgDiveClock;
     /// <summary>Verification (--dbg-vault): she shines at the nearest bubble vault.</summary>
     bool _dbgVault, _dbgShineSpring, _dbgShineClam, _dbgShineSchool;
@@ -2212,7 +2216,8 @@ public partial class TopDownMain : Node3D
         _mirrorView.Sync(_world, dt);
         // A regular way down has no seabed; on the dive itself the level below takes over.
         _holeShown = Mathf.MoveToward(_holeShown, _map.HasBoss || _diving ? 0f : 1f, dt * 2f);
-        _camera.SetHole(_map.Exit.Position, _map.Exit.Radius, _holeShown);
+        // (A template level's ways down are its holes, the ground fading into the deep as it falls into each.)
+        _camera.SetHoles(_map.DiveAnywhere ? _map.Holes.Select(h => (h.Shaft.Center, HoleDark)).ToList() : new[] { (_map.Exit.Position, _map.Exit.Radius) }, _holeShown, _map.DiveAnywhere ? HoleShade : 1f);
         if (_dbgLeakHits > 0 && _world.Leaks.Count > 0)
         {
             _world.Leaks[0].Light = Mathf.Min(_dbgLeakHits, _world.Leaks[0].StapleCount - 1) * AdventureTuning.StapleSeconds + 0.01f;
@@ -2375,6 +2380,8 @@ public partial class TopDownMain : Node3D
             "vase" => _world.Vases.Select(v => (System.Numerics.Vector2?)(v.Position + new System.Numerics.Vector2(0f, 4f))).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
             // Some metres south of the first clam (shut until her light reaches it), and on it (it opens, its pearl is touched).
             "clam" => _world.Clams.SelectMany(c => new[] { 9f, 7f, 5f }.Select(d => c.Position + new System.Numerics.Vector2(0f, d))).Select(q => (System.Numerics.Vector2?)q).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
+            // Some metres south of a template level's first hole down.
+            "pit" => _map.Holes.SelectMany(h => new[] { 6.8f, 6f, 5f }.Select(d => h.Shaft.Center + new System.Numerics.Vector2(0f, d))).Select(q => (System.Numerics.Vector2?)q).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
             "clam-pearl" => _world.Clams.Select(c => (System.Numerics.Vector2?)c.Position).FirstOrDefault(),
             "mob" => _world.Mobs.Select(m => (System.Numerics.Vector2?)(m.Position + new System.Numerics.Vector2(0f, 7f))).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
             // Outside the curse den's mouth, halfway down its tunnel, and at its end.
@@ -2795,7 +2802,6 @@ public partial class TopDownMain : Node3D
                 CorruptionEvent(e);
                 CurseEvent(e);
                 if (e.Type == PlaneEventType.Dived) dived = true;
-                // The dive clock has run (docs/proposals/CROSSOVER.md §3): a soft chime, and the way down is anywhere.
                 // The boss level's current rises (docs/proposals/CROSSOVER.md §4): a long rumble, and she is told.
                 else if (e.Type == PlaneEventType.TideRose)
                 {
@@ -2805,11 +2811,6 @@ public partial class TopDownMain : Node3D
                     Say("The current rises: it pulls everything toward the arena");
                 }
                 else if (e.Type == PlaneEventType.TideDissolved) _sfx.PlayAt("gurgle", new Vector3(e.Position.X, LevelMap.SwimBand, e.Position.Y), -6f, 0.15f);
-                else if (e.Type == PlaneEventType.DiveOpened)
-                {
-                    _sfx.PlayPitched("bell_ring", 1.5f, -12f);
-                    Say("The deep opens: dive whenever you like");
-                }
                 // A dive's leak cave sealed: the Leak's pull turns, an upwelling where the leak was carries her up and out.
                 else if (e.Type == PlaneEventType.LeakSealed && InDiveCave) _portals.Upwell(_map.Exit.Position);
                 else if (e.Type == PlaneEventType.PlayerDefeated) dived = false;
@@ -3374,8 +3375,6 @@ public partial class TopDownMain : Node3D
         _belowShaded = false;
         _diveTime = 0f;
         _diveFrom = _world.Player.Position;
-        // (A template level: down where she is.)
-        if (_map.Templated && !_map.HasBoss) _diveAt = _diveFrom;
         // Down the hole she is over (the first, if she is somehow over none).
         _diveHole = Math.Max(0, _world.HoleUnder);
         var next = _diveTo = DestinationOf(_diveHole);

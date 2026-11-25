@@ -218,9 +218,17 @@ public partial class CameraRig : Node3D
 
     readonly float[] _lights = new float[CombatView.MaxLights * 4];
 
-    /// <summary>A way down's opening, where the ground gives way to water (strength 0: none).</summary>
-    public void SetHole(System.Numerics.Vector2 at, float radius, float strength) =>
-        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("hole"), new Vector4(at.X, at.Y, radius, strength));
+    /// <summary>The ways down's openings (up to four), where the ground gives way to water (strength 0: none).</summary>
+    public void SetHoles(IReadOnlyList<(System.Numerics.Vector2 At, float Radius)> holes, float strength, float shade = 1f)
+    {
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("hole_shade"), shade);
+        int n = Mathf.Min(holes.Count, _holes.Length);
+        for (int i = 0; i < n; i++) _holes[i] = new Vector4(holes[i].At.X, holes[i].At.Y, holes[i].Radius, strength);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("holes"), _holes);
+        _post.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("hole_count"), n);
+    }
+
+    readonly Vector4[] _holes = new Vector4[4];
 
     /// <summary>The leaks' hot air (AdventureView): where each is and how open.</summary>
     public void SetLeaks(Vector3[] leaks, int count)

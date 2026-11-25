@@ -452,9 +452,13 @@ public static partial class TopDownGenerator
         FlattenSeabed(map);
         SoftenSlopes(map, Stage("slopes"), strata);
         // A leak cave's deepest floor has no way down: its leak lies where the shaft would be (a floor above it, a hole).
-        // A template level has none either: she dives anywhere once its clock has run (DiveClock).
+        // A template level's ways down are its holes (DiveHoles): openings in its floor she may dive down at any time.
         // (A template boss level keeps its Crack: the vortex down, open once the boss is freed.)
-        if ((map.LeakCave && !map.HoleDown) || (map.Templated && !map.HasBoss)) map.Shaft = NoShaft;
+        if (map.LeakCave && !map.HoleDown) map.Shaft = NoShaft;
+        else if (map.DiveAnywhere)
+        {
+            if (OpenHoles(map, Stage("shaft"), plan) is { } none) return none;
+        }
         else
         {
             CutShaft(map, Stage("shaft"));
@@ -571,12 +575,14 @@ public static partial class TopDownGenerator
             kinds.Remove(earlyKind);
             kinds.Insert(0, earlyKind);
         }
-        // Its further holes down (one for each exit past the first: the Exit's), never the early place.
-        for (int i = 1; i < plan.Exits.Count; i++) kinds.Add(PoiKind.Hole);
+        // Its further holes down (one for each exit past the first: the Exit's), never the early place. A template level's
+        // are its own (DiveHoles), first in line so each finds a mark on the path.
+        if (plan.Templated && !plan.HasBoss) kinds.InsertRange(0, Enumerable.Repeat(PoiKind.Hole, plan.DiveHoles));
+        else for (int i = 1; i < plan.Exits.Count; i++) kinds.Add(PoiKind.Hole);
 
         // A template level (docs/proposals/CROSSOVER.md §2): its cells, and the places its rooms and POI marks can hold.
         var (cave, why) = plan.Templated
-            ? CaveLayout.FromTemplates(rng, kinds.Where(k => k is not (PoiKind.Hole or PoiKind.Secret or PoiKind.LeakCave or PoiKind.Haven or PoiKind.CurseDen)).ToList(), RadiusOf, plan.HasBoss, plan.Biome)
+            ? CaveLayout.FromTemplates(rng, kinds.Where(k => k is not (PoiKind.Secret or PoiKind.LeakCave or PoiKind.Haven or PoiKind.CurseDen) && (k != PoiKind.Hole || !plan.HasBoss)).ToList(), RadiusOf, plan.HasBoss, plan.Biome)
             : CaveLayout.Build(rng, plan.HasBoss, plan.EntryFromArena, kinds, RadiusOf, plan.Template?.Layout, plan.AreaScale);
         open = cave?.Open ?? Array.Empty<bool>();
         if (cave is null) return why;
@@ -1566,6 +1572,69 @@ public static partial class TopDownGenerator
             map.Holes.Add(new MapHole { Shaft = new Shaft(middle, Vector2.UnitX, DiveRadius, DiveRadius) });
         }
     }
+
+    /// <summary>
+    /// A template level's holes down (CROSSOVER.md §3): at each Hole place the floor sags into a hollow and opens in its
+    /// middle, the opening's edge wavering (no circle) and rounding over into the drop, the slope easing out into the
+    /// floor round it and never cut into the rock (it eases off near a wall, so the hollow follows the rock's foot). Each
+    /// leads on to the level's way on.
+    /// </summary>
+    static string? OpenHoles(LevelMap map, Rng rng, LevelPlan plan)
+    {
+        map.Holes.Clear();
+        int N = map.Samples;
+        var toRock = Chamfer(N, i => map.Heights[i] > 0f);
+        foreach (var poi in map.Pois.Where(p => p.Kind == PoiKind.Hole))
+        {
+            // Its middle: the spot of the clearing farthest from the rock.
+            Vector2 c = poi.Position;
+            float best = -1f;
+            for (int y = (int)poi.Position.Y - 3; y <= (int)poi.Position.Y + 3; y++)
+            for (int x = (int)poi.Position.X - 3; x <= (int)poi.Position.X + 3; x++)
+                if (x >= 0 && y >= 0 && x < N && y < N && toRock[y * N + x] > best + 0.01f)
+                {
+                    best = toRock[y * N + x];
+                    c = new Vector2(x, y);
+                }
+            poi.Position = c;
+            // Its rim: wavering round the middle (three slow harmonics of its own).
+            float p1 = rng.Range(0f, MathF.Tau), p2 = rng.Range(0f, MathF.Tau), p3 = rng.Range(0f, MathF.Tau);
+            float stretch = rng.Range(0.1f, 0.2f);
+            float Rim(float a) => HoleOpening * (1f + stretch * MathF.Sin(2f * a + p1) + 0.09f * MathF.Sin(3f * a + p2) + 0.05f * MathF.Sin(5f * a + p3));
+            int r = (int)MathF.Ceiling(HoleOpening * 1.4f + HoleSlope) + 1;
+            for (int y = (int)c.Y - r; y <= (int)c.Y + r; y++)
+            for (int x = (int)c.X - r; x <= (int)c.X + r; x++)
+            {
+                if (x < 1 || y < 1 || x >= N - 1 || y >= N - 1) continue;
+                int i = y * N + x;
+                if (map.Heights[i] > 0f) continue;
+                var d = new Vector2(x, y) - c;
+                float beyond = d.Length() - Rim(MathF.Atan2(d.Y, d.X));
+                if (beyond > HoleSlope) continue;
+                // The hollow: down gently toward the rim, then over the lip and down; eased off within a few metres of the rock.
+                float sag = map.Heights[i] - HoleSag * Square(1f - Smooth(0f, HoleSlope, beyond));
+                float drop = 1f - Smooth(-HoleLip, 0.4f, beyond);
+                // (Its bottom just over the shaft's floor, as a sunk chamber's: one smooth surface all the way down into the dark, never cut through.)
+                float target = MathUtil.Lerp(sag, LevelMap.ShaftBottom + BowlLift, drop);
+                float wall = Smooth(0.5f, 3.5f, toRock[i]);
+                map.Heights[i] = MathF.Min(map.Heights[i], MathUtil.Lerp(map.Heights[i], target, wall));
+            }
+            map.Holes.Add(new MapHole
+            {
+                Shaft = new Shaft(c, Vector2.UnitX, DiveRadius, DiveRadius),
+                To = plan.Exits.Count > 0 ? plan.Exits[0] : default,
+                Kind = plan.ExitKinds.Count > 0 ? plan.ExitKinds[0] : OctoShoots.Core.Run.ReefKind.Reef,
+            });
+        }
+        if (map.Holes.Count == 0) return "no hole down";
+        map.Shaft = map.Holes[0].Shaft;
+        return null;
+    }
+
+    /// <summary>A template level's hole: how wide its opening (metres from its middle), how far its slope reaches past it, how deep the slope sags at the rim, and how far in its lip rounds over.</summary>
+    const float HoleOpening = 3.2f, HoleSlope = 5f, HoleSag = 1.4f, HoleLip = 1.8f;
+
+    static float Square(float x) => x * x;
 
     /// <summary>
     /// A branch's Crack (docs/proposals/CROSSOVER.md §4, §8): the fissure across the arena is two vortices end to end,

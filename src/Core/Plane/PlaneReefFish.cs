@@ -152,7 +152,7 @@ public sealed partial class PlaneWorld
         for (int i = 0; i < Map.Pois.Count; i++)
         {
             var poi = Map.Pois[i];
-            if (poi.Kind is PoiKind.Start or PoiKind.Exit or PoiKind.Shop or PoiKind.Hole or PoiKind.Relic || !Map.Shown(poi)) continue;
+            if (poi.Kind is PoiKind.Start or PoiKind.Exit or PoiKind.Shop or PoiKind.Relic || !Map.Shown(poi)) continue;
             if (i < Visited.Length && Visited[i] || i < Revealed.Length && Revealed[i] || PoiDone(i)) continue;
             if (poi.Kind == PoiKind.Secret && !SecretHidden) continue;
             float d = Vector2.Distance(from, GuideAt(i));

@@ -380,12 +380,12 @@ public sealed class LevelMap
     /// </summary>
     public bool LeakCave;
     /// <summary>
-    /// A crossover level built from cell templates (docs/proposals/CROSSOVER.md §2, CaveLayout.FromTemplates): it has no
-    /// shaft and no holes, since she may dive anywhere once the dive clock has run (DiveClock).
+    /// A crossover level built from cell templates (docs/proposals/CROSSOVER.md §2, CaveLayout.FromTemplates): but a
+    /// boss's, its ways down are its holes (Hole places, LevelPlan.DiveHoles), open from the start.
     /// </summary>
     public bool Templated;
 
-    /// <summary>A template level but a boss's (CROSSOVER.md §3): she dives anywhere once its clock has run, so it has no way down to find.</summary>
+    /// <summary>A template level but a boss's (CROSSOVER.md §3): she may dive down any of its holes at any time; its Exit is no way down.</summary>
     public bool DiveAnywhere => Templated && !HasBoss;
 
     /// <summary>

@@ -121,6 +121,13 @@ the reef was never being called home. It was being kept.
   upper valve swings back with an overshoot and shows what it kept, a pearl (90%) with its light pouring out of the
   clam's mouth, or a murkling (10%) that comes out at her. Every pearl lying loose anywhere glows the same way: its
   light in its colours and pattern on the floor all round it, and magic particles rising.
+- **Holes down** (0.95.0, `TopDownGenerator.OpenHoles`, `LevelPlan.DiveHoles`): a template level but a boss's has one
+  to three holes down (one always, a second half the time, a third on about one level in six), each a place on the
+  path. She may dive down any of them at any time, and nowhere else (no dive clock). Each is an opening in the reef
+  floor: the floor sags into it over 5 m, its rim wavers (no circle), the lip rounds over into the drop, the slope
+  eases off at a wall's foot so the hollow follows the rock, and the ground fades into the dark of the deep as it falls
+  (`topdown_post`'s `holes`, `hole_shade`). No light of its own, no ring; once she has found one (or a school has
+  shown it her), its emblem shows with an arrow pointing down (`EdgeArrows.Down`).
 - **Its life**: healthy reef fish (clownfish in anemones, blue tangs, schools of chromis, pufferfish, flounders) going
   about their day; a school in her light gathers into a shining arrow pointing at the nearest place she has not found,
   and lit ten seconds on end it shows her that place for good (its emblem; `ReefFishTuning.RevealSeconds`); the ink never turns them; currents and geysers; the reef director that keeps the reef acting when she is not
@@ -554,7 +561,8 @@ the tests of the dive still test the dive.
 - **No way down to find (0.65.1):** a dive-anywhere level (`LevelMap.DiveAnywhere`: a template level but a boss's) shows
   no exit: no "way down" sign on the maps or in their legend, and none named as she swims into it (`LevelMap.Shown`).
   Its cave's walk still ends there (the generator's own), and a boss level shows its Crack as before.
-- **A 30-second dive clock, one light (0.66.0):** the dive opens after **30 s** on a level (`DiveClock.Seconds`); a boss
+- **A 30-second dive clock, one light (0.66.0):** the dive opens after **30 s** on a level (`DiveClock.Seconds`; gone
+  in 0.95.0: she dives down a level's holes at any time, §5); a boss
   level's current keeps its own two minutes (`TideTuning.After`). **All her light is one light:** her shots' light shows
   the reef in its colour now and lingers after as her beam's does (0.1 s, fading over 0.5 s), by the same numbers in the
   post pass and the light memory (`LightMemory.ShotSpread`, `ShotShown`, `CameraRig.SetShotLight`); and her shots light
@@ -679,11 +687,12 @@ the tests of the dive still test the dive.
     (a scalloped rim, a moon jelly's four horseshoe gonads), filling from the bottom with the active pearl's charge in
     its colour; charged, the gonads light up and breathe, and it flashes as the pearl is used. The pearl sits at the
     bell's lower left. Her health is a row of beads of her light to the bell's right (one per pip, a half bead a half
-    pip, empty ones dark glass), her shells and energy under the row. The old bell gauge stays dormant.
+    pip, empty ones dark glass); last in the row (0.95.0) her light's energy, its lumens, as a mote of light with its
+    count beside it at the shells' size; her shells under the row. The old bell gauge stays dormant.
   - Arrows at the screen's edges point to places off screen in their colours (`EdgeArrows`,
     `TopDownMain.Arrows.cs`): rooms, caches, shrines, light springs, and the boss's arena while its boss waits. They
     replace the minimap in the crossover. Since 0.92.0 only the boss's arena and the shop show from the start; every
-    other place (a cache, a clam, a shrine, a den, a crab's deal, a haven, a light room, a light spring) only once she
+    other place (a cache, a clam, a shrine, a den, a crab's deal, a haven, a hole down, a light room, a light spring) only once she
     has been there (`PlaneWorld.Visited`, `LightRoom.Found`, `LightSpring.Found`) or (0.93.0) a school of fish in her
     light has shown it her (`PlaneWorld.Revealed`; a secret too, "?", until she has been in), and none once it is done
     (`PlaneWorld.PoiDone`: a cache's shells all gathered, a clam opened and its pearl taken or its murkling out, every stand of a shop, a shrine or a
@@ -713,7 +722,7 @@ the tests of the dive still test the dive.
     - Its water is the first depth's here, not the cube reef's.
     - The title launches only a jelly's dive (`RunLaunch.Pending`): no seeded, saved or new run of its own, and the
       save, seed and shots pieces are gone.
-  - The dive clock's ring stands right of the bars, and the danger marks right of the shells.
+  - The dive clock's ring stood right of the bars (gone with the clock in 0.95.0), and the danger marks right of the shells.
 - **The dive loads the level below whole (0.79.1):** she holds at the lip until the level below is made, its
   corruption laid and its sun's shade cast. That shade is drawn on the level below as the iris opens, so she never
   lands on a level that shows lit and is then covered in shade (DIVE.md §3).

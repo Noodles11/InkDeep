@@ -121,13 +121,32 @@ public class CrossoverTests
     }
 
     [Fact]
-    public void A_template_level_is_one_cave_with_no_shaft_and_its_marks_in_the_water()
+    public void A_template_level_is_one_cave_with_its_holes_down_and_its_marks_in_the_water()
     {
         foreach (var map in Templated.Value)
         {
             Assert.True(map.Templated);
             Assert.Null(LevelValidator.Validate(map));
-            Assert.Empty(map.Holes);
+            // One to three holes down, each a Hole place on the path: its middle open down to the shaft's floor, and
+            // the floor round it sloping into it (no sheer cut at the rim).
+            var holes = map.Pois.Where(p => p.Kind == PoiKind.Hole).ToList();
+            Assert.InRange(holes.Count, 1, 3);
+            Assert.Equal(holes.Count, map.Holes.Count);
+            foreach (var hole in holes)
+            {
+                Assert.True(map.InShaft(hole.Position));
+                Assert.True(map.HeightAt(hole.Position) < LevelMap.ShaftBottom + 1.2f, $"{map.Id}: the hole at {hole.Position} not open");
+                var path = LevelValidator.Distances(map, map.Start.Position);
+                Assert.True(float.IsFinite(LevelValidator.DistanceAt(path, hole.Position)), $"{map.Id}: a hole off the path");
+                for (int k = 0; k < 8; k++)
+                {
+                    var way = new Vector2(MathF.Cos(k * MathF.Tau / 8f), MathF.Sin(k * MathF.Tau / 8f));
+                    float near = map.HeightAt(hole.Position + way * 4.5f), far = map.HeightAt(hole.Position + way * 6.5f);
+                    if (far > 0f || near > 0f) continue;
+                    Assert.True(near <= far + 0.15f, $"{map.Id}: the floor round a hole does not slope into it ({near} at 4.5 m, {far} at 6.5 m)");
+                    Assert.True(far - near < 3f, $"{map.Id}: a step at a hole's rim");
+                }
+            }
             var reach = LevelValidator.Distances(map, map.Start.Position);
             Assert.True(float.IsFinite(LevelValidator.DistanceAt(reach, map.Exit.Position)), $"{map.Id}: the far side cannot be reached");
             Assert.NotEmpty(map.MobMarks);
@@ -139,7 +158,7 @@ public class CrossoverTests
             foreach (var poi in map.Pois.Where(p => p.Kind is not (PoiKind.Start or PoiKind.Exit)))
             {
                 Assert.True(Vector2.Distance(poi.Position, map.Start.Position) >= PlaceRules.FromStart, $"{map.Id}: the {poi.Kind} by the start");
-                Assert.DoesNotContain(poi.Kind, new[] { PoiKind.Secret, PoiKind.Hole, PoiKind.LeakCave, PoiKind.Haven, PoiKind.CurseDen });
+                Assert.DoesNotContain(poi.Kind, new[] { PoiKind.Secret, PoiKind.LeakCave, PoiKind.Haven, PoiKind.CurseDen });
             }
         }
     }
@@ -158,37 +177,36 @@ public class CrossoverTests
     }
 
     [Fact]
-    public void On_a_template_level_she_dives_anywhere_once_the_clock_has_run()
+    public void On_a_template_level_she_dives_down_a_hole_at_any_time_and_nowhere_else()
     {
         var map = Templated.Value[0];
         var w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()));
-        int ticks = (int)MathF.Ceiling(DiveClock.Seconds / PlaneWorld.Dt);
-        bool opened = false, earlyDive = false;
-        for (int i = 0; i < ticks - 2; i++)
+        // Away from its holes: no dive, however long she waits.
+        for (int i = 0; i < 40 * PlaneWorld.TickRate; i++)
         {
+            w.Player.Position = w.Player.PrevPosition = map.Start.Position;
+            w.Player.Hp = 100f;
             w.Step(new PlaneInput { Dive = true });
-            earlyDive |= w.Events.Any(e => e.Type == PlaneEventType.Dived);
-            opened |= w.Events.Any(e => e.Type == PlaneEventType.DiveOpened);
-            Assert.False(w.Defeated, "overrun before the clock ran");
+            Assert.DoesNotContain(w.Events, e => e.Type == PlaneEventType.Dived);
         }
-        Assert.False(earlyDive, "dived before the clock ran");
-        Assert.False(opened);
         Assert.False(w.CanDive);
-        for (int i = 0; i < 4; i++) w.Step(default);
+        // Over one, at once (on a fresh level too).
+        w = new PlaneWorld(map, new Tuning(), new PlaneRun(Catalog.Value, new Tuning()));
+        w.Player.Position = w.Player.PrevPosition = map.Holes[^1].Shaft.Center;
         Assert.True(w.CanDive);
-        Assert.False(w.OverShaft);
         w.Step(new PlaneInput { Dive = true });
         Assert.Contains(w.Events, e => e.Type == PlaneEventType.Dived);
     }
 
     [Fact]
-    public void The_dive_clock_runs_thirty_seconds()
+    public void A_template_level_has_one_to_three_holes_down_each_further_one_rarer()
     {
-        Assert.Equal(30f, DiveClock.Seconds);
-        Assert.False(DiveClock.Open(29.9f));
-        Assert.True(DiveClock.Open(30f));
-        Assert.Equal(0.5f, DiveClock.Progress(15f));
-        Assert.Equal(1f, DiveClock.Progress(500f));
+        var plans = Ids.Select(id => LevelPlan.For(TestLevels.Seed, id, crossover: true)).Where(p => p.Templated).ToList();
+        Assert.All(plans.Where(p => p.HasBoss), p => Assert.Equal(0, p.DiveHoles));
+        var free = plans.Where(p => !p.HasBoss).ToList();
+        Assert.All(free, p => Assert.InRange(p.DiveHoles, 1, 3));
+        Assert.All(new[] { 1, 2, 3 }, n => Assert.Contains(free, p => p.DiveHoles == n));
+        Assert.True(LevelPlan.HoleSecond * LevelPlan.HoleThird < LevelPlan.HoleSecond - LevelPlan.HoleSecond * LevelPlan.HoleThird && LevelPlan.HoleSecond < 1f - LevelPlan.HoleSecond + 1e-6f);
     }
 
     [Fact]

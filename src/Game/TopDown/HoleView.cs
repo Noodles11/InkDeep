@@ -90,6 +90,8 @@ public partial class HoleView : Node3D
         _emblems.Clear();
         _open.Clear();
         _map = map;
+        // (A template level's holes are openings in its floor, nothing more: no rim, no light, no sign in them.)
+        if (map.DiveAnywhere) return;
         foreach (var hole in map.Holes)
         {
             var sh = hole.Shaft;

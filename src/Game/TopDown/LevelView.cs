@@ -92,6 +92,7 @@ public partial class LevelView : Node3D
         PoiKind.Exit => new Color(1f, 0.55f, 0.15f),           // orange (the Crack, the way down)
         PoiKind.ShellCache => new Color(0.3f, 0.9f, 0.85f),    // teal (the treasure pool's colour)
         PoiKind.Shrine => new Color(1f, 0.92f, 0.72f),         // her warm light
+        PoiKind.Hole => new Color(0.55f, 0.8f, 1f),            // deep water blue (a hole down)
         _ => new Color(0.95f, 0.95f, 0.95f),                   // the start: white
     };
 
@@ -1354,7 +1355,7 @@ public partial class LevelView : Node3D
     void ShowHoleCovers(LevelMap map)
     {
         _holeCovers.Clear();
-        if (map.LeakCave || map.Station) return;
+        if (map.LeakCave || map.Station || map.DiveAnywhere) return;
         foreach (var hole in map.Holes)
         {
             var sh = hole.Shaft;

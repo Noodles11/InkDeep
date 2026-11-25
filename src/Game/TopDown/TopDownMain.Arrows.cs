@@ -11,7 +11,7 @@ namespace OctoShoots.Game.TopDown;
 /// What the emblems at the screen's edges show in the crossover (EdgeArrows, the cubes branch's: a ringed sign in its
 /// place's colour that waits at the screen's edge and slides onto its place once that is on the screen, in place of the
 /// minimap). The boss's arena while its boss waits and the shop are shown from the start; every other place (its caches,
-/// clams, shrines, dens, light rooms, light springs) only once she has found it (been there) or a school of fish lit by her has shown it her (PlaneWorld.Revealed); and none once it is done
+/// clams, shrines, dens, holes down, light rooms, light springs) only once she has found it (been there) or a school of fish lit by her has shown it her (PlaneWorld.Revealed); and none once it is done
 /// (PlaneWorld.PoiDone: nothing left there; a light room opened; a spring spent with no energy of hers to lay).
 /// </summary>
 public partial class TopDownMain
@@ -33,6 +33,7 @@ public partial class TopDownMain
         PoiKind.CrabDeal => "%",
         PoiKind.Shrine => "^",
         PoiKind.Secret => "?",
+        PoiKind.Hole => EdgeArrows.Down,
         _ => "!",
     };
 
@@ -42,7 +43,7 @@ public partial class TopDownMain
         {
             var poi = _map.Pois[i];
             bool shown = i < _world.Revealed.Length && _world.Revealed[i];
-            if (!_map.Shown(poi) || poi.Kind is PoiKind.Start or PoiKind.Relic or PoiKind.Hole) continue;
+            if (!_map.Shown(poi) || poi.Kind is PoiKind.Start or PoiKind.Relic) continue;
             // A secret only once a school has shown it her, until she has been in.
             if (poi.Kind == PoiKind.Secret && (!shown || _world.Visited[i])) continue;
             // A boss's arena while its boss waits; no other way out (she dives anywhere).
