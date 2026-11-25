@@ -397,7 +397,7 @@ public partial class HudView : Control
     /// over the dive clock (DiveClock.Seconds, 30 s); once full it breathes, the way down open.
     /// </summary>
     /// <summary>Where the dive clock's ring stands: round her bell, or (the plain bars) right of the bars, clear of the pearl.</summary>
-    Vector2 ClockAt => _plain ? HealthAt + new Vector2(BarWidth * _maxShare + 62f, 15f) : BellAt;
+    Vector2 ClockAt => _plain ? HpDot(Mathf.Max(1, (_maxHalves + 1) / 2)) + new Vector2(30f, 0f) : BellAt;
     float ClockR => _plain ? 13f : BellRadius + 9f;
 
     void DrawDiveClock()
@@ -510,28 +510,24 @@ public partial class HudView : Control
         Outlined(font, c + new Vector2(26f, 8f), $"{_energy:0.#}", (int)(22f * (1f + 0.25f * k)), new Color(1f, 0.93f, 0.78f));
     }
 
-    Vector2 ShellIcon => _adventure ? _plain ? ChargeAt + new Vector2(GaugeShell * 0.5f, ChargeHeight + 24f) : BellAt + new Vector2(BellRadius + 26f, -4f)
+    Vector2 ShellIcon => _adventure ? _plain ? HpDot(0) + new Vector2(GaugeShell * 0.5f - 9f, 30f) : BellAt + new Vector2(BellRadius + 26f, -4f)
         : new(Margin + 12f, Size.Y - Margin - 22f);
 
     // ───────────────────────── the plain bars (the crossover) ─────────────────────────
 
     /// <summary>The crossover's HUD: plain bars, top left, in place of her bell and its arms.</summary>
     bool _plain;
-    /// <summary>
-    /// The bars: health's (its length at her starting max HP, longer as it grows) and its height, the charge's height,
-    /// the gap between them; the pearl beside the charge (pixels across).
-    /// </summary>
-    const float BarWidth = 220f, HealthHeight = 16f, ChargeHeight = 10f, BarGap = 10f, PearlSize = 24f;
-    /// <summary>Health's colour steps (shares of her max HP): green above Fine, amber above Low, red (pulsing) under.</summary>
-    const float Fine = 0.6f, Low = 0.3f;
-    static readonly Vector2 HealthAt = new(Margin, Margin + 4f);
-    static readonly Vector2 ChargeAt = HealthAt + new Vector2(0f, HealthHeight + BarGap);
+    /// <summary>The HUD bell (its middle, its radius), her health's beads (their spacing), the pearl (pixels across).</summary>
+    const float HudBellRadius = 40f, DotStep = 24f, PearlSize = 24f;
+    static readonly Vector2 HudBell = new(Margin + HudBellRadius + 6f, Margin + HudBellRadius + 6f);
+    /// <summary>Health bead k, to the right of the bell, along its upper half.</summary>
+    static Vector2 HpDot(int k) => HudBell + new Vector2(HudBellRadius + 22f + k * DotStep, -12f);
     /// <summary>The active pearl beside its bar, in the shells' 3D view (none: hidden).</summary>
     MeshInstance3D? _pearl;
     ItemDef? _pearlShown;
 
-    /// <summary>The middle of the active pearl, right of its bar.</summary>
-    Vector2 PearlIcon => ChargeAt + new Vector2(BarWidth * _maxShare + PearlSize * 0.5f + 8f, ChargeHeight * 0.5f);
+    /// <summary>The middle of the active pearl, at the bell's lower left.</summary>
+    static Vector2 PearlIcon => HudBell + new Vector2(-0.72f, 0.72f) * HudBellRadius;
 
     /// <summary>The active pearl beside its bar: its own look, turning slowly, swelling a beat as it is used.</summary>
     void SyncPearl()
@@ -554,28 +550,71 @@ public partial class HudView : Control
     }
 
     /// <summary>
-    /// The bars, top left: her health (its colour by how much is left, red and pulsing when low; what a hit took pale a
-    /// moment, then draining; a flash as it is struck), and under it her active pearl's charge in the pearl's colour
-    /// (breathing when ready, a flash as it is used; without a pearl, its empty track). Her shells under them.
+    /// The crossover's HUD, top left: her bell seen from above (a scalloped rim, the four horseshoe gonads of a moon
+    /// jelly in its middle), filling from the bottom with her active pearl's charge in the pearl's colour; charged, its
+    /// gonads light up and breathe, and it flashes as the pearl is used. The pearl itself sits at the bell's lower left
+    /// (in 3D: SyncPearl). Her health is a row of beads of her warm light to the right of the bell (a half bead a lit
+    /// half; the empty ones dark glass; a flash as one is lost, the last breathes), her shells under the row.
     /// </summary>
     void DrawBars(Font font)
     {
         float pulse = 0.5f + 0.5f * Mathf.Sin(_time * 5f);
-        float width = BarWidth * _maxShare;
-        var health = _health > Fine ? new Color(0.42f, 0.86f, 0.46f) : _health > Low ? new Color(1f, 0.76f, 0.26f)
-            : new Color(1f, 0.28f, 0.26f).Lerp(new Color(1f, 0.62f, 0.55f), 0.45f * pulse);
-        Bar(HealthAt, width, HealthHeight, _health, _healthShown, health, _hurt);
-        if (_active is not null)
+        var c = HudBell;
+        const float r = HudBellRadius;
+        bool ready = _active is not null && _charge >= 1f;
+        var pearl = _active is not null ? OctoShoots.Game.Fx.PearlMaterials.GlowColor(_active) : new Color(0.6f, 0.62f, 0.66f);
+        var rim = BellRim(c, r);
+        var outline = new Vector2[rim.Length + 1];
+        rim.CopyTo(outline, 0);
+        outline[^1] = rim[0];
+        // Its glass, the charge filling it from the bottom up, and the rim over them.
+        DrawColoredPolygon(rim, new Color(0.04f, 0.05f, 0.09f, 0.7f));
+        float fill = _active is null ? 0f : Mathf.Clamp(_charge, 0f, 1f);
+        if (fill > 0.001f)
         {
-            var pearl = OctoShoots.Game.Fx.PearlMaterials.GlowColor(_active);
-            bool ready = _charge >= 1f;
-            Bar(ChargeAt, width, ChargeHeight, _charge, _charge, ready ? pearl.Lerp(Colors.White, 0.3f * pulse) : pearl * 0.8f, _used);
-            // (The pearl itself is drawn over this, in 3D: SyncPearl.) A soft glow behind it once it is ready.
-            if (ready) DrawCircle(PearlIcon, PearlSize * (0.7f + 0.08f * pulse), pearl with { A = 0.25f + 0.15f * pulse });
+            var cut = Below(rim, c.Y + r - 2f * r * fill);
+            if (cut.Length >= 3) DrawColoredPolygon(cut, (ready ? pearl.Lerp(Colors.White, 0.25f * pulse) : pearl * 0.75f) with { A = ready ? 0.85f : 0.6f });
         }
-        else Bar(ChargeAt, width, ChargeHeight, 0f, 0f, new Color(0.6f, 0.62f, 0.66f), 0f);
+        if (ready) DrawCircle(c, r * (1.1f + 0.06f * pulse), pearl with { A = 0.12f + 0.08f * pulse });
+        DrawPolyline(outline, new Color(0f, 0f, 0f, 0.5f), 5f, true);
+        DrawPolyline(outline, new Color(0.93f, 0.95f, 1f, 0.9f), 2.2f, true);
+        // Its gonads: four horseshoes round the middle, dim until the pearl is charged, then lit and breathing.
+        var dim = new Color(0.72f, 0.6f, 0.82f, 0.55f);
+        var lit = new Color(1f, 0.9f, 0.66f).Lerp(pearl, 0.3f);
+        for (int k = 0; k < 4; k++)
+        {
+            float a = Mathf.Pi * 0.25f + k * Mathf.Pi * 0.5f;
+            var at = c + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r * 0.36f;
+            // A horseshoe opening outward.
+            float from = a + Mathf.Pi * 0.35f, to = a + Mathf.Tau - Mathf.Pi * 0.35f;
+            if (ready) DrawArc(at, r * 0.2f, from, to, 20, lit with { A = 0.3f + 0.2f * pulse }, 9f, true);
+            DrawArc(at, r * 0.2f, from, to, 20, ready ? lit : dim, 4f, true);
+        }
+        if (_used > 0.01f) DrawColoredPolygon(rim, new Color(1f, 1f, 1f, 0.5f * _used));
         SyncPearl();
-        // Her shells under the bars (the shell itself is drawn in 3D over this).
+
+        // Her health: a bead of her light for each pip.
+        int pips = Mathf.Max(1, (_maxHalves + 1) / 2);
+        var light = new Color(1f, 0.88f, 0.62f);
+        float breath = _halves <= 2 ? 0.5f + 0.5f * Mathf.Sin(_time * 5f) : 0f;
+        for (int k = 0; k < pips; k++)
+        {
+            var at = HpDot(k);
+            const float dr = 9f;
+            int left = _halves - 2 * k;
+            DrawCircle(at, dr + 2f, new Color(0f, 0f, 0f, 0.55f));
+            DrawCircle(at, dr, new Color(0.08f, 0.09f, 0.13f, 0.9f));
+            DrawArc(at, dr, 0f, Mathf.Tau, 24, new Color(0.6f, 0.62f, 0.7f, 0.5f), 1.2f, true);
+            if (left <= 0) continue;
+            var col = light.Lerp(Colors.White, 0.35f * breath);
+            if (left >= 2) DrawCircle(at, dr - 1.5f, col);
+            else DrawColoredPolygon(HalfDisc(at, dr - 1.5f), col);
+            DrawCircle(at + new Vector2(-2.5f, -3f), 2.4f, new Color(1f, 1f, 0.95f, 0.8f));
+            DrawCircle(at, dr + 3f, light with { A = 0.1f + 0.2f * breath });
+        }
+        if (_pipLost > 0.01f) DrawCircle(HpDot(Mathf.Clamp(_halves / 2, 0, pips - 1)), 14f * (1f + _pipLost), new Color(1f, 0.95f, 0.85f, 0.4f * _pipLost));
+
+        // Her shells under the beads (the shell itself is drawn in 3D over this).
         if (_shellsSeen || _flights.Count > 0)
         {
             float k2 = _pulse * _pulse;
@@ -588,19 +627,44 @@ public partial class HudView : Control
         }
     }
 
-    /// <summary>One bar: a dark frame, its empty track, a pale trail (what was just lost), its fill with a lighter top, a flash.</summary>
-    void Bar(Vector2 at, float width, float height, float share, float trail, Color fill, float flash)
+    /// <summary>A bell seen from above: its rim, scalloped into sixteen lobes.</summary>
+    static Vector2[] BellRim(Vector2 c, float r)
     {
-        DrawRect(new Rect2(at - Vector2.One * 2f, new Vector2(width + 4f, height + 4f)), new Color(0f, 0f, 0f, 0.55f));
-        DrawRect(new Rect2(at, new Vector2(width, height)), new Color(0.06f, 0.07f, 0.1f, 0.85f));
-        if (trail > share) DrawRect(new Rect2(at, new Vector2(width * Mathf.Clamp(trail, 0f, 1f), height)), new Color(1f, 0.95f, 0.85f, 0.7f));
-        float w = width * Mathf.Clamp(share, 0f, 1f);
-        if (w > 0.5f)
+        const int n = 96;
+        var pts = new Vector2[n];
+        for (int i = 0; i < n; i++)
         {
-            DrawRect(new Rect2(at, new Vector2(w, height)), fill);
-            DrawRect(new Rect2(at, new Vector2(w, height * 0.35f)), fill.Lerp(Colors.White, 0.35f));
+            float a = i * Mathf.Tau / n;
+            float lobe = Mathf.Abs(Mathf.Sin(a * 8f));
+            pts[i] = c + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r * (0.94f + 0.06f * lobe);
         }
-        if (flash > 0.01f) DrawRect(new Rect2(at, new Vector2(width, height)), new Color(1f, 1f, 1f, 0.45f * flash));
+        return pts;
+    }
+
+    /// <summary>The part of a polygon below a line (y at least cut), clipped to it.</summary>
+    static Vector2[] Below(Vector2[] poly, float cut)
+    {
+        var o = new List<Vector2>();
+        for (int i = 0; i < poly.Length; i++)
+        {
+            Vector2 p = poly[i], q = poly[(i + 1) % poly.Length];
+            bool pin = p.Y >= cut, qin = q.Y >= cut;
+            if (pin) o.Add(p);
+            if (pin != qin) o.Add(p.Lerp(q, (cut - p.Y) / (q.Y - p.Y)));
+        }
+        return o.ToArray();
+    }
+
+    /// <summary>The left half of a disc (a half bead).</summary>
+    static Vector2[] HalfDisc(Vector2 c, float r)
+    {
+        var pts = new Vector2[17];
+        for (int i = 0; i <= 16; i++)
+        {
+            float a = Mathf.Pi * 0.5f + i * Mathf.Pi / 16f;
+            pts[i] = c + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r;
+        }
+        return pts;
     }
 
     /// <summary>Where a flight is at progress e (0 → 1): a quadratic arc from its start to the counter, bowed to one side.</summary>

@@ -675,8 +675,11 @@ the tests of the dive still test the dive.
   - Her light's physics is now worked out at the start of each step, so the first shot of a level takes it too.
     Tests: `OpticsTests`.
 - **0.78.0:**
-  - The crossover's HUD is plain bars, top left (`HudView.DrawBars`): health (green, amber, red pulsing), the active
-    pearl's charge with the pearl beside it, and shells and energy under them. The bell gauge stays dormant.
+  - The crossover's HUD, top left (`HudView.DrawBars`; since 0.94.0, in place of plain bars): her bell seen from above
+    (a scalloped rim, a moon jelly's four horseshoe gonads), filling from the bottom with the active pearl's charge in
+    its colour; charged, the gonads light up and breathe, and it flashes as the pearl is used. The pearl sits at the
+    bell's lower left. Her health is a row of beads of her light to the bell's right (one per pip, a half bead a half
+    pip, empty ones dark glass), her shells and energy under the row. The old bell gauge stays dormant.
   - Arrows at the screen's edges point to places off screen in their colours (`EdgeArrows`,
     `TopDownMain.Arrows.cs`): rooms, caches, shrines, light springs, and the boss's arena while its boss waits. They
     replace the minimap in the crossover. Since 0.92.0 only the boss's arena and the shop show from the start; every
