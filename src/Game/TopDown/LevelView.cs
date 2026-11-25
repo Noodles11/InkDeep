@@ -1536,7 +1536,7 @@ public partial class LevelView : Node3D
     public static string PlaceName(PoiKind kind) => kind switch
     {
         PoiKind.ShellCache => "Shell cache",
-        PoiKind.TreasureCave => "Clam room",
+        PoiKind.TreasureCave => "Clam",
         PoiKind.CurseDen => "Curse den",
         PoiKind.CrabDeal => "Crab's Deal",
         PoiKind.Shrine => "Light shrine",

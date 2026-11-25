@@ -101,6 +101,8 @@ public class TidyTests
                         case PoiKind.TreasureCave when w.Pearls.Any(q => Near(q.Position)):
                             Assert.False(w.PoiDone(i));
                             foreach (var q in w.Pearls.Where(q => Near(q.Position))) q.Taken = true;
+                            Assert.False(w.PoiDone(i));
+                            w.Clams.Single(c => c.Poi == i).Open = true;
                             Assert.True(w.PoiDone(i));
                             clam = true;
                             break;

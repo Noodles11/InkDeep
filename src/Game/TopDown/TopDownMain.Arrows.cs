@@ -11,7 +11,7 @@ namespace OctoShoots.Game.TopDown;
 /// What the emblems at the screen's edges show in the crossover (EdgeArrows, the cubes branch's: a ringed sign in its
 /// place's colour that waits at the screen's edge and slides onto its place once that is on the screen, in place of the
 /// minimap). The boss's arena while its boss waits and the shop are shown from the start; every other place (its caches,
-/// clams, shrines, dens, light rooms, light springs) only once she has found it (been there); and none once it is done
+/// clams, shrines, dens, light rooms, light springs) only once she has found it (been there) or a school of fish lit by her has shown it her (PlaneWorld.Revealed); and none once it is done
 /// (PlaneWorld.PoiDone: nothing left there; a light room opened; a spring spent with no energy of hers to lay).
 /// </summary>
 public partial class TopDownMain
@@ -32,6 +32,7 @@ public partial class TopDownMain
         PoiKind.ShellCache => "o",
         PoiKind.CrabDeal => "%",
         PoiKind.Shrine => "^",
+        PoiKind.Secret => "?",
         _ => "!",
     };
 
@@ -40,14 +41,17 @@ public partial class TopDownMain
         for (int i = 0; i < _map.Pois.Count; i++)
         {
             var poi = _map.Pois[i];
-            if (!_map.Shown(poi) || poi.Kind is PoiKind.Start or PoiKind.Relic or PoiKind.Secret or PoiKind.Hole) continue;
+            bool shown = i < _world.Revealed.Length && _world.Revealed[i];
+            if (!_map.Shown(poi) || poi.Kind is PoiKind.Start or PoiKind.Relic or PoiKind.Hole) continue;
+            // A secret only once a school has shown it her, until she has been in.
+            if (poi.Kind == PoiKind.Secret && (!shown || _world.Visited[i])) continue;
             // A boss's arena while its boss waits; no other way out (she dives anywhere).
             if (poi.Kind == PoiKind.Exit)
             {
                 if (_map.HasBoss && _world.Boss is { Freed: false }) yield return (poi.Position, ReefKinds.Colour(ReefKind.Boss), "X", poi.Radius);
                 continue;
             }
-            bool found = poi.Kind == PoiKind.Shop || i < _world.Visited.Length && _world.Visited[i];
+            bool found = poi.Kind == PoiKind.Shop || shown || i < _world.Visited.Length && _world.Visited[i];
             if (!found || _world.PoiDone(i)) continue;
             yield return (poi.Position, LevelView.PoiColor(poi.Kind), Sign(poi.Kind), Mathf.Max(poi.Radius, SpringReach));
         }

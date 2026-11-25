@@ -145,7 +145,9 @@ public enum PlaneEventType { JetStarted, DashStarted, HitWall, Shot, MobHit, Mob
     /// <summary>Her beam lights a dark charge stone (at its face, Direction the way out of the wall).</summary>
     ChargeStoneLit,
     /// <summary>She swam over a light spring for the first time: it lights up (LightSpring.Found).</summary>
-    SpringFound }
+    SpringFound,
+    /// <summary>A shut clam opened by light; a school lit long enough to show her a place (Size: its index).</summary>
+    ClamOpened, PlaceRevealed }
 
 /// <summary>What hurt Clementine (the killing blow names what ended a run; saved by number, so Gloomvine stays though nothing deals it now).</summary>
 public enum DamageSource { None, PufferNeedle, PufferSpines, BossPearl, RoyalPearl, BossSnap, BossContact, Murkling, MurkShot, Gloomvine, Blightroot, Blotter, Thumpsquirt, Lashjaw, Curse, Hearthguard, Leak, LeakWater, Debris, Dart, Mantis }
@@ -413,6 +415,8 @@ public sealed partial class PlaneWorld
         StepSpecks();
         // The plants answer the light on them (PlaneFlora.cs).
         StepFlora();
+        // Shut clams opened by any light on them (PlaneClams.cs).
+        StepClams();
         // Local water: silt settling, blooms lit, vents' shimmer (PlaneWaterPockets.cs).
         if (Options.Pockets) StepPockets();
         // The animals answer the light on them; the murklings' traits (PlaneFauna.cs, PlaneInkTraits.cs).

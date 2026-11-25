@@ -621,7 +621,7 @@ public partial class TopoMap : Control
         var rows = new (PoiKind Kind, string Name)[]
         {
             (PoiKind.Start, "Start"), (PoiKind.Exit, "Way down"), (PoiKind.ShellCache, "Shell cache"), (PoiKind.Shop, "Shop"),
-            (PoiKind.TreasureCave, "Clam room"), (PoiKind.CurseDen, "Curse den"), (PoiKind.Secret, "Secret"),
+            (PoiKind.TreasureCave, "Clam"), (PoiKind.CurseDen, "Curse den"), (PoiKind.Secret, "Secret"),
         };
         // (No way down to find where she dives anywhere.)
         if (_map is { DiveAnywhere: true }) rows = rows.Where(r => r.Kind != PoiKind.Exit).ToArray();

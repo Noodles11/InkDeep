@@ -112,12 +112,18 @@ the reef was never being called home. It was being kept.
   through the water, and murklings bud out of it (ADVENTURE §4). Sealing it with her light opens every hole of the reef, sends
   a wave of light out that dissolves the ink and briefly shows the corrupted it touches, and pays her experience.
 - **Its places** (LIGHT-AND-GRAPH §7): secrets (sealed walls with labyrinths behind), shops, shell caches, Crab Deals,
-  clam rooms, leak caves (sub-levels with their own leak, harmful until sealed) and the holes. A template gives each reef
+  clams, leak caves (sub-levels with their own leak, harmful until sealed) and the holes. A template gives each reef
   its subject and cast (DESIGN-TOPDOWN §4.8).
 - **Its light**: light springs where she heals, charge stones her beam lights (lures, lamps, and a trio that hides a
   cache), prism stones she pushes into line to colour her light for coloured seals.
+- **Clams** (0.93.0, `PlaneClams.cs`, `ClamRoomView`): a giant clam lying shut on the path (a place, as often as the
+  clam rooms were, but in the open water rather than a cave). Any light touching it opens it, once and for good: its
+  upper valve swings back with an overshoot and shows what it kept, a pearl (90%) with its light pouring out of the
+  clam's mouth, or a murkling (10%) that comes out at her. Every pearl lying loose anywhere glows the same way: its
+  light in its colours and pattern on the floor all round it, and magic particles rising.
 - **Its life**: healthy reef fish (clownfish in anemones, blue tangs, schools of chromis, pufferfish, flounders) going
-  about their day; the ink never turns them; currents and geysers; the reef director that keeps the reef acting when she is not
+  about their day; a school in her light gathers into a shining arrow pointing at the nearest place she has not found,
+  and lit ten seconds on end it shows her that place for good (its emblem; `ReefFishTuning.RevealSeconds`); the ink never turns them; currents and geysers; the reef director that keeps the reef acting when she is not
   there.
 - **Where she is shown**: the minimap (her surroundings, the unseen filled as rock), the Tab map (the whole level under
   fog), the chart (the dive).
@@ -193,7 +199,7 @@ emptied, it is freed, leaving a core of light.
 - **Pearls are swallowed, for good**, in a short ritual, and circle her bell (PEARLS). 72 are designed and 41 work on the
   plane; 13 are actives (she carries one). A pearl looks like what it does: its colour from its strongest effect, an
   icon engraved for its kind (`PearlKey`).
-- **Found** in clam rooms, shops, labyrinths, boss pearls, Crab Deals (paid in health), request rewards and the folk's
+- **Found** in clams, shops, labyrinths, boss pearls, Crab Deals (paid in health), request rewards and the folk's
   chains. **Achievements** unlock pearls into the pools (DESIGN-TOPDOWN §8).
 - **On her beam**: fire rate is its tick rate, shot speed its carry, knockback its light pressure; pearls split it into
   rays, a helix, a floodlight (proposals/BEAM-PEARLS-PLAN.md has the rest of the carry-over).
@@ -312,7 +318,7 @@ the tests of the dive still test the dive.
   and the arena keep their size, the arena's doorways 12 m wide; its water band ×1.45, `WidenedWater`) and the rock
   edges are eroded with noise, and the generator's own stages (walls, passes,
   arches, decoration) build on it. Ten Sunlit Reef cells and one room cell so far. A room cell holds a place that
-  lives in a cave (a treasure clam, a Crab Deal) behind a short spur; an open place (a shell cache) takes a POI mark;
+  lives in a cave (a Crab Deal; a clam lay in one until 0.93.0, now it takes a POI mark) behind a short spur; an open place (a shell cache) takes a POI mark;
   a place that finds neither is left out. Mob marks fill the spawn table by tag (lone, pack, thrower, ambusher,
   guard), and the marks are kept on the map (`LevelMap.MobMarks`, `PoiMarks`) for the rosters and places of later
   steps; the ink creatures still come from the corruption's Blightroots as before. No secret rooms (a labyrinth is a
@@ -333,7 +339,7 @@ the tests of the dive still test the dive.
     beam fills it with her light till it bursts (about a second), and her dash bursts it too; its contents tumble out
     away from the wall. It is fixed to the rock. `--at=vault --dbg-vault` shines at one (verification).
   - **Shops:** with no havens, a template level from its second row on holds a shop 45% of the time
-    (`LevelPlan.CrossoverShop`), in a room cell like a treasure clam, with the shop's stands as before.
+    (`LevelPlan.CrossoverShop`), in a room cell like a Crab Deal, with the shop's stands as before.
 - **Step 3, second part (0.52.0), light pips, pools by place, the light shrine:**
   - **Light pips** (`LightPips`, `PlaneRun.Pips`, on for the crossover's runs): her health counts in half pips of
     100/12, so 6 pips at the start (more as pearls raise her most). A hit takes whole half pips, one to four by how
@@ -675,8 +681,9 @@ the tests of the dive still test the dive.
     `TopDownMain.Arrows.cs`): rooms, caches, shrines, light springs, and the boss's arena while its boss waits. They
     replace the minimap in the crossover. Since 0.92.0 only the boss's arena and the shop show from the start; every
     other place (a cache, a clam, a shrine, a den, a crab's deal, a haven, a light room, a light spring) only once she
-    has been there (`PlaneWorld.Visited`, `LightRoom.Found`, `LightSpring.Found`), and none once it is done
-    (`PlaneWorld.PoiDone`: a cache's shells all gathered, a clam's pearl taken, every stand of a shop, a shrine or a
+    has been there (`PlaneWorld.Visited`, `LightRoom.Found`, `LightSpring.Found`) or (0.93.0) a school of fish in her
+    light has shown it her (`PlaneWorld.Revealed`; a secret too, "?", until she has been in), and none once it is done
+    (`PlaneWorld.PoiDone`: a cache's shells all gathered, a clam opened and its pearl taken or its murkling out, every stand of a shop, a shrine or a
     deal sold, a curse den cleared; a light room opened; a spring spent with no energy of hers to lay).
   - In the reef's soft edge nothing is cut away round her (no see-through). She rises twice as high (`GooLift` 2.2)
     and is drawn up to 35% larger.

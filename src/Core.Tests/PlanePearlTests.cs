@@ -46,7 +46,16 @@ public class PlanePearlTests
         var treasure = w.Map.Pois.Single(p => p.Kind == PoiKind.TreasureCave);
         Assert.Equal(treasure.Position, pearl.Position);
 
+        // Shut in its clam: it cannot be taken until light opens it (her own glow does, as she comes to it).
+        var clam = Assert.Single(w.Clams);
+        Assert.Same(pearl, clam.Pearl);
+        Assert.False(clam.Open);
+        Assert.True(w.Shut(pearl));
         w.Player.Position = w.Player.PrevPosition = pearl.Position;
+        w.Step(default);
+        Assert.True(clam.Open);
+        Assert.Contains(w.Events, e => e.Type == PlaneEventType.ClamOpened);
+        Assert.DoesNotContain(w.Events, e => e.Type == PlaneEventType.PearlTouched);
         w.Step(default);
         // Touched: the ritual begins; it is hers only when it ends.
         Assert.Contains(w.Events, e => e.Type == PlaneEventType.PearlTouched);

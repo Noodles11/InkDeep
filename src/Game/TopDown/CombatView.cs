@@ -1285,12 +1285,13 @@ void fragment() {
                 light.LightEnergy = WorldPearlLight * (1f - 0.85f * pale);
                 continue;
             }
-            _pearls[i].Visible = !pearl.Taken;
+            // (Shut in its clam it is out of sight.)
+            _pearls[i].Visible = !pearl.Taken && !world.Shut(pearl);
             _pearls[i].Scale = Vector3.One;
             float fall = Mathf.Clamp((_time - _pearlBorn[i]) / PearlFall, 0f, 1f);
             float drop = PearlFallHeight * (1f - fall) * (1f - fall);
-            // Every pearl floats slowly up and down: a clam room's just over its clam's lower valve, others on her plane.
-            bool resting = world.Map.Pois.Exists(q => q.Kind == PoiKind.TreasureCave && q.Position == pearl.Position);
+            // Every pearl floats slowly up and down: a clam's just over its lower valve, others on her plane.
+            bool resting = world.Clams.Exists(c => c.Pearl == pearl);
             float y = resting ? ClamRoomView.RestHeight + PearlBob(_time, i) * 0.5f : LevelMap.SwimBand - PearlBobHeight * 0.5f + PearlBob(_time, i);
             // In its clam its light is shadowed: the shell keeps it off what lies behind.
             _pearlLooks[i].Light.ShadowEnabled = resting && OctoShoots.Game.Settings.ViewOptions.Shadows;

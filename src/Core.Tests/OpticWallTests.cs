@@ -18,11 +18,19 @@ public class OpticWallTests
 
     static PlaneWorld World(Biome biome, params string[] pearls)
     {
+        // (The first of its levels with what the tests look at: a pane in the alien wreck.)
+        for (int level = 2; level <= 6; level++)
+            if (World(biome, level, pearls) is var w && (biome != Biome.AlienWreckage || w.OpticWalls.Any(o => o.Kind == OpticKind.Lightglass))) return w;
+        return World(biome, 2, pearls);
+    }
+
+    static PlaneWorld World(Biome biome, int level, string[] pearls)
+    {
         var (depth, branch) = biome switch
         {
             Biome.Shipwreck => (2, 1), Biome.AlienWreckage => (4, 0), Biome.DrownedTemple => (4, 1), Biome.Atlantis => (5, 0), _ => (1, 0),
         };
-        var map = TopDownGenerator.Generate(new RunStreams(TestLevels.Seed), new LevelId(1, depth + LevelPlan.Tutorial, 2) with { Branch = branch }, crossover: true);
+        var map = TopDownGenerator.Generate(new RunStreams(TestLevels.Seed), new LevelId(1, depth + LevelPlan.Tutorial, level) with { Branch = branch }, crossover: true);
         var run = new PlaneRun(Catalog.Value, new Tuning());
         foreach (var p in pearls) run.Add(p);
         var w = new PlaneWorld(map, new Tuning(), run, new PlaneOptions { Adventure = true, Glow = false, Gun = true, Optics = true });

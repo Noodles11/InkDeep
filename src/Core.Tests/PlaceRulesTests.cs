@@ -22,7 +22,7 @@ public class PlaceRulesTests
     public void PlacesKeepApart_CavesAndHolesFurther()
     {
         Assert.Equal(PlaceRules.Apart, PlaceRules.Between(PoiKind.Secret, PoiKind.ShellCache));
-        Assert.Equal(PlaceRules.CaveApart, PlaceRules.Between(PoiKind.Shop, PoiKind.TreasureCave));
+        Assert.Equal(PlaceRules.CaveApart, PlaceRules.Between(PoiKind.Shop, PoiKind.CrabDeal));
         Assert.Equal(PlaceRules.HoleApart, PlaceRules.Between(PoiKind.Hole, PoiKind.Hole));
         Assert.Equal(PlaceRules.Apart, PlaceRules.Between(PoiKind.Hole, PoiKind.Shop));
     }

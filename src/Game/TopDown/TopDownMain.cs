@@ -23,7 +23,7 @@ namespace OctoShoots.Game.TopDown;
 /// screen (RunLaunch); run directly with verification flags, it starts a run on its own and saves nothing.
 /// WASD swims (north is up), Space dashes, Shift dives (InputSetup), the mouse aims, F1 opens the debug menu (any
 /// level, any pearls), F3 toggles the debug map, R regenerates from the seed field.
-/// Verification flags: --seed=, --cycle=, --depth=, --level=, --at=start|arch|arch-near|cave|exit|hole|kelp|shop|shop-out|cache|cache-near|secret|secret-in|treasure|treasure-out|clam-pearl|mob|boss|spring|spring-in,
+/// Verification flags: --seed=, --cycle=, --depth=, --level=, --at=start|arch|arch-near|cave|exit|hole|kelp|shop|shop-out|cache|cache-near|secret|secret-in|clam|clam-pearl|mob|boss|spring|spring-in,
 /// --autopilot, --dive (dives whenever it can), --dbg-pad (on the controller from the start), --calm (no creatures), --fire, --pearls=, --hp=, --luck=, --boss-hp=, --paused, --map, --f3, --no-focus, --dbg-nofog (no floor fog),
 /// --at=optic (facing the first mirror plate or lightglass pane), --at=room (beside the first light room), --dbg-f1 (the F1 menu open), --dbg-light=r,g,b,power,coherence,width,pulse (her light set by hand), --capture=dir --frames=a,b, --dbg-say=text (a message banner, a second in), --dbg-loose=id (that pearl loose near her), --at=prism|trio|charge (in a prism stones' bed, a charge stones' trio's
 /// nook, before a charge stone), --dbg-prism (a coloured seal's stones laid on her way to it; --fire aims at it), --dbg-shadow (her beam held
@@ -311,7 +311,7 @@ public partial class TopDownMain : Node3D
         }
         foreach (var pearl in _world.Pearls)
         {
-            if (pearl.Taken || pearl.Absorbing || _world.Map.Pois.Exists(q => q.Kind == PoiKind.TreasureCave && q.Position == pearl.Position)) continue;
+            if (pearl.Taken || pearl.Absorbing || _world.Clams.Exists(c => c.Pearl == pearl)) continue;
             float d = System.Numerics.Vector2.Distance(pearl.Position, her);
             if (d > nearest) continue;
             nearest = d;
@@ -337,9 +337,16 @@ public partial class TopDownMain : Node3D
         foreach (var stand in _world.Stands)
             if (stand.Kind is StandKind.Pearl or StandKind.Deal && !stand.Sold) loose.Add((System.Numerics.Vector2.Distance(stand.Position, her), stand.Position, stand.ItemId));
         foreach (var pearl in _world.Pearls)
-            if (!pearl.Taken && !pearl.Absorbing && !_world.Map.Pois.Exists(q => q.Kind == PoiKind.TreasureCave && q.Position == pearl.Position))
+            if (!pearl.Taken && !pearl.Absorbing && !_world.Clams.Exists(c => c.Pearl == pearl))
                 loose.Add((System.Numerics.Vector2.Distance(pearl.Position, her), pearl.Position, pearl.ItemId));
         loose.Sort((a, b) => a.D.CompareTo(b.D));
+        // A school's arrow in her light: a pale haze round it, so it shines out of the dark.
+        foreach (var sc in _world.Schools)
+            if (sc.Form > 0.01f && _pearlGlows.Count < CameraRig.MostPearlGlows)
+            {
+                _pearlGlows.Add(new Vector4(sc.Position.X, sc.Position.Y, 4f, 0.5f * sc.Form));
+                _pearlGlowColors.Add(new Color(0.9f, 0.95f, 1f));
+            }
         foreach (var (_, at, id) in loose)
         {
             if (_pearlGlows.Count >= CameraRig.MostPearlGlows) break;
@@ -358,7 +365,7 @@ public partial class TopDownMain : Node3D
     /// <summary>Verification (--dbg-diveclock=s): each level's clock starts this far on (DiveClock), so the dive opens sooner.</summary>
     float _dbgDiveClock;
     /// <summary>Verification (--dbg-vault): she shines at the nearest bubble vault.</summary>
-    bool _dbgVault, _dbgShineSpring;
+    bool _dbgVault, _dbgShineSpring, _dbgShineClam, _dbgShineSchool;
     /// <summary>Verification (--dbg-loose=id): that pearl lies loose on the reef a few metres from her at the start.</summary>
     string? _dbgLoose;
     /// <summary>
@@ -658,6 +665,8 @@ public partial class TopDownMain : Node3D
             else if (arg == "--dbg-vault") _dbgVault = true;
             // (Verification: she holds still and shines her beam on the nearest light spring.)
             else if (arg == "--dbg-shine-spring") _dbgShineSpring = true;
+            else if (arg == "--dbg-shine-clam") _dbgShineClam = true;
+            else if (arg == "--dbg-shine-school") _dbgShineSchool = true;
             else if (arg.StartsWith("--dbg-diveclock=") && float.TryParse(Value("--dbg-diveclock="), NumberStyles.Float, CultureInfo.InvariantCulture, out float dc)) _dbgDiveClock = dc;
             else if (arg.StartsWith("--dbg-loose=")) _dbgLoose = Value("--dbg-loose=");
             else if (arg == "--dbg-prism") _dbgPrism = true;
@@ -2364,11 +2373,9 @@ public partial class TopDownMain : Node3D
                 .Select(q => (System.Numerics.Vector2?)q).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
             // A few metres south of the first pot, in water that sees it.
             "vase" => _world.Vases.Select(v => (System.Numerics.Vector2?)(v.Position + new System.Numerics.Vector2(0f, 4f))).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
-            "treasure" => _map.Caves.Where(c => _map.Pois[c.Poi].Kind == PoiKind.TreasureCave).Select(c => (System.Numerics.Vector2?)(c.Mouth - c.Facing * 2.5f)).FirstOrDefault(),
-            // On a clam room's pearl: it is touched at once.
-            "clam-pearl" => _map.Pois.Where(p => p.Kind == PoiKind.TreasureCave).Select(p => (System.Numerics.Vector2?)p.Position).FirstOrDefault(),
-            // Out in the canyon before a clam room's mouth, to see its light spill.
-            "treasure-out" => _map.Caves.Where(c => _map.Pois[c.Poi].Kind == PoiKind.TreasureCave).Select(c => (System.Numerics.Vector2?)(c.Mouth + c.Facing * 7f)).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
+            // Some metres south of the first clam (shut until her light reaches it), and on it (it opens, its pearl is touched).
+            "clam" => _world.Clams.SelectMany(c => new[] { 9f, 7f, 5f }.Select(d => c.Position + new System.Numerics.Vector2(0f, d))).Select(q => (System.Numerics.Vector2?)q).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
+            "clam-pearl" => _world.Clams.Select(c => (System.Numerics.Vector2?)c.Position).FirstOrDefault(),
             "mob" => _world.Mobs.Select(m => (System.Numerics.Vector2?)(m.Position + new System.Numerics.Vector2(0f, 7f))).FirstOrDefault(q => q is { } v && _world.Clear(v, 0.6f)),
             // Outside the curse den's mouth, halfway down its tunnel, and at its end.
             "curse" => _world.Curse is { } c ? _map.Caves[_map.Pois[c.Poi].Cave].Mouth + _map.Caves[_map.Pois[c.Poi].Cave].Facing * 2.5f : null,
@@ -2832,6 +2839,16 @@ public partial class TopDownMain : Node3D
                 {
                     // A school gathers into an arrow: a soft rising chime. What it means she finds out herself (no hints).
                     _sfx.PlayPitched("merge", 1.35f, -9f);
+                }
+                else if (e.Type == PlaneEventType.PlaceRevealed)
+                {
+                    // Lit long enough, the school has shown her the place: its emblem comes (EdgeArrows), with a brighter chime.
+                    _sfx.PlayPitched("merge", 1.7f, -6f);
+                }
+                else if (e.Type == PlaneEventType.ClamOpened)
+                {
+                    // Light on a shut clam: its valve swings open (ClamRoomView), with a low knock of shell.
+                    _sfx.PlayAt("snap", new Vector3(e.Position.X, LevelMap.SwimBand, e.Position.Y), -12f);
                 }
                 else if (e.Type == PlaneEventType.Necklace)
                 {
@@ -4455,6 +4472,16 @@ public partial class TopDownMain : Node3D
         if (_dbgSteer is { } steerTo && !(_dbgSteerFight && _world.Boss is not { Stage: BossStage.Fight }))
         {
             input.Move = new System.Numerics.Vector2(steerTo.X, steerTo.Y);
+            return input;
+        }
+        // Verification: she shines at the nearest clam, or the nearest school (from the second half-second).
+        if (_dbgShineClam && _world.Clams.Count > 0 || _dbgShineSchool && _world.Schools.Count > 0)
+        {
+            var her = _world.Player.Position;
+            var at = _dbgShineClam ? _world.Clams.OrderBy(c => System.Numerics.Vector2.Distance(c.Position, her)).First().Position
+                : _world.Schools.OrderBy(c => System.Numerics.Vector2.Distance(c.Position, her)).First().Position;
+            input.Aim = System.Numerics.Vector2.Normalize(at - her);
+            input.Beam = _frame > 30;
             return input;
         }
         if (_dbgShineSpring && _world.Springs.Count > 0)

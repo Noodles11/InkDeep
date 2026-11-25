@@ -29,7 +29,7 @@ public sealed class Poi
     public int Cave = -1;
 
     /// <summary>Special rooms live in caves (DESIGN-TOPDOWN §4.2).</summary>
-    public static bool IsCaveHosted(PoiKind kind) => kind is PoiKind.Shop or PoiKind.Secret or PoiKind.CurseDen or PoiKind.TreasureCave or PoiKind.CrabDeal or PoiKind.LeakCave or PoiKind.Haven;
+    public static bool IsCaveHosted(PoiKind kind) => kind is PoiKind.Shop or PoiKind.Secret or PoiKind.CurseDen or PoiKind.CrabDeal or PoiKind.LeakCave or PoiKind.Haven;
 }
 
 /// <summary>Main: a route canyon start→rift. Spur: to a place. Pass: a narrow cut. Side: a labyrinth canyon (dead end or loop).</summary>

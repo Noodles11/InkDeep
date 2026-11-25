@@ -542,7 +542,7 @@ public static partial class TopDownGenerator
 
     /// <summary>A special room's cave, or an open place's clearing.</summary>
     static float RadiusOf(PoiKind kind) => kind == PoiKind.Hole ? ClearingRadius :
-        Poi.IsCaveHosted(kind) ? (kind is PoiKind.TreasureCave or PoiKind.CurseDen or PoiKind.LeakCave or PoiKind.Haven ? ChamberRadius : PocketRadius) : ClearingRadius;
+        Poi.IsCaveHosted(kind) ? (kind is PoiKind.CurseDen or PoiKind.LeakCave or PoiKind.Haven ? ChamberRadius : PocketRadius) : ClearingRadius;
 
     /// <summary>
     /// Lays out the level's cave (<see cref="CaveLayout"/>, docs/archive/CAVEGEN.md) and records it: the start and the way down,

@@ -51,7 +51,7 @@ public static class ReefKinds
     {
         ReefKind.Haven => "Haven",
         ReefKind.Boss => "Boss",
-        ReefKind.Treasure => "Clam room",
+        ReefKind.Treasure => "Clam",
         ReefKind.Den => "Curse den",
         _ => "Reef",
     };

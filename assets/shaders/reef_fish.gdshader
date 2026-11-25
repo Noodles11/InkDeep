@@ -29,6 +29,8 @@ varying float sun;
 varying float seed;
 // A murkling's throw turning it (0 → 1, from the instance colour's red): ink creeps over it from the tail.
 varying float ink;
+// A chromis in its school's arrow, lit by her (0 → 1, from the instance colour's green): it shines, so the arrow reads.
+varying float shine;
 
 vec3 rot_y(vec3 p, float a) { float c = cos(a), s = sin(a); return vec3(c * p.x + s * p.z, p.y, -s * p.x + c * p.z); }
 vec3 rot_x(vec3 p, float a) { float c = cos(a), s = sin(a); return vec3(p.x, c * p.y - s * p.z, s * p.y + c * p.z); }
@@ -49,6 +51,7 @@ void vertex() {
 	v = part < 0.5 ? CUSTOM2.z : (part > 3.5 && part < 4.5 ? 1.0 : (part > 4.5 && part < 5.5 ? -1.0 : 0.0));
 	seed = fract(float(INSTANCE_ID) * 0.6180339);
 	ink = COLOR.r;
+	shine = COLOR.g;
 	float phase = INSTANCE_CUSTOM.x, fin_phase = INSTANCE_CUSTOM.y, swim = INSTANCE_CUSTOM.z, turn = INSTANCE_CUSTOM.w;
 	float drive = 0.3 + 0.7 * min(swim, 1.4);
 	vec3 p = VERTEX;
@@ -196,6 +199,12 @@ void fragment() {
 		float k = smoothstep(0.0, 0.2, ink * 1.4 - (1.0 - u) * 0.4);
 		col = mix(col, vec3(0.01, 0.006, 0.02), k);
 		glow = mix(glow, vec3(0.3, 0.09, 0.6) * 0.5, k);
+	}
+	if (shine > 0.0) {
+		// A pale sheen running head-ward along each fish, under her own warmth.
+		float run = 0.7 + 0.3 * sin(TIME * 4.0 - u * 6.0 + seed * 6.0);
+		glow += vec3(1.0, 0.95, 0.82) * 2.6 * shine * run;
+		col = mix(col, vec3(0.95, 0.97, 1.0), 0.5 * shine);
 	}
 	ALBEDO = col;
 	ROUGHNESS = rough;

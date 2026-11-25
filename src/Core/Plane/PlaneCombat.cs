@@ -278,14 +278,21 @@ public sealed partial class PlaneWorld
     void PlacePearls()
     {
         var rng = new Rng(Map.Seed * 0x9E3779B97F4A7C15UL ^ (ulong)(Map.Cycle * 100000 + Map.Depth * 1000 + Map.Level) ^ ((ulong)Map.Attempt << 40));
-        foreach (var poi in Map.Pois)
+        var murk = new Rng(Map.Seed ^ 0xC1A3UL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Attempt << 46));
+        for (int pi = 0; pi < Map.Pois.Count; pi++)
         {
+            var poi = Map.Pois[pi];
             if (poi.Kind != PoiKind.TreasureCave) continue;
+            // Each a shut clam (PlaneClams.cs): a pearl in it, or now and then a murkling.
+            var clam = new PlaneClam { Position = poi.Position, Poi = pi, Murk = murk.NextFloat() < ClamTuning.MurkShare };
+            Clams.Add(clam);
+            if (clam.Murk) continue;
             // (A template level's clam offers from the treasure pool: CROSSOVER.md §7.)
             var offer = Map.Templated ? Run.Offer("treasure", Pearls.Select(q => q.ItemId))
                 : PlaneRun.InPlay.Where(id => Run.CanOffer(id) && Pearls.All(q => q.ItemId != id)).ToList();
-            if (offer.Count == 0) break;
-            Pearls.Add(new PlanePearl { ItemId = Run.Pick(offer, rng), Position = poi.Position });
+            if (offer.Count == 0) continue;
+            clam.Pearl = new PlanePearl { ItemId = Run.Pick(offer, rng), Position = poi.Position };
+            Pearls.Add(clam.Pearl);
         }
     }
 
@@ -431,7 +438,7 @@ public sealed partial class PlaneWorld
         if (!Pearls.Exists(q => q.Absorbing))
             foreach (var pearl in Pearls)
             {
-                if (pearl.Taken || pearl.Absorbing || Vector2.Distance(pearl.Position, p.Position) > Radius + PlaneCombatTuning.PearlReach) continue;
+                if (pearl.Taken || pearl.Absorbing || Shut(pearl) || Vector2.Distance(pearl.Position, p.Position) > Radius + PlaneCombatTuning.PearlReach) continue;
                 BeginRitual(pearl);
                 break;
             }

@@ -69,7 +69,7 @@ public sealed partial class PlaneWorld
         return poi.Kind switch
         {
             PoiKind.ShellCache => !Shells.Exists(s => !s.Taken && Within(s.Position)),
-            PoiKind.TreasureCave => !Pearls.Exists(q => !q.Taken && Within(q.Position)),
+            PoiKind.TreasureCave => ClamDone(index),
             PoiKind.Shop or PoiKind.Shrine or PoiKind.CrabDeal => !Stands.Exists(s => !s.Sold && Within(s.Position)),
             PoiKind.CurseDen => Curse is { Cleared: true } den && den.Poi == index,
             _ => false,

@@ -399,10 +399,10 @@ public class TopDownGenTests
     [MemberData(nameof(Seeds))]
     public void CaveMouthsFaceCorridorsOrOpenWater(string seed)
     {
-        // The first reef of the first depth with a room in a cave.
+        // The first reef with a room in a cave (a shop's or a crab's).
         var code = SeedCode.Parse(seed);
-        var id = Enumerable.Range(1, 4).SelectMany(r => DiveGraph.Of(code).Row(1, LevelPlan.Tutorial + 1, r)).Select(n => n.Id)
-            .First(i => LevelPlan.For(code, i) is var p && p.Treasures + p.Crabs > 0);
+        var id = Enumerable.Range(1, 5).SelectMany(d => Enumerable.Range(1, 4).SelectMany(r => DiveGraph.Of(code).Row(1, LevelPlan.Tutorial + d, r))).Select(n => n.Id)
+            .First(i => LevelPlan.For(code, i) is var p && p.Shops + p.Crabs > 0 && Map(seed, i).Caves.Count > 0);
         var map = Map(seed, id);
         Assert.NotEmpty(map.Caves);
         foreach (var cave in map.Caves)
@@ -488,42 +488,19 @@ public class TopDownGenTests
     }
 
     [Fact]
-    public void EveryClamRoomIsADeadEndChamber()
+    public void EveryClamLiesOnThePathAndNoneInACave()
     {
-        int rooms = 0;
+        int clams = 0;
         foreach (var id in TestLevels.All(p => p.Treasures > 0))
         {
             var map = TestLevels.Get(id);
-            foreach (var cave in map.Caves.Where(c => map.Pois[c.Poi].Kind == PoiKind.TreasureCave))
+            foreach (var poi in map.Pois.Where(p => p.Kind == PoiKind.TreasureCave))
             {
-                rooms++;
-                Assert.Equal(CaveKind.Pocket, cave.Kind);
-                Assert.Single(cave.Chambers);
-                // With its own spur shut, nothing else reaches it.
-                const int N = LevelMap.Seeded;
-                var seen = new bool[N * N];
-                var queue = new System.Collections.Generic.Queue<(int X, int Y)>();
-                var start = LevelValidator.Cell(map.Start.Position);
-                queue.Enqueue(start);
-                seen[start.Y * N + start.X] = true;
-                var (room, radius) = cave.Chambers[0];
-                while (queue.Count > 0)
-                {
-                    var (x, y) = queue.Dequeue();
-                    foreach (var (dx, dy) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
-                    {
-                        int nx = x + dx, ny = y + dy;
-                        if (nx < 0 || ny < 0 || nx >= N || ny >= N || seen[ny * N + nx]) continue;
-                        var p = new Vector2(nx + 0.5f, ny + 0.5f);
-                        if (Vector2.Distance(p, cave.Mouth) < 3f || map.Corridors.Any(k => k.Poi == cave.Poi && k.DistanceToCentre(p) < k.HalfWidth + 1.5f)) continue;
-                        if (!LevelValidator.CellOpen(map, nx, ny)) continue;
-                        seen[ny * N + nx] = true;
-                        Assert.True(Vector2.Distance(p, room) > radius * 0.6f, $"{id}: its clam room is reached at {p} without its spur");
-                        queue.Enqueue((nx, ny));
-                    }
-                }
+                clams++;
+                Assert.True(poi.Cave < 0);
+                Assert.True(map.IsOpen(poi.Position));
             }
         }
-        Assert.True(rooms > 5, $"only {rooms} clam rooms");
+        Assert.True(clams > 0);
     }
 }

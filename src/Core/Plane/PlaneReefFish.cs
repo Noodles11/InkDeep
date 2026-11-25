@@ -26,11 +26,11 @@ public static class ReefFishTuning
     /// <summary>Each keeps about Spacing from its neighbours, matches those within Align, and stays near the school.</summary>
     public const float Spacing = 0.7f, Align = 1.6f;
     /// <summary>
-    /// The school as a guide: on a level with a secret room she has not found, swimming into a school (within its
-    /// radius plus GuideEnter) makes it gather into an arrow pointing at the secret's way in; it holds while she stays
-    /// within its radius plus GuideStay, forming over FormSeconds and loosening again over LooseSeconds.
+    /// The school as a guide: lit by her (GuideLight of hers on its centre; it holds down to GuideKeep), it gathers into
+    /// a shining arrow pointing at the nearest place she has not found (GuideTarget), forming over FormSeconds and
+    /// loosening again over LooseSeconds. Lit RevealSeconds on end, it shows her that place for good (Revealed: its emblem).
     /// </summary>
-    public const float GuideEnter = 0.6f, GuideStay = 2.5f, FormSeconds = 0.8f, LooseSeconds = 1.2f;
+    public const float GuideLight = 0.15f, GuideKeep = 0.08f, FormSeconds = 0.8f, LooseSeconds = 1.2f, RevealSeconds = 10f, ArrowLeast = 2.4f;
     /// <summary>
     /// The school's centre roams from spot to spot along the channels, within SchoolRoam of home. A school spreads over
     /// SchoolSpread × √(its fish) metres (never under SchoolRadius), loose enough to part round her and close again.
@@ -84,6 +84,9 @@ public sealed class PlaneSchool
     /// <summary>Guiding her to the secret: the arrow it is forming (0 a loose school → 1 the full arrow), and its heading.</summary>
     public bool Guiding;
     public float Form;
+    /// <summary>The place it points at (a POI index), and how long it has been lit pointing at it.</summary>
+    public int Guide = -1;
+    public float Lit;
     public Vector2 Pointing = Vector2.UnitX;
     public Rng Rng = null!;
 }
@@ -135,6 +138,34 @@ public sealed partial class PlaneWorld
     public Vector2 SecretWay { get; private set; }
     int _secret = -1;
 
+    /// <summary>The places a school has shown her (by POI index): their emblems show as if she had been there.</summary>
+    public bool[] Revealed { get; private set; } = Array.Empty<bool>();
+
+    /// <summary>
+    /// The nearest place a school can point her to: one she has neither been to nor been shown, not done, and not one
+    /// shown from the start (the shop, the way out); −1 for none.
+    /// </summary>
+    public int GuideTarget(Vector2 from)
+    {
+        int best = -1;
+        float bestD = float.MaxValue;
+        for (int i = 0; i < Map.Pois.Count; i++)
+        {
+            var poi = Map.Pois[i];
+            if (poi.Kind is PoiKind.Start or PoiKind.Exit or PoiKind.Shop or PoiKind.Hole or PoiKind.Relic || !Map.Shown(poi)) continue;
+            if (i < Visited.Length && Visited[i] || i < Revealed.Length && Revealed[i] || PoiDone(i)) continue;
+            if (poi.Kind == PoiKind.Secret && !SecretHidden) continue;
+            float d = Vector2.Distance(from, GuideAt(i));
+            if (d >= bestD) continue;
+            bestD = d;
+            best = i;
+        }
+        return best;
+    }
+
+    /// <summary>Where a school points for a place: a secret's way in, else the place.</summary>
+    public Vector2 GuideAt(int poi) => poi == _secret ? SecretWay : Map.Pois[poi].Position;
+
     /// <summary>A secret she has not found yet: the schools can guide her to it.</summary>
     bool SecretHidden => _secret >= 0 && !Map.Labyrinth && !(Visited.Length > _secret && Visited[_secret])
         // (A labyrinth's mouth no longer hidden once its wall is down.)
@@ -152,6 +183,7 @@ public sealed partial class PlaneWorld
 
     void PlaceReefFish()
     {
+        Revealed = new bool[Map.Pois.Count];
         _secret = Map.Pois.FindIndex(p => p.Kind == PoiKind.Secret);
         if (_secret >= 0)
         {
@@ -450,15 +482,30 @@ public sealed partial class PlaneWorld
     /// <summary>A school's centre: roams from spot to spot along the channels near home, lingering at each.</summary>
     void StepSchool(PlaneSchool s)
     {
-        // Guiding: she is in the school and a secret is still hidden. It holds still and gathers into the arrow.
-        float her = Vector2.Distance(Player.Position, s.Position);
-        bool guide = SecretHidden && her < s.Radius + (s.Guiding ? ReefFishTuning.GuideStay : ReefFishTuning.GuideEnter);
-        if (guide && !s.Guiding) Events.Add(new PlaneEvent(PlaneEventType.SchoolPoints, s.Position, Vector2.Normalize(SecretWay - s.Position)));
+        // Guiding: her light on it, and a place left to show. It holds still and gathers into the arrow.
+        bool lit = HerLightOn(s.Position) >= (s.Guiding ? ReefFishTuning.GuideKeep : ReefFishTuning.GuideLight);
+        int target = lit ? GuideTarget(s.Position) : -1;
+        bool guide = target >= 0;
+        if (guide && (!s.Guiding || target != s.Guide))
+        {
+            s.Lit = 0f;
+            Events.Add(new PlaneEvent(PlaneEventType.SchoolPoints, s.Position, SafeNormalize(GuideAt(target) - s.Position)));
+        }
         s.Guiding = guide;
+        s.Guide = target;
         s.Form = guide ? MathF.Min(1f, s.Form + Dt / ReefFishTuning.FormSeconds) : MathF.Max(0f, s.Form - Dt / ReefFishTuning.LooseSeconds);
+        if (!guide) s.Lit = 0f;
         if (guide)
         {
-            Vector2 to = SecretWay - s.Position;
+            // Lit long enough, it shows her the place for good (and next time points at the next one).
+            s.Lit += Dt;
+            if (s.Lit >= ReefFishTuning.RevealSeconds)
+            {
+                Revealed[target] = true;
+                s.Lit = 0f;
+                Events.Add(new PlaneEvent(PlaneEventType.PlaceRevealed, GuideAt(target), Vector2.Zero, target));
+            }
+            Vector2 to = GuideAt(target) - s.Position;
             if (to.LengthSquared() > 1e-4f) s.Pointing = Vector2.Normalize(to);
             s.Velocity = MoveToward(s.Velocity, Vector2.Zero, 3f * Dt);
             Move(ref s.Position, ref s.Velocity, ReefFishTuning.SchoolRadius * 0.6f, report: false);
@@ -552,7 +599,8 @@ public sealed partial class PlaneWorld
     public static Vector2 ArrowSlot(PlaneSchool s, int slot)
     {
         Vector2 d = s.Pointing, across = new(-d.Y, d.X);
-        float r = s.Radius;
+        // (Never smaller than ArrowLeast, so a small school's arrow still reads from her camera.)
+        float r = MathF.Max(s.Radius, ReefFishTuning.ArrowLeast);
         int n = Math.Max(s.Count, 2);
         int head = Math.Max(2, (int)(n * 0.35f));
         Vector2 tip = d * (r * 1.1f);

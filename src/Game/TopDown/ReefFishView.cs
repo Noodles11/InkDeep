@@ -194,11 +194,13 @@ public partial class ReefFishView : Node3D
             float bob = 0.05f * Mathf.Sin(p.Time * 1.1f + f.Id * 1.9f) * st.Spec.Length / 0.45f;
 
             float turn = Mathf.Clamp(f.TurnRate / 2.5f, -1f, 1f);
-            var basis = (new Basis(Vector3.Up, p.Yaw) * new Basis(Vector3.Right, p.Roll) * new Basis(Vector3.Back, p.Pitch)).Scaled(Vector3.One * (1f - 0.35f * ink));
+            // In its school's arrow (lit by her), it shines and is drawn a little larger, so the arrow reads.
+            float shine = f.Kind == ReefFishKind.Chromis && f.Host >= 0 && f.Host < world.Schools.Count ? world.Schools[f.Host].Form : 0f;
+            var basis = (new Basis(Vector3.Up, p.Yaw) * new Basis(Vector3.Right, p.Roll) * new Basis(Vector3.Back, p.Pitch)).Scaled(Vector3.One * (1f - 0.35f * ink) * (1f + 0.7f * shine));
             var at = new Vector3(f.Position.X, p.Height + bob, f.Position.Y);
             group.Mesh.SetInstanceTransform(p.Slot, new Transform3D(basis, at));
             group.Mesh.SetInstanceCustomData(p.Slot, new Color(p.Tail, p.Fin, p.Swim, turn));
-            group.Mesh.SetInstanceColor(p.Slot, new Color(ink, 0f, 0f, 1f));
+            group.Mesh.SetInstanceColor(p.Slot, new Color(ink, shine, 0f, 1f));
             group.Min = group.Min.Min(at);
             group.Max = group.Max.Max(at);
         }

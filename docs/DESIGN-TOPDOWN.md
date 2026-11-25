@@ -1392,16 +1392,26 @@ at mist distance (inherited fade rule).
   trio to each anemone on the seabed by the rock, dart out at most 1.6 m and back, and tuck in while she is within
   2.5 m. **Blue tangs**, alone or in pairs, hop 6–14 m about home and graze at each spot, and veer off when she comes
   within 1.5 m. **Blue-green chromis** school round a centre that roams the channels, parting round her and closing
-  behind. **A school is a guide:** on a level with a secret room she has not found, swimming into a school makes it
-  hold still and gather into an arrow (a short chevron head, a long two-lane shaft, sized to the school) pointing at
-  the secret's way in (its seal), every fish facing along it, with a soft chime; it loosens back into a school
-  when she leaves, and once the secret is found it no longer points. Schools are few but big, so they visibly split and join: a school spreads over about 0.33 m × √(its fish).
+  behind. **A school is a guide** (0.93.0): lit by her (`ReefFishTuning.GuideLight` of her light on its centre, held
+  down to `GuideKeep`), it holds still and gathers into an arrow (a short chevron head, a long two-lane shaft, sized to
+  the school but never under `ArrowLeast`) pointing at the nearest place she has neither been to nor been shown and
+  that is not done (`PlaneWorld.GuideTarget`; a secret's way in, its seal; never the shop or the way out), every fish
+  facing along it, drawn larger and shining pale (`reef_fish.gdshader`'s instance green) in a pale haze, with a soft
+  chime. Lit `RevealSeconds` (10 s) on end, it shows her the place for good (`PlaneWorld.Revealed`: its emblem, as if
+  she had been there; a brighter chime) and turns to the next. Out of her light it loosens back into a school. Schools are few but big, so they visibly split and join: a school spreads over about 0.33 m × √(its fish).
   Her dash startles all of them from 4 m. None within 20 m of the start. Per level by depth: Depth 0 (the Shallows) has
   4–6 anemones, 4–7 tangs and 1–2 schools of 45–90; Depth 1 fewer (2–3, 2–4, one school of 30–60); Depth 2 at most
   one anemone, 1–2 tangs and at most one school of 30–45; Depth 3 the same with a school of 25–40; Depth 4 at most one
   anemone, up to 2 tangs and at most one school of 20–35; Depth 5 at most one tang and one school of 20–30; Depth 6
   none.
-- **Clam rooms (look)** (`ClamRoomView`): a chamber like any other, the dead end of its spur, and in its middle a giant
+- **Clams** (0.93.0, `PlaneClams.cs`, `ClamRoomView`): the clam rooms are gone; each is a giant clam (the look below)
+  lying **shut** on the path, its place a POI mark like a shell cache's (`Poi.IsCaveHosted` no longer holds it). Any
+  light on it (`ClamTuning.Touch` of `LightAt`) opens it, once: its upper valve swings back over 0.9 s with an ease-out
+  overshoot, its mouth toward the camera. It holds a pearl (90%; its light then comes out as below, and it cannot be
+  taken while the clam is shut, `PlaneWorld.Shut`) or a murkling (`ClamTuning.MurkShare` 10%), born out of it at once.
+  Every loose pearl (a boss's, a crab's, an altar's) lays its light all round it (`pearl_floor_light`'s cone opened
+  to a full circle, 6 m) with the magic particles. What follows is the clam rooms' look as it was, kept for the clam.
+- **Clam rooms (look, until 0.92.0)** (`ClamRoomView`): a chamber like any other, the dead end of its spur, and in its middle a giant
   clam lying open on the sand — three times the pearl's width, bone-cream, ribbed — its mouth turned to the chamber's
   entrance, the hinge behind, its soft flesh inside and the pearl lying on its lower valve. **The pearl's light comes out
   of the clam's mouth only:** in the pearl's own colours, softly mottled (`pearl_glow.gdshaderinc`), laid over the chamber's floor and the foot of its walls in a cone of 120°
