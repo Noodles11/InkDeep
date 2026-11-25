@@ -283,21 +283,26 @@ public sealed partial class PlaneWorld
             if (Vector2.Distance(anchor, Map.Start.Position) < 20f || groups.Any(g => Vector2.Distance(g, anchor) < 14f)) continue;
             if (!Clear(anchor, PufferlingTuning.CalmRadius + 0.5f)) continue;
             groups.Add(anchor);
-            int size = Math.Min(1 + rng.Int(3), want - Fish.Count);
-            for (int k = 0; k < size; k++)
+            AddPufferlings(anchor, Math.Min(1 + rng.Int(3), want - Fish.Count), rng);
+        }
+    }
+
+    /// <summary>Healthy pufferlings round a spot.</summary>
+    void AddPufferlings(Vector2 anchor, int size, Rng rng)
+    {
+        for (int k = 0; k < size; k++)
+        {
+            var at = anchor + new Vector2(rng.Range(-2.5f, 2.5f), rng.Range(-2.5f, 2.5f));
+            if (!Clear(at, PufferlingTuning.CalmRadius + 0.2f)) at = anchor;
+            Fish.Add(new PlaneFish
             {
-                var at = anchor + new Vector2(rng.Range(-2.5f, 2.5f), rng.Range(-2.5f, 2.5f));
-                if (!Clear(at, PufferlingTuning.CalmRadius + 0.2f)) at = anchor;
-                Fish.Add(new PlaneFish
-                {
-                    Id = _fishIds++,
-                    Position = at,
-                    Home = anchor,
-                    Heading = rng.Range(0f, MathF.Tau),
-                    Wait = rng.Range(0f, 3f),
-                    Rng = new Rng(rng.NextU64()),
-                });
-            }
+                Id = _fishIds++,
+                Position = at,
+                Home = anchor,
+                Heading = rng.Range(0f, MathF.Tau),
+                Wait = rng.Range(0f, 3f),
+                Rng = new Rng(rng.NextU64()),
+            });
         }
     }
 

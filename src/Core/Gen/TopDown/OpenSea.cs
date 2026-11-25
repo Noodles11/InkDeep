@@ -52,7 +52,7 @@ public sealed class OpenSea
     /// <summary>The place a chunk holds (by the rules), or none.</summary>
     public PoiKind? PlaceOf((int X, int Y) key)
     {
-        if (Near(key)) return null;
+        if (Near(key) || key == Lair) return null;
         for (int r = 0; r < PlaceRules.Count; r++)
             if (Chosen(r, key).Contains(key)) return PlaceRules[r].Kind;
         return null;
@@ -125,6 +125,8 @@ public sealed class OpenSea
     /// <summary>A hole: its opening, its slope, its sag at the rim, its lip; how far its middle keeps from the chunk's edge (its slope then ends Pad inside it: a neighbour's padding never holds it), and how much room it needs.</summary>
     /// <summary>How much room a place needs round its POI mark (metres to the rock).</summary>
     const float PlaceRoom = 3f;
+    /// <summary>How far round the lair's hole the water is opened (metres).</summary>
+    const float LairPool = 5f;
     const float HoleOpening = 2.4f, HoleSlope = 3f, HoleSag = 1.2f, HoleLip = 1.4f, HoleKeep = 9f, HoleRoom = 3.5f;
 
     public readonly ulong Seed;
@@ -140,7 +142,17 @@ public sealed class OpenSea
         Biome = biome;
         _shift = (int)(Mix(seed, 0x5EA) % 4);
         _noise = (uint)(Mix(seed, 0xE40DE) >> 40);
+        float a = Mix(seed, 0x1A12) % 3600 / 3600f * MathF.Tau;
+        Lair = ChunkOfCell(((int)MathF.Round(MathF.Cos(a) * LairCells), (int)MathF.Round(MathF.Sin(a) * LairCells)));
     }
+
+    /// <summary>
+    /// The level's one way to its boss (the depth's arena, met alone): a hole down in this chunk, LairCells from her
+    /// start in a direction of the sea's own. It holds no other place.
+    /// </summary>
+    public readonly (int X, int Y) Lair;
+    /// <summary>How far the lair lies from her first cell (cells).</summary>
+    const int LairCells = 5;
 
     // ───────────────────────── the pattern ─────────────────────────
 
@@ -267,6 +279,8 @@ public sealed class OpenSea
         /// <summary>The place it holds (PlaceOf; a hole is in Holes as well), and where: on one of its cells' POI marks in open water, else where its water is widest.</summary>
         public PoiKind? Place;
         public Vector2 PlaceAt;
+        /// <summary>The lair's hole (the way to the boss), if this chunk is the lair (it is in Holes as well).</summary>
+        public Vector2? Lair;
         /// <summary>Its template: its cells' templates by name, and how many neighbours it is joined to.</summary>
         public string Template = "";
         public int Ways;
@@ -342,6 +356,29 @@ public sealed class OpenSea
         }
         // Raised: the floor, rising round into the rock over a few metres.
         var toRock = Chamfer(open, w, h, false);
+        // The lair: its hole where the water is widest, the water opened round it so it always has the room.
+        Vector2? lair = null;
+        if (key == Lair)
+        {
+            int at = -1;
+            for (int j = 0; j < h; j++)
+            for (int i = 0; i < w; i++)
+            {
+                var p = new Vector2(x0 + i, y0 + j);
+                if (p.X < min.X + HoleKeep || p.Y < min.Y + HoleKeep || p.X > max.X - HoleKeep || p.Y > max.Y - HoleKeep) continue;
+                if (open[j * w + i] && (at < 0 || toRock[j * w + i] > toRock[at])) at = j * w + i;
+            }
+            if (at >= 0)
+            {
+                int ci = at % w, cj = at / w;
+                for (int j = 0; j < h; j++)
+                for (int i = 0; i < w; i++)
+                    if ((i - ci) * (i - ci) + (j - cj) * (j - cj) <= LairPool * LairPool && !InWall((FloorDiv(x0 + i), FloorDiv(y0 + j)), Mod(x0 + i, Cell), Mod(y0 + j, Cell), WallCore))
+                        open[j * w + i] = true;
+                toRock = Chamfer(open, w, h, false);
+                lair = new Vector2(x0 + ci, y0 + cj);
+            }
+        }
         var toOpen = Chamfer(open, w, h, true);
         var chunk = new Chunk { Key = key, Min = min, Max = max, Origin = min - new Vector2(Pad), Stride = (int)(max.X - min.X) + 2 * Pad + 1, Rows = (int)(max.Y - min.Y) + 2 * Pad + 1 };
         chunk.Heights = new float[chunk.Stride * chunk.Rows];
@@ -403,6 +440,11 @@ public sealed class OpenSea
                 chunk.PlaceAt = c;
             }
             else chunk.Place = null;
+        }
+        if (lair is { } l)
+        {
+            DigHole(chunk, l, new Rng(Mix(Seed, (ulong)(uint)key.X, (ulong)(uint)key.Y, 0x1A13)));
+            chunk.Lair = l;
         }
         var names = CellsOf(key).Select(c => CellGrid(c).Name);
         chunk.Template = string.Join("+", names);
@@ -470,7 +512,7 @@ public sealed class OpenSea
             if (chunk is not null)
                 foreach (var hole in chunk.Holes)
                     if (hole.X - ox is > 4f and < LevelMap.Seeded - 4f && hole.Y - oy is > 4f and < LevelMap.Seeded - 4f)
-                        map.Holes.Add(new MapHole { Shaft = new Shaft(hole - origin, Vector2.UnitX, 3f, 3f) });
+                        map.Holes.Add(new MapHole { Shaft = new Shaft(hole - origin, Vector2.UnitX, 3f, 3f), Kind = hole == chunk.Lair ? OctoShoots.Core.Run.ReefKind.Boss : default });
             if (only is { } o && o != key) continue;
             var (min, max) = RectOf(key);
             int x0 = Math.Max((int)min.X, ox), x1 = Math.Min((int)max.X, ox + n), y0 = Math.Max((int)min.Y, oy), y1 = Math.Min((int)max.Y, oy + n);

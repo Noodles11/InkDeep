@@ -136,9 +136,18 @@ public partial class ReefFishView : Node3D
         if (_map is null) return;
         // Fish come into the reef (those Drippus Prime took, swimming out of it as it is freed): a pose for each.
         if (_poses.Count != world.ReefFish.Count) Show(world);
-        // An anemone turned (an Inkwarden now, BlightView draws it) is gone from its shelf until it is freed.
+        // An anemone turned (an Inkwarden now, BlightView draws it) is gone from its shelf until it is freed. (An open
+        // level's window moves it on: it keeps over its sim.)
         for (int i = 0; i < _anemones.Count && i < world.Anemones.Count; i++)
         {
+            var now = world.Anemones[i].Position;
+            if (_anemones[i].At.Origin.X != now.X || _anemones[i].At.Origin.Z != now.Y)
+            {
+                var at = _anemones[i].At;
+                at.Origin = new Vector3(now.X, at.Origin.Y, now.Y);
+                _anemones[i] = (_anemones[i].Mesh, at);
+                _hidden[i] = !world.Anemones[i].Turned;
+            }
             bool turned = world.Anemones[i].Turned;
             if (_hidden[i] == turned) continue;
             _hidden[i] = turned;
@@ -189,7 +198,8 @@ public partial class ReefFishView : Node3D
                 ReefFishKind.BlueTang => LevelMap.SwimBand + 0.05f,
                 _ => LevelMap.SwimBand - 0.3f + 0.5f * (Mathf.PosMod(f.Id * 0.618f, 1f) - 0.5f),
             };
-            want = Mathf.Clamp(want, floor + 0.2f, LevelMap.SwimBand + 0.3f);
+            // (Min then max, not Clamp: a fish off an open level's window reads the rock beyond it.)
+            want = Mathf.Min(Mathf.Max(want, floor + 0.2f), LevelMap.SwimBand + 0.3f);
             p.Height = float.IsNaN(p.Height) ? want : Mathf.Lerp(p.Height, want, 1f - Mathf.Exp(-3f * dt));
             float bob = 0.05f * Mathf.Sin(p.Time * 1.1f + f.Id * 1.9f) * st.Spec.Length / 0.45f;
 

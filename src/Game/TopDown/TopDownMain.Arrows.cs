@@ -70,6 +70,8 @@ public partial class TopDownMain
         }
         // An open level's holes down, once she has found them.
         foreach (var hole in FoundSeaHoles()) yield return (hole, LevelView.PoiColor(PoiKind.Hole), EdgeArrows.Down, 3f);
+        // Its lair, the way to its boss: shown from the start, as the boss's arena is.
+        if (Sea is { } sea) yield return (LairAt(sea), ReefKinds.Colour(ReefKind.Boss), "X", 3f);
         // Light rooms while they are shut ("~").
         foreach (var room in _world.LightRooms)
             if (room.Found && !room.Opened) yield return (room.Centre, LightRoomColour, "~", FloraTuning.Ring + 1f);

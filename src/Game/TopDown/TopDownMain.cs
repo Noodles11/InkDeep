@@ -634,6 +634,7 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--dbg-caverounds=") && int.TryParse(Value("--dbg-caverounds="), out int rounds)) _dbgCaveRounds = rounds;
             else if (arg.StartsWith("--dbg-caveback=") && float.TryParse(Value("--dbg-caveback="), NumberStyles.Float, CultureInfo.InvariantCulture, out float back)) _dbgCaveBack = back;
             else if (arg == "--dive") _autoDive = true;
+            else if (arg == "--dbg-lair") _autopilot = _dbgExplore = _dbgLair = true;
             else if (arg == "--calm") _calm = true;
             else if (arg.StartsWith("--at=")) _startAt = Value("--at=");
             else if (arg == "--autopilot") _autopilot = true;

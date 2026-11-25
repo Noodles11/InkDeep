@@ -50,6 +50,42 @@ public sealed partial class PlaneWorld
         return pi;
     }
 
+    /// <summary>
+    /// A chunk's life, once it lies whole in the window (its heights there): the reef's own fish, each kind by its chance
+    /// (SeaLife), at open spots of it apart from its place and from her. Seeded by where it lies in the sea.
+    /// </summary>
+    public void AddSeaLife(Vector2 min, Vector2 max, Vector2 inSea, Vector2? place)
+    {
+        var rng = new Rng(Map.Seed ^ 0x11FE_5EAUL ^ ((ulong)(uint)(int)MathF.Round(inSea.X) << 32) ^ (uint)(int)MathF.Round(inSea.Y));
+        var taken = new System.Collections.Generic.List<Vector2>();
+        if (place is { } pl) taken.Add(pl);
+        Vector2? Spot(float room, bool byRock)
+        {
+            for (int t = 0; t < 24; t++)
+            {
+                var q = new Vector2(rng.Range(min.X + 2f, max.X - 2f), rng.Range(min.Y + 2f, max.Y - 2f));
+                if (!Clear(q, room) || byRock && Clear(q, room + 2.5f) || Map.InShaft(q, 3f)) continue;
+                if (Vector2.Distance(q, Player.Position) < SeaLifeClear || taken.Exists(o => Vector2.Distance(o, q) < 8f)) continue;
+                taken.Add(q);
+                return q;
+            }
+            return null;
+        }
+        if (rng.NextFloat() < SeaAnemone && Spot(ReefFishTuning.ClownRange, true) is { } a) AddAnemone(a, rng);
+        if (rng.NextFloat() < SeaTangs && Spot(ReefFishTuning.TangRadius + 0.6f, false) is { } t) AddTangs(t, 1 + rng.Int(2), rng);
+        // (A school the adventure's size: a template level's few big ones would crowd a sea of chunks.)
+        if (rng.NextFloat() < SeaSchool && Spot(2f, false) is { } s) AddSchool(s, AdventureTuning.SchoolMin + rng.Int(AdventureTuning.SchoolMax - AdventureTuning.SchoolMin + 1), rng);
+        if (rng.NextFloat() < SeaPuffers && Spot(PufferlingTuning.CalmRadius + 0.5f, false) is { } f) AddPufferlings(f, 1 + rng.Int(3), rng);
+    }
+
+    /// <summary>
+    /// How often a chunk holds each kind of the reef's fish (an anemone with its clownfish, tangs, a chromis school,
+    /// pufferlings): about as many to the window as a template level holds.
+    /// </summary>
+    public const float SeaAnemone = 0.5f, SeaTangs = 0.5f, SeaSchool = 0.2f, SeaPuffers = 0.35f;
+    /// <summary>No fish comes in this near her (metres).</summary>
+    const float SeaLifeClear = 10f;
+
     /// <summary>How far round its middle an open level's place reaches (she has found it within this, and one more metre).</summary>
     public const float SeaPlaceRadius = 6f;
 
@@ -79,5 +115,48 @@ public sealed partial class PlaneWorld
         foreach (var s in Stands) s.Position -= by;
         foreach (var r in Relics) r.Position -= by;
         if (CrabAt is { } crab) CrabAt = crab - by;
+        foreach (var f in Fish) Moved(f, by);
+        foreach (var f in ReefFish) Moved(f, by);
+        foreach (var a in Anemones) a.Position -= by;
+        foreach (var s in Schools)
+        {
+            s.Position -= by;
+            s.Home -= by;
+            s.Target -= by;
+        }
+        DropOutside();
+    }
+
+    /// <summary>
+    /// The fish beyond the window let go (each with its anemone's or school's), the rest re-pointed at theirs: what lies
+    /// out of the window is rock to the sim, and a chunk's fish come back with it (AddSeaLife).
+    /// </summary>
+    void DropOutside()
+    {
+        bool Out(Vector2 p) => p.X < 0f || p.Y < 0f || p.X > Map.Size || p.Y > Map.Size;
+        Fish.RemoveAll(f => Out(f.Position));
+        var anemones = Anemones.Select(a => Out(a.Position) ? -1 : 0).ToArray();
+        var schools = Schools.Select(sc => Out(sc.Home) ? -1 : 0).ToArray();
+        int n = 0;
+        for (int i = 0; i < anemones.Length; i++) if (anemones[i] == 0) anemones[i] = n++;
+        n = 0;
+        for (int i = 0; i < schools.Length; i++) if (schools[i] == 0) schools[i] = n++;
+        ReefFish.RemoveAll(f => f.Kind switch
+        {
+            ReefFishKind.Clownfish => anemones[f.Host] < 0,
+            ReefFishKind.Chromis => schools[f.Host] < 0,
+            _ => Out(f.Position),
+        });
+        foreach (var f in ReefFish)
+            f.Host = f.Kind switch { ReefFishKind.Clownfish => anemones[f.Host], ReefFishKind.Chromis => schools[f.Host], _ => f.Host };
+        for (int i = anemones.Length - 1; i >= 0; i--) if (anemones[i] < 0) Anemones.RemoveAt(i);
+        for (int i = schools.Length - 1; i >= 0; i--) if (schools[i] < 0) Schools.RemoveAt(i);
+    }
+
+    static void Moved(PlaneSwimmer f, Vector2 by)
+    {
+        f.Position -= by;
+        f.Home -= by;
+        f.Target -= by;
     }
 }

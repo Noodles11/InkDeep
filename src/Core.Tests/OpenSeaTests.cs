@@ -201,6 +201,52 @@ public class OpenSeaTests
     }
 
     [Fact]
+    public void Every_sea_has_one_lair_a_hole_to_its_boss_away_from_her_start()
+    {
+        for (ulong seed = 1; seed <= 12; seed++)
+        {
+            var sea = new OpenSea(seed, Biome.SunlitReef);
+            var lair = sea.Build(sea.Lair);
+            Assert.True(lair.Lair is { } at && lair.Holes.Contains(at) && lair.At((int)at.X, (int)at.Y) < LevelMap.ShaftBottom + 1.5f, $"seed {seed}");
+            Assert.Null(lair.Place);
+            Assert.True(lair.Min.Length() > 3 * OpenSea.Cell, $"seed {seed}: lair at {lair.Min}");
+            // In the sim's window it is the hole marked as the boss's.
+            var map = new LevelMap();
+            var origin = lair.Lair!.Value - new Vector2(55f);
+            sea.Fill(map, origin, k => k == sea.Lair ? lair : null);
+            Assert.Single(map.Holes, h => h.Kind == ReefKind.Boss);
+        }
+    }
+
+    [Fact]
+    public void A_chunks_fish_come_with_it_and_go_once_the_window_leaves_them()
+    {
+        var catalog = OctoShoots.Core.Items.ItemCatalog.FromJson(System.IO.File.ReadAllText(System.IO.Path.Combine(AppContext.BaseDirectory, "data", "items.json")));
+        var built = ChunksWithin(12).ToDictionary(k => k, Sea.Build);
+        var map = new LevelMap { Templated = true, Seed = 7 };
+        var origin = new Vector2(-54f, -54f);
+        map.Pois.Add(new Poi { Kind = PoiKind.Start, Position = new Vector2(55f), Radius = 6f });
+        map.Pois.Add(new Poi { Kind = PoiKind.Exit, Position = new Vector2(55f), Radius = 6f });
+        Sea.Fill(map, origin, k => built.GetValueOrDefault(k));
+        var w = new PlaneWorld(map, new Tuning(), new PlaneRun(catalog, new Tuning()), new PlaneOptions { OpenSea = true, Corruption = false, Adventure = false });
+        foreach (var c in built.Values.Where(c => c.Min.X - origin.X >= 0f && c.Min.Y - origin.Y >= 0f && c.Max.X - origin.X <= 110f && c.Max.Y - origin.Y <= 110f))
+            w.AddSeaLife(c.Min - origin, c.Max - origin, c.Min, null);
+        Assert.NotEmpty(w.ReefFish);
+        // Far on: every fish still in the window keeps its host, and none lies beyond it.
+        var by = new Vector2(3 * OpenSea.Cell, 0f);
+        origin += by;
+        Sea.Fill(map, origin, k => built.GetValueOrDefault(k));
+        w.ShiftWindow(by);
+        Assert.All(w.ReefFish, f =>
+        {
+            if (f.Kind == ReefFishKind.Clownfish) Assert.Equal(w.Anemones[f.Host].Position, f.Home);
+            if (f.Kind == ReefFishKind.Chromis) Assert.Contains(f, w.Schools[f.Host].Fish);
+        });
+        Assert.All(w.Anemones, a => Assert.InRange(a.Position.X, 0f, map.Size));
+        Assert.All(w.Fish, f => Assert.InRange(f.Position.X, 0f, map.Size));
+    }
+
+    [Fact]
     public void Its_window_for_the_sim_takes_the_built_chunks_and_their_holes()
     {
         var built = ChunksWithin(10).ToDictionary(k => k, Sea.Build);

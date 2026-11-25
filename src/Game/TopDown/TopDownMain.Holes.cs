@@ -42,6 +42,9 @@ public partial class TopDownMain
     /// <summary>Where a hole leads (a map without its list of holes: the graph's first exit).</summary>
     LevelId DestinationOf(int hole) =>
         hole >= 0 && hole < _map.Holes.Count && _map.Holes[hole].To != default ? _map.Holes[hole].To
+        // (An open level's lair: down into its depth's boss arena.)
+        : hole >= 0 && hole < _map.Holes.Count && _map.Holes[hole].Kind == ReefKind.Boss
+            ? DiveGraph.Of(_seed).Row(_id.Cycle, _id.Depth, LevelPlan.BossLevel(_seed, _id.Cycle, _id.Depth))[0].Id with { Branch = _id.Branch }
         // (The crossover's way on keeps her branch: Biomes.)
         : Crossover.On && !_id.IsTutorial ? Biomes.Exits(_seed, _id)[0] : DiveGraph.Of(_seed).ExitsOf(_id)[0];
 

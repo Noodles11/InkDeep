@@ -149,8 +149,17 @@ the reef was never being called home. It was being kept.
     sun's shade is cast again for it off the main thread, read from where it lies till then by everything that reads it
     (the ink's relief and rock rims too, 0.96.1: they had read it a cell off, a flicker as she crossed into a chunk),
     and her light's afterimage moves with the window.
-  - **Not there yet:** creatures and the level's boss (the rest of phase 2), light features, corruption and hazards
-    (phase 3). The holes she has found keep their emblems (an arrow pointing down).
+  - **Its lair** (0.98.0, `OpenSea.Lair`): every open level has one way to its boss, a hole down in a chunk five cells
+    from her start (in a direction of the sea's own) that holds no other place; the water round it is opened so it
+    always has room. It leads into the depth's boss arena (its last level, as before: the boss is met there alone), so
+    she may go to the boss from any level of the depth. Its emblem (the boss's "X") shows from the start.
+  - **Its creatures** (0.98.0, `PlaneWorld.AddSeaLife`): each chunk, once it lies whole in the window, brings the
+    reef's own fish, each kind by its chance: an anemone with its clownfish (50%), tangs (50%), a chromis school of
+    12–24 (20%), pufferlings (35%), at open spots apart from its place and from her, seeded by where it lies (the same
+    chunk, the same fish). Fish beyond the window leave the sim and come back with their chunk, so about as many swim
+    in the window as on a template level (35–120 reef fish), and the sim costs about what it did.
+  - **Not there yet:** murklings (they come with the corruption), light features, corruption and hazards (phase 3).
+    The holes she has found keep their emblems (an arrow pointing down).
   - **The debug chunk map** (F3): the chunks round her, the one she is in, those she has visited, those made and not
     yet visited, the ways between them, each one's template and its holes.
 - **Holes down** (0.95.0, `TopDownGenerator.OpenHoles`, `LevelPlan.DiveHoles`; on open levels since 0.96.0, a chunk's own): a template level but a boss's has one

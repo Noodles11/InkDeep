@@ -208,7 +208,6 @@ public sealed partial class PlaneWorld
             more *= AdventureTuning.FishMore * AdventureTuning.Rate(AdventureTuning.BaseHome, LifeDepth);
         }
         int More(int count) => (int)MathF.Round(count * more);
-        int ids = 0;
         var exit = Map.Exit;
         bool Allowed(Vector2 q) => Vector2.Distance(q, Map.Start.Position) >= ReefFishTuning.StartClear
             && Vector2.Distance(q, exit.Position) >= exit.Radius + 4f;
@@ -243,15 +242,7 @@ public sealed partial class PlaneWorld
                 if (!Allowed(q) || !Clear(q, ReefFishTuning.ClownRange) || Clear(q, ReefFishTuning.ClownRange + 2.5f)) continue;
                 if (Map.Abyss && Map.HeightAt(q) < AbyssReef.ShelfDepth - 0.5f) continue;
                 if (Anemones.Any(o => Vector2.Distance(o.Position, q) < 12f) || Flounders.Exists(o => Vector2.Distance(o.Home, q) < 6f)) continue;
-                Anemones.Add(new PlaneAnemone { Position = q, Scale = rng.Range(0.95f, 1.3f) });
-                int host = Anemones.Count - 1, size = 2 + rng.Int(2);
-                for (int k = 0; k < size; k++)
-                    ReefFish.Add(new PlaneReefFish
-                    {
-                        Kind = ReefFishKind.Clownfish, Id = ids++, Host = host, Home = q,
-                        Position = q + new Vector2(rng.Range(-0.5f, 0.5f), rng.Range(-0.5f, 0.5f)),
-                        Heading = rng.Range(0f, MathF.Tau), Wait = rng.Range(0f, 2f), Rng = new Rng(rng.NextU64()),
-                    });
+                AddAnemone(q, rng);
                 break;
             }
         }
@@ -266,16 +257,8 @@ public sealed partial class PlaneWorld
             if (!Allowed(anchor) || !Clear(anchor, ReefFishTuning.TangRadius + 0.6f) || groups.Any(g => Vector2.Distance(g, anchor) < 12f)) continue;
             groups.Add(anchor);
             int size = Math.Min(1 + rng.Int(2), want - tangs);
-            for (int k = 0; k < size; k++, tangs++)
-            {
-                var at = anchor + new Vector2(rng.Range(-1.5f, 1.5f), rng.Range(-1.5f, 1.5f));
-                if (!Clear(at, ReefFishTuning.TangRadius + 0.1f)) at = anchor;
-                ReefFish.Add(new PlaneReefFish
-                {
-                    Kind = ReefFishKind.BlueTang, Id = ids++, Home = anchor, Position = at,
-                    Heading = rng.Range(0f, MathF.Tau), Wait = rng.Range(0f, 3f), Rng = new Rng(rng.NextU64()),
-                });
-            }
+            AddTangs(anchor, size, rng);
+            tangs += size;
         }
 
         // Chromis schools over the channels.
@@ -284,24 +267,58 @@ public sealed partial class PlaneWorld
         {
             if (Schools.Count >= want) break;
             if (!Allowed(at) || !Clear(at, 2f) || Schools.Any(s => Vector2.Distance(s.Home, at) < 25f)) continue;
-            int size = n.SizeMin + rng.Int(n.SizeMax - n.SizeMin + 1);
-            float spread = MathF.Max(ReefFishTuning.SchoolRadius, ReefFishTuning.SchoolSpread * MathF.Sqrt(size));
-            Schools.Add(new PlaneSchool { Position = at, Home = at, Target = at, Wait = rng.Range(0f, 2f), Radius = spread, Count = size, Rng = new Rng(rng.NextU64()) });
-            int school = Schools.Count - 1;
-            for (int k = 0; k < size; k++)
+            AddSchool(at, n.SizeMin + rng.Int(n.SizeMax - n.SizeMin + 1), rng);
+        }
+    }
+
+    /// <summary>An anemone on the seabed, a pair or trio of clownfish in it.</summary>
+    void AddAnemone(Vector2 q, Rng rng)
+    {
+        Anemones.Add(new PlaneAnemone { Position = q, Scale = rng.Range(0.95f, 1.3f) });
+        int host = Anemones.Count - 1, size = 2 + rng.Int(2);
+        for (int k = 0; k < size; k++)
+            ReefFish.Add(new PlaneReefFish
             {
-                float a = rng.Range(0f, MathF.Tau), r = spread * MathF.Sqrt(rng.NextFloat());
-                var q = at + new Vector2(MathF.Cos(a), MathF.Sin(a)) * r;
-                if (!Clear(q, ReefFishTuning.ChromisRadius)) q = at;
-                float heading = rng.Range(-0.4f, 0.4f);
-                var fish = new PlaneReefFish
-                {
-                    Kind = ReefFishKind.Chromis, Id = ids++, Host = school, Slot = k, Home = at, Position = q, Heading = heading,
-                    Velocity = new Vector2(MathF.Cos(heading), MathF.Sin(heading)) * 0.5f, Rng = new Rng(rng.NextU64()),
-                };
-                ReefFish.Add(fish);
-                Schools[school].Fish.Add(fish);
-            }
+                Kind = ReefFishKind.Clownfish, Id = ReefFish.Count, Host = host, Home = q,
+                Position = q + new Vector2(rng.Range(-0.5f, 0.5f), rng.Range(-0.5f, 0.5f)),
+                Heading = rng.Range(0f, MathF.Tau), Wait = rng.Range(0f, 2f), Rng = new Rng(rng.NextU64()),
+            });
+    }
+
+    /// <summary>Blue tangs round a spot, alone or in a pair.</summary>
+    void AddTangs(Vector2 anchor, int size, Rng rng)
+    {
+        for (int k = 0; k < size; k++)
+        {
+            var at = anchor + new Vector2(rng.Range(-1.5f, 1.5f), rng.Range(-1.5f, 1.5f));
+            if (!Clear(at, ReefFishTuning.TangRadius + 0.1f)) at = anchor;
+            ReefFish.Add(new PlaneReefFish
+            {
+                Kind = ReefFishKind.BlueTang, Id = ReefFish.Count, Home = anchor, Position = at,
+                Heading = rng.Range(0f, MathF.Tau), Wait = rng.Range(0f, 3f), Rng = new Rng(rng.NextU64()),
+            });
+        }
+    }
+
+    /// <summary>A chromis school over open water.</summary>
+    void AddSchool(Vector2 at, int size, Rng rng)
+    {
+        float spread = MathF.Max(ReefFishTuning.SchoolRadius, ReefFishTuning.SchoolSpread * MathF.Sqrt(size));
+        Schools.Add(new PlaneSchool { Position = at, Home = at, Target = at, Wait = rng.Range(0f, 2f), Radius = spread, Count = size, Rng = new Rng(rng.NextU64()) });
+        int school = Schools.Count - 1;
+        for (int k = 0; k < size; k++)
+        {
+            float a = rng.Range(0f, MathF.Tau), r = spread * MathF.Sqrt(rng.NextFloat());
+            var q = at + new Vector2(MathF.Cos(a), MathF.Sin(a)) * r;
+            if (!Clear(q, ReefFishTuning.ChromisRadius)) q = at;
+            float heading = rng.Range(-0.4f, 0.4f);
+            var fish = new PlaneReefFish
+            {
+                Kind = ReefFishKind.Chromis, Id = ReefFish.Count, Host = school, Slot = k, Home = at, Position = q, Heading = heading,
+                Velocity = new Vector2(MathF.Cos(heading), MathF.Sin(heading)) * 0.5f, Rng = new Rng(rng.NextU64()),
+            };
+            ReefFish.Add(fish);
+            Schools[school].Fish.Add(fish);
         }
     }
 

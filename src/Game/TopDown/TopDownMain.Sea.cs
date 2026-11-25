@@ -103,6 +103,7 @@ public partial class TopDownMain
         _seaPending.Clear();
         _seaVisited.Clear();
         _seaFound.Clear();
+        _seaLife.Clear();
         _seaHere = null;
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_rim"), Sea is null ? 1f : 0f);
         // (F3's map of the window is hidden on an open level: its chunk map stands in for it.)
@@ -145,6 +146,7 @@ public partial class TopDownMain
             {
                 sea.Fill(_map, _seaW, k => _seaBuilt.GetValueOrDefault(k), key);
                 OctoShoots.Game.Fx.SunMap.Shifted(_map, OctoShoots.Game.Fx.SunLight.Direction, Vector3.Zero);
+                AddSeaLife();
             }
             break;
         }
@@ -156,7 +158,7 @@ public partial class TopDownMain
         foreach (var hole in _map.Holes)
         {
             var at = hole.Shaft.Center + _seaW;
-            if (System.Numerics.Vector2.Distance(her, hole.Shaft.Center) < 7f && !_seaFound.Contains(at)) _seaFound.Add(at);
+            if (hole.Kind != ReefKind.Boss && System.Numerics.Vector2.Distance(her, hole.Shaft.Center) < 7f && !_seaFound.Contains(at)) _seaFound.Add(at);
         }
         // (F3 shows the chunk map in place of the window's own, which moves.)
         _seaMap.Visible = _debugMap.Visible;
@@ -174,6 +176,23 @@ public partial class TopDownMain
     {
         if (_levelShape is not { Sea: not null } shape) return;
         foreach (var (chunk, _) in shape.SeaChunks) AddSeaPlace(chunk);
+        AddSeaLife();
+    }
+
+    /// <summary>The chunks whose life has come in (each once, when it first lies whole in the window).</summary>
+    readonly HashSet<(int X, int Y)> _seaLife = new();
+
+    /// <summary>Each made chunk lying whole in the window, its life not yet come in: its fish (PlaneWorld.AddSeaLife).</summary>
+    void AddSeaLife()
+    {
+        foreach (var (key, chunk) in _seaBuilt)
+        {
+            var (min, max) = (chunk.Min - _seaW, chunk.Max - _seaW);
+            // (Out of the window altogether, its fish are gone from the sim: they come back with it.)
+            if (max.X <= 0f || max.Y <= 0f || min.X >= LevelMap.Seeded || min.Y >= LevelMap.Seeded) _seaLife.Remove(key);
+            if (min.X < 0f || min.Y < 0f || max.X > LevelMap.Seeded || max.Y > LevelMap.Seeded || !_seaLife.Add(key)) continue;
+            _world.AddSeaLife(min, max, chunk.Min, chunk.Place is null ? null : chunk.PlaceAt - _seaW);
+        }
     }
 
     /// <summary>The window moved on by <paramref name="by"/> (sea metres): the sim's map refilled, she and the whole world moved back by as much.</summary>
@@ -195,11 +214,22 @@ public partial class TopDownMain
         _level.Place(Vector3.Zero, _origin);
         _level.SetSeaOrigin(_seaW);
         OctoShoots.Game.Fx.SunMap.Shifted(_map, OctoShoots.Game.Fx.SunLight.Direction, new Vector3(by.X, 0f, by.Y));
+        AddSeaLife();
     }
 
     void Explore(OpenSea sea, (int X, int Y) here)
     {
-        var ways = sea.Neighbours(here).Where(n => sea.Linked(here, n) && _seaBuilt.ContainsKey(n)).OrderBy(n => _seaVisited.Contains(n)).ThenBy(n => (n.X * 7919 + n.Y * 104729 + _frame / 600) & 7).ToList();
+        // (--dbg-lair: on towards the lair, the nearest way first, and down it once there.)
+        var lair = LairAt(sea) + _seaW;
+        if (_dbgLair && here == sea.Lair)
+        {
+            _route = LevelValidator.ShortestPath(_map, _world.Player.Position, lair - _seaW, clearance: 0.8f);
+            _routeProgress = 0;
+            _autoDive = true;
+            return;
+        }
+        var ways = sea.Neighbours(here).Where(n => sea.Linked(here, n) && _seaBuilt.ContainsKey(n))
+            .OrderBy(n => _dbgLair ? System.Numerics.Vector2.Distance((sea.RectOf(n).Min + sea.RectOf(n).Max) * 0.5f, lair) : 0f).ThenBy(n => _seaVisited.Contains(n)).ThenBy(n => (n.X * 7919 + n.Y * 104729 + _frame / 600) & 7).ToList();
         foreach (var n in ways)
         {
             var c = _seaBuilt[n];
@@ -216,5 +246,11 @@ public partial class TopDownMain
     }
 
     /// <summary>The holes she has found on an open level, in the window (their emblems at the screen's edge).</summary>
+    /// <summary>The lair (the way to the level's boss) in the window: its hole once its chunk is made, till then its chunk's middle.</summary>
+    System.Numerics.Vector2 LairAt(OpenSea sea) =>
+        (_seaBuilt.GetValueOrDefault(sea.Lair)?.Lair ?? (sea.RectOf(sea.Lair).Min + sea.RectOf(sea.Lair).Max) * 0.5f) - _seaW;
+
+    bool _dbgLair;
+
     IEnumerable<System.Numerics.Vector2> FoundSeaHoles() => Sea is null ? Enumerable.Empty<System.Numerics.Vector2>() : _seaFound.Select(h => h - _seaW);
 }
