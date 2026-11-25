@@ -177,6 +177,7 @@ public partial class TopDownMain
         _plankton.Shift(shift);
         _bell.Shift(shift);
         _wakes.Clear();
+        _memory.Shift(by);
         _level.Place(Vector3.Zero, _origin);
         _level.SetSeaOrigin(_seaW);
         OctoShoots.Game.Fx.SunMap.Shifted(_map, OctoShoots.Game.Fx.SunLight.Direction, new Vector3(by.X, 0f, by.Y));

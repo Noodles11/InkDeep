@@ -331,7 +331,8 @@ vec2 ink_line(float h, vec2 wp, vec2 uv, vec2 frag, mat4 ip, mat4 iv, vec2 viewp
 	// (The rock's alone: what stands well above the terrain there, a boss's shell, a creature, rises through her plane too,
 	// and is outlined as what it is, below. The sun's map holds the terrain's height, SunMap.)
 	if (sun_has_shadow > 0.5) {
-		vec2 suv = sun_plane(vec3(wp.x - world_origin.x, h + swim_level, wp.y - world_origin.y)) / reef_extent;
+		// (Read from where the sun's map lies, sun_offset: an open level's window moves on before its map is cast again.)
+		vec2 suv = sun_plane(vec3(wp.x - world_origin.x, h + swim_level, wp.y - world_origin.y) - sun_offset) / reef_extent;
 		if (suv.x > 0.0 && suv.y > 0.0 && suv.x < 1.0 && suv.y < 1.0)
 			rim *= 1.0 - smoothstep(0.9, 1.6, h + swim_level - texture(sun_shadow, suv).r);
 	}
@@ -378,7 +379,8 @@ float ink_motif(vec2 wp) {
 // z the terrain's own height there (what stands higher than it is a thing on it: a wreck's timbers, a fallen wall).
 vec3 ink_relief(vec3 p) {
 	if (sun_has_shadow < 0.5) return vec3(0.6, 0.0, p.y);
-	vec2 uv = sun_plane(p) / reef_extent;
+	// (Read from where the sun's map lies, as sun_lit reads it.)
+	vec2 uv = sun_plane(p - sun_offset) / reef_extent;
 	// (Past the map's edge it knows nothing: flat, no relief, the terrain where the point is.)
 	if (uv.x < 0.02 || uv.y < 0.02 || uv.x > 0.98 || uv.y > 0.98) return vec3(0.6, 0.0, p.y);
 	vec2 e = vec2(0.6) / reef_extent;

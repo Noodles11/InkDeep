@@ -51,6 +51,26 @@ public sealed class LightMemory
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("her_after_rect"), new Vector4(0f, 0f, _n * Cell, _n * Cell));
     }
 
+    /// <summary>An open level's window moved on by <paramref name="by"/> (metres, whole cells of it): what her light lit keeps its place.</summary>
+    public void Shift(System.Numerics.Vector2 by)
+    {
+        if (_n == 0) return;
+        int dx = (int)MathF.Round(by.X / Cell), dy = (int)MathF.Round(by.Y / Cell);
+        var peak = new float[_peak.Length];
+        var age = new float[_age.Length];
+        Array.Fill(age, Hold + Fade);
+        for (int y = 0; y < _n; y++)
+        for (int x = 0; x < _n; x++)
+        {
+            int sx = x + dx, sy = y + dy;
+            if (sx < 0 || sy < 0 || sx >= _n || sy >= _n) continue;
+            peak[y * _n + x] = _peak[sy * _n + sx];
+            age[y * _n + x] = _age[sy * _n + sx];
+        }
+        _peak = peak;
+        _age = age;
+    }
+
     /// <summary>
     /// A frame: every cell ages; those her beam lights now, and those round her bubbles' lights (each a centre, a reach,
     /// a strength: CombatView.Lights), take their light; the texture is sent on.

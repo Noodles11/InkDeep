@@ -134,7 +134,9 @@ the reef was never being called home. It was being kept.
     level below at a dive costs about 10 ms and arriving about 30 ms (a whole level's 200 ms and 300 ms before).
   - **The sim's window:** the sim's map is a 110 m window onto the sea that follows her: once she is a cell from its
     middle it moves on a cell and the whole world moves back with it (about 3 ms), so no coordinate grows large; the
-    sun's shade is cast again for it off the main thread.
+    sun's shade is cast again for it off the main thread, read from where it lies till then by everything that reads it
+    (the ink's relief and rock rims too, 0.96.1: they had read it a cell off, a flicker as she crossed into a chunk),
+    and her light's afterimage moves with the window.
   - **Phase 1 is her and the water:** no creatures, places, pickups, light features, corruption or hazards yet (phases
     2 and 3 bring them back chunk by chunk). The holes she has found keep their emblems (an arrow pointing down).
   - **The debug chunk map** (F3): the chunks round her, the one she is in, those she has visited, those made and not
