@@ -71,6 +71,8 @@ public sealed partial class PlaneWorld
             }
             return null;
         }
+        // Its light features first (they keep their own dice: phase 4, PlaneSeaFeatures.cs).
+        AddSeaFeatures(min, max, inSea, r => Spot(r, false));
         if (rng.NextFloat() < SeaAnemone && Spot(ReefFishTuning.ClownRange, true) is { } a) AddAnemone(a, rng);
         if (rng.NextFloat() < SeaTangs && Spot(ReefFishTuning.TangRadius + 0.6f, false) is { } t) AddTangs(t, 1 + rng.Int(2), rng);
         // (A school the adventure's size: a template level's few big ones would crowd a sea of chunks.)
@@ -156,6 +158,7 @@ public sealed partial class PlaneWorld
         Darts.Clear();
         Debris.Clear();
         for (int i = 0; i < _trail.Count; i++) _trail[i] = (_trail[i].At - by, _trail[i].Time);
+        ShiftSeaFeatures(by);
         DropOutside();
     }
 

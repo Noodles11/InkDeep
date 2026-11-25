@@ -817,7 +817,7 @@ public partial class TopDownMain : Node3D
     static PlaneOptions SeaOptions()
     {
         var d = PlaneOptions.Default;
-        return new PlaneOptions { OpenSea = true, Corruption = false, Adventure = d.Adventure, InkMurklings = d.InkMurklings, Specks = d.Specks, Tidy = d.Tidy, Shots = d.Shots, Glow = d.Glow, BeamBurn = d.BeamBurn, Gun = d.Gun };
+        return new PlaneOptions { OpenSea = true, Corruption = false, Adventure = d.Adventure, InkMurklings = d.InkMurklings, Specks = d.Specks, Tidy = d.Tidy, Optics = d.Optics, Flora = d.Flora, Pockets = d.Pockets, Fauna = d.Fauna, Shots = d.Shots, Glow = d.Glow, BeamBurn = d.BeamBurn, Gun = d.Gun };
     }
 
     PlaneOptions? DiveBoss()

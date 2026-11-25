@@ -57,15 +57,7 @@ public sealed partial class PlaneWorld
     {
         if (!Options.Tidy) return;
         var rng = new Rng(Map.Seed ^ 0x71D7UL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Attempt << 46));
-        var (mirrors, panes) = OpticWallTuning.For(Map.Biome);
-        var (sun, shadow, halo) = OpticWallTuning.Stones(Map.Biome);
-        var has = new List<LightFeature> { LightFeature.Rooms, LightFeature.Plants };
-        if (mirrors > 0) has.Add(LightFeature.Mirrors);
-        if (panes > 0) has.Add(LightFeature.Panes);
-        if (sun + shadow > 0) has.Add(LightFeature.Stones);
-        if (halo > 0) has.Add(LightFeature.Haloclines);
-        if (PocketTuning.For(Map.Biome).Length > 0) has.Add(LightFeature.Pockets);
-        if (FaunaTuning.For(Map.Biome).Length > 0) has.Add(LightFeature.Animals);
+        var has = BiomeFeatures();
         for (int i = has.Count - 1; i > 0; i--)
         {
             int j = rng.Int(i + 1);
@@ -77,5 +69,20 @@ public sealed partial class PlaneWorld
         int n = TidyTuning.Grid;
         _quiet = new bool[n * n];
         for (int i = 0; i < _quiet.Length; i++) _quiet[i] = rng.NextFloat() < TidyTuning.QuietShare;
+    }
+
+    /// <summary>The light features its biome has.</summary>
+    List<LightFeature> BiomeFeatures()
+    {
+        var (mirrors, panes) = OpticWallTuning.For(Map.Biome);
+        var (sun, shadow, halo) = OpticWallTuning.Stones(Map.Biome);
+        var has = new List<LightFeature> { LightFeature.Rooms, LightFeature.Plants };
+        if (mirrors > 0) has.Add(LightFeature.Mirrors);
+        if (panes > 0) has.Add(LightFeature.Panes);
+        if (sun + shadow > 0) has.Add(LightFeature.Stones);
+        if (halo > 0) has.Add(LightFeature.Haloclines);
+        if (PocketTuning.For(Map.Biome).Length > 0) has.Add(LightFeature.Pockets);
+        if (FaunaTuning.For(Map.Biome).Length > 0) has.Add(LightFeature.Animals);
+        return has;
     }
 }

@@ -277,6 +277,42 @@ public class OpenSeaTests
     }
 
     [Fact]
+    public void Its_light_features_leave_with_their_chunk_and_come_back_as_she_left_them()
+    {
+        var catalog = OctoShoots.Core.Items.ItemCatalog.FromJson(System.IO.File.ReadAllText(System.IO.Path.Combine(AppContext.BaseDirectory, "data", "items.json")));
+        var built = ChunksWithin(12).ToDictionary(k => k, Sea.Build);
+        var map = new LevelMap { Templated = true, Seed = 7 };
+        var origin = new Vector2(-54f, -54f);
+        map.Pois.Add(new Poi { Kind = PoiKind.Start, Position = new Vector2(55f), Radius = 6f });
+        map.Pois.Add(new Poi { Kind = PoiKind.Exit, Position = new Vector2(55f), Radius = 6f });
+        Sea.Fill(map, origin, k => built.GetValueOrDefault(k));
+        var w = new PlaneWorld(map, new Tuning(), new PlaneRun(catalog, new Tuning()),
+            new PlaneOptions { OpenSea = true, Corruption = false, Adventure = false, Tidy = true, Optics = true, Flora = true, Pockets = true, Fauna = true });
+        var inWindow = built.Values.Where(c => c.Min.X - origin.X >= 0f && c.Min.Y - origin.Y >= 0f && c.Max.X - origin.X <= 110f && c.Max.Y - origin.Y <= 110f).ToList();
+        foreach (var c in inWindow) w.AddSeaLife(c.Min - origin, c.Max - origin, c.Min, null);
+        Assert.NotEmpty(w.Flora);
+        Assert.NotEmpty(w.ChargeStones);
+        var stone = w.ChargeStones.MinBy(c => c.Position.X)!;
+        var stoneInSea = stone.Position + origin;
+        int stones = w.ChargeStones.Count, lights = w.Lights.All.Count;
+        // Far on: the chunks out of the window altogether take theirs with them, lights and all.
+        var by = new Vector2(3 * OpenSea.Cell, 0f);
+        Sea.Fill(map, origin + by, k => built.GetValueOrDefault(k));
+        w.ShiftWindow(by);
+        Assert.DoesNotContain(stone, w.ChargeStones);
+        Assert.DoesNotContain(stone.Light, w.Lights.All);
+        Assert.True(w.Lights.All.Count < lights);
+        // And back: the same ones, where they were in the sea, no more of them.
+        Sea.Fill(map, origin, k => built.GetValueOrDefault(k));
+        w.ShiftWindow(-by);
+        foreach (var c in inWindow) w.AddSeaLife(c.Min - origin, c.Max - origin, c.Min, null);
+        Assert.Contains(stone, w.ChargeStones);
+        Assert.Contains(stone.Light, w.Lights.All);
+        Assert.Equal(stoneInSea, stone.Position + origin);
+        Assert.Equal(stones, w.ChargeStones.Count);
+    }
+
+    [Fact]
     public void Its_window_for_the_sim_takes_the_built_chunks_and_their_holes()
     {
         var built = ChunksWithin(10).ToDictionary(k => k, Sea.Build);

@@ -183,8 +183,9 @@ public partial class TopDownMain
     readonly HashSet<(int X, int Y)> _seaLife = new();
 
     /// <summary>Each made chunk lying whole in the window, its life not yet come in: its fish (PlaneWorld.AddSeaLife).</summary>
-    void AddSeaLife()
+    void AddSeaLife(bool moved = false)
     {
+        bool added = moved;
         foreach (var (key, chunk) in _seaBuilt)
         {
             var (min, max) = (chunk.Min - _seaW, chunk.Max - _seaW);
@@ -192,7 +193,16 @@ public partial class TopDownMain
             if (max.X <= 0f || max.Y <= 0f || min.X >= LevelMap.Seeded || min.Y >= LevelMap.Seeded) _seaLife.Remove(key);
             if (min.X < 0f || min.Y < 0f || max.X > LevelMap.Seeded || max.Y > LevelMap.Seeded || !_seaLife.Add(key)) continue;
             _world.AddSeaLife(min, max, chunk.Min, chunk.Place is null ? null : chunk.PlaceAt - _seaW);
+            added = true;
         }
+        // (The light features' views are drawn where they lie: shown again as they come, go and move.)
+        if (!added || _opticWalls is null) return;
+        _opticWalls.Show(_world);
+        _flora.Show(_world);
+        _pockets.Clear();
+        _fauna.Clear();
+        _chargeStones.Show(_world);
+        _springs.Show(_world);
     }
 
     /// <summary>The window moved on by <paramref name="by"/> (sea metres): the sim's map refilled, she and the whole world moved back by as much.</summary>
@@ -214,7 +224,7 @@ public partial class TopDownMain
         _level.Place(Vector3.Zero, _origin);
         _level.SetSeaOrigin(_seaW);
         OctoShoots.Game.Fx.SunMap.Shifted(_map, OctoShoots.Game.Fx.SunLight.Direction, new Vector3(by.X, 0f, by.Y));
-        AddSeaLife();
+        AddSeaLife(moved: true);
     }
 
     void Explore(OpenSea sea, (int X, int Y) here)

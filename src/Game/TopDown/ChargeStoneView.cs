@@ -54,6 +54,9 @@ public partial class ChargeStoneView : Node3D
         return _shard = st.Commit();
     }
 
+    /// <summary>Its charge stones drawn again (an open level's come and go with their chunks).</summary>
+    public void Show(PlaneWorld world) => Build(world);
+
     void Build(PlaneWorld world)
     {
         var crystals = world.ChargeStones;

@@ -165,9 +165,15 @@ the reef was never being called home. It was being kept.
     the window about a level's number (`SeaChunks`, 12 chunks to the window), and they come and go with it; the
     Shipwreck's debris falls round her as anywhere. Each chunk brings its share of a tidy level's light specks the first
     time only: those she gathers never come back, and those left beyond the window are gone.
-  - **Not there yet:** the other light features (mirrors and panes, stones, haloclines, pockets, light rooms, plants,
-    animals, charge and prism stones, springs, vaults) and the Kelp Forest's curtains and tangles (they need its
-    passages and beds). The holes she has found keep their emblems (an arrow pointing down).
+  - **Its light features** (0.100.0, phase 4, PlaneSeaFeatures.cs): the first time a chunk lies whole in the window,
+    by a chance (`SeaFeature`, a half) it holds one of its biome's light features (mirrors, panes, stones, haloclines,
+    pockets, a light room, plants or animals) at half a level's count of it (at least one), placed in its own water as
+    on any level; besides, its share of a level's charge stones, and by one chance in 12 a light spring (about one to
+    the window, where she grows). A chunk out of the window altogether takes them with it, lights and all, and brings
+    them back as she left them (a shattered pane stays so, a spring spent, an anemone's shells given).
+  - **Not there yet:** vaults, secret seals and prism stones (they need a template's marks and secret rocks), the
+    charge stones' trio, the Ruins' amphorae, and the Kelp Forest's curtains and tangles (they need its passages and
+    beds). The holes she has found keep their emblems (an arrow pointing down).
   - **The debug chunk map** (F3): the chunks round her, the one she is in, those she has visited, those made and not
     yet visited, the ways between them, each one's template and its holes.
 - **Holes down** (0.95.0, `TopDownGenerator.OpenHoles`, `LevelPlan.DiveHoles`; on open levels since 0.96.0, a chunk's own): a template level but a boss's has one

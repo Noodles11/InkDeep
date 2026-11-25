@@ -153,10 +153,16 @@ public sealed partial class PlaneWorld
     {
         PlaceChargeTrio();
         var rng = new Rng(Map.Seed ^ 0xC2757A15UL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Id.Lane << 40) ^ ((ulong)Map.Attempt << 50));
-        for (int tries = 0; tries < 3000 && ChargeStones.Count < ChargeStoneTuning.Count; tries++)
+        PlaceChargeStones(new Vector2(6f), new Vector2(Map.Size - 6f), ChargeStoneTuning.Count - ChargeStones.Count, 3000, rng);
+    }
+
+    /// <summary>Up to <paramref name="want"/> charge stones set in the walls between lo and hi.</summary>
+    void PlaceChargeStones(Vector2 lo, Vector2 hi, int want, int tries, Rng rng)
+    {
+        for (int placed = 0; tries > 0 && placed < want; tries--)
         {
-            var p = new Vector2(rng.Range(6f, Map.Size - 6f), rng.Range(6f, Map.Size - 6f));
-            if (!Map.IsOpen(p) || Map.InShaft(p, 4f) || Vector2.Distance(p, Map.Start.Position) < ChargeStoneTuning.FromStart) continue;
+            var p = new Vector2(rng.Range(lo.X, hi.X), rng.Range(lo.Y, hi.Y));
+            if (!Map.IsOpen(p) || Map.InShaft(p, 4f) || Vector2.Distance(p, FeatureStart) < ChargeStoneTuning.FromStart) continue;
             // A wall just beside it, at her plane: the charge stone is set in its face.
             float a = rng.Range(0f, MathF.Tau);
             Vector2? into = null;
@@ -173,6 +179,7 @@ public sealed partial class PlaneWorld
                 Owner = crystal, Position = p, Range = ChargeStoneTuning.Reach, Intensity = 0f, Colour = ChargeStoneTuning.Colours[crystal.Colour], Drinkable = true,
             });
             ChargeStones.Add(crystal);
+            placed++;
         }
     }
 

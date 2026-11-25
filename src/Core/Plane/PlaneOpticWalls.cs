@@ -163,15 +163,12 @@ public sealed partial class PlaneWorld
         if (!HasFeature(LightFeature.Panes)) panes = 0;
         if (!HasFeature(LightFeature.Stones)) sunStones = shadowStones = 0;
         if (!HasFeature(LightFeature.Haloclines)) haloclines = 0;
+        (mirrors, panes, sunStones, shadowStones, haloclines) = (AreaCount(mirrors), AreaCount(panes), AreaCount(sunStones), AreaCount(shadowStones), AreaCount(haloclines));
         if (mirrors + panes + sunStones + shadowStones + haloclines == 0) return;
-        var rng = new Rng(Map.Seed ^ 0x0971C5UL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Attempt << 46));
+        var rng = _areaRng ?? new Rng(Map.Seed ^ 0x0971C5UL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Attempt << 46));
         var spots = new List<Vector2>();
-        for (float y = LevelMap.RimWidth + 3f; y < Map.Size - LevelMap.RimWidth - 3f; y += 2.5f)
-        for (float x = LevelMap.RimWidth + 3f; x < Map.Size - LevelMap.RimWidth - 3f; x += 2.5f)
-        {
-            var p = new Vector2(x, y);
+        foreach (var p in GridSpots(3f, 2.5f))
             if (Fits(p, 1.6f)) spots.Add(p);
-        }
         for (int i = spots.Count - 1; i > 0; i--)
         {
             int j = rng.Int(i + 1);
@@ -227,7 +224,7 @@ public sealed partial class PlaneWorld
         bool Fits(Vector2 p, float radius)
         {
             if (!Clear(p, radius) || Map.InShaft(p)) return false;
-            if (Vector2.Distance(p, Map.Start.Position) < OpticWallTuning.StartClear) return false;
+            if (Vector2.Distance(p, FeatureStart) < OpticWallTuning.StartClear) return false;
             foreach (var poi in Map.Pois)
                 if (poi.Kind != PoiKind.Start && Vector2.Distance(p, poi.Position) < poi.Radius + 3f) return false;
             foreach (var v in Vases)

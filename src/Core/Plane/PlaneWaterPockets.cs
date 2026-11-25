@@ -96,14 +96,10 @@ public sealed partial class PlaneWorld
     /// <summary>The level's pockets (PlaneOptions.Pockets), in its open water by its own seed.</summary>
     void PlacePockets()
     {
-        var rng = PocketRng;
+        var rng = _areaRng ?? PocketRng;
         var spots = new List<Vector2>();
-        for (float y = LevelMap.RimWidth + 4f; y < Map.Size - LevelMap.RimWidth - 4f; y += 3f)
-        for (float x = LevelMap.RimWidth + 4f; x < Map.Size - LevelMap.RimWidth - 4f; x += 3f)
-        {
-            var p = new Vector2(x, y);
-            if (Clear(p, 2f) && !Map.InShaft(p) && Vector2.Distance(p, Map.Start.Position) >= PocketTuning.FromStart) spots.Add(p);
-        }
+        foreach (var p in GridSpots(4f, 3f))
+            if (Clear(p, 2f) && !Map.InShaft(p) && Vector2.Distance(p, FeatureStart) >= PocketTuning.FromStart) spots.Add(p);
         for (int i = spots.Count - 1; i > 0; i--)
         {
             int j = rng.Int(i + 1);
@@ -112,7 +108,7 @@ public sealed partial class PlaneWorld
         int next = 0;
         if (!HasFeature(LightFeature.Pockets)) return;
         foreach (var (kind, count) in PocketTuning.For(Map.Biome))
-            for (int k = 0; k < count && next < spots.Count; next++)
+            for (int k = 0; k < AreaCount(count) && next < spots.Count; next++)
             {
                 var p = spots[next];
                 if (Pockets.Exists(o => Vector2.Distance(o.Centre, p) < PocketTuning.Apart) || !TidySpot(p)) continue;

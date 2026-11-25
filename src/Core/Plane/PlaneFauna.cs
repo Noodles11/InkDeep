@@ -95,19 +95,15 @@ public sealed partial class PlaneWorld
     /// <summary>The level's animals (PlaneOptions.Fauna), in its open water by its own seed.</summary>
     void PlaceFauna()
     {
-        var rng = new Rng(Map.Seed ^ 0xFA0AUL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Attempt << 46));
+        var rng = _areaRng ?? new Rng(Map.Seed ^ 0xFA0AUL ^ ((ulong)Map.Level << 20) ^ ((ulong)Map.Depth << 30) ^ ((ulong)Map.Attempt << 46));
         var spots = new List<Vector2>();
-        for (float y = LevelMap.RimWidth + 4f; y < Map.Size - LevelMap.RimWidth - 4f; y += 3f)
-        for (float x = LevelMap.RimWidth + 4f; x < Map.Size - LevelMap.RimWidth - 4f; x += 3f)
-        {
-            var p = new Vector2(x, y);
-            if (Clear(p, 1.5f) && !Map.InShaft(p) && Vector2.Distance(p, Map.Start.Position) >= FaunaTuning.FromStart) spots.Add(p);
-        }
+        foreach (var p in GridSpots(4f, 3f))
+            if (Clear(p, 1.5f) && !Map.InShaft(p) && Vector2.Distance(p, FeatureStart) >= FaunaTuning.FromStart) spots.Add(p);
         Shuffle(spots, rng);
         int next = 0;
         if (!HasFeature(LightFeature.Animals)) return;
         foreach (var (kind, count) in FaunaTuning.For(Map.Biome))
-            for (int k = 0; k < count && next < spots.Count; next++)
+            for (int k = 0; k < AreaCount(count) && next < spots.Count; next++)
             {
                 var p = spots[next];
                 if (Fauna.Exists(o => Vector2.Distance(o.Home, p) < FaunaTuning.Apart) || !TidySpot(p)) continue;
