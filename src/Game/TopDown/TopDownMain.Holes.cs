@@ -32,7 +32,6 @@ public partial class TopDownMain
     {
         _holeShapes.Clear();
         _belowHole = _diveHole = -1;
-        foreach (var h in _map.Holes) GD.Print($"DBGHOLE {h.Shaft.Center} {_map.HeightAt(h.Shaft.Center)} {_map.HeightAt(h.Shaft.Center + new System.Numerics.Vector2(3f, 0f))} {_map.HeightAt(h.Shaft.Center + new System.Numerics.Vector2(6f, 0f))} {_map.HeightAt(h.Shaft.Center + new System.Numerics.Vector2(10f, 0f))}");
         StartNextHoleShape();
     }
 
