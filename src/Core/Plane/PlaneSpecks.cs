@@ -67,15 +67,7 @@ public sealed partial class PlaneWorld
     void PlaceSpecks()
     {
         var rng = SpeckRng;
-        int want = SpeckTuning.Scatter + SpeckTuning.PerDepth * Math.Max(0, Map.Depth - LevelPlan.Tutorial - 1);
-        // (Tidy: fewer specks, each worth the more, out of the quiet water.)
-        float worth = 1f;
-        if (Options.Tidy)
-        {
-            int fewer = Math.Max(1, (int)MathF.Round(want * TidyTuning.SpeckShare));
-            worth = want / (float)fewer;
-            want = fewer;
-        }
+        var (want, worth) = SpeckCount();
         var spots = new List<Vector2>();
         for (float y = LevelMap.RimWidth + 2f; y < Map.Size - LevelMap.RimWidth - 2f; y += 3f)
         for (float x = LevelMap.RimWidth + 2f; x < Map.Size - LevelMap.RimWidth - 2f; x += 3f)
@@ -94,6 +86,15 @@ public sealed partial class PlaneWorld
             var at = Clear(spots[i] + jitter, SpeckTuning.Clearance) && !InQuietWater(spots[i] + jitter) && Vector2.Distance(spots[i] + jitter, Map.Start.Position) >= SpeckTuning.FromStart ? spots[i] + jitter : spots[i];
             AddSpeck(at, rng.Range(SpeckTuning.Least, SpeckTuning.Most) * worth, Vector2.Zero);
         }
+    }
+
+    /// <summary>How many specks a level holds, and what each is worth for it (tidy: fewer, each worth the more, out of the quiet water).</summary>
+    (int Want, float Worth) SpeckCount()
+    {
+        int want = SpeckTuning.Scatter + SpeckTuning.PerDepth * Math.Max(0, Map.Depth - LevelPlan.Tutorial - 1);
+        if (!Options.Tidy) return (want, 1f);
+        int fewer = Math.Max(1, (int)MathF.Round(want * TidyTuning.SpeckShare));
+        return (fewer, want / (float)fewer);
     }
 
     /// <summary>A speck on the level (its light registered: the murklings see it).</summary>

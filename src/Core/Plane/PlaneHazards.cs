@@ -102,17 +102,20 @@ public sealed partial class PlaneWorld
         int want = ruins ? HazardTuning.DartTraps : HazardTuning.Cannons;
         var rng = HazardRng;
         for (int tries = 0; tries < 600 && DartTraps.Count < want; tries++)
-        {
-            var p = new Vector2(rng.Range(0f, Map.Size), rng.Range(0f, Map.Size));
-            if (!Map.IsOpen(p) || Vector2.Distance(p, Map.Start.Position) < 10f) continue;
-            if (Map.HasBoss && Vector2.Distance(p, ArenaCenter) < ArenaRadius + 3f) continue;
-            if (DartTraps.Exists(t => Vector2.Distance(t.Position, p) < HazardTuning.DartApart)) continue;
-            float a = rng.Int(8) * MathF.Tau / 8f;
-            var d = new Vector2(MathF.Cos(a), MathF.Sin(a));
-            // Its back to the rock, a clear run of water before it.
-            if (Map.IsOpen(p - d * 1.2f) || LineReach(p, d, HazardTuning.DartReach, out _) < 6f) continue;
-            DartTraps.Add(new PlaneDartTrap { Position = p, Facing = d, Rest = rng.Range(0f, 1f), Cannon = wreck });
-        }
+            TryTrap(new Vector2(rng.Range(0f, Map.Size), rng.Range(0f, Map.Size)), Map.Start.Position, rng, wreck);
+    }
+
+    /// <summary>A trap at a spot, if it may stand there: open water away from <paramref name="clear"/> and the others, its back to the rock, a clear run of water before it.</summary>
+    bool TryTrap(Vector2 p, Vector2 clear, Rng rng, bool wreck)
+    {
+        if (!Map.IsOpen(p) || Vector2.Distance(p, clear) < 10f) return false;
+        if (Map.HasBoss && Vector2.Distance(p, ArenaCenter) < ArenaRadius + 3f) return false;
+        if (DartTraps.Exists(t => Vector2.Distance(t.Position, p) < HazardTuning.DartApart)) return false;
+        float a = rng.Int(8) * MathF.Tau / 8f;
+        var d = new Vector2(MathF.Cos(a), MathF.Sin(a));
+        if (Map.IsOpen(p - d * 1.2f) || LineReach(p, d, HazardTuning.DartReach, out _) < 6f) return false;
+        DartTraps.Add(new PlaneDartTrap { Position = p, Facing = d, Rest = rng.Range(0f, 1f), Cannon = wreck });
+        return true;
     }
 
     /// <summary>The Kelp Forest's curtains: across the middle of a side passage or two, far from the start and the arena.</summary>

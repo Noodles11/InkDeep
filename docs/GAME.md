@@ -158,8 +158,16 @@ the reef was never being called home. It was being kept.
     12–24 (20%), pufferlings (35%), at open spots apart from its place and from her, seeded by where it lies (the same
     chunk, the same fish). Fish beyond the window leave the sim and come back with their chunk, so about as many swim
     in the window as on a template level (35–120 reef fish), and the sim costs about what it did.
-  - **Not there yet:** murklings (they come with the corruption), light features, corruption and hazards (phase 3).
-    The holes she has found keep their emblems (an arrow pointing down).
+  - **Its corruption, hazards and specks** (0.99.0, phase 3): the corruption is a crossover level's own, murklings out
+    of the dark round her (PlaneDanger.cs: the first ones in the window away from her start, then more the longer she
+    stays, the danger's marks as ever); no leaks, no ink. Those left beyond the window leave the sim (but one clinging
+    to her). Each chunk brings its biome's traps (the Ruins' dart traps, the Shipwreck's cannons) by a chance that gives
+    the window about a level's number (`SeaChunks`, 12 chunks to the window), and they come and go with it; the
+    Shipwreck's debris falls round her as anywhere. Each chunk brings its share of a tidy level's light specks the first
+    time only: those she gathers never come back, and those left beyond the window are gone.
+  - **Not there yet:** the other light features (mirrors and panes, stones, haloclines, pockets, light rooms, plants,
+    animals, charge and prism stones, springs, vaults) and the Kelp Forest's curtains and tangles (they need its
+    passages and beds). The holes she has found keep their emblems (an arrow pointing down).
   - **The debug chunk map** (F3): the chunks round her, the one she is in, those she has visited, those made and not
     yet visited, the ways between them, each one's template and its holes.
 - **Holes down** (0.95.0, `TopDownGenerator.OpenHoles`, `LevelPlan.DiveHoles`; on open levels since 0.96.0, a chunk's own): a template level but a boss's has one

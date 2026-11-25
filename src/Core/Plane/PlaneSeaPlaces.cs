@@ -76,7 +76,22 @@ public sealed partial class PlaneWorld
         // (A school the adventure's size: a template level's few big ones would crowd a sea of chunks.)
         if (rng.NextFloat() < SeaSchool && Spot(2f, false) is { } s) AddSchool(s, AdventureTuning.SchoolMin + rng.Int(AdventureTuning.SchoolMax - AdventureTuning.SchoolMin + 1), rng);
         if (rng.NextFloat() < SeaPuffers && Spot(PufferlingTuning.CalmRadius + 0.5f, false) is { } f) AddPufferlings(f, 1 + rng.Int(3), rng);
+        // Its biome's traps (the Ruins' darts, the Shipwreck's cannons), as many to the window as a level holds.
+        bool ruins = HasHazards(OctoShoots.Core.Run.Biome.SunkenRuins), wreck = HasHazards(OctoShoots.Core.Run.Biome.Shipwreck);
+        if ((ruins || wreck) && rng.NextFloat() < (ruins ? HazardTuning.DartTraps : HazardTuning.Cannons) / SeaChunks)
+            for (int k = 0; k < 40 && !TryTrap(new Vector2(rng.Range(min.X, max.X), rng.Range(min.Y, max.Y)), Player.Position, rng, wreck); k++) { }
+        // Its light specks, the first time only (those she gathers never come back), as many to the window as a level holds.
+        if (!Options.Specks || !_specked.Add(inSea)) return;
+        var (want, worth) = SpeckCount();
+        float n = want / SeaChunks;
+        int count = (int)n + (rng.NextFloat() < n - (int)n ? 1 : 0);
+        for (int i = 0; i < count && Spot(SpeckTuning.Clearance, false) is { } at; i++) AddSpeck(at, rng.Range(SpeckTuning.Least, SpeckTuning.Most) * worth, Vector2.Zero);
     }
+
+    /// <summary>About how many chunks' life lies in the window at once (each chunk brings its share of a level's traps and specks).</summary>
+    const float SeaChunks = 12f;
+    /// <summary>The chunks (by where they lie in the sea) whose specks have come.</summary>
+    readonly System.Collections.Generic.HashSet<Vector2> _specked = new();
 
     /// <summary>
     /// How often a chunk holds each kind of the reef's fish (an anemone with its clownfish, tangs, a chromis school,
@@ -124,6 +139,23 @@ public sealed partial class PlaneWorld
             s.Home -= by;
             s.Target -= by;
         }
+        foreach (var m in Murklings)
+        {
+            m.Position -= by;
+            m.Target -= by;
+            if (m.Home is { } h) m.Home = h - by;
+        }
+        foreach (var s in MurkShots)
+        {
+            s.Position -= by;
+            s.From -= by;
+        }
+        foreach (var e in Lights.All) e.Position -= by;
+        foreach (var s in Specks) s.Position -= by;
+        foreach (var t in DartTraps) t.Position -= by;
+        Darts.Clear();
+        Debris.Clear();
+        for (int i = 0; i < _trail.Count; i++) _trail[i] = (_trail[i].At - by, _trail[i].Time);
         DropOutside();
     }
 
@@ -135,6 +167,13 @@ public sealed partial class PlaneWorld
     {
         bool Out(Vector2 p) => p.X < 0f || p.Y < 0f || p.X > Map.Size || p.Y > Map.Size;
         Fish.RemoveAll(f => Out(f.Position));
+        Murklings.RemoveAll(m => !m.Clinging && Out(m.Position));
+        DartTraps.RemoveAll(t => Out(t.Position));
+        foreach (var s in Specks.Where(s => Out(s.Position)).ToList())
+        {
+            Lights.Remove(s.Light);
+            Specks.Remove(s);
+        }
         var anemones = Anemones.Select(a => Out(a.Position) ? -1 : 0).ToArray();
         var schools = Schools.Select(sc => Out(sc.Home) ? -1 : 0).ToArray();
         int n = 0;

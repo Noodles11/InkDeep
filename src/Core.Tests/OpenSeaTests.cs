@@ -247,6 +247,36 @@ public class OpenSeaTests
     }
 
     [Fact]
+    public void Its_murklings_and_specks_keep_to_the_window_and_gathered_specks_never_come_back()
+    {
+        var catalog = OctoShoots.Core.Items.ItemCatalog.FromJson(System.IO.File.ReadAllText(System.IO.Path.Combine(AppContext.BaseDirectory, "data", "items.json")));
+        var built = ChunksWithin(12).ToDictionary(k => k, Sea.Build);
+        var map = new LevelMap { Templated = true, Seed = 7, Menace = 0.5f };
+        var origin = new Vector2(-54f, -54f);
+        map.Pois.Add(new Poi { Kind = PoiKind.Start, Position = new Vector2(55f), Radius = 6f });
+        map.Pois.Add(new Poi { Kind = PoiKind.Exit, Position = new Vector2(55f), Radius = 6f });
+        Sea.Fill(map, origin, k => built.GetValueOrDefault(k));
+        var w = new PlaneWorld(map, new Tuning(), new PlaneRun(catalog, new Tuning()), new PlaneOptions { OpenSea = true, Corruption = false, Adventure = true, Specks = true, Tidy = true });
+        var inWindow = built.Values.Where(c => c.Min.X - origin.X >= 0f && c.Min.Y - origin.Y >= 0f && c.Max.X - origin.X <= 110f && c.Max.Y - origin.Y <= 110f).ToList();
+        foreach (var c in inWindow) w.AddSeaLife(c.Min - origin, c.Max - origin, c.Min, null);
+        Assert.NotEmpty(w.Murklings);
+        Assert.NotEmpty(w.Specks);
+        int lights = w.Lights.All.Count;
+        // Far on and back: what lay beyond the window is gone (its specks' lights with them), and a chunk come back brings no specks again.
+        var by = new Vector2(3 * OpenSea.Cell, 0f);
+        Sea.Fill(map, origin + by, k => built.GetValueOrDefault(k));
+        w.ShiftWindow(by);
+        Assert.All(w.Murklings, m => Assert.InRange(m.Position.X, 0f, map.Size));
+        Assert.All(w.Specks, s => Assert.InRange(s.Position.X, 0f, map.Size));
+        Assert.True(w.Lights.All.Count < lights);
+        int specks = w.Specks.Count;
+        Sea.Fill(map, origin, k => built.GetValueOrDefault(k));
+        w.ShiftWindow(-by);
+        foreach (var c in inWindow) w.AddSeaLife(c.Min - origin, c.Max - origin, c.Min, null);
+        Assert.Equal(specks, w.Specks.Count);
+    }
+
+    [Fact]
     public void Its_window_for_the_sim_takes_the_built_chunks_and_their_holes()
     {
         var built = ChunksWithin(10).ToDictionary(k => k, Sea.Build);

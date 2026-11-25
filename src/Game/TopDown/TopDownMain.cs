@@ -813,11 +813,11 @@ public partial class TopDownMain : Node3D
     /// A dive's boss level: the neighbour waiting there as the Leak made her (docs/DIVE.md §5), at her own level; null for
     /// the depth's own boss.
     /// </summary>
-    /// <summary>An open level's sim (phase 1): her and the water, her shots and glow as ever.</summary>
+    /// <summary>An open level's sim: her and the water, her shots and glow as ever, the murklings out of the dark, the specks (its other light features not yet).</summary>
     static PlaneOptions SeaOptions()
     {
         var d = PlaneOptions.Default;
-        return new PlaneOptions { OpenSea = true, Corruption = false, Adventure = false, InkMurklings = false, Shots = d.Shots, Glow = d.Glow, BeamBurn = d.BeamBurn, Gun = d.Gun };
+        return new PlaneOptions { OpenSea = true, Corruption = false, Adventure = d.Adventure, InkMurklings = d.InkMurklings, Specks = d.Specks, Tidy = d.Tidy, Shots = d.Shots, Glow = d.Glow, BeamBurn = d.BeamBurn, Gun = d.Gun };
     }
 
     PlaneOptions? DiveBoss()

@@ -196,6 +196,9 @@ public sealed partial class PlaneWorld
             PlaceCurse();
             Revealed = new bool[Map.Pois.Count];
             PlaceShells();
+            // Its corruption: murklings out of the dark round her, as on any crossover level (no leaks, no ink).
+            PlaceCorruption();
+            PlaceAdventure();
             return;
         }
         if (Options.Pufferlings) PlaceMobs();

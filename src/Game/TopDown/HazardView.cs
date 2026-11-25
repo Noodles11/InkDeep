@@ -24,6 +24,7 @@ public partial class HazardView : Node3D
     sealed class Trap
     {
         public PlaneDartTrap Sim = null!;
+        public Node3D Root = null!;
         public OmniLight3D Glint = null!;
         public StandardMaterial3D Mouth = null!;
     }
@@ -87,9 +88,18 @@ public partial class HazardView : Node3D
             f.Timber.Visible = f.Sim.Landed || f.Sim.Timer < 0.5f;
             f.Timber.Position = new Vector3(f.Sim.Position.X, y, f.Sim.Position.Y);
         }
-        // Dart traps: a glint as one winds up.
+        // Dart traps: a glint as one winds up. (An open level's come and go with their chunks, and keep their place as its window moves on.)
+        for (int i = _traps.Count - 1; i >= 0; i--)
+            if (!world.DartTraps.Contains(_traps[i].Sim))
+            {
+                _traps[i].Root.QueueFree();
+                _traps.RemoveAt(i);
+            }
+        foreach (var d in world.DartTraps)
+            if (!_traps.Exists(t => t.Sim == d)) _traps.Add(MakeTrap(d));
         foreach (var t in _traps)
         {
+            t.Root.Position = new Vector3(t.Sim.Position.X, LevelMap.SwimBand, t.Sim.Position.Y);
             bool armed = t.Sim.Windup > 0f;
             t.Glint.LightEnergy = armed ? 2.2f : 0f;
             t.Mouth.AlbedoColor = armed ? new Color(1f, 0.85f, 0.5f, 0.95f) : new Color(0.8f, 0.77f, 0.7f, t.Sim.Rest > 0f ? 0.2f : 0.5f);
@@ -134,35 +144,36 @@ public partial class HazardView : Node3D
         _map = world.Map;
         _curtains.Clear();
         foreach (var c in world.Curtains) _curtains.Add(MakeCurtain(c));
-        foreach (var t in world.DartTraps)
+    }
+
+    /// <summary>A trap: a ship's cannon (the Shipwreck) or a carved dart trap (the Ruins), against its wall.</summary>
+    Trap MakeTrap(PlaneDartTrap t)
+    {
+        var root = new Node3D { Position = new Vector3(t.Position.X, LevelMap.SwimBand, t.Position.Y) };
+        // (Its front, local −z, toward the water it faces.)
+        root.Basis = new Basis(Vector3.Up, Mathf.Atan2(-t.Facing.X, -t.Facing.Y));
+        if (t.Cannon)
         {
-            var root = new Node3D { Position = new Vector3(t.Position.X, LevelMap.SwimBand, t.Position.Y) };
-            // (Its front, local −z, toward the water it faces.)
-            root.Basis = new Basis(Vector3.Up, Mathf.Atan2(-t.Facing.X, -t.Facing.Y));
-            if (t.Cannon)
-            {
-                // A ship's cannon fallen against the rock, its rusted barrel toward the water on a broken carriage.
-                root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(0.9f, 0.35f, 1.1f) }, MaterialOverride = Rust, Position = new Vector3(0f, -0.25f, 0.3f) });
-                root.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.16f, BottomRadius = 0.24f, Height = 1.8f, RadialSegments = 14, Rings = 1 }, MaterialOverride = Iron, Rotation = new Vector3(-Mathf.Pi / 2f, 0f, 0f), Position = new Vector3(0f, 0f, -0.1f) });
-                var muzzle = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, Transparency = BaseMaterial3D.TransparencyEnum.Alpha, BlendMode = BaseMaterial3D.BlendModeEnum.Add, AlbedoTexture = Soft, AlbedoColor = new Color(1f, 1f, 1f, 0.3f) };
-                root.AddChild(new MeshInstance3D { Mesh = new PlaneMesh { Size = new Vector2(1.5f, 1.5f) }, MaterialOverride = muzzle, Position = new Vector3(0f, 0.5f, -1f), CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
-                var flash = new OmniLight3D { LightColor = new Color(1f, 0.7f, 0.4f), LightEnergy = 0f, OmniRange = 3f, ShadowEnabled = false, Position = new Vector3(0f, 0.3f, -1.2f) };
-                root.AddChild(flash);
-                AddChild(root);
-                _traps.Add(new Trap { Sim = t, Glint = flash, Mouth = muzzle });
-                continue;
-            }
-            // A carved face of pale stone pressed into the wall, its slot toward the water.
-            root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(0.9f, 1.1f, 0.5f) }, MaterialOverride = Stone, Position = new Vector3(0f, 0f, 0.15f) });
-            root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(0.26f, 0.14f, 0.1f) }, MaterialOverride = Slot, Position = new Vector3(0f, 0.15f, -0.12f) });
-            // Its mouth's faint pale outline, seen in the dark; it flares warm as the trap winds up.
-            var mouth = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, Transparency = BaseMaterial3D.TransparencyEnum.Alpha, BlendMode = BaseMaterial3D.BlendModeEnum.Add, AlbedoTexture = Soft, AlbedoColor = new Color(1f, 1f, 1f, 0.3f) };
-            root.AddChild(new MeshInstance3D { Mesh = new PlaneMesh { Size = new Vector2(1.4f, 1.4f) }, MaterialOverride = mouth, Position = new Vector3(0f, 0.6f, -0.2f), CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
-            var glint = new OmniLight3D { LightColor = new Color(1f, 0.85f, 0.55f), LightEnergy = 0f, OmniRange = 2.2f, ShadowEnabled = false, Position = new Vector3(0f, 0.3f, -0.5f) };
-            root.AddChild(glint);
+            // A ship's cannon fallen against the rock, its rusted barrel toward the water on a broken carriage.
+            root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(0.9f, 0.35f, 1.1f) }, MaterialOverride = Rust, Position = new Vector3(0f, -0.25f, 0.3f) });
+            root.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.16f, BottomRadius = 0.24f, Height = 1.8f, RadialSegments = 14, Rings = 1 }, MaterialOverride = Iron, Rotation = new Vector3(-Mathf.Pi / 2f, 0f, 0f), Position = new Vector3(0f, 0f, -0.1f) });
+            var muzzle = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, Transparency = BaseMaterial3D.TransparencyEnum.Alpha, BlendMode = BaseMaterial3D.BlendModeEnum.Add, AlbedoTexture = Soft, AlbedoColor = new Color(1f, 1f, 1f, 0.3f) };
+            root.AddChild(new MeshInstance3D { Mesh = new PlaneMesh { Size = new Vector2(1.5f, 1.5f) }, MaterialOverride = muzzle, Position = new Vector3(0f, 0.5f, -1f), CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+            var flash = new OmniLight3D { LightColor = new Color(1f, 0.7f, 0.4f), LightEnergy = 0f, OmniRange = 3f, ShadowEnabled = false, Position = new Vector3(0f, 0.3f, -1.2f) };
+            root.AddChild(flash);
             AddChild(root);
-            _traps.Add(new Trap { Sim = t, Glint = glint, Mouth = mouth });
+            return new Trap { Sim = t, Root = root, Glint = flash, Mouth = muzzle };
         }
+        // A carved face of pale stone pressed into the wall, its slot toward the water.
+        root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(0.9f, 1.1f, 0.5f) }, MaterialOverride = Stone, Position = new Vector3(0f, 0f, 0.15f) });
+        root.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(0.26f, 0.14f, 0.1f) }, MaterialOverride = Slot, Position = new Vector3(0f, 0.15f, -0.12f) });
+        // Its mouth's faint pale outline, seen in the dark; it flares warm as the trap winds up.
+        var mouth = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, Transparency = BaseMaterial3D.TransparencyEnum.Alpha, BlendMode = BaseMaterial3D.BlendModeEnum.Add, AlbedoTexture = Soft, AlbedoColor = new Color(1f, 1f, 1f, 0.3f) };
+        root.AddChild(new MeshInstance3D { Mesh = new PlaneMesh { Size = new Vector2(1.4f, 1.4f) }, MaterialOverride = mouth, Position = new Vector3(0f, 0.6f, -0.2f), CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        var glint = new OmniLight3D { LightColor = new Color(1f, 0.85f, 0.55f), LightEnergy = 0f, OmniRange = 2.2f, ShadowEnabled = false, Position = new Vector3(0f, 0.3f, -0.5f) };
+        root.AddChild(glint);
+        AddChild(root);
+        return new Trap { Sim = t, Root = root, Glint = glint, Mouth = mouth };
     }
 
     /// <summary>A kelp curtain: a close row of tall strands across its passage, a faint green glow along it (seen in the dark).</summary>

@@ -50,6 +50,9 @@ public partial class ReefFishView : Node3D
     readonly List<Node> _nodes = new();
     readonly List<Pose> _poses = new();
     readonly List<float> _hostTops = new();
+    /// <summary>The fish and anemones its poses were made for (an open level's chunks bring theirs and take them away).</summary>
+    readonly List<PlaneReefFish> _shownFish = new();
+    readonly List<PlaneAnemone> _shownAnemones = new();
     /// <summary>Whether each anemone is shown as turned (hidden), so it is set only when that changes.</summary>
     readonly List<bool> _hidden = new();
     LevelMap? _map;
@@ -96,6 +99,10 @@ public partial class ReefFishView : Node3D
         _hidden.Clear();
         _groups.Clear();
         _poses.Clear();
+        _shownFish.Clear();
+        _shownFish.AddRange(world.ReefFish);
+        _shownAnemones.Clear();
+        _shownAnemones.AddRange(world.Anemones);
         var index = new Dictionary<(ReefFishKind, int), int>();
         var counts = new List<int>();
         var kinds = new List<ReefFishKind>();
@@ -131,11 +138,20 @@ public partial class ReefFishView : Node3D
         }
     }
 
+    static bool Same<T>(List<T> shown, List<T> now) where T : class
+    {
+        if (shown.Count != now.Count) return false;
+        for (int i = 0; i < now.Count; i++)
+            if (!ReferenceEquals(shown[i], now[i])) return false;
+        return true;
+    }
+
     public void Sync(PlaneWorld world, float dt)
     {
         if (_map is null) return;
         // Fish come into the reef (those Drippus Prime took, swimming out of it as it is freed): a pose for each.
-        if (_poses.Count != world.ReefFish.Count) Show(world);
+        // (On an open level the fish and anemones of chunks that left and came in may number as before: each is checked.)
+        if (!Same(_shownFish, world.ReefFish) || !Same(_shownAnemones, world.Anemones)) Show(world);
         // An anemone turned (an Inkwarden now, BlightView draws it) is gone from its shelf until it is freed. (An open
         // level's window moves it on: it keeps over its sim.)
         for (int i = 0; i < _anemones.Count && i < world.Anemones.Count; i++)
