@@ -287,7 +287,9 @@ public partial class LevelView : Node3D
             _tunnelRoofs[corridor] = roof;
             AddChild(new MeshInstance3D { Mesh = ToMesh(surface), MaterialOverride = roof });
         }
-        foreach (var canopy in map.Canopies) AddCanopy(canopy);
+        // (An open level's window holds its chunks' canopies for the sun's map only: each chunk draws its own, ShowSeaCanopies.)
+        if (shape.Sea is null)
+            foreach (var canopy in map.Canopies) AddCanopy(canopy);
         AddShopGates(map);
         AddDoors(map, shape);
         // Sealed walls: the reef wall carried on across their passage (LevelMap.Sealed), in the reef's own ground, so each is
@@ -330,12 +332,12 @@ public partial class LevelView : Node3D
     }
 
     /// <summary>A cave's roof, and its copy under it that only the sun sees.</summary>
-    List<MeshInstance3D> AddLid(ArrayMesh mesh, ShaderMaterial lid, bool visible)
+    List<MeshInstance3D> AddLid(ArrayMesh mesh, ShaderMaterial lid, bool visible, Node3D? parent = null, Vector3 at = default)
     {
-        var top = new MeshInstance3D { Mesh = mesh, MaterialOverride = lid, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = visible };
-        var shade = new MeshInstance3D { Mesh = mesh, MaterialOverride = lid, CastShadow = GeometryInstance3D.ShadowCastingSetting.ShadowsOnly, Position = new Vector3(0f, -LidShadowDrop, 0f), Visible = visible };
-        AddChild(top);
-        AddChild(shade);
+        var top = new MeshInstance3D { Mesh = mesh, MaterialOverride = lid, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = visible, Position = at };
+        var shade = new MeshInstance3D { Mesh = mesh, MaterialOverride = lid, CastShadow = GeometryInstance3D.ShadowCastingSetting.ShadowsOnly, Position = at + new Vector3(0f, -LidShadowDrop, 0f), Visible = visible };
+        (parent ?? this).AddChild(top);
+        (parent ?? this).AddChild(shade);
         return new List<MeshInstance3D> { top, shade };
     }
 
@@ -495,7 +497,8 @@ public partial class LevelView : Node3D
         else if (h <= 10f) c = new Color(0.43f, 0.4f, 0.33f).Lerp(new Color(0.4f, 0.36f, 0.32f), (h - 6f) / 4f);
         else c = new Color(0.4f, 0.36f, 0.32f).Lerp(new Color(0.66f, 0.43f, 0.52f), Mathf.Clamp((h - 10f) / 4f, 0f, 1f));
         float e = Mathf.Max(Mathf.Min(Mathf.Min(x, y), Mathf.Min(size - x, size - y)), 0f);
-        if (e < LevelMap.RimWidth) c = c.Lerp(new Color(0.24f, 0.23f, 0.26f), 1f - e / LevelMap.RimWidth);
+        // (size < 0: an open level's chunk, which has no rim.)
+        if (size >= 0 && e < LevelMap.RimWidth) c = c.Lerp(new Color(0.24f, 0.23f, 0.26f), 1f - e / LevelMap.RimWidth);
         // A little grain so flat colour reads as ground.
         uint hash = unchecked((uint)((int)(x * Sub) * 73856093 ^ (int)(y * Sub) * 19349663));
         float grain = 0.95f + 0.1f * ((hash & 1023) / 1023f);
@@ -762,7 +765,8 @@ public partial class LevelView : Node3D
     }
 
     /// <summary>A triangle is kept when any of its corners passes <paramref name="keep"/>.</summary>
-    static LevelShape.Surface? SurfaceMesh(int size, Func<float, float, float> height, int x0, int y0, int x1, int y1, Func<float, float, bool>? keep)
+    /// <param name="sea">An open level's chunk: its corner in the sea, coloured there (its grain the sea's own) and with no rim (its edges meet its neighbours').</param>
+    static LevelShape.Surface? SurfaceMesh(int size, Func<float, float, float> height, int x0, int y0, int x1, int y1, Func<float, float, bool>? keep, Vector2? sea = null)
     {
         int w = (x1 - x0) * Sub + 1, h = (y1 - y0) * Sub + 1;
         var verts = new Vector3[w * h];
@@ -778,7 +782,7 @@ public partial class LevelView : Node3D
             float hl = height(x - e, y), hr = height(x + e, y);
             float hd = height(x, y - e), hu = height(x, y + e);
             normals[j * w + i] = new Vector3(hl - hr, 2f * e, hd - hu).Normalized();
-            colors[j * w + i] = Band(hgt, x, y, size);
+            colors[j * w + i] = sea is { } at ? Band(hgt, x + at.X, y + at.Y, -1) : Band(hgt, x, y, size);
         }
         var indices = new List<int>((w - 1) * (h - 1) * 6);
         for (int j = 0; j + 1 < h; j++)
@@ -1134,12 +1138,13 @@ public partial class LevelView : Node3D
     /// same skin, its ends sunk into the walls, thicker at the feet; flat on top with rounded shoulders, rounded beneath.
     /// Its height span (the underside's lowest to its top) is kept for the occlusion rule.
     /// </summary>
-    ArrayMesh ArchMesh(Canopy c)
+    ArrayMesh ArchMesh(Canopy c, Func<float, float, float>? ground = null)
     {
         const int along = 48, around = 20;
         var a = c.EndA;
         var b = c.EndB;
-        float topA = SmoothHeight(_map, a.X, a.Y), topB = SmoothHeight(_map, b.X, b.Y);
+        ground ??= (x, y) => SmoothHeight(_map, x, y);
+        float topA = ground(a.X, a.Y), topB = ground(b.X, b.Y);
         var side = new Vector3(-c.Axis.Y, 0f, c.Axis.X);
         var verts = new List<Vector3>();
         var normals = new List<Vector3>();
@@ -1243,6 +1248,8 @@ public partial class LevelView : Node3D
     {
         var her = new Vector3(player.X, LevelMap.SwimBand, player.Y);
         var sight = (camera - her).Normalized();
+        // (An open level's chunks' canopies stand in sea metres: she is looked for there.)
+        var herSea = her + new Vector3(_seaAt.X, 0f, _seaAt.Y);
         var hiddenCaves = new HashSet<int>();
         var hiddenTunnels = new HashSet<int>();
         var hide = new bool[_canopies.Count];
@@ -1250,9 +1257,9 @@ public partial class LevelView : Node3D
         {
             var c = _canopies[i].Canopy;
             // A sealed secret's roof stays: she cannot be in there, and it must not show there is a chamber under it.
-            if (c.Kind == CanopyKind.CaveRoof && _sealedCaves.Contains(CaveOf(c))) continue;
+            if (c.Kind == CanopyKind.CaveRoof && _sealedCaves.Contains(CaveOf(c)) || _seaKept.Contains(c)) continue;
             var (lo, hi) = _spans.TryGetValue(c, out var span) ? span : (c.Bottom, c.Top);
-            if (!Blocks(c, lo, hi, her, sight) && !ShopRoof(c)) continue;
+            if (!Blocks(c, lo, hi, _seaCanopies.Contains(c) ? herSea : her, sight) && !ShopRoof(c)) continue;
             hide[i] = true;
             if (c.Kind == CanopyKind.CaveRoof && CaveOf(c) is int cave and >= 0) hiddenCaves.Add(cave);
             if (c.Kind == CanopyKind.TunnelRoof) hiddenTunnels.Add(c.Corridor);

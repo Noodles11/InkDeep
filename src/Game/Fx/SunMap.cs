@@ -56,21 +56,42 @@ public static class SunMap
         return true;
     }
 
-    /// <summary>Where the map's level lies (world metres): its lookups are made from there.</summary>
-    public static void SetOffset(Vector3 offset) => RenderingServer.GlobalShaderParameterSet(SN.Of("sun_offset"), offset);
-
-    static void Install(byte[] bytes, LevelMap map)
+    /// <summary>Where the map's level lies (world metres): its lookups are made from there (and from its margin's corner, a wide map's).</summary>
+    public static void SetOffset(Vector3 offset)
     {
-        if (_image is null || _texture is null)
+        _offset = offset;
+        RenderingServer.GlobalShaderParameterSet(SN.Of("sun_offset"), offset - new Vector3(_margin, 0f, _margin));
+    }
+
+    static Vector3 _offset;
+    /// <summary>How far the map in place reaches past its level's square on every side (an open level's: Wide).</summary>
+    static float _margin;
+
+    /// <summary>
+    /// An open level's: the sea round the window, past it by a margin on every side (made from the chunks there), so the
+    /// sun's map reaches past what the screen shows and its edge, on the window's edge (a chunk's), never shows as a line
+    /// across the reef's relief. Null on any other level.
+    /// </summary>
+    public static System.Func<(LevelMap Map, float Margin)>? Wide;
+
+    static void Install(byte[] bytes, LevelMap map, float margin = 0f, int extent = 0)
+    {
+        int texels = (int)MathF.Round(MathF.Sqrt(bytes.Length / 4f));
+        if (_image is null || _texture is null || _image.GetWidth() != texels)
         {
-            _image = Image.CreateFromData(Size, Size, false, Image.Format.Rf, bytes);
+            _image = Image.CreateFromData(texels, texels, false, Image.Format.Rf, bytes);
             _texture = ImageTexture.CreateFromImage(_image);
         }
         else
         {
-            _image.SetData(Size, Size, false, Image.Format.Rf, bytes);
+            _image.SetData(texels, texels, false, Image.Format.Rf, bytes);
             _texture.Update(_image);
         }
+        // (What the map covers: the level's square, or a wide map's, past it by its margin.)
+        _margin = margin;
+        float covers = extent > 0 ? extent : map.Size;
+        RenderingServer.GlobalShaderParameterSet(SN.Of("reef_extent"), new Vector2(covers, covers));
+        SetOffset(_offset);
         RenderingServer.GlobalShaderParameterSet(SN.Of("sun_shadow"), _texture);
         _shown = map;
         _pending = null;
@@ -133,12 +154,28 @@ public static class SunMap
 
     static void Recast(LevelMap map, Vector3 sunDir)
     {
-        var copy = new LevelMap(map.Size);
-        System.Array.Copy(map.Heights, copy.Heights, map.Heights.Length);
+        LevelMap copy;
+        if (Wide?.Invoke() is { } wide)
+        {
+            copy = wide.Map;
+            _recastMargin = wide.Margin;
+        }
+        else
+        {
+            copy = new LevelMap(map.Size);
+            System.Array.Copy(map.Heights, copy.Heights, map.Heights.Length);
+            _recastMargin = 0f;
+        }
         _recastAt = _since;
         _stale = false;
+        // (It supersedes a first cast still running: that one's window is narrower.)
+        _pending = null;
         _recast = System.Threading.Tasks.Task.Run(() => Cast(copy, sunDir));
+        _recastSize = copy.Size;
     }
+
+    static float _recastMargin;
+    static int _recastSize;
 
     public static void Poll(LevelMap current)
     {
@@ -147,7 +184,7 @@ public static class SunMap
             _recast = null;
             if (!recast.IsFaulted)
             {
-                Install(recast.Result, current);
+                Install(recast.Result, current, _recastMargin, _recastSize);
                 _since -= _recastAt;
                 SetOffset(-_since);
             }
@@ -197,12 +234,14 @@ public static class SunMap
         var l = sunDir.Normalized();
         float step = 0.5f;
         float extent = map.Size;
-        var data = new float[Size * Size];
-        for (int v = 0; v < Size; v++)
-        for (int u = 0; u < Size; u++)
+        // (A wide map has as many texels to the metre as a level's.)
+        int texels = Math.Max(Size, (int)MathF.Round(Size * extent / LevelMap.Seeded));
+        var data = new float[texels * texels];
+        for (int v = 0; v < texels; v++)
+        for (int u = 0; u < texels; u++)
         {
             // Where this ray enters at the surface (texel centre), then down along the sun.
-            float ex = (u + 0.5f) / Size * extent, ez = (v + 0.5f) / Size * extent;
+            float ex = (u + 0.5f) / texels * extent, ez = (v + 0.5f) / texels * extent;
             float hit = -100f;
             for (float t = 0f; t < 80f; t += step)
             {
@@ -221,7 +260,7 @@ public static class SunMap
                     break;
                 }
             }
-            data[v * Size + u] = hit;
+            data[v * texels + u] = hit;
         }
 
         var bytes = new byte[data.Length * 4];

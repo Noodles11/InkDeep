@@ -69,6 +69,17 @@ public partial class TopDownMain
         return LevelShape.OfSea(map, sea, w, chunks);
     }
 
+    /// <summary>How far past the window an open level's sun map reaches on every side (SunMap.Wide).</summary>
+    const int SunMargin = 2 * (int)OpenSea.Cell;
+
+    /// <summary>The sea round the window, SunMargin past it on every side, from the chunks made there (SunMap.Wide).</summary>
+    (LevelMap Map, float Margin) WideSea()
+    {
+        var wide = new LevelMap(LevelMap.Seeded + 2 * SunMargin);
+        Sea!.Fill(wide, _seaW - new System.Numerics.Vector2(SunMargin), k => _seaBuilt.GetValueOrDefault(k));
+        return (wide, SunMargin);
+    }
+
     /// <summary>The window round a point: its corner a whole number of cells, the point within a cell of its middle.</summary>
     static System.Numerics.Vector2 WindowFor(System.Numerics.Vector2 at)
     {
@@ -110,11 +121,14 @@ public partial class TopDownMain
         _seaLife.Clear();
         _seaHere = null;
         RenderingServer.GlobalShaderParameterSet(OctoShoots.Game.Fx.SN.Of("reef_rim"), Sea is null ? 1f : 0f);
+        OctoShoots.Game.Fx.SunMap.Wide = Sea is null ? null : WideSea;
         // (F3's map of the window is hidden on an open level: its chunk map stands in for it.)
         _debugMap.SelfModulate = Sea is null ? Colors.White : Colors.Transparent;
         if (_levelShape is not { Sea: not null } shape) return;
         _seaW = shape.SeaOrigin;
         foreach (var (chunk, _, _) in shape.SeaChunks) _seaBuilt[chunk.Key] = chunk;
+        // (Its sun map cast wide at once, past the window.)
+        OctoShoots.Game.Fx.SunMap.Shifted(_map, OctoShoots.Game.Fx.SunLight.Direction, Vector3.Zero);
     }
 
     /// <summary>Once a frame on an open level: the chunks round hers asked for, one made chunk shown, the window moved on, the holes she has found.</summary>
@@ -232,6 +246,7 @@ public partial class TopDownMain
     {
         if (Sea is not { } sea || !_seaBuilt.TryGetValue(sea.ChunkAt(at + _seaW), out var chunk) || !chunk.Sealed) return;
         chunk.Unseal();
+        _level.OpenSeaRoof(chunk.Key);
         sea.Fill(_map, _seaW, k => _seaBuilt.GetValueOrDefault(k), chunk.Key);
         OctoShoots.Game.Fx.SunMap.Shifted(_map, OctoShoots.Game.Fx.SunLight.Direction, Vector3.Zero);
         _level.ShowSeaChunk(chunk, LevelView.SeaSurface(chunk), again: true);

@@ -117,7 +117,12 @@ public sealed class OpenSea
     /// <summary>The window's height where no chunk is built yet: just over her plane (it stops her, and casts next to no shade).</summary>
     public const float Unbuilt = 0.3f;
     /// <summary>How thick a chunk's wall is along each side it shares with another (so two meet as a wall twice as thick), how much it wanders (its face's noise), and how much of it the erosion never opens.</summary>
-    const float Wall = 2f, WallWander = 1.8f, WallCore = 1f;
+    const float Wall = 1f, WallWander = 2.2f, WallCore = 1f;
+    /// <summary>
+    /// How far a wall's face swells and shrinks over a few tens of metres besides (so it is never a straight line along
+    /// the chunks' edge, but reef), and how much a way through it widens past its socket (never past a seal's reach).
+    /// </summary>
+    const float WallLump = 5f, GapWiden = 1.4f;
     /// <summary>The erosion's two octaves (as a template level's; its walls are not pushed back: between chunks they are the ways shut).</summary>
     const float Erode = 1.5f, ErodeFine = 0.6f;
     /// <summary>The floor, and the rock's top (each give or take its noise).</summary>
@@ -294,6 +299,10 @@ public sealed class OpenSea
         public float[]? Unsealed;
         /// <summary>Its kelp beds (sea metres).</summary>
         public readonly List<KelpBed> Kelp = new();
+        /// <summary>Its arches and its room's roof (sea metres): drawn with it, and copied into the window (the sun's shade).</summary>
+        public readonly List<Canopy> Canopies = new();
+        /// <summary>Its room's roof: the rock's height over it (as Heights), NaN where there is none; null without one.</summary>
+        public float[]? Lid;
 
         /// <summary>Its seal opened: its heights without the wall (the sea's window is filled again from them).</summary>
         public void Unseal()
@@ -343,13 +352,19 @@ public sealed class OpenSea
             open[k] = sd + CaveLayout.Fbm(x * 0.13f, y * 0.13f, _noise) * Erode + CaveLayout.Fbm(x * 0.41f, y * 0.41f, _noise + 31) * ErodeFine < 0f;
         }
         // The chunk's walls, after the erosion so it never eats them: a band along every side it shares with another
-        // chunk but the joined ones' sockets, its face wandering with its own noise.
+        // chunk but the joined ones' sockets, its face wandering with its own noise, swelling and shrinking more broadly
+        // too (reef, not a line along the edge); what it walls is kept (its rock rises to the reef's top at once).
+        var walled = new bool[n];
         for (int j = 0; j < h; j++)
         for (int i = 0; i < w; i++)
         {
             int x = x0 + i, y = y0 + j;
-            float wall = MathF.Max(WallCore, Wall + WallWander * CaveLayout.Fbm(x * 0.11f, y * 0.11f, _noise + 17));
-            if (open[j * w + i] && InWall((FloorDiv(x), FloorDiv(y)), Mod(x, Cell), Mod(y, Cell), wall)) open[j * w + i] = false;
+            float wall = WallThick(x, y);
+            if (InWall((FloorDiv(x), FloorDiv(y)), Mod(x, Cell), Mod(y, Cell), wall))
+            {
+                walled[j * w + i] = true;
+                open[j * w + i] = false;
+            }
         }
         for (int pass = 0; pass < 2; pass++)
         {
@@ -408,7 +423,8 @@ public sealed class OpenSea
             float s = open[k] ? 0.5f - toRock[k] : toOpen[k] - 0.5f;
             float floor = Floor + 0.12f * CaveLayout.Fbm(x * 0.21f, y * 0.21f, _noise + 5);
             float top = Top + 1.2f * CaveLayout.Fbm(x * 0.05f, y * 0.05f, _noise + 9);
-            float hgt = floor + (top - floor) * Smooth(-0.8f, 3f, s);
+            // (A wall between chunks, thin as it may be, stands at the reef's top: never a low strip along their edge.)
+            float hgt = floor + (top - floor) * Smooth(-0.8f, walled[k] ? 1.4f : 3f, s);
             // (Rock always stands over her plane and water always lies under it, however thin: a wall is a wall.)
             chunk.Heights[j * chunk.Stride + i] = open[k] ? MathF.Min(hgt, -0.3f) : MathF.Max(hgt, 0.3f);
         }
@@ -478,11 +494,104 @@ public sealed class OpenSea
             chunk.Unsealed = (float[])chunk.Heights.Clone();
             RaiseSeals(chunk, key);
         }
+        PlaceRoof(chunk, key, toRock, x0, y0, w);
+        PlaceArches(chunk, key);
         PlaceKelp(chunk, key, toRock, x0, y0, w);
         var names = CellsOf(key).Select(c => CellGrid(c).Name);
         chunk.Template = string.Join("+", names);
         chunk.Ways = Neighbours(key).Count(o => Linked(key, o));
         return chunk;
+    }
+
+    /// <summary>The share of the chunks holding a clam, a cache or a relic whose room is roofed (a secret room's always is); its roof's reach past the water round its place, its least and most reach, and how much it domes up over the rock's top.</summary>
+    public const float RoofChance = 0.5f, RoofPast = 2.5f, RoofMin = 4f, RoofMax = 9f, RoofDome = 1.5f;
+
+    /// <summary>
+    /// A treasure's room roofed, as a template level's caves are: the reef's rock carried on over it as a low dome (its
+    /// own top's height, rising a little to the middle), out to a little past the water round its place, and never past
+    /// its own chunk (its roof is drawn with it). Its canopy fades it while she is under it (LevelView).
+    /// </summary>
+    void PlaceRoof(Chunk chunk, (int X, int Y) key, float[] toRock, int x0, int y0, int w)
+    {
+        if (chunk.Place is not (PoiKind.TreasureCave or PoiKind.ShellCache or PoiKind.Relic)) return;
+        if (!Secret(key) && Unit(Mix(Seed, (ulong)(uint)key.X, (ulong)(uint)key.Y, 0x400F)) >= RoofChance) return;
+        var at = chunk.PlaceAt;
+        float room = toRock[((int)at.Y - y0) * w + (int)at.X - x0];
+        float edge = MathF.Min(MathF.Min(at.X - chunk.Min.X, chunk.Max.X - at.X), MathF.Min(at.Y - chunk.Min.Y, chunk.Max.Y - at.Y));
+        float r = MathF.Min(Math.Clamp(room + RoofPast, RoofMin, RoofMax), edge - 1.5f);
+        if (r < RoofMin) return;
+        var ground = chunk.Unsealed ?? chunk.Heights;
+        var lid = new float[chunk.Heights.Length];
+        Array.Fill(lid, float.NaN);
+        float most = 0f;
+        for (int j = 0; j < chunk.Rows; j++)
+        for (int i = 0; i < chunk.Stride; i++)
+        {
+            var p = chunk.Origin + new Vector2(i, j);
+            float d = Vector2.Distance(p, at);
+            if (d > r) continue;
+            float top = Top + 1.2f * CaveLayout.Fbm(p.X * 0.05f, p.Y * 0.05f, _noise + 9) + RoofDome * (1f - Square(d / r));
+            int k = j * chunk.Stride + i;
+            lid[k] = MathF.Max(ground[k], top);
+            most = MathF.Max(most, lid[k]);
+        }
+        chunk.Lid = lid;
+        chunk.Canopies.Add(new Canopy { Kind = CanopyKind.CaveRoof, Center = at, Radius = r, Bottom = LevelMap.SwimBand + 1.2f, Top = most });
+    }
+
+    /// <summary>The share of chunks with an arch; its span's least and most (footing to footing), and the rock's least height at a footing.</summary>
+    public const float ArchChance = 0.35f, ArchSpanMin = 6f, ArchSpanMax = 14f, ArchFooting = 2.2f;
+
+    /// <summary>
+    /// Now and then an arch, as a template level's: a span of rock across a passage, springing from the rock tops either
+    /// side of it, footings and all inside its chunk (it is drawn with it), clear of its holes and its place.
+    /// </summary>
+    void PlaceArches(Chunk chunk, (int X, int Y) key)
+    {
+        var rng = new Rng(Mix(Seed, (ulong)(uint)key.X, (ulong)(uint)key.Y, 0xA4C4));
+        if (rng.NextFloat() >= ArchChance) return;
+        var ground = chunk.Unsealed ?? chunk.Heights;
+        float H(Vector2 p) => ground[Math.Clamp((int)MathF.Round(p.Y - chunk.Origin.Y), 0, chunk.Rows - 1) * chunk.Stride + Math.Clamp((int)MathF.Round(p.X - chunk.Origin.X), 0, chunk.Stride - 1)];
+        bool Inside(Vector2 p) => p.X > chunk.Min.X + 1f && p.Y > chunk.Min.Y + 1f && p.X < chunk.Max.X - 1f && p.Y < chunk.Max.Y - 1f;
+        var keep = new List<(Vector2 At, float Radius)>();
+        foreach (var hole in chunk.Holes) keep.Add((hole, 9f));
+        if (chunk.Place is not null) keep.Add((chunk.PlaceAt, 6f));
+        foreach (var c in chunk.Canopies) keep.Add((c.Center, c.Radius + 3f));
+        var found = new List<(Vector2 A, Vector2 B)>();
+        for (float y = chunk.Min.Y + 3f; y < chunk.Max.Y - 3f; y += 2f)
+        for (float x = chunk.Min.X + 3f; x < chunk.Max.X - 3f; x += 2f)
+        {
+            var p = new Vector2(x, y);
+            if (H(p) > -0.3f || keep.Exists(q => Vector2.Distance(q.At, p) < q.Radius)) continue;
+            for (int d = 0; d < 8; d++)
+            {
+                var dir = new Vector2(MathF.Cos(d * MathF.PI / 8f), MathF.Sin(d * MathF.PI / 8f));
+                float Reach(Vector2 way)
+                {
+                    for (float t = 1f; t <= ArchSpanMax; t += 0.5f)
+                        if (H(p + way * t) >= ArchFooting) return t + 0.5f;
+                    return -1f;
+                }
+                float sa = Reach(dir), sb = Reach(-dir);
+                if (sa < 0f || sb < 0f || sa + sb < ArchSpanMin || sa + sb > ArchSpanMax) continue;
+                var a = p + dir * sa;
+                var b = p - dir * sb;
+                if (Inside(a) && Inside(b) && H(a) >= ArchFooting && H(b) >= ArchFooting) found.Add((a, b));
+            }
+        }
+        if (found.Count == 0) return;
+        var (fa, fb) = found[rng.Int(found.Count)];
+        float bottom = LevelMap.SwimBand + 1.6f;
+        chunk.Canopies.Add(new Canopy
+        {
+            Kind = CanopyKind.Arch,
+            Center = (fa + fb) * 0.5f,
+            Axis = Vector2.Normalize(fb - fa),
+            HalfLength = Vector2.Distance(fa, fb) * 0.5f,
+            HalfWidth = rng.Range(1.8f, 3f),
+            Bottom = bottom,
+            Top = bottom + rng.Range(2f, 3.5f),
+        });
     }
 
     /// <summary>A sealed way: its wall's half thickness (it stands inside the dead end, from its edge in), how far past the way it reaches either side, and its top.</summary>
@@ -581,13 +690,19 @@ public sealed class OpenSea
     /// Whether a point of a cell (lx, ly within it) is in its chunk's wall: <paramref name="wall"/> metres along every side it shares with
     /// another chunk, but for the socket in the middle of a side where the two are joined (the way between them).
     /// </summary>
+    /// <summary>A wall's thickness from its chunk's edge at a point (sea metres): its own wander and its broad swell.</summary>
+    float WallThick(int x, int y) =>
+        MathF.Max(WallCore, Wall + WallWander * CaveLayout.Fbm(x * 0.11f, y * 0.11f, _noise + 17) + WallLump * (0.35f + 0.65f * MathUtil.Clamp01(0.5f + 1.2f * CaveLayout.Fbm(x * 0.06f, y * 0.06f, _noise + 23))));
+
     bool InWall((int X, int Y) cell, int lx, int ly, float wall)
     {
         var key = ChunkOfCell(cell);
+        // (A way's sides waver too, widening it a little past its socket here and there.)
+        float widen = GapWiden * MathUtil.Clamp01(0.5f + CaveLayout.Fbm((cell.X * Cell + lx) * 0.19f, (cell.Y * Cell + ly) * 0.19f, _noise + 29));
         bool Shut(int dx, int dy, int along)
         {
             var n = ChunkOfCell((cell.X + dx, cell.Y + dy));
-            return n != key && (along < CaveTemplates.SocketFrom - 1 || along > CaveTemplates.SocketTo + 1 || !Linked(key, n));
+            return n != key && (along < CaveTemplates.SocketFrom - 1 - widen || along > CaveTemplates.SocketTo + 1 + widen || !Linked(key, n));
         }
         return lx < wall && Shut(-1, 0, ly) || lx >= Cell - wall && Shut(1, 0, ly) || ly < wall && Shut(0, -1, lx) || ly >= Cell - wall && Shut(0, 1, lx);
     }
@@ -628,6 +743,7 @@ public sealed class OpenSea
         int missing = 0, n = map.Samples, ox = (int)origin.X, oy = (int)origin.Y;
         map.Holes.Clear();
         map.Kelp.Clear();
+        map.Canopies.Clear();
         var keys = new HashSet<(int X, int Y)>();
         for (int cy = FloorDiv(oy); cy <= FloorDiv(oy + n - 1); cy++)
         for (int cx = FloorDiv(ox); cx <= FloorDiv(ox + n - 1); cx++)
@@ -644,6 +760,11 @@ public sealed class OpenSea
                 foreach (var bed in chunk.Kelp)
                     if (bed.Center.X - bed.Radius - ox > 0f && bed.Center.Y - bed.Radius - oy > 0f && bed.Center.X + bed.Radius - ox < n - 1 && bed.Center.Y + bed.Radius - oy < n - 1)
                         map.Kelp.Add(new KelpBed { Center = bed.Center - origin, Radius = bed.Radius, Roots = bed.Roots.Select(q => q - origin).ToList(), Lengths = bed.Lengths });
+            // (Its arches and roof, those whose middle is in the window, in its coordinates.)
+            if (chunk is not null)
+                foreach (var c in chunk.Canopies)
+                    if (c.Center.X - ox is > 0f && c.Center.Y - oy is > 0f && c.Center.X - ox < n - 1 && c.Center.Y - oy < n - 1)
+                        map.Canopies.Add(new Canopy { Kind = c.Kind, Center = c.Center - origin, Axis = c.Axis, HalfLength = c.HalfLength, HalfWidth = c.HalfWidth, Radius = c.Radius, Bottom = c.Bottom, Top = c.Top });
             if (only is { } o && o != key) continue;
             var (min, max) = RectOf(key);
             int x0 = Math.Max((int)min.X, ox), x1 = Math.Min((int)max.X, ox + n), y0 = Math.Max((int)min.Y, oy), y1 = Math.Min((int)max.Y, oy + n);
@@ -653,11 +774,14 @@ public sealed class OpenSea
                 if (chunk is null)
                 {
                     for (int x = x0; x < x1; x++) map.Heights[row + x] = Unbuilt;
+                    Array.Fill(map.Lid, float.NaN, row + x0, x1 - x0);
                     missing += x1 - x0;
                     continue;
                 }
                 int src = (y - (int)chunk.Origin.Y) * chunk.Stride - (int)chunk.Origin.X;
                 Array.Copy(chunk.Heights, src + x0, map.Heights, row + x0, x1 - x0);
+                if (chunk.Lid is { } lid) Array.Copy(lid, src + x0, map.Lid, row + x0, x1 - x0);
+                else Array.Fill(map.Lid, float.NaN, row + x0, x1 - x0);
             }
         }
         map.Shaft = map.Holes.Count > 0 ? map.Holes[0].Shaft : new Shaft(new Vector2(-100f, -100f), Vector2.UnitX, 0.01f, 0.01f);

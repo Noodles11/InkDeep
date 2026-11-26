@@ -192,8 +192,20 @@ the reef was never being called home. It was being kept.
     corals 1.6 m and lone heads 3.5 m on the sand; the biomes' things 2 m, their larger pieces 13 m), no grid to show,
     and as many to the square metre as the old jittered grid gave. (`--dbg-closed`: every level a template level, to
     compare.)
-  - **Still apart from a template level:** no shop gates, crab's fake walls, tunnels or caves with roofs (the chunks
-    have none). The holes she has found keep their emblems (an arrow pointing down).
+  - **Arches and roofed rooms** (0.103.0): about a third of the chunks (`OpenSea.ArchChance`) carry an arch, a span
+    of rock 6–14 m across one of their passages, springing from the rock tops either side (`ArchFooting`), all of it
+    inside its chunk; half the rooms holding a clam, a cache or a relic (`RoofChance`; a secret room's always) are
+    roofed, the reef's rock carried on over the room as a low dome (`Chunk.Lid`, out to a little past its water and
+    never past its chunk). Each is drawn with its chunk as a template level's is (`LevelView.ShowSeaCanopies`) and fades
+    while she is under it; a sealed secret room's roof stays whole till its seal opens. The window takes them as it
+    takes the holes (`Fill`: `Canopies` and `Lid`), for the sun's shade only (it never draws them).
+  - **No lines along the chunks' edges** (0.103.0): the walls between chunks not joined swell and shrink broadly
+    (`WallLump`, 2.75–6 m a side) and rise to the reef's top within a metre or two of their face, so they read as reef,
+    not as low straight strips along the edges; a way through one wavers wider than its socket (`GapWiden`, never past
+    a seal's reach). The sun's map, whose relief the ink look draws, is cast 36 m past the window on every side
+    (`SunMap.Wide`), so its edge (on the window's, a chunk's) never shows as a line across the reef; and a chunk's
+    ground is coloured in sea metres with no rim.
+  - **Still apart from a template level:** no shop gates, crab's fake walls or tunnels (the chunks have none). The holes she has found keep their emblems (an arrow pointing down).
   - **The debug chunk map** (F3): the chunks round her, the one she is in, those she has visited, those made and not
     yet visited, the ways between them, each one's template and its holes.
 - **Holes down** (0.95.0, `TopDownGenerator.OpenHoles`, `LevelPlan.DiveHoles`; on open levels since 0.96.0, a chunk's own): a template level but a boss's has one

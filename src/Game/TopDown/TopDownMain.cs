@@ -1683,6 +1683,8 @@ public partial class TopDownMain : Node3D
         ApplyLook(Look);
         // Where the sun reaches into this level's water (its god rays and caustics end at the rock that shades them).
         ReefLook.SetExtent(map.Size);
+        // (An open level's wide map is cast once its chunks are in: EnterSea.)
+        OctoShoots.Game.Fx.SunMap.Wide = null;
         OctoShoots.Game.Fx.SunMap.Build(map, OctoShoots.Game.Fx.SunLight.Direction);
         if (!keepRun || _run is null)
         {

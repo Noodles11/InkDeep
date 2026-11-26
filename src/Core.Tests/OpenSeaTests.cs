@@ -399,4 +399,60 @@ public class OpenSeaTests
         Assert.Equal(built.Values.Single(c => c.Contains(new Vector2(3f, 5f))).At(3, 5), map[57, 59]);
         Assert.All(map.Holes, h => Assert.True(map.HeightAt(h.Shaft.Center) < LevelMap.ShaftBottom + 1.5f));
     }
+
+    [Fact]
+    public void Some_chunks_hold_an_arch_over_a_passage_or_a_roof_over_their_room_and_the_window_takes_them()
+    {
+        var built = ChunksWithin(10).ToDictionary(k => k, Sea.Build);
+        var arches = built.Values.SelectMany(c => c.Canopies.Where(a => a.Kind == CanopyKind.Arch).Select(a => (c, a))).ToList();
+        var roofed = built.Values.Where(c => c.Lid is not null).ToList();
+        Assert.NotEmpty(arches);
+        Assert.NotEmpty(roofed);
+        // An arch springs from rock either side, inside its chunk, over water.
+        foreach (var (c, a) in arches)
+        {
+            Assert.True(c.Contains(a.EndA) && c.Contains(a.EndB));
+            Assert.True(c.At((int)MathF.Round(a.EndA.X), (int)MathF.Round(a.EndA.Y)) >= OpenSea.ArchFooting - 0.01f);
+            Assert.True(c.At((int)MathF.Round(a.EndB.X), (int)MathF.Round(a.EndB.Y)) >= OpenSea.ArchFooting - 0.01f);
+            Assert.InRange(a.HalfLength * 2f, OpenSea.ArchSpanMin, OpenSea.ArchSpanMax + 1f);
+            Assert.True(a.Bottom > LevelMap.SwimBand);
+        }
+        // A roof covers its place's room, over its own heights, inside its chunk, with its canopy over it.
+        foreach (var c in roofed)
+        {
+            Assert.True(c.Place is PoiKind.TreasureCave or PoiKind.ShellCache or PoiKind.Relic);
+            var roof = Assert.Single(c.Canopies, x => x.Kind == CanopyKind.CaveRoof);
+            Assert.Equal(c.PlaceAt, roof.Center);
+            Assert.True(c.Lid![(int)(c.PlaceAt.Y - c.Origin.Y) * c.Stride + (int)(c.PlaceAt.X - c.Origin.X)] > LevelMap.SwimBand + 1f);
+            for (int k = 0; k < c.Lid.Length; k++)
+                if (!float.IsNaN(c.Lid[k]))
+                {
+                    var p = c.Origin + new Vector2(k % c.Stride, k / c.Stride);
+                    Assert.True(c.Contains(p));
+                    Assert.True(c.Lid[k] >= c.Heights[k]);
+                }
+        }
+        // The window takes them, in its own coordinates.
+        var one = roofed[0];
+        var origin = new Vector2(MathF.Floor((one.PlaceAt.X - 55f) / OpenSea.Cell) * OpenSea.Cell, MathF.Floor((one.PlaceAt.Y - 55f) / OpenSea.Cell) * OpenSea.Cell);
+        var more = ChunksAround(one.Key, 6).Where(k => !built.ContainsKey(k)).ToList();
+        foreach (var k in more) built[k] = Sea.Build(k);
+        var map = new LevelMap();
+        Sea.Fill(map, origin, k => built.GetValueOrDefault(k));
+        var at = one.PlaceAt - origin;
+        Assert.False(float.IsNaN(map.LidAt((int)at.X, (int)at.Y)));
+        Assert.Contains(map.Canopies, x => x.Kind == CanopyKind.CaveRoof && Vector2.Distance(x.Center, at) < 0.01f);
+    }
+
+    static IEnumerable<(int X, int Y)> ChunksAround((int X, int Y) key, int reach)
+    {
+        var cell = Sea.RectOf(key).Min;
+        var seen = new HashSet<(int, int)>();
+        for (int y = -reach; y <= reach; y++)
+        for (int x = -reach; x <= reach; x++)
+        {
+            var k = Sea.ChunkAt(cell + new Vector2(x, y) * OpenSea.Cell);
+            if (seen.Add(k)) yield return k;
+        }
+    }
 }
