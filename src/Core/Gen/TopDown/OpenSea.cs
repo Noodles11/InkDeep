@@ -511,6 +511,21 @@ public sealed class OpenSea
         return ways;
     }
 
+    /// <summary>A secret room opened: its walls gone from another chunk's padding too (the room's own heights there).</summary>
+    public void UnsealAround(Chunk room, Chunk other)
+    {
+        var (min, max) = RectOf(room.Key);
+        for (int j = 0; j < other.Rows; j++)
+        for (int i = 0; i < other.Stride; i++)
+        {
+            var p = other.Origin + new Vector2(i, j);
+            if (p.X < min.X || p.Y < min.Y || p.X >= max.X || p.Y >= max.Y) continue;
+            float h = room.At((int)p.X, (int)p.Y);
+            other.Heights[j * other.Stride + i] = h;
+            if (other.Unsealed is { } u) u[j * other.Stride + i] = h;
+        }
+    }
+
     /// <summary>A secret room's walls across its ways (inside it, from its edge in) raised in a chunk's heights, padding and all.</summary>
     void RaiseSeals(Chunk chunk, (int X, int Y) room)
     {

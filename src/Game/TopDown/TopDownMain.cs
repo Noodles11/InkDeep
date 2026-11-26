@@ -639,6 +639,7 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--at=")) _startAt = Value("--at=");
             else if (arg == "--autopilot") _autopilot = true;
             else if (arg == "--dbg-explore") _autopilot = _dbgExplore = true;
+            else if (arg == "--dbg-secret") _autopilot = _dbgExplore = _dbgSecret = true;
             else if (arg.StartsWith("--boss-hp=") && float.TryParse(Value("--boss-hp="), NumberStyles.Float, CultureInfo.InvariantCulture, out float bhp)) _bossHp = bhp;
             else if (arg == "--fire") _autoFire = true;
             // (Verification: as --fire, with her bubble shots in place of her beam.)

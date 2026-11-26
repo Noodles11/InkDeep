@@ -46,6 +46,15 @@ public sealed partial class PlaneWorld
     /// <summary>The prism stones' seals (an open level's seals come and go: their indices are set again from these).</summary>
     readonly Dictionary<PrismStone, SecretSeal> _prismSeal = new();
 
+    /// <summary>The other seals of an open level's secret room (none on a template level).</summary>
+    IEnumerable<SecretSeal> RoomSeals(SecretSeal seal)
+    {
+        foreach (var f in _seaLive.Values)
+            if (f.Items.Contains(seal))
+                foreach (var o in f.Items)
+                    if (o is SecretSeal s && s != seal) yield return s;
+    }
+
     /// <summary>A grid of spots through the area, <paramref name="edge"/> in from its sides (from the level's rim on a whole level).</summary>
     IEnumerable<Vector2> GridSpots(float edge, float step)
     {

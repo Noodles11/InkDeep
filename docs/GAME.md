@@ -176,8 +176,9 @@ the reef was never being called home. It was being kept.
     charge stones' trio of the whole level. **Secret rooms**: a chunk holding a treasure (a clam, a shell cache, a relic)
     is one by `OpenSea.SecretChance` (0.3, never the lair or her first): a sealed wall stands across each of its ways,
     raised in its own heights (and in its neighbours' padding, so they meet), with the sim's seal over it; now and then
-    (`SeaPrism`, 0.4) it takes only coloured light, its prism stones bedded out before it. Opened, its chunk takes its
-    heights without the wall, the window is filled again and its ground redrawn; seals and stones come and go with
+    (`SeaPrism`, 0.4) it takes only coloured light, its prism stones bedded out before it. One seal opened opens the
+    whole room (0.101.1: its walls are one set of its heights): its chunk takes its heights without them, the window is
+    filled again and its ground redrawn, the chunks round it too (their padding, now or when made later); seals and stones come and go with
     their chunk, kept as she left them. **Kelp beds** are made with each chunk (a quarter of them; the Kelp Forest's
     more), copied into the window as its holes are, so the Kelp Forest tangles her in them; and a fifth of its ways
     between chunks hold a **kelp curtain** (`SeaCurtain`; none on a secret room's).

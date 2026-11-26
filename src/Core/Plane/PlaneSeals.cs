@@ -124,6 +124,9 @@ public sealed partial class PlaneWorld
         _rocks.Remove(seal.Rock);
         _rocks.AddRange(seal.Rock.Remains());
         Events.Add(new PlaneEvent(PlaneEventType.SealOpened, seal.Rock.Center, seal.Facing, seal.Rock.Radius));
+        // An open level's secret room opens whole: its walls are one set of its chunk's heights.
+        foreach (var other in RoomSeals(seal))
+            if (!other.Open) OpenSeal(other);
     }
 
     /// <summary>

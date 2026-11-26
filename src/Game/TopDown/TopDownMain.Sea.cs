@@ -100,6 +100,7 @@ public partial class TopDownMain
     void EnterSea()
     {
         _seaBuilt.Clear();
+        _seaOpened.Clear();
         _seaPending.Clear();
         _seaVisited.Clear();
         _seaFound.Clear();
@@ -139,6 +140,15 @@ public partial class TopDownMain
             }
             var (chunk, ground) = task.Result;
             _seaBuilt[key] = chunk;
+            // (A secret room opened before it came: the room's walls gone from its padding too.)
+            bool touched = false;
+            foreach (var room in _seaOpened)
+                if (Touches(_seaBuilt[room], chunk))
+                {
+                    sea.UnsealAround(_seaBuilt[room], chunk);
+                    touched = true;
+                }
+            if (touched) ground = LevelView.SeaSurface(chunk);
             _level.ShowSeaChunk(chunk, ground);
             AddSeaPlace(chunk);
             var (min, max) = (chunk.Min - _seaW, chunk.Max - _seaW);
@@ -150,7 +160,8 @@ public partial class TopDownMain
             }
             break;
         }
-        if (_dbgExplore && (_route.Count == 0 || _routeProgress >= _route.Count - 3)) Explore(sea, here);
+        if (_dbgSecret && DebugSecret()) { }
+        else if (_dbgExplore && (_route.Count == 0 || _routeProgress >= _route.Count - 3)) Explore(sea, here);
         // The window moves on a cell once she is a cell from its middle.
         var off = her - new System.Numerics.Vector2(LevelMap.Seeded / 2f);
         int dx = off.X > OpenSea.Cell ? 1 : off.X < -OpenSea.Cell ? -1 : 0, dy = off.Y > OpenSea.Cell ? 1 : off.Y < -OpenSea.Cell ? -1 : 0;
@@ -220,6 +231,14 @@ public partial class TopDownMain
         sea.Fill(_map, _seaW, k => _seaBuilt.GetValueOrDefault(k), chunk.Key);
         OctoShoots.Game.Fx.SunMap.Shifted(_map, OctoShoots.Game.Fx.SunLight.Direction, Vector3.Zero);
         _level.ShowSeaChunk(chunk, LevelView.SeaSurface(chunk), again: true);
+        // Its walls stood in the padding of the chunks round it as well (their ground drawn to meet it).
+        _seaOpened.Add(chunk.Key);
+        foreach (var other in _seaBuilt.Values)
+            if (other != chunk && Touches(chunk, other))
+            {
+                sea.UnsealAround(chunk, other);
+                _level.ShowSeaChunk(other, LevelView.SeaSurface(other), again: true);
+            }
         _seals.Show(_world, _level);
     }
 
@@ -278,7 +297,50 @@ public partial class TopDownMain
     System.Numerics.Vector2 LairAt(OpenSea sea) =>
         (_seaBuilt.GetValueOrDefault(sea.Lair)?.Lair ?? (sea.RectOf(sea.Lair).Min + sea.RectOf(sea.Lair).Max) * 0.5f) - _seaW;
 
+    /// <summary>The secret rooms opened (their walls gone from the padding of chunks made after).</summary>
+    readonly HashSet<(int X, int Y)> _seaOpened = new();
+
+    /// <summary>Whether a chunk's padding reaches into a room.</summary>
+    static bool Touches(OpenSea.Chunk room, OpenSea.Chunk other) =>
+        other.Min.X - OpenSea.Pad < room.Max.X && other.Max.X + OpenSea.Pad > room.Min.X && other.Min.Y - OpenSea.Pad < room.Max.Y && other.Max.Y + OpenSea.Pad > room.Min.Y;
+
     bool _dbgLair;
+    /// <summary>Verification (--dbg-secret): exploring, she makes for the nearest secret room's seal she can reach, holds two seconds before it, then it opens.</summary>
+    bool _dbgSecret;
+    int _dbgSecretHeld;
+
+    bool DebugSecret()
+    {
+        var her = _world.Player.Position;
+        foreach (var seal in _world.Seals.Where(s => !s.Open).OrderBy(s => System.Numerics.Vector2.Distance(s.Emblem, her)))
+        {
+            var stand = seal.Emblem + seal.Facing * 2.5f;
+            if (System.Numerics.Vector2.Distance(stand, her) < 1.5f)
+            {
+                _route.Clear();
+                if (++_dbgSecretHeld == 1) GD.Print($"secret seal reached at frame {_frame} (hue {seal.Hue})");
+                if (_dbgSecretHeld < 120) return true;
+                int from = _world.Events.Count;
+                for (int i = 0; i < seal.Needed && !seal.Open; i++) _world.DebugStrikeSeal(seal);
+                for (int i = from; i < _world.Events.Count; i++)
+                {
+                    _seals.OnEvent(_world, _world.Events[i]);
+                    CorruptionEvent(_world.Events[i]);
+                }
+                GD.Print($"secret seal opened at frame {_frame}");
+                _dbgSecret = false;
+                return true;
+            }
+            if (_route.Count > 0 && System.Numerics.Vector2.Distance(_route[^1], stand) < 1f) return true;
+            if (_frame % 30 != 0) return false;
+            var route = LevelValidator.ShortestPath(_map, her, stand, clearance: 0.8f);
+            if (route.Count == 0) continue;
+            _route = route;
+            _routeProgress = 0;
+            return true;
+        }
+        return false;
+    }
 
     IEnumerable<System.Numerics.Vector2> FoundSeaHoles() => Sea is null ? Enumerable.Empty<System.Numerics.Vector2>() : _seaFound.Select(h => h - _seaW);
 }

@@ -337,6 +337,11 @@ public class OpenSeaTests
         Assert.False(one.Sealed);
         var through = wayAt - wayOut * OpenSea.SealThick;
         Assert.True(one.At((int)through.X, (int)through.Y) < LevelMap.SwimBand);
+        // And its wall gone from the padding of the chunk beyond the way (its ground drawn to meet it).
+        var beyond = Sea.Build(Sea.ChunkAt(wayAt + wayOut * 0.5f));
+        Assert.True(beyond.At((int)through.X, (int)through.Y) >= OpenSea.SealTop);
+        Sea.UnsealAround(one, beyond);
+        Assert.Equal(one.At((int)through.X, (int)through.Y), beyond.At((int)through.X, (int)through.Y));
         // Some chunks hold kelp beds, rooted on their floor, and the window takes those wholly in it.
         var kelp = all.Where(c => c.Kelp.Count > 0).ToList();
         Assert.NotEmpty(kelp);
@@ -364,6 +369,9 @@ public class OpenSeaTests
         var seal = w.Seals[0];
         Assert.Contains(seal.Rock, w.WeakRocks);
         w.DebugOpenSeal(seal);
+        // The room opens whole: its walls are one set of its chunk's heights.
+        Assert.All(w.Seals, s => Assert.True(s.Open));
+        Assert.All(w.Seals, s => Assert.DoesNotContain(s.Rock, w.WeakRocks));
         // Far on: it goes with its chunk, its wall too; and back, open still, where it was.
         var by = new Vector2(4 * OpenSea.Cell, 0f);
         var emblemInSea = seal.Emblem + origin;
