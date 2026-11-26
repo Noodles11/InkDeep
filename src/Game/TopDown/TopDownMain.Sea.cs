@@ -21,7 +21,7 @@ public partial class TopDownMain
     /// <summary>The window's corner in the sea (sea metres, whole cells).</summary>
     System.Numerics.Vector2 _seaW;
     readonly Dictionary<(int X, int Y), OpenSea.Chunk> _seaBuilt = new();
-    readonly Dictionary<(int X, int Y), Task<(OpenSea.Chunk, LevelShape.Surface?)>> _seaPending = new();
+    readonly Dictionary<(int X, int Y), Task<(OpenSea.Chunk, LevelShape.Surface?, LevelView.SeaDecor)>> _seaPending = new();
     /// <summary>The chunks she has been in, the one she is in, and the holes she has found (sea metres).</summary>
     readonly HashSet<(int X, int Y)> _seaVisited = new();
     (int X, int Y)? _seaHere;
@@ -32,7 +32,7 @@ public partial class TopDownMain
 
     /// <summary>Whether a level is an open one: a crossover template level but a boss's.</summary>
     static bool OpenLevel(SeedCode seed, LevelId id) =>
-        Crossover.On && !id.Haven && LevelPlan.For(seed, id, crossover: true) is { Templated: true, HasBoss: false };
+        !_dbgClosed && Crossover.On && !id.Haven && LevelPlan.For(seed, id, crossover: true) is { Templated: true, HasBoss: false };
 
     /// <summary>
     /// An open level made: its sea (seeded by the run and the level), the chunk of her start and those round it, and
@@ -90,11 +90,14 @@ public partial class TopDownMain
             if (seen.Add(sea.ChunkOfCell((x, y)))) yield return sea.ChunkOfCell((x, y));
     }
 
-    static (OpenSea.Chunk, LevelShape.Surface?) BuildSeaChunk(OpenSea sea, (int X, int Y) key)
+    static (OpenSea.Chunk, LevelShape.Surface?, LevelView.SeaDecor) BuildSeaChunk(OpenSea sea, (int X, int Y) key)
     {
         var chunk = sea.Build(key);
-        return (chunk, LevelView.SeaSurface(chunk));
+        return (chunk, LevelView.SeaSurface(chunk), LevelView.GrowSeaDecor(sea, chunk));
     }
+
+    /// <summary>A chunk's decoration drawn with it (its biome's things in the level's skins).</summary>
+    void ShowSeaDecor(OpenSea.Chunk chunk, LevelView.SeaDecor decor) => _level.ShowSeaDecor(chunk, decor, _props.Build(decor.Props));
 
     /// <summary>An open level entered: what was made with it, and nothing found yet.</summary>
     void EnterSea()
@@ -111,7 +114,7 @@ public partial class TopDownMain
         _debugMap.SelfModulate = Sea is null ? Colors.White : Colors.Transparent;
         if (_levelShape is not { Sea: not null } shape) return;
         _seaW = shape.SeaOrigin;
-        foreach (var (chunk, _) in shape.SeaChunks) _seaBuilt[chunk.Key] = chunk;
+        foreach (var (chunk, _, _) in shape.SeaChunks) _seaBuilt[chunk.Key] = chunk;
     }
 
     /// <summary>Once a frame on an open level: the chunks round hers asked for, one made chunk shown, the window moved on, the holes she has found.</summary>
@@ -138,7 +141,7 @@ public partial class TopDownMain
                 GD.PushError(task.Exception?.ToString());
                 break;
             }
-            var (chunk, ground) = task.Result;
+            var (chunk, ground, decor) = task.Result;
             _seaBuilt[key] = chunk;
             // (A secret room opened before it came: the room's walls gone from its padding too.)
             bool touched = false;
@@ -150,6 +153,7 @@ public partial class TopDownMain
                 }
             if (touched) ground = LevelView.SeaSurface(chunk);
             _level.ShowSeaChunk(chunk, ground);
+            ShowSeaDecor(chunk, decor);
             AddSeaPlace(chunk);
             var (min, max) = (chunk.Min - _seaW, chunk.Max - _seaW);
             if (max.X > 0f && max.Y > 0f && min.X < LevelMap.Seeded && min.Y < LevelMap.Seeded)
@@ -186,7 +190,7 @@ public partial class TopDownMain
     void AddSeaPlaces()
     {
         if (_levelShape is not { Sea: not null } shape) return;
-        foreach (var (chunk, _) in shape.SeaChunks) AddSeaPlace(chunk);
+        foreach (var (chunk, _, _) in shape.SeaChunks) AddSeaPlace(chunk);
         AddSeaLife();
     }
 
@@ -305,6 +309,8 @@ public partial class TopDownMain
         other.Min.X - OpenSea.Pad < room.Max.X && other.Max.X + OpenSea.Pad > room.Min.X && other.Min.Y - OpenSea.Pad < room.Max.Y && other.Max.Y + OpenSea.Pad > room.Min.Y;
 
     bool _dbgLair;
+    /// <summary>Verification (--dbg-closed): every level a template level, as before open levels (to compare their look).</summary>
+    static bool _dbgClosed;
     /// <summary>Verification (--dbg-secret): exploring, she makes for the nearest secret room's seal she can reach, holds two seconds before it, then it opens.</summary>
     bool _dbgSecret;
     int _dbgSecretHeld;

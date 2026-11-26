@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using OctoShoots.Core.Gen.TopDown;
+using OctoShoots.Game.Fx;
 
 namespace OctoShoots.Game.TopDown;
 
@@ -14,6 +16,35 @@ public partial class LevelView
     Node3D? _seaRoot;
     readonly HashSet<(int X, int Y)> _seaShown = new();
     readonly Dictionary<(int X, int Y), MeshInstance3D> _seaMeshes = new();
+    readonly HashSet<(int X, int Y)> _seaDecorShown = new();
+
+    /// <summary>A chunk's decoration (its flora, its biome's things), grown with it on its worker.</summary>
+    public sealed record SeaDecor(List<FloraItem> Flora, List<BiomePropView.Part> Props);
+
+    /// <summary>A chunk's decoration, on its own ground in sea metres (the same every visit, meeting its neighbours'). Pure: any thread.</summary>
+    internal static SeaDecor GrowSeaDecor(OpenSea sea, OpenSea.Chunk c)
+    {
+        var flora = new List<FloraItem>();
+        if (OS.GetCmdlineUserArgs().Contains("--dbg-nodecor")) return new SeaDecor(flora, new List<BiomePropView.Part>());
+        var ground = DecorGround.Of(sea, c);
+        Scatter(ground, flora);
+        if (ReefLook.Painted) Gardens(ground, flora);
+        return new SeaDecor(flora, BiomePropView.Scatter(ground));
+    }
+
+    /// <summary>A chunk's decoration shown (once), with its chunk: its flora in the level's flora skins, its things as made.</summary>
+    public void ShowSeaDecor(OpenSea.Chunk c, SeaDecor decor, Node3D props)
+    {
+        if (_seaRoot is null || !_seaDecorShown.Add(c.Key))
+        {
+            props.QueueFree();
+            return;
+        }
+        var node = new Node3D();
+        _seaRoot.AddChild(node);
+        _flora.AddTo(node, decor.Flora);
+        node.AddChild(props);
+    }
 
     /// <summary>A chunk's ground, in its own coordinates (its corner at 0): its padding read for the spline and the normals at its edge, so neighbouring chunks meet without a seam. Pure: any thread.</summary>
     internal static LevelShape.Surface? SeaSurface(OpenSea.Chunk c)
@@ -30,8 +61,9 @@ public partial class LevelView
         AddChild(_seaRoot);
         _seaShown.Clear();
         _seaMeshes.Clear();
+        _seaDecorShown.Clear();
         SetSeaOrigin(shape.SeaOrigin);
-        foreach (var (chunk, ground) in shape.SeaChunks) ShowSeaChunk(chunk, ground);
+        foreach (var (chunk, ground, _) in shape.SeaChunks) ShowSeaChunk(chunk, ground);
     }
 
     public bool HasSeaChunk((int X, int Y) k) => _seaShown.Contains(k);

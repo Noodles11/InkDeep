@@ -639,6 +639,7 @@ public partial class TopDownMain : Node3D
             else if (arg.StartsWith("--at=")) _startAt = Value("--at=");
             else if (arg == "--autopilot") _autopilot = true;
             else if (arg == "--dbg-explore") _autopilot = _dbgExplore = true;
+            else if (arg == "--dbg-closed") _dbgClosed = true;
             else if (arg == "--dbg-secret") _autopilot = _dbgExplore = _dbgSecret = true;
             else if (arg.StartsWith("--boss-hp=") && float.TryParse(Value("--boss-hp="), NumberStyles.Float, CultureInfo.InvariantCulture, out float bhp)) _bossHp = bhp;
             else if (arg == "--fire") _autoFire = true;
@@ -1830,7 +1831,12 @@ public partial class TopDownMain : Node3D
         _relics.Show(_world);
         // (An open level's sea has none yet: its window moves.)
         if (Sea is null) _props.Show(_map, ReefLook.Of(_map.Id));
-        else _props.Show(new LevelMap(), ReefLook.Of(_map.Id));
+        else
+        {
+            // (An open level's come with its chunks, those made with it first.)
+            _props.SetLook(ReefLook.Of(_map.Id));
+            foreach (var (chunk, _, decor) in _levelShape!.SeaChunks) ShowSeaDecor(chunk, decor);
+        }
         _puffers.Show(_world);
         _reefFish.Show(_world);
         _curseDen.Show(_world);

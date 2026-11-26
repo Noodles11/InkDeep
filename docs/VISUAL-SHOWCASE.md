@@ -54,7 +54,8 @@ between).
   fading out over 1.2 s after (`BlightView.Wave`, `murkling`'s `wave_seen`).
 
 - **Coral gardens** (`LevelView.Gardens`): sea rods, tube sponges, staghorn, sea fans, elkhorn and brain corals packed
-  in drifting patches on the walls' tops and ledges, and in a band along their feet at the edge of the open floor.
+  in drifting patches on the walls' tops and ledges, and in a band along their feet at the edge of the open floor, on
+  Poisson disks (`PoissonTile`) so they never pile on one another nor fall in rows.
 
 - **Wakes** (`WakeField`, `topdown_post`'s `wake_map`): everything that swims (Clementine, every creature, the reef's
   fish, her shells in flight, a boss) leaves a V of disturbed water behind it, as a motorboat does seen from above, drawn

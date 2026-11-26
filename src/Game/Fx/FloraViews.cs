@@ -80,6 +80,13 @@ public partial class FloraViews : Node3D
     public void Show(IReadOnlyList<FloraItem> items)
     {
         Clear();
+        AddTo(this, items);
+        GD.Print($"Flora: {items.Count} plants and animals ({string.Join(", ", items.GroupBy(i => i.Kind).Select(g => $"{g.Count()} {g.Key}"))})");
+    }
+
+    /// <summary>Items drawn under <paramref name="parent"/> (an open level's chunk), in this view's materials.</summary>
+    public void AddTo(Node parent, IReadOnlyList<FloraItem> items)
+    {
         var groups = items.GroupBy(i => (i.Kind, X: Mathf.FloorToInt(i.Transform.Origin.X / Tile), Z: Mathf.FloorToInt(i.Transform.Origin.Z / Tile)));
         foreach (var group in groups)
         {
@@ -105,7 +112,7 @@ public partial class FloraViews : Node3D
             var centre = new Vector3((group.Key.X + 0.5f) * Tile, (minY + maxY) * 0.5f, (group.Key.Z + 0.5f) * Tile);
             for (int i = 0; i < list.Count; i++) multimesh.SetInstanceTransform(i, list[i].Transform.Translated(-centre));
             float half = (maxY - minY) * 0.5f + 3f;
-            AddChild(new MultiMeshInstance3D
+            parent.AddChild(new MultiMeshInstance3D
             {
                 Position = centre,
                 Multimesh = multimesh,
@@ -119,6 +126,5 @@ public partial class FloraViews : Node3D
                 VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self,
             });
         }
-        GD.Print($"Flora: {items.Count} plants and animals ({string.Join(", ", items.GroupBy(i => i.Kind).Select(g => $"{g.Count()} {g.Key}"))})");
     }
 }

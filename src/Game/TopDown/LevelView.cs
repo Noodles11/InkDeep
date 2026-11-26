@@ -38,10 +38,10 @@ public sealed class LevelShape
     /// <summary>An open level's sea (its map a window onto it, its corner at SeaOrigin), and the chunks made with it (round her start).</summary>
     public OpenSea? Sea { get; private init; }
     public System.Numerics.Vector2 SeaOrigin { get; private init; }
-    public List<(OpenSea.Chunk Chunk, Surface? Ground)> SeaChunks { get; } = new();
+    public List<(OpenSea.Chunk Chunk, Surface? Ground, LevelView.SeaDecor Decor)> SeaChunks { get; } = new();
 
     /// <summary>An open level's shape: no ground of its own, its first chunks and their meshes.</summary>
-    public static LevelShape OfSea(LevelMap map, OpenSea sea, System.Numerics.Vector2 origin, IEnumerable<(OpenSea.Chunk, Surface?)> chunks)
+    public static LevelShape OfSea(LevelMap map, OpenSea sea, System.Numerics.Vector2 origin, IEnumerable<(OpenSea.Chunk, Surface?, LevelView.SeaDecor)> chunks)
     {
         var shape = new LevelShape { Map = map, Sea = sea, SeaOrigin = origin };
         shape.SeaChunks.AddRange(chunks);
@@ -1632,33 +1632,56 @@ public partial class LevelView : Node3D
                 items.Add(new FloraItem(k, new Transform3D(basis, pos), new Color(variant, bright, 1f, d.Yaw / Mathf.Tau)));
             }
         }
-        Scatter(map, items, rocks);
-        if (ReefLook.Painted) Gardens(map, items);
+        var ground = DecorGround.Of(map);
+        Scatter(ground, items);
+        if (ReefLook.Painted) Gardens(ground, items);
+    }
+
+    /// <summary>The decoration's Poisson spacings (PoissonTile): the big coral heads and sponges, the smaller growth, the grass.</summary>
+    internal const float BigSpacing = 3.5f, MidSpacing = 1.6f, GrassSpacing = 0.9f;
+    /// <summary>The coral gardens' small growth's spacing (packed close, as a garden is; their big heads MidSpacing apart).</summary>
+    internal const float GardenSpacing = 1f;
+    static readonly HashSet<FloraKind> BigKinds = new() { FloraKind.BrainCoral, FloraKind.Elkhorn, FloraKind.BarrelSponge };
+
+    /// <summary>A point's own random numbers (k: which), from where it is and its ground's seed.</summary>
+    internal static float DecorHash(uint seed, float x, float y, int k)
+    {
+        uint h = unchecked((uint)((int)MathF.Floor(x * 10f) * 73856093) ^ (uint)((int)MathF.Floor(y * 10f) * 19349663) ^ (uint)(k * 83492791) ^ seed);
+        h ^= h >> 13;
+        h = unchecked(h * 0x5bd1e995u);
+        h ^= h >> 15;
+        return (h & 0xFFFFFF) / 16777216f;
+    }
+
+    /// <summary>Whether ground higher than the floor stands within <paramref name="reach"/> of here (six ways round).</summary>
+    static bool NearWall(DecorGround g, System.Numerics.Vector2 p, float reach)
+    {
+        for (int i = 0; i < 6; i++)
+        {
+            float a = i * Mathf.Tau / 6f;
+            if (g.Height(p + new System.Numerics.Vector2(Mathf.Cos(a), Mathf.Sin(a)) * reach) > 0.2f) return true;
+        }
+        return false;
     }
 
     /// <summary>
     /// The game's look (docs/VISUAL-SHOWCASE.md): coral gardens, as in a reef seen from above — clusters of sea rods, tube
     /// sponges, staghorn, sea fans and brain corals packed in patches on the walls' tops and ledges, and in a band along
-    /// their feet at the edge of the open floor; the open sand and her plane's way left clear. For the look only.
+    /// their feet at the edge of the open floor; the open sand and her plane's way left clear. For the look only. On
+    /// Poisson disks (PoissonTile): the big heads and sponges kept MidSpacing apart, the rest GardenSpacing, each as many
+    /// to the square metre as the old metre grid gave.
     /// </summary>
-    static void Gardens(LevelMap map, List<FloraItem> items)
+    internal static void Gardens(DecorGround g, List<FloraItem> items)
     {
-        uint seed = unchecked((uint)(map.Seed ^ (map.Seed >> 32)) ^ (uint)(map.Level * 6151 + map.Depth * 98317 + map.Cycle * 3079) ^ 0x6A4D3Bu);
-        float Hash(float x, float y, int k)
-        {
-            uint h = unchecked((uint)((int)(x * 10f) * 73856093) ^ (uint)((int)(y * 10f) * 19349663) ^ (uint)(k * 83492791) ^ seed);
-            h ^= h >> 13;
-            h = unchecked(h * 0x5bd1e995u);
-            h ^= h >> 15;
-            return (h & 0xFFFFFF) / 16777216f;
-        }
+        uint seed = g.Salt ^ 0x6A4D3Bu;
+        float Hash(float x, float y, int k) => DecorHash(seed, x, y, k);
         FloraKind[] top = { FloraKind.SeaRod, FloraKind.TubeSponge, FloraKind.Staghorn, FloraKind.SeaFan, FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Elkhorn };
         FloraKind[] foot = { FloraKind.TubeSponge, FloraKind.BrainCoral, FloraKind.SeaRod, FloraKind.Staghorn, FloraKind.BarrelSponge };
         // The crossover's biomes (CROSSOVER.md §8) grow their own: the Kelp Forest sea grass and a few sponges under its
         // kelp, no reef corals; the Shipwreck's timbers and the Ruins' stone only a thin growth of sponges and fans and
         // sea grass (their own things are BiomePropView's).
         float grow = 1f;
-        switch (map.Templated ? map.Biome : OctoShoots.Core.Run.Biome.SunlitReef)
+        switch (g.Biome)
         {
             case OctoShoots.Core.Run.Biome.KelpForest:
                 top = new[] { FloraKind.TurtleGrass, FloraKind.TurtleGrass, FloraKind.TubeSponge, FloraKind.SeaRod };
@@ -1684,95 +1707,93 @@ public partial class LevelView : Node3D
                 grow = 0.4f;
                 break;
         }
-        const float step = 1.05f;
-        for (float y = LevelMap.RimWidth + 1f; y < map.Size - LevelMap.RimWidth - 1f; y += step)
-        for (float x = LevelMap.RimWidth + 1f; x < map.Size - LevelMap.RimWidth - 1f; x += step)
+        // (The old grid's points to the square metre, a step of 1.05 m.)
+        const float grid = 1f / (1.05f * 1.05f);
+        foreach (bool big in new[] { false, true })
         {
-            var p = new System.Numerics.Vector2(x + Hash(x, y, 1) * step, y + Hash(x, y, 2) * step);
-            if (map.InShaft(p, 3f)) continue;
-            float h = map.HeightAt(p);
-            float slope = map.Gradient(p).Length();
-            // Patches: the gardens grow in drifts, thick in their middles, none between.
-            float patch = TerrainNoise.Fbm(p.X * 0.06f, p.Y * 0.06f, seed, 3);
-            float r = Hash(x, y, 3);
-            FloraKind kind;
-            float scale;
-            if (h > 0.6f && slope < 1.3f)
+            float spacing = big ? MidSpacing : GardenSpacing, more = grid / Core.Gen.PoissonTile.Density(spacing);
+            var tops = top.Where(k => BigKinds.Contains(k) == big).ToArray();
+            var foots = foot.Where(k => BigKinds.Contains(k) == big).ToArray();
+            float topShare = tops.Length / (float)top.Length * more, footShare = foots.Length / (float)foot.Length * more;
+            foreach (var p in Core.Gen.PoissonTile.In(spacing, g.Lo, g.Hi))
             {
-                // A wall's top or a ledge.
-                if (r > 0.8f * grow * Mathf.SmoothStep(-0.3f, 0.15f, patch)) continue;
-                kind = top[(int)(Hash(x, y, 4) * top.Length) % top.Length];
-                scale = 1.8f + 1.6f * Hash(x, y, 5);
-            }
-            else if (h < -0.4f && h > -6f && slope < 0.9f)
-            {
-                // The open floor: only a band along the walls' feet.
-                bool foots = false;
-                for (int i = 0; i < 6 && !foots; i++)
+                if (g.Blocked(p, 3f)) continue;
+                float h = g.Height(p);
+                float slope = g.Gradient(p).Length();
+                // Patches: the gardens grow in drifts, thick in their middles, none between.
+                float patch = TerrainNoise.Fbm(p.X * 0.06f, p.Y * 0.06f, seed, 3);
+                float r = Hash(p.X, p.Y, 3);
+                FloraKind kind;
+                float scale;
+                if (h > 0.6f && slope < 1.3f)
                 {
-                    float a = i * Mathf.Tau / 6f;
-                    foots = map.HeightAt(p + new System.Numerics.Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 1.8f) > 0.2f;
+                    // A wall's top or a ledge.
+                    if (tops.Length == 0 || r > 0.8f * grow * topShare * Mathf.SmoothStep(-0.3f, 0.15f, patch)) continue;
+                    kind = tops[(int)(Hash(p.X, p.Y, 4) * tops.Length) % tops.Length];
+                    scale = 1.8f + 1.6f * Hash(p.X, p.Y, 5);
                 }
-                if (!foots || r > 0.55f * grow * Mathf.SmoothStep(-0.2f, 0.25f, patch)) continue;
-                kind = foot[(int)(Hash(x, y, 4) * foot.Length) % foot.Length];
-                scale = 1.1f + 1.1f * Hash(x, y, 5);
+                else if (h < -0.4f && h > -6f && slope < 0.9f)
+                {
+                    // The open floor: only a band along the walls' feet.
+                    if (foots.Length == 0 || r > 0.55f * grow * footShare * Mathf.SmoothStep(-0.2f, 0.25f, patch) || !NearWall(g, p, 1.8f)) continue;
+                    kind = foots[(int)(Hash(p.X, p.Y, 4) * foots.Length) % foots.Length];
+                    scale = 1.1f + 1.1f * Hash(p.X, p.Y, 5);
+                }
+                else continue;
+                var at = new Vector3(p.X, h - 0.08f, p.Y);
+                var basis = new Basis(Vector3.Up, Hash(p.X, p.Y, 6) * Mathf.Tau).Scaled(Vector3.One * scale);
+                var tint = new Color(Hash(p.X, p.Y, 7) < 0.5f ? 1f : 0f, 0.9f + 0.25f * Hash(p.X, p.Y, 8), 1f, Hash(p.X, p.Y, 9));
+                items.Add(new FloraItem(kind, new Transform3D(basis, at), tint));
             }
-            else continue;
-            var at = new Vector3(p.X, h - 0.08f, p.Y);
-            var basis = new Basis(Vector3.Up, Hash(x, y, 6) * Mathf.Tau).Scaled(Vector3.One * scale);
-            var tint = new Color(Hash(x, y, 7) < 0.5f ? 1f : 0f, 0.9f + 0.25f * Hash(x, y, 8), 1f, Hash(x, y, 9));
-            items.Add(new FloraItem(kind, new Transform3D(basis, at), tint));
         }
     }
 
     /// <summary>
-    /// Ground cover, for the look only (nothing in play depends on it): a deterministic scatter from the level's seed so
+    /// Ground cover, for the look only (nothing in play depends on it): a deterministic scatter from the ground's seed so
     /// the seabed reads as a living reef rather than a beach (THEME-BIBLE §7, Depth 1: healthy neighbours everywhere),
     /// kept sparse so it never draws the eye from play: seagrass meadows in drifting patches, a few small brain corals at
-    /// the feet of the walls and a lone coral head now and then out on the open sand. The exit is left clear round the
-    /// shaft.
+    /// the feet of the walls and a lone coral head now and then out on the open sand. Ways down are left clear. On Poisson
+    /// disks (PoissonTile: the grass GrassSpacing apart, the small corals MidSpacing, the heads BigSpacing), as many to
+    /// the square metre as the old grid gave.
     /// </summary>
-    static void Scatter(LevelMap map, List<FloraItem> items, List<Transform3D> rocks)
+    internal static void Scatter(DecorGround g, List<FloraItem> items)
     {
-        uint seed = unchecked((uint)(map.Seed ^ (map.Seed >> 32)) ^ (uint)(map.Level * 7919 + map.Depth * 104729 + map.Cycle * 15485863));
-        float Hash(float x, float y, int k)
+        uint seed = g.Salt;
+        float Hash(float x, float y, int k) => DecorHash(seed, x, y, k);
+        // (The old grid's points to the square metre, a step of 1.1 m.)
+        const float grid = 1f / (1.1f * 1.1f);
+        foreach (var spacing in new[] { GrassSpacing, MidSpacing, BigSpacing })
         {
-            uint h = unchecked((uint)((int)(x * 10f) * 73856093) ^ (uint)((int)(y * 10f) * 19349663) ^ (uint)(k * 83492791) ^ seed);
-            h ^= h >> 13;
-            h = unchecked(h * 0x5bd1e995u);
-            h ^= h >> 15;
-            return (h & 0xFFFFFF) / 16777216f;
-        }
-        var rift = map.Exit;
-        const float step = 1.1f;
-        for (float y = LevelMap.RimWidth + 1f; y < map.Size - LevelMap.RimWidth - 1f; y += step)
-        for (float x = LevelMap.RimWidth + 1f; x < map.Size - LevelMap.RimWidth - 1f; x += step)
-        {
-            var p = new System.Numerics.Vector2(x + Hash(x, y, 1) * step, y + Hash(x, y, 2) * step);
-            float h = map.HeightAt(p);
-            // The seabed of the shallows only: not the walls, not the deeps.
-            if (h > -0.6f || h < -6f) continue;
-            float slope = map.Gradient(p).Length();
-            if (slope > 0.9f) continue;
-            if (map.HasBoss ? System.Numerics.Vector2.Distance(p, rift.Position) < rift.Radius * 0.6f || map.InShaft(p, 1.5f) : map.InShaft(p, 1.5f)) continue;
-            bool nearWall = false;
-            for (int i = 0; i < 6 && !nearWall; i++)
+            float more = grid / Core.Gen.PoissonTile.Density(spacing);
+            foreach (var p in Core.Gen.PoissonTile.In(spacing, g.Lo, g.Hi))
             {
-                float a = i * Mathf.Tau / 6f;
-                nearWall = map.HeightAt(p + new System.Numerics.Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 2.6f) > 0.2f;
+                float h = g.Height(p);
+                // The seabed of the shallows only: not the walls, not the deeps.
+                if (h > -0.6f || h < -6f) continue;
+                float slope = g.Gradient(p).Length();
+                if (slope > 0.9f || g.Blocked(p, 1.5f)) continue;
+                float r = Hash(p.X, p.Y, 3), yaw = Hash(p.X, p.Y, 4) * Mathf.Tau, size = Hash(p.X, p.Y, 5);
+                var at = new Vector3(p.X, h - 0.05f, p.Y);
+                var tint = new Color(Hash(p.X, p.Y, 6) < 0.42f ? 1f : 0f, 0.86f + 0.26f * Hash(p.X, p.Y, 7), 1f, Hash(p.X, p.Y, 8));
+                FloraItem Item(FloraKind kind, float scale) => new(kind, new Transform3D(new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale), at), tint);
+                if (spacing == MidSpacing)
+                {
+                    // The reef's foot: a few small brain corals.
+                    if (r < 0.06f * more && NearWall(g, p, 2.6f)) items.Add(Item(FloraKind.BrainCoral, 0.55f + 0.4f * size));
+                }
+                else if (spacing == BigSpacing)
+                {
+                    // A lone coral head out on the sand (the open sand: not a wall's foot, not a meadow).
+                    if (slope < 0.3f && r < 0.012f * more && TerrainNoise.Fbm(p.X * 0.045f, p.Y * 0.045f, seed, 3) <= 0.1f && !NearWall(g, p, 2.6f))
+                        items.Add(Item(FloraKind.BrainCoral, 1.1f + 0.9f * size));
+                }
+                else
+                {
+                    float meadow = TerrainNoise.Fbm(p.X * 0.045f, p.Y * 0.045f, seed, 3);
+                    if (meadow > 0.1f && slope < 0.35f && r < 0.85f * more * Mathf.SmoothStep(0.1f, 0.35f, meadow))
+                        items.Add(Item(FloraKind.TurtleGrass, 1.9f + 1.1f * size));
+                }
             }
-            float meadow = TerrainNoise.Fbm(p.X * 0.045f, p.Y * 0.045f, seed, 3);
-            float r = Hash(x, y, 3), yaw = Hash(x, y, 4) * Mathf.Tau, size = Hash(x, y, 5);
-            var at = new Vector3(p.X, h - 0.05f, p.Y);
-            var tint = new Color(Hash(x, y, 6) < 0.42f ? 1f : 0f, 0.86f + 0.26f * Hash(x, y, 7), 1f, Hash(x, y, 8));
-            FloraItem Item(FloraKind kind, float scale) => new(kind, new Transform3D(new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale), at), tint);
-            if (nearWall && r < 0.06f)
-                // The reef's foot: a few small brain corals.
-                items.Add(Item(FloraKind.BrainCoral, 0.55f + 0.4f * size));
-            else if (meadow > 0.1f && slope < 0.35f && r < 0.85f * Mathf.SmoothStep(0.1f, 0.35f, meadow))
-                items.Add(Item(FloraKind.TurtleGrass, 1.9f + 1.1f * size));
-            else if (slope < 0.3f && r < 0.012f)
-                items.Add(Item(FloraKind.BrainCoral, 1.1f + 0.9f * size));
         }
     }
 

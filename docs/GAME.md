@@ -182,6 +182,16 @@ the reef was never being called home. It was being kept.
     their chunk, kept as she left them. **Kelp beds** are made with each chunk (a quarter of them; the Kelp Forest's
     more), copied into the window as its holes are, so the Kelp Forest tangles her in them; and a fifth of its ways
     between chunks hold a **kelp curtain** (`SeaCurtain`; none on a secret room's).
+  - **The reef's decoration** (0.102.0): each chunk grows its own on its worker as it is made, on its own ground in
+    sea metres (`DecorGround`, so it grows the same on every visit and meets its neighbours'): the coral gardens, the
+    seagrass meadows and lone coral heads (`LevelView.Gardens`, `Scatter`) and its biome's things (`BiomePropView`), off
+    its holes, its place and a secret room's walls (nothing grows on them, so nothing floats when they open); drawn under
+    its chunk, so they move with the window. A template level's square is grown the same way (`DecorGround.Of(map)`).
+    All of it stands on **Poisson disks** (`PoissonTile`: one 64 m tile per spacing, wrapping round, made once): no two
+    things closer than their spacing (big coral heads and sponges 1.6 m in a garden, the rest 1 m; grass 0.9 m, small
+    corals 1.6 m and lone heads 3.5 m on the sand; the biomes' things 2 m, their larger pieces 13 m), no grid to show,
+    and as many to the square metre as the old jittered grid gave. (`--dbg-closed`: every level a template level, to
+    compare.)
   - **Still apart from a template level:** no shop gates, crab's fake walls, tunnels or caves with roofs (the chunks
     have none). The holes she has found keep their emblems (an arrow pointing down).
   - **The debug chunk map** (F3): the chunks round her, the one she is in, those she has visited, those made and not
