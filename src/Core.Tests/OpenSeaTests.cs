@@ -14,7 +14,7 @@ public class OpenSeaTests
 {
     static readonly OpenSea Sea = new(0xC0FFEEUL, Biome.SunlitReef);
 
-    static IEnumerable<(int X, int Y)> ChunksWithin(int reach)
+    internal static IEnumerable<(int X, int Y)> ChunksWithin(int reach)
     {
         var seen = new HashSet<(int X, int Y)>();
         for (int y = -reach; y <= reach; y++)
@@ -72,6 +72,15 @@ public class OpenSeaTests
     [Fact]
     public void Neighbouring_chunks_meet_without_a_seam_open_where_joined_and_walled_where_not()
     {
+        // (How far a chunk's water may lie past its edge, the walls bent; the sea's heights wherever, from their chunk.)
+        const int Reach = 11;
+        var built = new Dictionary<(int X, int Y), OpenSea.Chunk>();
+        float Height(int x, int y)
+        {
+            var k = Sea.ChunkAt(new Vector2(x, y));
+            if (!built.TryGetValue(k, out var c)) built[k] = c = Sea.Build(k);
+            return c.At(x, y);
+        }
         foreach (var a in ChunksWithin(3))
         {
             var ca = Sea.Build(a);
@@ -84,12 +93,12 @@ public class OpenSeaTests
                 for (int y = (int)lo.Y; y <= (int)hi.Y; y++)
                 for (int x = (int)lo.X; x <= (int)hi.X; x++)
                     Assert.Equal(ca.At(x, y), cb.At(x, y), 3);
-                // Joined, there is water across the side they share; not joined, their walls shut it.
+                // Joined, there is water across the wall they share (bent as it is: OwnerAt); not joined, it shuts it.
                 bool crossing = false;
-                for (int y = (int)ca.Min.Y; y < ca.Max.Y && !crossing; y++)
-                for (int x = (int)ca.Min.X; x < ca.Max.X && !crossing; x++)
-                    crossing = ca.At(x, y) <= 0f && new[] { (1, 0), (0, 1), (-1, 0), (0, -1) }
-                        .Any(d => cb.Contains(new Vector2(x + d.Item1, y + d.Item2)) && cb.At(x + d.Item1, y + d.Item2) <= 0f);
+                for (int y = (int)ca.Min.Y - Reach; y < ca.Max.Y + Reach && !crossing; y++)
+                for (int x = (int)ca.Min.X - Reach; x < ca.Max.X + Reach && !crossing; x++)
+                    crossing = Sea.OwnerAt(x, y) == a && Height(x, y) <= 0f && new[] { (1, 0), (0, 1), (-1, 0), (0, -1) }
+                        .Any(d => Sea.OwnerAt(x + d.Item1, y + d.Item2) == b && Height(x + d.Item1, y + d.Item2) <= 0f);
                 // (A secret room's ways are sealed till she opens them.)
                 bool open = Sea.Linked(a, b) && !Sea.Secret(a) && !Sea.Secret(b);
                 Assert.True(crossing == open, $"{a} and {b}: joined {Sea.Linked(a, b)}, sealed {Sea.Secret(a) || Sea.Secret(b)}, water across {crossing}");
@@ -134,16 +143,10 @@ public class OpenSeaTests
     }
 
     [Fact]
-    public void A_chunk_is_the_same_every_time_and_quick_to_build()
+    public void A_chunk_is_the_same_every_time()
     {
         var sea = new OpenSea(0xC0FFEEUL, Biome.SunlitReef);
         Assert.Equal(Sea.Build((4, 2)).Heights, sea.Build((4, 2)).Heights);
-        var keys = ChunksWithin(6).ToList();
-        foreach (var k in keys.Take(3)) sea.Build(k);
-        var watch = Stopwatch.StartNew();
-        foreach (var k in keys) sea.Build(k);
-        double each = watch.Elapsed.TotalMilliseconds / keys.Count;
-        Assert.True(each < 25, $"{each:0.0} ms a chunk");
     }
 
     [Fact]
@@ -502,5 +505,25 @@ public class OpenSeaTests
             var k = Sea.ChunkAt(cell + new Vector2(x, y) * OpenSea.Cell);
             if (seen.Add(k)) yield return k;
         }
+    }
+}
+
+/// <summary>Timings, run with nothing else beside them (what they measure is the build, not the other tests).</summary>
+[CollectionDefinition("Alone", DisableParallelization = true)]
+public class AloneCollection;
+
+[Collection("Alone")]
+public class OpenSeaTimingTests
+{
+    [Fact]
+    public void A_chunk_is_quick_to_build()
+    {
+        var sea = new OpenSea(0xC0FFEEUL, Biome.SunlitReef);
+        var keys = OpenSeaTests.ChunksWithin(6).ToList();
+        foreach (var k in keys.Take(3)) sea.Build(k);
+        var watch = Stopwatch.StartNew();
+        foreach (var k in keys) sea.Build(k);
+        double each = watch.Elapsed.TotalMilliseconds / keys.Count;
+        Assert.True(each < 25, $"{each:0.0} ms a chunk");
     }
 }

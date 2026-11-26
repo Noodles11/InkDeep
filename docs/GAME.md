@@ -206,17 +206,25 @@ the reef was never being called home. It was being kept.
     (`SunMap.Wide`), so its edge (on the window's, a chunk's) never shows as a line across the reef; and a chunk's
     ground is coloured in sea metres with no rim.
   - **Natural rock, filler chunks** (0.104.0): the reef's rock reads as rock, not the templates' squares:
-    - the cells' templates are read through a broad warp of the sea's own (`OpenSea.Warp`, up to 2.5 m), faded out
-      round the middle of each cell's side so the ways still meet the walls' gaps; read across into a chunk not joined,
-      it is rock;
-    - the distances that erode and raise it are exact (Euclidean, not a chamfer's octagons), so no straight 45° bevels;
+    - **carved, not drawn** (0.105.0): the cells' templates and the walls between chunks (at their full, lumpy
+      thickness) are read through a warp of the sea's own (`OpenSea.Warp`, two octaves, up to 10 m, read off a 2 m
+      lattice), then **blurred** (three box blurs, about a Gaussian of 2.5 m: `Blur`) and cut where the blur and the
+      sea's noise cross a half (`Carve`, `CarveFine`): no room keeps its square walls, no corridor its straight sides,
+      and rock and water melt into rounded, wandering shapes; read across into a chunk not joined, a template is rock;
+    - every chunk's **ways** are kept open through whatever the rock did: from each socket a bowed channel runs in to a
+      point near its cell's middle (strayed up to 3.5 m from it: no crossroads at the centre) and on to the chunk's middle
+      (`OnWays`), carved last;
+    - the **middle of a wall** between chunks not joined is always rock, bent with the same warp (so not a line along
+      the chunks' edge either), easing off only round a way between joined chunks so its gap (and a secret room's seal)
+      stays at its socket (`WallWarp`, `Core`); which chunk's water a point is, by the bent walls: `OpenSea.OwnerAt`;
+    - a secret room's seals are rounded, lumpy plugs rising to their middle (`SealLump`), not slabs;
+    - a chunk reads 18 m round it (`Context`; the blur's reach and the mountains' 10 m), about 11 ms to build;
+    - the distances that raise it are exact (Euclidean, not a chamfer's octagons), so no straight 45° bevels;
     - the rock where four cells meet (a template's corners and the walls' ends: a small square on the chunks' edges) is
       left out most of the time (`PillarKeep` 15% kept), only where every two chunks round it side by side are joined
       and none is a filler or a secret room; a lone rock this small elsewhere is kept as rarely (`Islet`, `IsletKeep`);
     - the rock rises on past its foot into mountains, up to 4.5 m higher 2–10 m in from the water, ridged
-      (`MountainPeak`);
-    - the erosion grows rock at most 0.9 m into a template's water (`ErodeIn`), and a wall between chunks swells its
-      full width only into rock (at most 3.5 m over water), so no way inside a chunk is shut.
+      (`MountainPeak`).
 
     **Filler chunks** (`OpenSea.FillOf`, never her first chunk or those round it, the lair or a chunk with a place):
     - about one chunk in seven no other takes as its parent is **filled whole**: joined to none, its rock bulging a few
