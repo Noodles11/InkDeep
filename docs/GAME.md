@@ -124,8 +124,10 @@ the reef was never being called home. It was being kept.
 - **Open levels** (0.96.0, phase 1; `OpenSea`, `TopDownMain.Sea.cs`): in the crossover every level but a boss's is an
   endless sea, made only as she swims, new every run. It is laid in 2 × 1 chunks in a herringbone (lying and standing
   chunks of two 18 m cells), the streaming unit. Every chunk is joined to a neighbour nearer the sea's first cell (so
-  every chunk is reachable and has a way out) and to the others now and then (55%); a way between two joined chunks
-  passes their side somewhere along it (`SideMid`, never two sides' ways in a row), everywhere else they meet is rock.
+  every chunk is reachable and has a way out), the one whose way lies in the most open water, and to the others
+  whenever their way lies in open water (seldom through a reef: `ChunkLink`); two joined chunks meet in open water, and
+  their one way (`WaySide`, on the side they share where the reef is lowest, `SideMid` along it) is where a passage
+  runs if a reef stands between them. Chunks not joined meet at a wall.
   - **Its places** (0.106.0, `OpenSea.PlaceRules`): a rule for each kind says how often it lies (about one chunk in
     `OnceIn`), how far apart two of a kind must be (`Apart`: 1, never side by side; more, no two whose first cells are
     that few cells apart either way), how far from her start it may first be (`From`, cells), and which rooms drawn by
@@ -207,25 +209,30 @@ the reef was never being called home. It was being kept.
   - **No lines along the chunks' edges** (0.103.0): the sun's map, whose relief the ink look draws, is cast 36 m past
     the window on every side (`SunMap.Wide`), so its edge (on the window's, a chunk's) never shows as a line across the
     reef; and a chunk's ground is coloured in sea metres with no rim.
-  - **The reef, carved by water** (0.106.0, `OpenSea.Plan`, `RockAt`): the water comes first and the rock is all the
-    rest, so the reef is connected by its making and nothing is patched after:
-    - each chunk's **skeleton** (`Plan`, from its own seed): 2–4 caves scattered through it (2.6–4.8 m, kept 4.5 m from
-      its edge and 7 m apart, a lobe or two each, mostly along the chunk; a side passage tapering off half of them; now
-      and then a pillar), joined by the shortest tree through them and now and then a loop, and each way out straight in
-      through its wall and on to its nearest cave; every passage bowed and meandering (`Meander`), 3.4–5 m wide;
-    - the **rock at a point** (`RockAt`): its distance from the skeletons reaching it (its own and its neighbours'),
-      passages and caves blending smoothly where they meet (`Blend`, as water rounds a joint), warped (`Warp`, up to
-      5 m) and roughened with broad noise and scallops (`Rough`, `Scallop`) in the sea's own coordinates, and raised
-      from that distance: the floor, rising into the rock over 3 m and on into mountains 2–10 m in (`MountainPeak`). It
-      is a function of the sea's coordinates alone, so neighbours meet without a seam and a chunk reads no more than its
-      own padding (about 5 ms to build, from 11);
-    - **walls between chunks** not joined: no water within 1.5 m of where they meet (`WallClear`; within a metre,
-      always rock), and the warp and roughness ease off near them, so the water never runs flat along one;
+  - **Open sea and reefs** (0.106.0, 0.107.0: `OpenSea.Plan`, `RockAt`): the sea is open (about two thirds of it
+    water) but for its reefs, and every chunk's ways always meet:
+    - the **sea's own reefs** (`ReefAt`): where a broad noise of the sea's own (`ReefScale`, about 45 m across) passes
+      `ReefLevel`, rock rises (`ReefDepth`: about a metre a metre in from its edge), roughened at its edge (`ReefRough`,
+      `Rough`, `Scallop`), lying anywhere whatever the chunks;
+    - **worn by the sea** (`Wear`): rock stands only within its wear of rock that far in from the water (an opening, up
+      to 4.5 m, its reach wandering over the sea): the biggest reefs stand (rounded), fewer of the middling, now and
+      then a small one where the wear is light;
+    - each chunk's **skeleton** (`Plan`): from each of its ways a passage straight in and on to its meeting point (where
+      the reef is lowest of a few places in it; its middle for a hole or the lair), and on to its place; every passage
+      bowed and meandering (`Meander`), 3.4–5 m wide, cutting through any reef in its way (and through a wall's swell);
+      no reef over a place or a hole (a pool 5.5 m round it);
+    - **walls between chunks** not joined (and round a secret room): put back after the wear, lumpy (`WallReef`: 1.5–
+      4.5 m from where they meet, round at their ends), their middle always rock; mostly within the reefs, as the
+      chunks join wherever their way lies in open water;
     - **filler chunks** (`OpenSea.FillOf`, never her first chunk or those round it, the lair or a chunk with a place):
-      about one chunk in seven no other takes as its parent is **filled whole** (no skeleton, joined to none); a
-      **half** has no cave in one cell with one way out at most, its way running on through the rock as a canyon; a
-      **quarter** no cave in the far half of a cell with no way out at its end;
-    - a secret room's seals are rounded, lumpy plugs rising to their middle (`SealLump`), not slabs.
+      about one chunk in seven no other takes as its parent is **filled whole** (a block of rock, joined to none,
+      bulging lumpily past its square: `SolidBulge`); a **half**'s cell with one way out at most is rock, its way running
+      on through it as a canyon; a **quarter**'s far half of a cell with no way out at its end;
+    - a **secret room** is a grotto in a block of rock of its own (its passages and the pool round its place carved in
+      it), its ways shut by seals: rounded, lumpy plugs rising to their middle (`SealLump`);
+    - the rock is a function of the sea's coordinates alone (read 8 m past a chunk's padding, `Open`, for the wear), so
+      neighbours meet without a seam; about 13 ms a chunk on a worker. Heights: the floor, rising into the rock over
+      3 m and on into mountains 2–10 m in (`MountainPeak`).
   - **Still apart from a template level:** no shop gates, crab's fake walls or tunnels (the chunks have none). The holes she has found keep their emblems (an arrow pointing down).
   - **The debug chunk map** (F3): the chunks round her, the one she is in, those she has visited, those made and not
     yet visited, the ways between them, each one's template and its holes.

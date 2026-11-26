@@ -13,19 +13,20 @@ namespace OctoShoots.Core.Gen.TopDown;
 /// <para>
 /// The pattern: with d = x − y + shift (mod 4) for a cell (x, y), a cell at d 0 is a lying chunk's left half (its right
 /// half at d 1), at d 3 a standing chunk's top (its foot at d 2). A chunk's two cells are always joined. Two neighbouring
-/// chunks are joined (a way through every side they share, somewhere along it: SideMid) when either takes the other as
+/// chunks are joined (meeting in open water, their one way on a side they share: WaySide) when either takes the other as
 /// its parent (each chunk but the one holding cell (0, 0) has one: a neighbour nearer that cell, so every chunk reaches
-/// it and has a way out), or now and then besides (ChunkLink). Each chunk's water is a skeleton of its own (Plan: caves
-/// scattered through it, joined by bowed, meandering passages, its ways out to the nearest), the rock all the rest
-/// (RockAt): a function of the sea's own coordinates, so a chunk is the same from wherever it is asked and neighbours
-/// meet without a seam. Its places come by rules (PlaceRules), some in rooms drawn by hand (AreaTemplates).
+/// it and has a way out), or besides where their way lies in open water (ChunkLink). The sea is open but for its own
+/// reefs (ReefAt), worn by it so the biggest stand (Wear), the fillers' rock and the walls between chunks not joined;
+/// each chunk's passages (Plan) cut through any of it, so its ways always meet (RockAt: a function of the sea's own
+/// coordinates, so a chunk is the same from wherever it is asked and neighbours meet without a seam). Its places come
+/// by rules (PlaceRules), some in rooms drawn by hand (AreaTemplates).
 /// </para>
 /// </summary>
 public sealed class OpenSea
 {
     public const int Cell = CaveTemplates.Cell;
-    /// <summary>Two neighbouring chunks not joined by the tree are joined this often.</summary>
-    public const float ChunkLink = 0.55f;
+    /// <summary>Two neighbouring chunks not joined by the tree are joined this often where their way lies in open water (less as it lies in a reef).</summary>
+    public const float ChunkLink = 1f;
     /// <summary>
     /// Where and how often each kind of place lies in the sea (docs/GAME.md, Open levels): about one chunk in OnceIn holds
     /// one, none Apart or nearer to another of its kind (1: never side by side; more: no two whose first cells are that
@@ -199,8 +200,10 @@ public sealed class OpenSea
     {
         int d = Dist(k, CellsOf(k));
         if (d == 0) return null;
+        // (Of the neighbours nearer it, the one whose way lies in the most open water, give or take: the tree runs
+        // through the open sea, round the reefs.)
         var nearer = Neighbours(k).Where(n => Dist(n, CellsOf(n)) < d).ToList();
-        return nearer[(int)(Mix(Seed, (ulong)(uint)k.X, (ulong)(uint)k.Y, 0x9A2E) % (ulong)nearer.Count)];
+        return nearer.MinBy(n => WayReef(k, n) + 0.15f * Unit(Mix(Seed, (ulong)(uint)k.X, (ulong)(uint)k.Y, (ulong)(uint)n.X, (ulong)(uint)n.Y, 0x9A2E)));
     });
 
     /// <summary>Whether two neighbouring chunks are joined (the same asked from either).</summary>
@@ -211,7 +214,8 @@ public sealed class OpenSea
     {
         if (Parent(a) == b || Parent(b) == a) return true;
         var (lo, hi) = a.CompareTo(b) < 0 ? (a, b) : (b, a);
-        return Unit(Mix(Seed, (ulong)(uint)lo.X, (ulong)(uint)lo.Y, (ulong)(uint)hi.X, (ulong)(uint)hi.Y)) < ChunkLink;
+        // (Now and then besides: mostly where their way lies in open water, seldom through a reef.)
+        return Unit(Mix(Seed, (ulong)(uint)lo.X, (ulong)(uint)lo.Y, (ulong)(uint)hi.X, (ulong)(uint)hi.Y)) < ChunkLink * (1f - Smooth(ReefLevel - 0.15f, ReefLevel + 0.15f, WayReef(lo, hi)));
     }
 
     /// <summary>How much of a chunk is solid rock over its template: none, a quarter (half a cell), a half (a cell), or all of it.</summary>
@@ -265,23 +269,22 @@ public sealed class OpenSea
     });
 
     /// <summary>
-    /// A chunk's skeleton (docs/GAME.md, Open levels): where its water runs. From each of its ways out a passage bows in to
-    /// a cave near its cell's middle, and on to the chunk's middle; a cave swells into a lobe or two (mostly along the
-    /// chunk), now and then a side passage tapers off it, now and then a pillar stands in it. A filler's filled cell has
-    /// its passages and no cave (a half), or a small cave drawn back to its middle (a quarter); a chunk filled whole has
-    /// none. A place stands in its cell's cave (a hole and the lair in a pool at the chunk's middle), or in the room of
-    /// its area template, pressed in there.
+    /// A chunk's skeleton (docs/GAME.md, Open levels): its passages, which cut through any rock in their way, so every way
+    /// of it always meets the others. From each of its ways out a passage runs straight in and on to the nearest of a few
+    /// points scattered through it, and those are joined by the shortest tree through them (now and then a loop); every
+    /// passage bowed and meandering. Its place stands at the roomiest of those points (or its area template's mark), a
+    /// hole and the lair at its middle; no reef stands over them (Clear). A filler's rock (Solid): all of it, a half's
+    /// filled cell, a quarter's far half of it.
     /// </summary>
-    sealed record Plan(Way[] Ways, Cave[] Caves, Cave[] Pillars, Stamp? Stamp, Vector2? Mark, Vector2 Lo, Vector2 Hi);
+    sealed record Plan(Way[] Ways, Stamp? Stamp, Vector2? Mark, Vector2[] Clear, (Vector2 Lo, Vector2 Hi)? Solid, Vector2 Lo, Vector2 Hi);
     readonly record struct Way(Vector2 A, Vector2 B, float Bend, float R0, float R1, Vector2 Lo, Vector2 Hi);
-    readonly record struct Cave(Vector2 C, float R);
     sealed record Stamp(AreaTemplate Template, Vector2 At, int Turn);
 
-    /// <summary>A passage's half width (least, most), a side passage's (where it leaves, where it ends), and how far a passage bows.</summary>
-    const float WayMin = 1.7f, WayMax = 2.5f, SideFrom = 1.6f, SideTo = 0.9f, WayBend = 3f;
-    /// <summary>A cave's reach (least, most), how near two caves' middles may be, how far a cave keeps from its chunk's edge, a place's least, a hole's pool.</summary>
-    const float CaveMin = 2.6f, CaveMax = 4.8f, CaveApart = 7f, CaveKeep = 4.5f, PlaceCave = 4.2f, HubHole = 6f;
-    /// <summary>How far round its chunk a skeleton reaches (its passages past the ways), and how broadly passages and caves blend.</summary>
+    /// <summary>A passage's half width (least, most), and how far a passage bows (a share of its length).</summary>
+    const float WayMin = 1.7f, WayMax = 2.5f, WayBend = 0.3f;
+    /// <summary>How near two of its points may be, how far they keep from its edge, and the room kept clear round a place or a hole.</summary>
+    const float NodeApart = 6.5f, NodeKeep = 5f, PlaceCave = 4.5f;
+    /// <summary>How far round its chunk a skeleton reaches (its passages past the ways, a filler's rock bulging), and how broadly passages blend.</summary>
     const float Reach = 7f, Blend = 1.5f;
     /// <summary>The rock's face: its broad roughness and its scallops (metres).</summary>
     const float Rough = 1f, Scallop = 0.9f;
@@ -297,125 +300,84 @@ public sealed class OpenSea
         var (kind, filled) = Fill(k);
         var lo = min - new Vector2(Reach);
         var hi = max + new Vector2(Reach);
-        if (kind == Filler.Full) return new Plan(Array.Empty<Way>(), Array.Empty<Cave>(), Array.Empty<Cave>(), null, null, lo, hi);
+        if (kind == Filler.Full) return new Plan(Array.Empty<Way>(), null, null, Array.Empty<Vector2>(), (min, max), lo, hi);
         var rng = new Rng(Mix(Seed, (ulong)(uint)k.X, (ulong)(uint)k.Y, 0x5CE1));
         var hub = (min + max) * 0.5f;
         var place = PlaceOf(k);
         bool hole = place == PoiKind.Hole || k == Lair;
         var cells = CellsOf(k);
-        var sockets = SocketsOf(k);
         var ways = new List<Way>();
-        var caves = new List<Cave>();
-        var pillars = new List<Cave>();
         Vector2? mark = null;
         Stamp? stamp = null;
-        float Keep(Vector2 c) => MathF.Min(MathF.Min(c.X - min.X, max.X - c.X), MathF.Min(c.Y - min.Y, max.Y - c.Y)) - CaveKeep;
         void AddWay(Vector2 a, Vector2 b, float bend, float r0, float r1)
         {
             var m = new Vector2(MathF.Abs(bend) + Meander + MathF.Max(r0, r1) + Rough + Scallop + Blend);
             ways.Add(new Way(a, b, bend, r0, r1, Vector2.Min(a, b) - m, Vector2.Max(a, b) + m));
         }
         float Bend(Vector2 a, Vector2 b, float most) => Vector2.Distance(a, b) * most * rng.Range(-1f, 1f);
-        // (Where its rock stands whole: a half's filled cell, a quarter's far half of it.)
-        var filledCell = kind is Filler.Half or Filler.Quarter ? cells[filled] : ((int X, int Y)?)null;
-        bool Allowed(Vector2 p)
+        // (A filler's rock: its filled cell (a half), the far half of it (a quarter).)
+        (Vector2 Lo, Vector2 Hi)? solid = null;
+        if (kind is Filler.Half or Filler.Quarter)
         {
-            if (filledCell is not { } fc || CellOf(p) != fc) return true;
-            if (kind == Filler.Half) return false;
-            var mid = new Vector2(fc.X * Cell + Cell * 0.5f, fc.Y * Cell + Cell * 0.5f);
-            return Vector2.Dot(p - mid, hub - mid) > 0f;
+            var fc = cells[filled];
+            var c0 = new Vector2(fc.X * Cell, fc.Y * Cell);
+            var c1 = c0 + new Vector2(Cell);
+            if (kind == Filler.Quarter)
+            {
+                // (The half away from its other cell.)
+                var other = cells[1 - filled];
+                if (other.X < fc.X) c0.X += Cell * 0.5f;
+                else if (other.X > fc.X) c1.X -= Cell * 0.5f;
+                else if (other.Y < fc.Y) c0.Y += Cell * 0.5f;
+                else c1.Y -= Cell * 0.5f;
+            }
+            solid = (c0, c1);
         }
-        // Its caves: scattered through it (a pool at its middle for a hole or the lair), none too near another.
-        var nodes = new List<Vector2>();
-        if (hole) nodes.Add(hub);
-        int want = 2 + rng.Int(3);
-        float inset = CaveKeep + CaveMin;
-        for (int tries = 0; tries < 40 && nodes.Count < want + (hole ? 1 : 0); tries++)
-        {
-            var at = new Vector2(rng.Range(min.X + inset, max.X - inset), rng.Range(min.Y + inset, max.Y - inset));
-            if (Allowed(at) && nodes.TrueForAll(o => Vector2.Distance(o, at) >= CaveApart)) nodes.Add(at);
-        }
-        if (nodes.Count == 0) nodes.Add(Allowed(hub) ? hub : Vector2.Lerp(hub, new Vector2(cells[1 - filled].X * Cell + Cell * 0.5f, cells[1 - filled].Y * Cell + Cell * 0.5f), 0.6f));
-        // (Its place's cave: the one with the most room, but a hole's, which is the pool at its middle.)
+        // (A secret room is a grotto in a block of rock of its own: its ways and the pool round its place carved in it.)
+        if (Secret(k)) solid = (min, max);
+        bool Allowed(Vector2 p) => solid is not { } so || so == (min, max) || p.X < so.Lo.X || p.Y < so.Lo.Y || p.X > so.Hi.X || p.Y > so.Hi.Y;
+        // Its points: where its ways meet (its middle for a hole or the lair, else where the sea's reefs are lowest of a
+        // few places in it, so its passages run through open water), and for a place one more, away from that one.
+        var spots = Enumerable.Range(0, 12).Select(_ => new Vector2(rng.Range(min.X + NodeKeep, max.X - NodeKeep), rng.Range(min.Y + NodeKeep, max.Y - NodeKeep))).Where(Allowed).OrderBy(ReefAt).ToList();
+        var nodes = new List<Vector2> { hole || spots.Count == 0 ? (Allowed(hub) ? hub : Vector2.Lerp(hub, new Vector2(cells[1 - filled].X * Cell + Cell * 0.5f, cells[1 - filled].Y * Cell + Cell * 0.5f), 0.6f)) : spots[0] };
+        if (place is not null && !hole && spots.FirstOrDefault(o => Vector2.Distance(o, nodes[0]) >= NodeApart) is var second && second != default) nodes.Add(second);
+        // (Its place at the other point, if it found room for one, but a hole's, at its middle.)
         int placeNode = -1;
         if (place is not null && !hole)
         {
-            placeNode = 0;
-            for (int i = 1; i < nodes.Count; i++)
-                if (Keep(nodes[i]) > Keep(nodes[placeNode])) placeNode = i;
-        }
-        for (int i = 0; i < nodes.Count; i++)
-        {
-            var node = nodes[i];
-            bool isPlace = i == placeNode;
-            float reach = hole && i == 0 ? HubHole : rng.Range(CaveMin, CaveMax);
-            if (isPlace) reach = MathF.Max(reach, PlaceCave);
-            // (A hole's pool may come nearer the edge: its middle is the chunk's, HoleKeep from every side.)
-            reach = MathF.Min(reach, hole && i == 0 ? Keep(node) + CaveKeep - 3f : MathF.Max(Keep(node), 1.5f));
-            caves.Add(new Cave(node, reach));
-            // (A lobe or two, mostly along the chunk's length, where it has the room.)
-            var length = Lying(k) ? Vector2.UnitX : Vector2.UnitY;
-            for (int l = rng.Int(3); l > 0; l--)
+            placeNode = nodes.Count - 1;
+            mark = nodes[placeNode];
+            var rule = PlaceRules.First(r => r.Kind == place);
+            if (rule.Templates is { Length: > 0 } names && rng.NextFloat() < rule.TemplateShare)
             {
-                var dir = Vector2.Normalize(length * (rng.NextFloat() < 0.5f ? -1f : 1f) + new Vector2(rng.Range(-0.9f, 0.9f), rng.Range(-0.9f, 0.9f)));
-                var at = node + dir * reach * rng.Range(0.5f, 0.9f);
-                float r = MathF.Min(reach * rng.Range(0.5f, 0.75f), Keep(at));
-                if (r > 1.2f && Allowed(at)) caves.Add(new Cave(at, r));
-            }
-            // (A side passage tapering off it now and then.)
-            if (rng.NextFloat() < 0.45f)
-            {
-                float a = rng.Range(0f, MathF.Tau);
-                var end = node + new Vector2(MathF.Cos(a), MathF.Sin(a)) * (reach + rng.Range(3f, 6f));
-                end = Vector2.Clamp(end, min + new Vector2(CaveKeep + SideTo + 1f), max - new Vector2(CaveKeep + SideTo + 1f));
-                if (Allowed(end)) AddWay(node, end, Bend(node, end, 0.3f), SideFrom, SideTo);
-            }
-            // (Now and then a pillar standing in a wide cave, off its middle, where no place stands.)
-            if (reach >= 4f && !isPlace && !(hole && i == 0) && rng.NextFloat() < 0.35f)
-            {
-                float a = rng.Range(0f, MathF.Tau);
-                pillars.Add(new Cave(node + new Vector2(MathF.Cos(a), MathF.Sin(a)) * reach * 0.5f, rng.Range(0.8f, 1.3f)));
-            }
-            if (isPlace)
-            {
-                mark = node;
-                var rule = PlaceRules.First(r => r.Kind == place);
-                if (rule.Templates is { Length: > 0 } names && rng.NextFloat() < rule.TemplateShare)
-                {
-                    var t = AreaTemplates.ByName[names[rng.Int(names.Length)]];
-                    int turn = rng.Int(4);
-                    stamp = new Stamp(t, node, turn);
-                    mark = node + t.MarkTurned(turn);
-                }
+                var t = AreaTemplates.ByName[names[rng.Int(names.Length)]];
+                int turn = rng.Int(4);
+                stamp = new Stamp(t, mark.Value, turn);
+                mark = mark.Value + t.MarkTurned(turn);
             }
         }
-        // Its passages: the caves joined by the shortest tree through them, now and then one more (a loop), and each way
-        // out to its nearest cave; every one bowed, so none runs straight.
+        // Its passages: the shortest tree through its points, now and then one more (a loop), and each way out straight
+        // in through its wall (never along the wall beside its gap) and on to the nearest point.
         var joinedTo = new List<int> { 0 };
         var rest = Enumerable.Range(1, nodes.Count - 1).ToList();
         while (rest.Count > 0)
         {
             var (a, b) = joinedTo.SelectMany(i => rest.Select(j => (i, j))).MinBy(e => Vector2.Distance(nodes[e.i], nodes[e.j]));
-            AddWay(nodes[a], nodes[b], Bend(nodes[a], nodes[b], 0.3f), rng.Range(WayMin, WayMax), rng.Range(WayMin, WayMax));
+            AddWay(nodes[a], nodes[b], Bend(nodes[a], nodes[b], WayBend), rng.Range(WayMin, WayMax), rng.Range(WayMin, WayMax));
             joinedTo.Add(b);
             rest.Remove(b);
         }
-        if (nodes.Count >= 3 && rng.NextFloat() < 0.35f)
+        foreach (var s in SocketsOf(k))
         {
-            int a = rng.Int(nodes.Count), b = (a + 1 + rng.Int(nodes.Count - 1)) % nodes.Count;
-            AddWay(nodes[a], nodes[b], Bend(nodes[a], nodes[b], 0.35f), WayMin, rng.Range(WayMin, WayMax));
-        }
-        foreach (var s in sockets)
-        {
-            // (Straight in through its wall first, so it never runs along the wall beside its gap; then bowed on.)
             var from = s.At + s.Way * 2f;
             var inside = s.At - s.Way * WayGap;
-            var to = nodes.MinBy(o => Vector2.Distance(o, inside));
+            var to = nodes[0];
             float r = rng.Range(WayMin, WayMax);
             AddWay(from, inside, 0f, r, r);
-            AddWay(inside, to, Bend(inside, to, 0.25f), r, r + rng.Range(0f, 0.6f));
+            AddWay(inside, to, Bend(inside, to, WayBend * 0.8f), r, r + rng.Range(0f, 0.6f));
         }
-        return new Plan(ways.ToArray(), caves.ToArray(), pillars.ToArray(), stamp, mark, lo, hi);
+        var clear = nodes.Where((_, i) => i == placeNode || hole && i == 0).ToArray();
+        return new Plan(ways.ToArray(), stamp, mark, clear, solid, lo, hi);
     }
 
     /// <summary>The skeletons reaching into a window of the sea (lo to hi, metres).</summary>
@@ -426,25 +388,26 @@ public sealed class OpenSea
         for (int cx = FloorDiv((int)MathF.Floor(lo.X - Reach)); cx <= FloorDiv((int)MathF.Ceiling(hi.X + Reach)); cx++)
             keys.Add(ChunkOfCell((cx, cy)));
         // (In one order, whichever chunk asks: the blends between them are not quite the same taken in another.)
-        return keys.OrderBy(k => k).Select(PlanOf).Where(p => p.Lo.X < hi.X && p.Lo.Y < hi.Y && p.Hi.X > lo.X && p.Hi.Y > lo.Y && p.Caves.Length > 0).ToList();
+        return keys.OrderBy(k => k).Select(PlanOf).Where(p => p.Lo.X < hi.X && p.Lo.Y < hi.Y && p.Hi.X > lo.X && p.Hi.Y > lo.Y).ToList();
     }
 
     /// <summary>
-    /// The rock at a point (sea metres): below 0 in water (about the metres to the rock), above 0 in rock (about the
-    /// metres to the water). The skeletons' passages and caves blend smoothly into one another (as water wears them),
-    /// warped and roughened in the sea's own coordinates (but not by a closed wall between chunks, which it would only
-    /// run against); a place's template pressed in round it; never water near a wall between chunks not joined. The same
-    /// from any chunk asked.
+    /// The rock at a point (sea metres), before the sea wears it and the walls between chunks go in: below 0 in water
+    /// (about the metres to the rock), above 0 in rock (about the metres to the water). Open sea but for the sea's own
+    /// reefs (broad, lying anywhere, never over a place or a hole) and the fillers' rock (bulging lumpily past its
+    /// square), the skeletons' passages cut through them; warped and roughened in the sea's own coordinates (but not by a
+    /// closed wall, which it would only run against); a place's template pressed in round it. The same from any chunk.
     /// </summary>
-    float RockAt(int x, int y, List<Plan> plans, out bool walled)
+    float RockAt(int x, int y, List<Plan> plans, out bool walled, out float closed, out float passage)
     {
         var p = new Vector2(x, y);
-        float closed = Closed((FloorDiv(x), FloorDiv(y)), Mod(x, Cell) + 0.5f, Mod(y, Cell) + 0.5f);
-        // (Bent and roughened in the sea's own coordinates, the same from any chunk; but not by a closed wall, which it would only run against.)
+        closed = ClosedAt(x, y);
+        walled = closed < WallCore;
         float fade = Smooth(1.5f, 5f, closed);
         var q = fade > 0f ? p + Warp(x, y) * fade : p;
-        float ways = Far, caves = Far, pillar = -Far;
+        float ways = Far, clear = Far, solid = -Far;
         Stamp? stamp = null;
+        float rough = fade * (Rough * CaveLayout.Fbm(q.X * 0.11f, q.Y * 0.11f, _noise + 3) + Scallop * (0.3f - MathF.Abs(CaveLayout.Fbm(q.X * 0.29f, q.Y * 0.29f, _noise + 7))));
         foreach (var plan in plans)
         {
             if (q.X < plan.Lo.X || q.Y < plan.Lo.Y || q.X > plan.Hi.X || q.Y > plan.Hi.Y) continue;
@@ -454,23 +417,39 @@ public sealed class OpenSea
                 float d = WayDistance(q, w.A, w.B, w.Bend, out float t);
                 ways = SMin(ways, d - (w.R0 + (w.R1 - w.R0) * t), Blend);
             }
-            foreach (var c in plan.Caves) caves = SMin(caves, Vector2.Distance(q, c.C) - c.R, Blend);
-            foreach (var c in plan.Pillars) pillar = MathF.Max(pillar, c.R - Vector2.Distance(q, c.C));
+            foreach (var c in plan.Clear) clear = MathF.Min(clear, Vector2.Distance(q, c));
+            if (plan.Solid is { } so)
+            {
+                // (Its rock: how far inside its square, and a lumpy bulge out past it.)
+                var o = Vector2.Max(so.Lo - p, p - so.Hi);
+                float box = o.X > 0f || o.Y > 0f ? Vector2.Max(o, Vector2.Zero).Length() : MathF.Max(o.X, o.Y);
+                solid = MathF.Max(solid, SolidBulge * MathUtil.Clamp01(0.5f + CaveLayout.Fbm(x * 0.08f, y * 0.08f, _noise + 91)) + 1f - box);
+            }
             if (plan.Stamp is { } st && Vector2.DistanceSquared(q, st.At) < 49f) stamp = st;
         }
-        float rough = fade * (Rough * CaveLayout.Fbm(q.X * 0.11f, q.Y * 0.11f, _noise + 3) + Scallop * (0.3f - MathF.Abs(CaveLayout.Fbm(q.X * 0.29f, q.Y * 0.29f, _noise + 7))));
-        float s = MathF.Max(caves + rough, pillar);
+        // (The sea's own reefs, broad and lying anywhere, whatever the chunks: never over a place or a hole.)
+        float s = ReefDepth * (ReefAt(q) - ReefLevel) + ReefRough * CaveLayout.Fbm(q.X * 0.08f, q.Y * 0.08f, _noise + 103) + rough;
+        s = SMin(s, clear - PlaceCave - 1f + rough, Blend);
+        s = MathF.Max(s, solid + rough * 0.5f);
         if (stamp is { } at)
         {
             float m = 1f - Smooth(4.5f, 6.5f, Vector2.Distance(q, at.At));
             s += (at.Template.At(q - at.At, at.Turn) + 0.3f * rough - s) * m;
         }
-        s = SMin(s, ways + rough, Blend);
-        // (Never water near a wall between chunks not joined: its middle is rock, the water kept WallClear past it.)
-        s = MathF.Max(s, WallClear - closed);
-        walled = closed < WallCore;
-        return walled ? MathF.Max(s, 0.6f) : s;
+        passage = ways + rough;
+        return SMin(s, passage, Blend);
     }
+
+    /// <summary>The sea's own reefs: how steeply they rise (metres a unit of their noise), its scale, the share of it under them, and their rough edge.</summary>
+    const float ReefDepth = 35f, ReefScale = 0.022f, ReefLevel = 0.15f, ReefRough = 1.5f;
+    /// <summary>How far a filler's rock bulges past its square at most (metres).</summary>
+    const float SolidBulge = 4f;
+
+    /// <summary>A wall between chunks not joined (or round a secret room), put back once the sea has worn the rest: how thick from where they meet, lumpy.</summary>
+    float WallReef(int x, int y) => WallClear + WallSwell * MathUtil.Clamp01(0.5f + 1.3f * CaveLayout.Fbm(x * 0.06f, y * 0.06f, _noise + 107));
+
+    /// <summary>How much a wall between chunks swells past WallClear (metres at most, either side).</summary>
+    const float WallSwell = 3f;
 
     /// <summary>
     /// How far a point of a cell (fx, fy within it) is from the closed part of its sides shared with another chunk (all
@@ -478,21 +457,38 @@ public sealed class OpenSea
     /// </summary>
     float Closed((int X, int Y) cell, float fx, float fy)
     {
-        var (other, joined) = SidesOf(cell);
+        var (other, joined, shut, way) = SidesOf(cell);
         float closed = Far;
-        float[]? mids = joined != 0 ? MidsOf(cell) : null;
+        float[]? mids = way != 0 ? MidsOf(cell) : null;
         void Side(int bit, int index, float perp, float along)
         {
-            if ((other & bit) == 0) return;
-            float off = (joined & bit) == 0 ? Far : MathF.Abs(along - mids![index]);
-            float d = off > WayGap ? perp : MathF.Sqrt(perp * perp + Square(WayGap - off));
-            closed = MathF.Min(closed, d);
+            // (Two chunks joined meet in open water; but a secret room's side, which is shut but for its way.)
+            if ((other & bit) == 0 || (joined & bit) != 0 && (shut & bit) == 0) return;
+            float a = Math.Clamp(along, 0f, Cell), da = MathF.Abs(along - a);
+            if ((way & bit) != 0 && MathF.Abs(a - mids![index]) < WayGap) da = WayGap - MathF.Abs(a - mids[index]);
+            closed = MathF.Min(closed, MathF.Sqrt(perp * perp + da * da));
         }
-        Side(CaveTemplates.N, 0, fy, fx);
-        Side(CaveTemplates.E, 1, Cell - fx, fy);
-        Side(CaveTemplates.S, 2, Cell - fy, fx);
-        Side(CaveTemplates.W, 3, fx, fy);
+        Side(CaveTemplates.N, 0, MathF.Abs(fy), fx);
+        Side(CaveTemplates.E, 1, MathF.Abs(Cell - fx), fy);
+        Side(CaveTemplates.S, 2, MathF.Abs(Cell - fy), fx);
+        Side(CaveTemplates.W, 3, MathF.Abs(fx), fy);
         return closed;
+    }
+
+    /// <summary>How far a point (sea metres) is from the nearest closed wall between chunks (its cell's and those round it: so a wall's end is round), ClosedFar at most.</summary>
+    const float ClosedFar = 8f;
+
+    float ClosedAt(int x, int y)
+    {
+        int cx = FloorDiv(x), cy = FloorDiv(y);
+        float fx = x + 0.5f - cx * Cell, fy = y + 0.5f - cy * Cell;
+        // (Nothing reads it past ClosedFar: a cell round it further off than that is not asked.)
+        int x0 = fx < ClosedFar ? -1 : 0, x1 = Cell - fx < ClosedFar ? 1 : 0, y0 = fy < ClosedFar ? -1 : 0, y1 = Cell - fy < ClosedFar ? 1 : 0;
+        float best = ClosedFar;
+        for (int dy = y0; dy <= y1; dy++)
+        for (int dx = x0; dx <= x1; dx++)
+            best = MathF.Min(best, Closed((cx + dx, cy + dy), fx - dx * Cell, fy - dy * Cell));
+        return best;
     }
 
     /// <summary>A smooth minimum (the two blended over k metres where they meet, as water rounds a joint).</summary>
@@ -527,6 +523,17 @@ public sealed class OpenSea
     Vector2 Warp(int x, int y) =>
         new Vector2(CaveLayout.Fbm(x * WarpScale, y * WarpScale, _noise + 51), CaveLayout.Fbm(x * WarpScale, y * WarpScale, _noise + 53)) * WarpReach
         + new Vector2(CaveLayout.Fbm(x * WarpFineScale, y * WarpFineScale, _noise + 55), CaveLayout.Fbm(x * WarpFineScale, y * WarpFineScale, _noise + 57)) * WarpFine;
+
+    /// <summary>
+    /// How much the sea wears the reef away (metres at most, an opening's reach: a reef must stand that far in from the
+    /// water somewhere to stay), how far past that it is read (so it is the same from any chunk), and the scale of its
+    /// wander: heavy over most of the sea, light here and there (where a small reef may stand).
+    /// </summary>
+    const float WearMost = 4.5f, WearCap = 2.5f, WearScale = 0.035f;
+    const int Open = 8;
+
+    float Wear(int x, int y) =>
+        WearMost * Smooth(-0.45f, 0.2f, CaveLayout.Fbm(x * WearScale, y * WearScale, _noise + 91));
 
     /// <summary>
     /// The rock rising on past its foot into mountains: up to MountainPeak higher, from MountainFoot to MountainReach metres
@@ -593,13 +600,42 @@ public sealed class OpenSea
         var (min, max) = RectOf(key);
         var chunk = new Chunk { Key = key, Min = min, Max = max, Origin = min - new Vector2(Pad), Stride = (int)(max.X - min.X) + 2 * Pad + 1, Rows = (int)(max.Y - min.Y) + 2 * Pad + 1 };
         int w = chunk.Stride, h = chunk.Rows, n = w * h, x0 = (int)chunk.Origin.X, y0 = (int)chunk.Origin.Y;
-        // The rock round every point, from the skeletons reaching it (its own and its neighbours').
-        var plans = PlansNear(chunk.Origin - new Vector2(WarpReach + WarpFine), chunk.Origin + new Vector2(w, h) + new Vector2(WarpReach + WarpFine));
+        // The rock round every point, from the skeletons reaching it (its own and its neighbours'), read Open past its
+        // padding: what the sea wears away of it is judged by how big a reef it is.
+        int bw = w + 2 * Open, bh = h + 2 * Open, bn = bw * bh, bx = x0 - Open, by = y0 - Open;
+        var plans = PlansNear(new Vector2(bx, by) - new Vector2(WarpReach + WarpFine), new Vector2(bx + bw, by + bh) + new Vector2(WarpReach + WarpFine));
+        var all = new float[bn];
+        var wear = new float[bn];
+        var walls = new bool[bn];
+        var core = new bool[bn];
+        var closedAt = new float[bn];
+        var passages = new float[bn];
+        for (int j = 0; j < bh; j++)
+        for (int i = 0; i < bw; i++)
+        {
+            int k = j * bw + i, x = bx + i, y = by + j;
+            all[k] = RockAt(x, y, plans, out walls[k], out closedAt[k], out passages[k]);
+            wear[k] = Wear(x, y);
+            core[k] = all[k] >= wear[k];
+        }
+        // Worn by the sea: rock stands only within its wear of rock that far in from the water (an opening: a reef too
+        // small for it is gone, a bigger one keeps its shape, rounded), so the biggest reefs stand, fewer of the middling,
+        // now and then a small one (where the sea's wear is light).
+        var toCore = Distances(core, bw, bh, true);
         var s = new float[n];
         var walled = new bool[n];
         for (int j = 0; j < h; j++)
         for (int i = 0; i < w; i++)
-            s[j * w + i] = RockAt(x0 + i, y0 + j, plans, out walled[j * w + i]);
+        {
+            int k = (j + Open) * bw + i + Open;
+            float d = MathF.Min(toCore[k], WearMost + WearCap);
+            s[j * w + i] = d > 0f ? MathF.Min(all[k], wear[k] - d) : all[k];
+            // (Then the walls between chunks not joined: never water near one, its middle always rock; but the chunk's
+            // passages run on through a wall's swell, so it never shuts one.)
+            s[j * w + i] = MathF.Min(MathF.Max(s[j * w + i], WallReef(x0 + i, y0 + j) - closedAt[k]), MathF.Max(passages[k], WallClear - closedAt[k]));
+            walled[j * w + i] = walls[k];
+            if (walls[k]) s[j * w + i] = MathF.Max(s[j * w + i], 0.6f);
+        }
         // The lair: its hole where the water is deepest (its pool at the chunk's middle).
         Vector2? lair = null;
         if (key == Lair)
@@ -811,7 +847,7 @@ public sealed class OpenSea
             foreach (var (dx, dy) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
             {
                 var nb = ChunkOfCell((c.X + dx, c.Y + dy));
-                if (nb == key || !Linked(key, nb)) continue;
+                if (nb == key || !Linked(key, nb) || !IsWaySide(c, dx, dy)) continue;
                 float mid = SideMid(c, dx, dy);
                 var at = dx != 0 ? new Vector2((c.X + (dx > 0 ? 1 : 0)) * Cell, c.Y * Cell + mid) : new Vector2(c.X * Cell + mid, (c.Y + (dy > 0 ? 1 : 0)) * Cell);
                 ways.Add((at, new Vector2(dx, dy), half, nb.X > key.X || nb.X == key.X && nb.Y > key.Y));
@@ -896,9 +932,69 @@ public sealed class OpenSea
     float SideMid((int X, int Y) cell, int dx, int dy)
     {
         var (ex, ey, axis) = dx != 0 ? (Math.Min(cell.X, cell.X + dx), cell.Y, 0UL) : (cell.X, Math.Min(cell.Y, cell.Y + dy), 1UL);
-        float lo = WayGap + 1.5f;
-        return lo + (Cell - 2f * lo) * Unit(Mix(Seed, (ulong)(uint)ex, (ulong)(uint)ey, axis, 0x50C));
+        // (Where the sea's reefs are lowest along it, of a few places: so its passage runs through open water.)
+        float lo = WayGap + 1.5f, best = lo, least = Far;
+        ulong h = Mix(Seed, (ulong)(uint)ex, (ulong)(uint)ey, axis, 0x50C);
+        for (int i = 0; i < 7; i++)
+        {
+            float along = lo + (Cell - 2f * lo) * (i + Unit(h >> (i * 3)) * 0.8f) / 7f;
+            var at = axis == 0 ? new Vector2((ex + 1) * Cell, ey * Cell + along) : new Vector2(ex * Cell + along, (ey + 1) * Cell);
+            float reef = ReefAt(at);
+            if (reef < least)
+            {
+                least = reef;
+                best = along;
+            }
+        }
+        return best;
     }
+
+    readonly ConcurrentDictionary<((int X, int Y) A, (int X, int Y) B), ((int X, int Y) Cell, int DX, int DY)> _waySides = new();
+
+    /// <summary>
+    /// The one side two joined chunks' way passes (of the sides they share, the one whose way lies where the sea's reefs
+    /// are lowest), as a cell of the first and the way out of it: one way to a pair, so few passages cut the reefs.
+    /// </summary>
+    ((int X, int Y) Cell, int DX, int DY) WaySide((int X, int Y) a, (int X, int Y) b) => _waySides.TryGetValue((a, b), out var hit) ? hit : _waySides.GetOrAdd((a, b), pair =>
+    {
+        var best = (pair.A, 0, 0);
+        float least = Far;
+        foreach (var c in CellsOf(pair.A))
+            foreach (var (dx, dy) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+            {
+                if (ChunkOfCell((c.X + dx, c.Y + dy)) != pair.B) continue;
+                float mid = SideMid(c, dx, dy);
+                var at = dx != 0 ? new Vector2((c.X + (dx > 0 ? 1 : 0)) * Cell, c.Y * Cell + mid) : new Vector2(c.X * Cell + mid, (c.Y + (dy > 0 ? 1 : 0)) * Cell);
+                float reef = ReefAt(at);
+                if (reef < least)
+                {
+                    least = reef;
+                    best = (c, dx, dy);
+                }
+            }
+        return best;
+    });
+
+    /// <summary>The sea's reefs' noise where two neighbouring chunks' way would lie.</summary>
+    float WayReef((int X, int Y) a, (int X, int Y) b)
+    {
+        var (lo, hi) = a.CompareTo(b) < 0 ? (a, b) : (b, a);
+        var (c, dx, dy) = WaySide(lo, hi);
+        float mid = SideMid(c, dx, dy);
+        return ReefAt(dx != 0 ? new Vector2((c.X + (dx > 0 ? 1 : 0)) * Cell, c.Y * Cell + mid) : new Vector2(c.X * Cell + mid, (c.Y + (dy > 0 ? 1 : 0)) * Cell));
+    }
+
+    /// <summary>Whether a side of a cell (toward dx, dy) is the one its chunk and the chunk past it pass by (WaySide).</summary>
+    bool IsWaySide((int X, int Y) cell, int dx, int dy)
+    {
+        var a = ChunkOfCell(cell);
+        var b = ChunkOfCell((cell.X + dx, cell.Y + dy));
+        if (a.CompareTo(b) > 0) return WaySide(b, a) == ((cell.X + dx, cell.Y + dy), -dx, -dy);
+        return WaySide(a, b) == (cell, dx, dy);
+    }
+
+    /// <summary>The sea's reefs' broad noise at a point (above ReefLevel, a reef stands).</summary>
+    float ReefAt(Vector2 p) => CaveLayout.Fbm(p.X * ReefScale, p.Y * ReefScale, _noise + 101);
 
     /// <summary>How far a way's gap in a wall reaches either side of its middle (metres).</summary>
     const float WayGap = 4f;
@@ -908,21 +1004,25 @@ public sealed class OpenSea
     /// <summary>A cell's ways' middles along its sides (as Sides: N, E, S, W).</summary>
     float[] MidsOf((int X, int Y) cell) => _mids.TryGetValue(cell, out var hit) ? hit : _mids.GetOrAdd(cell, c => Sides.Select(side => SideMid(c, side.DX, side.DY)).ToArray());
 
-    readonly ConcurrentDictionary<(int X, int Y), (int Other, int Joined)> _sides = new();
+    readonly ConcurrentDictionary<(int X, int Y), (int Other, int Joined, int Shut, int Way)> _sides = new();
 
-    /// <summary>A cell's sides (CaveTemplates.N/E/S/W bits) shared with another chunk, and those of them joined to it.</summary>
-    (int Other, int Joined) SidesOf((int X, int Y) cell) => _sides.TryGetValue(cell, out var hit) ? hit : _sides.GetOrAdd(cell, c =>
+    /// <summary>A cell's sides (CaveTemplates.N/E/S/W bits) shared with another chunk, those of them joined to it, and those round a secret room.</summary>
+    (int Other, int Joined, int Shut, int Way) SidesOf((int X, int Y) cell) => _sides.TryGetValue(cell, out var hit) ? hit : _sides.GetOrAdd(cell, c =>
     {
         var key = ChunkOfCell(c);
-        int other = 0, joined = 0;
+        int other = 0, joined = 0, shut = 0, way = 0;
         foreach (var (dx, dy, bit) in Sides)
         {
             var n = ChunkOfCell((c.X + dx, c.Y + dy));
             if (n == key) continue;
             other |= bit;
-            if (Linked(key, n)) joined |= bit;
+            if (!Linked(key, n)) continue;
+            joined |= bit;
+            if (IsWaySide(c, dx, dy)) way |= bit;
+            // (A secret room is walled but for its ways, which its seals shut.)
+            if (Secret(key) || Secret(n)) shut |= bit;
         }
-        return (other, joined);
+        return (other, joined, shut, way);
     });
 
     static int FloorDiv(int v) => FloorDiv(v, Cell);
