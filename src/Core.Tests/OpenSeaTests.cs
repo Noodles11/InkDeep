@@ -72,15 +72,6 @@ public class OpenSeaTests
     [Fact]
     public void Neighbouring_chunks_meet_without_a_seam_open_where_joined_and_walled_where_not()
     {
-        // (How far a chunk's water may lie past its edge, the walls bent; the sea's heights wherever, from their chunk.)
-        const int Reach = 11;
-        var built = new Dictionary<(int X, int Y), OpenSea.Chunk>();
-        float Height(int x, int y)
-        {
-            var k = Sea.ChunkAt(new Vector2(x, y));
-            if (!built.TryGetValue(k, out var c)) built[k] = c = Sea.Build(k);
-            return c.At(x, y);
-        }
         foreach (var a in ChunksWithin(3))
         {
             var ca = Sea.Build(a);
@@ -93,12 +84,12 @@ public class OpenSeaTests
                 for (int y = (int)lo.Y; y <= (int)hi.Y; y++)
                 for (int x = (int)lo.X; x <= (int)hi.X; x++)
                     Assert.Equal(ca.At(x, y), cb.At(x, y), 3);
-                // Joined, there is water across the wall they share (bent as it is: OwnerAt); not joined, it shuts it.
+                // Joined, there is water across the side they share; not joined, their walls shut it.
                 bool crossing = false;
-                for (int y = (int)ca.Min.Y - Reach; y < ca.Max.Y + Reach && !crossing; y++)
-                for (int x = (int)ca.Min.X - Reach; x < ca.Max.X + Reach && !crossing; x++)
-                    crossing = Sea.OwnerAt(x, y) == a && Height(x, y) <= 0f && new[] { (1, 0), (0, 1), (-1, 0), (0, -1) }
-                        .Any(d => Sea.OwnerAt(x + d.Item1, y + d.Item2) == b && Height(x + d.Item1, y + d.Item2) <= 0f);
+                for (int y = (int)ca.Min.Y; y < ca.Max.Y && !crossing; y++)
+                for (int x = (int)ca.Min.X; x < ca.Max.X && !crossing; x++)
+                    crossing = ca.At(x, y) <= 0f && new[] { (1, 0), (0, 1), (-1, 0), (0, -1) }
+                        .Any(d => cb.Contains(new Vector2(x + d.Item1, y + d.Item2)) && cb.At(x + d.Item1, y + d.Item2) <= 0f);
                 // (A secret room's ways are sealed till she opens them.)
                 bool open = Sea.Linked(a, b) && !Sea.Secret(a) && !Sea.Secret(b);
                 Assert.True(crossing == open, $"{a} and {b}: joined {Sea.Linked(a, b)}, sealed {Sea.Secret(a) || Sea.Secret(b)}, water across {crossing}");
@@ -119,7 +110,7 @@ public class OpenSeaTests
     }
 
     [Fact]
-    public void Each_kind_of_place_lies_as_often_as_its_rule_says_none_side_by_side_and_none_by_her_start()
+    public void Each_kind_of_place_lies_as_often_and_as_far_apart_as_its_rule_says_and_none_by_her_start()
     {
         var keys = ChunksWithin(40).ToList();
         var places = keys.ToDictionary(k => k, Sea.PlaceOf);
@@ -127,9 +118,17 @@ public class OpenSeaTests
         {
             var mine = keys.Where(k => places[k] == rule.Kind).ToList();
             float per = keys.Count / (float)mine.Count;
-            Assert.True(per >= rule.AtMostOnceIn * 0.8f && per <= rule.AtLeastOnceIn * 1.25f, $"{rule.Kind}: one in {per:0.0} chunks (want {rule.AtMostOnceIn}–{rule.AtLeastOnceIn})");
+            Assert.True(per >= rule.OnceIn * 0.6f && per <= rule.OnceIn * 1.6f, $"{rule.Kind}: one in {per:0.0} chunks (want about {rule.OnceIn})");
             Assert.All(mine, k => Assert.DoesNotContain(Sea.Neighbours(k), n => places.GetValueOrDefault(n) == rule.Kind));
+            if (rule.Apart > 1)
+                Assert.All(mine, k => Assert.DoesNotContain(mine, o => o != k && Math.Abs(o.X - k.X) <= rule.Apart && Math.Abs(o.Y - k.Y) <= rule.Apart));
+            Assert.All(mine, k => Assert.True(Sea.CellsOf(k).Min(c => Math.Abs(c.X) + Math.Abs(c.Y)) >= rule.From));
         }
+        // Some stand in a room drawn by hand (an area template of their kind's), their place in its water.
+        var stamped = keys.Where(k => places[k] is { } kind && OpenSea.PlaceRules.First(r => r.Kind == kind).Templates is { Length: > 0 }).Take(40).Select(Sea.Build).Where(c => AreaTemplates.ByName.ContainsKey(c.Template)).ToList();
+        Assert.NotEmpty(stamped);
+        Assert.All(stamped, c => Assert.Contains(c.Template, OpenSea.PlaceRules.First(r => r.Kind == c.Place).Templates!));
+        Assert.All(stamped, c => Assert.True(c.At((int)c.PlaceAt.X, (int)c.PlaceAt.Y) < 0f));
         var home = Sea.ChunkOfCell((0, 0));
         Assert.Null(places[home]);
         Assert.All(Sea.Neighbours(home), n => Assert.Null(Sea.PlaceOf(n)));

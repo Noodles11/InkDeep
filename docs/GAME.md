@@ -122,19 +122,24 @@ the reef was never being called home. It was being kept.
   clam's mouth, or a murkling (10%) that comes out at her. Every pearl lying loose anywhere glows the same way: its
   light in its colours and pattern on the floor all round it, and magic particles rising.
 - **Open levels** (0.96.0, phase 1; `OpenSea`, `TopDownMain.Sea.cs`): in the crossover every level but a boss's is an
-  endless sea, made only as she swims. It is laid in 2 × 1 chunks in a herringbone (lying and standing chunks of two
-  18 m cells). Each chunk takes the cell templates made for its openings, turned and mirrored to fit, so its shape
-  comes from them and its look from the biome and the seed; a wall runs along every side it shares with another chunk,
-  its face wandering, opened by a 6 m socket in the middle of each side where the two are joined. Every chunk is joined
-  to a neighbour nearer the sea's first cell (so every chunk is reachable and has a way out) and to the others now and
-  then (55%).
-  - **Its places** (0.97.0, `OpenSea.PlaceRules`): each kind of place has its own rule, at most one in A chunks and at
-    least one in B: a hole down 6–12, a shop 5–10, a clam 4–8, a shell cache 6–12, a light shrine 8–16, a crab's deal
-    10–20, a relic 25–50. The sea is cut into regions of about 2B chunks for each kind; each region rolls how many it
-    holds within those bounds, each in a chunk of its own, never two of a kind side by side (a chunk touching a later
-    region holds none, so none meet across a border), and one place to a chunk (the kind higher in the list has it).
-    Her first chunk and those round it hold none. A place stands on one of its chunk's POI marks with room round it,
-    else where its water is widest; a hole where it is widest, well inside the chunk.
+  endless sea, made only as she swims, new every run. It is laid in 2 × 1 chunks in a herringbone (lying and standing
+  chunks of two 18 m cells), the streaming unit. Every chunk is joined to a neighbour nearer the sea's first cell (so
+  every chunk is reachable and has a way out) and to the others now and then (55%); a way between two joined chunks
+  passes their side somewhere along it (`SideMid`, never two sides' ways in a row), everywhere else they meet is rock.
+  - **Its places** (0.106.0, `OpenSea.PlaceRules`): a rule for each kind says how often it lies (about one chunk in
+    `OnceIn`), how far apart two of a kind must be (`Apart`: 1, never side by side; more, no two whose first cells are
+    that few cells apart either way), how far from her start it may first be (`From`, cells), and which rooms drawn by
+    hand it may stand in (`Templates`, `TemplateShare` of the time): a hole down about one in 9, a shop 8, a clam 8, a
+    shell cache 9, a light shrine 12, a crab's deal 15, a relic 35. Every chunk rolls for every kind (a share worked out
+    from `OnceIn` and `Apart`, and from what the kinds above it take) and holds it where none of those round it that
+    rolled for it rolled higher: decided from the chunks round it alone, so the same from wherever it is asked and
+    nothing of the sea made first. One place to a chunk (the kind higher in the list has it); her first chunk and those
+    round it hold none. A place stands in its chunk's roomiest cave (or its template's mark); a hole in a pool at the
+    chunk's middle.
+  - **Area templates** (0.106.0, `AreaTemplates`): small rooms drawn by hand, a metre a character (a pillared hall for
+    a shrine, a grotto with an alcove for a shop or a crab's deal, a chamber ringed by rocks for a clam, a crypt with
+    niches for a relic), pressed into the reef round their place, turned any of four ways and blended into the rock
+    over their last 2 m; the chunk's passages are carved on to the place, so a template needs no openings of its own.
   - **Places come in with their chunks** (`PlaneWorld.AddSeaPlace`): each is set up as on any level (a clam with its
     pearl or murkling, a cache's shells, a shop's, a shrine's or a crab's stands, a relic or a pearl), seeded by where
     it lies in the sea; its views pick it up the next frame (about 1 ms more a frame in all; no hitch measured over
@@ -150,8 +155,8 @@ the reef was never being called home. It was being kept.
     (the ink's relief and rock rims too, 0.96.1: they had read it a cell off, a flicker as she crossed into a chunk),
     and her light's afterimage moves with the window.
   - **Its lair** (0.98.0, `OpenSea.Lair`): every open level has one way to its boss, a hole down in a chunk five cells
-    from her start (in a direction of the sea's own) that holds no other place; the water round it is opened so it
-    always has room. It leads into the depth's boss arena (its last level, as before: the boss is met there alone), so
+    from her start (in a direction of the sea's own) that holds no other place, in a pool at the chunk's middle.
+    It leads into the depth's boss arena (its last level, as before: the boss is met there alone), so
     she may go to the boss from any level of the depth. Its emblem (the boss's "X") shows from the start.
   - **Its creatures** (0.98.0, `PlaneWorld.AddSeaLife`): each chunk, once it lies whole in the window, brings the
     reef's own fish, each kind by its chance: an anemone with its clownfish (50%), tangs (50%), a chromis school of
@@ -199,38 +204,28 @@ the reef was never being called home. It was being kept.
     never past its chunk). Each is drawn with its chunk as a template level's is (`LevelView.ShowSeaCanopies`) and fades
     while she is under it; a sealed secret room's roof stays whole till its seal opens. The window takes them as it
     takes the holes (`Fill`: `Canopies` and `Lid`), for the sun's shade only (it never draws them).
-  - **No lines along the chunks' edges** (0.103.0): the walls between chunks not joined swell and shrink broadly
-    (`WallLump`, 2.75–6 m a side) and rise to the reef's top within a metre or two of their face, so they read as reef,
-    not as low straight strips along the edges; a way through one wavers wider than its socket (`GapWiden`, never past
-    a seal's reach). The sun's map, whose relief the ink look draws, is cast 36 m past the window on every side
-    (`SunMap.Wide`), so its edge (on the window's, a chunk's) never shows as a line across the reef; and a chunk's
-    ground is coloured in sea metres with no rim.
-  - **Natural rock, filler chunks** (0.104.0): the reef's rock reads as rock, not the templates' squares:
-    - **carved, not drawn** (0.105.0): the cells' templates and the walls between chunks (at their full, lumpy
-      thickness) are read through a warp of the sea's own (`OpenSea.Warp`, two octaves, up to 10 m, read off a 2 m
-      lattice), then **blurred** (three box blurs, about a Gaussian of 2.5 m: `Blur`) and cut where the blur and the
-      sea's noise cross a half (`Carve`, `CarveFine`): no room keeps its square walls, no corridor its straight sides,
-      and rock and water melt into rounded, wandering shapes; read across into a chunk not joined, a template is rock;
-    - every chunk's **ways** are kept open through whatever the rock did: from each socket a bowed channel runs in to a
-      point near its cell's middle (strayed up to 3.5 m from it: no crossroads at the centre) and on to the chunk's middle
-      (`OnWays`), carved last;
-    - the **middle of a wall** between chunks not joined is always rock, bent with the same warp (so not a line along
-      the chunks' edge either), easing off only round a way between joined chunks so its gap (and a secret room's seal)
-      stays at its socket (`WallWarp`, `Core`); which chunk's water a point is, by the bent walls: `OpenSea.OwnerAt`;
-    - a secret room's seals are rounded, lumpy plugs rising to their middle (`SealLump`), not slabs;
-    - a chunk reads 18 m round it (`Context`; the blur's reach and the mountains' 10 m), about 11 ms to build;
-    - the distances that raise it are exact (Euclidean, not a chamfer's octagons), so no straight 45° bevels;
-    - the rock where four cells meet (a template's corners and the walls' ends: a small square on the chunks' edges) is
-      left out most of the time (`PillarKeep` 15% kept), only where every two chunks round it side by side are joined
-      and none is a filler or a secret room; a lone rock this small elsewhere is kept as rarely (`Islet`, `IsletKeep`);
-    - the rock rises on past its foot into mountains, up to 4.5 m higher 2–10 m in from the water, ridged
-      (`MountainPeak`).
-
-    **Filler chunks** (`OpenSea.FillOf`, never her first chunk or those round it, the lair or a chunk with a place):
-    - about one chunk in seven no other takes as its parent is **filled whole**: joined to none, its rock bulging a few
-      metres into its neighbours' water (`FullBulge`);
-    - **half**: one cell with one way out at most is rock, a bowed canyon from that way to the chunk's middle;
-    - **a quarter**: the far half of a cell with no way out at its end is rock, canyons from its cell's ways.
+  - **No lines along the chunks' edges** (0.103.0): the sun's map, whose relief the ink look draws, is cast 36 m past
+    the window on every side (`SunMap.Wide`), so its edge (on the window's, a chunk's) never shows as a line across the
+    reef; and a chunk's ground is coloured in sea metres with no rim.
+  - **The reef, carved by water** (0.106.0, `OpenSea.Plan`, `RockAt`): the water comes first and the rock is all the
+    rest, so the reef is connected by its making and nothing is patched after:
+    - each chunk's **skeleton** (`Plan`, from its own seed): 2–4 caves scattered through it (2.6–4.8 m, kept 4.5 m from
+      its edge and 7 m apart, a lobe or two each, mostly along the chunk; a side passage tapering off half of them; now
+      and then a pillar), joined by the shortest tree through them and now and then a loop, and each way out straight in
+      through its wall and on to its nearest cave; every passage bowed and meandering (`Meander`), 3.4–5 m wide;
+    - the **rock at a point** (`RockAt`): its distance from the skeletons reaching it (its own and its neighbours'),
+      passages and caves blending smoothly where they meet (`Blend`, as water rounds a joint), warped (`Warp`, up to
+      5 m) and roughened with broad noise and scallops (`Rough`, `Scallop`) in the sea's own coordinates, and raised
+      from that distance: the floor, rising into the rock over 3 m and on into mountains 2–10 m in (`MountainPeak`). It
+      is a function of the sea's coordinates alone, so neighbours meet without a seam and a chunk reads no more than its
+      own padding (about 5 ms to build, from 11);
+    - **walls between chunks** not joined: no water within 1.5 m of where they meet (`WallClear`; within a metre,
+      always rock), and the warp and roughness ease off near them, so the water never runs flat along one;
+    - **filler chunks** (`OpenSea.FillOf`, never her first chunk or those round it, the lair or a chunk with a place):
+      about one chunk in seven no other takes as its parent is **filled whole** (no skeleton, joined to none); a
+      **half** has no cave in one cell with one way out at most, its way running on through the rock as a canyon; a
+      **quarter** no cave in the far half of a cell with no way out at its end;
+    - a secret room's seals are rounded, lumpy plugs rising to their middle (`SealLump`), not slabs.
   - **Still apart from a template level:** no shop gates, crab's fake walls or tunnels (the chunks have none). The holes she has found keep their emblems (an arrow pointing down).
   - **The debug chunk map** (F3): the chunks round her, the one she is in, those she has visited, those made and not
     yet visited, the ways between them, each one's template and its holes.
