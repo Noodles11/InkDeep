@@ -205,6 +205,24 @@ the reef was never being called home. It was being kept.
     a seal's reach). The sun's map, whose relief the ink look draws, is cast 36 m past the window on every side
     (`SunMap.Wide`), so its edge (on the window's, a chunk's) never shows as a line across the reef; and a chunk's
     ground is coloured in sea metres with no rim.
+  - **Natural rock, filler chunks** (0.104.0): the reef's rock reads as rock, not the templates' squares:
+    - the cells' templates are read through a broad warp of the sea's own (`OpenSea.Warp`, up to 2.5 m), faded out
+      round the middle of each cell's side so the ways still meet the walls' gaps; read across into a chunk not joined,
+      it is rock;
+    - the distances that erode and raise it are exact (Euclidean, not a chamfer's octagons), so no straight 45° bevels;
+    - the rock where four cells meet (a template's corners and the walls' ends: a small square on the chunks' edges) is
+      left out most of the time (`PillarKeep` 15% kept), only where every two chunks round it side by side are joined
+      and none is a filler or a secret room; a lone rock this small elsewhere is kept as rarely (`Islet`, `IsletKeep`);
+    - the rock rises on past its foot into mountains, up to 4.5 m higher 2–10 m in from the water, ridged
+      (`MountainPeak`);
+    - the erosion grows rock at most 0.9 m into a template's water (`ErodeIn`), and a wall between chunks swells its
+      full width only into rock (at most 3.5 m over water), so no way inside a chunk is shut.
+
+    **Filler chunks** (`OpenSea.FillOf`, never her first chunk or those round it, the lair or a chunk with a place):
+    - about one chunk in seven no other takes as its parent is **filled whole**: joined to none, its rock bulging a few
+      metres into its neighbours' water (`FullBulge`);
+    - **half**: one cell with one way out at most is rock, a bowed canyon from that way to the chunk's middle;
+    - **a quarter**: the far half of a cell with no way out at its end is rock, canyons from its cell's ways.
   - **Still apart from a template level:** no shop gates, crab's fake walls or tunnels (the chunks have none). The holes she has found keep their emblems (an arrow pointing down).
   - **The debug chunk map** (F3): the chunks round her, the one she is in, those she has visited, those made and not
     yet visited, the ways between them, each one's template and its holes.

@@ -40,7 +40,8 @@ public class OpenSeaTests
     [Fact]
     public void Every_chunk_has_a_way_out_and_all_are_joined()
     {
-        var keys = ChunksWithin(14).ToList();
+        // (A chunk filled whole with rock is joined to none: nothing lies past it.)
+        var keys = ChunksWithin(14).Where(k => Sea.FillOf(k) != OpenSea.Filler.Full).ToList();
         foreach (var k in keys)
         {
             var (a0, a1) = Sea.RectOf(k);
@@ -442,6 +443,53 @@ public class OpenSeaTests
         var at = one.PlaceAt - origin;
         Assert.False(float.IsNaN(map.LidAt((int)at.X, (int)at.Y)));
         Assert.Contains(map.Canopies, x => x.Kind == CanopyKind.CaveRoof && Vector2.Distance(x.Center, at) < 0.01f);
+    }
+
+    [Fact]
+    public void Some_chunks_are_filled_with_rock_whole_by_half_or_by_a_quarter_and_every_chunks_ways_meet_in_its_water()
+    {
+        var keys = ChunksWithin(12).ToList();
+        var fills = keys.ToDictionary(k => k, Sea.FillOf);
+        foreach (var f in new[] { OpenSea.Filler.Full, OpenSea.Filler.Half, OpenSea.Filler.Quarter })
+            Assert.Contains(fills.Values, v => v == f);
+        foreach (var k in keys)
+        {
+            var c = Sea.Build(k);
+            if (fills[k] == OpenSea.Filler.Full)
+            {
+                Assert.DoesNotContain(Sea.Neighbours(k), n => Sea.Linked(k, n));
+                Assert.Null(Sea.PlaceOf(k));
+                for (int y = (int)c.Min.Y; y < c.Max.Y; y++)
+                for (int x = (int)c.Min.X; x < c.Max.X; x++)
+                    Assert.True(c.At(x, y) > 0f, $"{k}: water at ({x}, {y}) in a chunk filled whole");
+                continue;
+            }
+            // Its water, flooded from its first way: every way (unsealed) is reached, and the most of its rock rises past its foot.
+            var heights = c.Unsealed ?? c.Heights;
+            bool Water(int x, int y) => c.Contains(new Vector2(x, y)) && heights[(y - (int)c.Origin.Y) * c.Stride + x - (int)c.Origin.X] < 0f;
+            var ways = c.Sockets.Select(s => s.At - s.Way * 1.5f).Select(p => ((int)MathF.Floor(p.X), (int)MathF.Floor(p.Y))).ToList();
+            Assert.NotEmpty(ways);
+            var reached = new HashSet<(int, int)>();
+            var queue = new Queue<(int X, int Y)>();
+            foreach (var (wx, wy) in ways.Take(1))
+                for (int dy = -2; dy <= 2; dy++)
+                for (int dx = -2; dx <= 2; dx++)
+                    if (Water(wx + dx, wy + dy) && reached.Add((wx + dx, wy + dy))) queue.Enqueue((wx + dx, wy + dy));
+            while (queue.Count > 0)
+            {
+                var (x, y) = queue.Dequeue();
+                foreach (var (dx, dy) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                    if (Water(x + dx, y + dy) && reached.Add((x + dx, y + dy))) queue.Enqueue((x + dx, y + dy));
+            }
+            foreach (var (wx, wy) in ways)
+            {
+                bool hit = false;
+                for (int dy = -2; dy <= 2 && !hit; dy++)
+                for (int dx = -2; dx <= 2 && !hit; dx++)
+                    hit = reached.Contains((wx + dx, wy + dy));
+                Assert.True(hit, $"{k} ({fills[k]}): its way at ({wx}, {wy}) not reached from its first");
+            }
+        }
     }
 
     static IEnumerable<(int X, int Y)> ChunksAround((int X, int Y) key, int reach)
