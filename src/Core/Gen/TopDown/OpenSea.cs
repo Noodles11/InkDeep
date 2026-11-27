@@ -385,7 +385,7 @@ public sealed class OpenSea
     /// square), the skeletons' passages cut through them; warped and roughened in the sea's own coordinates (but not by a
     /// closed wall, which it would only run against); a place's template pressed in round it. The same from any chunk.
     /// </summary>
-    float RockAt(int x, int y, List<Plan> plans, out bool walled, out float closed, out float passage)
+    float RockAt(int x, int y, List<Plan> plans, out bool walled, out float closed, out float passage, out float grotto)
     {
         var p = new Vector2(x, y);
         closed = ClosedAt(x, y);
@@ -416,6 +416,9 @@ public sealed class OpenSea
         }
         // (The sea's own reefs, broad and lying anywhere, whatever the chunks: never over a place or a hole.)
         float s = ReefDepth * ReefAt(p);
+        // (A place stands in a grotto: a shell of rock round it, its passages its ways in.)
+        grotto = clear;
+        s = MathF.Max(s, MathF.Min(clear - PlaceCave - 1f, PlaceCave + 1f + GrottoShell - clear) + rough);
         s = SMin(s, clear - PlaceCave - 1f + rough, Blend);
         s = MathF.Max(s, solid + rough * 0.5f);
         if (stamp is { } at)
@@ -433,6 +436,15 @@ public sealed class OpenSea
     /// </summary>
     const double RockFraction = 0.34;
     const float ReefDepth = 48f;
+    /// <summary>How thick the rock round a place's grotto is (metres).</summary>
+    const float GrottoShell = 3.5f;
+    /// <summary>
+    /// What is drawn under the open water (no floor: the reef is a cut of the depth's band): the rock's walls fall
+    /// away over Fall metres past its foot, down to the next slice's reef, faint (its tops at BelowTop, its open water at
+    /// BelowVoid), lost in the mist the ground draws there.
+    /// </summary>
+    const float Fall = 2.5f, BelowTop = -LevelMap.LevelDrop + 1.5f, BelowVoid = LevelMap.ShaftBottom + 0.5f;
+
     /// <summary>How far a filler's rock bulges past its square at most (metres).</summary>
     const float SolidBulge = 4f;
 
@@ -515,11 +527,6 @@ public sealed class OpenSea
         new Vector2(CaveLayout.Fbm(x * WarpScale, y * WarpScale, _noise + 51), CaveLayout.Fbm(x * WarpScale, y * WarpScale, _noise + 53)) * WarpReach
         + new Vector2(CaveLayout.Fbm(x * WarpFineScale, y * WarpFineScale, _noise + 55), CaveLayout.Fbm(x * WarpFineScale, y * WarpFineScale, _noise + 57)) * WarpFine;
 
-    /// <summary>
-    /// The rock rising on past its foot into mountains: up to MountainPeak higher, from MountainFoot to MountainReach metres
-    /// in from the water, ridged.
-    /// </summary>
-    const float MountainPeak = 4.5f, MountainFoot = 2f, MountainReach = 10f;
 
     // ───────────────────────── a chunk ─────────────────────────
 
@@ -553,6 +560,12 @@ public sealed class OpenSea
         public readonly List<KelpBed> Kelp = new();
         /// <summary>Its arches and its room's roof (sea metres): drawn with it, and copied into the window (the sun's shade).</summary>
         public readonly List<Canopy> Canopies = new();
+        /// <summary>What is drawn under its open water (as Heights; NaN where its own ground is drawn: rock, a grotto's floor).</summary>
+        public float[]? Deep;
+
+        /// <summary>The ground drawn at a sample of some heights of it (its Heights, or Unsealed): open water's the deep below.</summary>
+        public float Shown(float[] heights, int k) => Deep is { } d && heights[k] < -0.3f && !float.IsNaN(d[k]) ? d[k] : heights[k];
+
         /// <summary>Its room's roof: the rock's height over it (as Heights), NaN where there is none; null without one.</summary>
         public float[]? Lid;
 
@@ -584,11 +597,12 @@ public sealed class OpenSea
         var plans = PlansNear(chunk.Origin - new Vector2(WarpReach + WarpFine), chunk.Origin + new Vector2(w, h) + new Vector2(WarpReach + WarpFine));
         var s = new float[n];
         var walled = new bool[n];
+        var grottos = new float[n];
         for (int j = 0; j < h; j++)
         for (int i = 0; i < w; i++)
         {
             int k = j * w + i;
-            float rock = RockAt(x0 + i, y0 + j, plans, out walled[k], out float closed, out float passage);
+            float rock = RockAt(x0 + i, y0 + j, plans, out walled[k], out float closed, out float passage, out grottos[k]);
             // (Then the walls between chunks not joined: never water near one, its middle always rock; but the chunk's
             // passages run on through a wall's swell, so it never shuts one.)
             s[k] = MathF.Min(MathF.Max(rock, WallReef(x0 + i, y0 + j) - closed), MathF.Max(passage, WallClear - closed));
@@ -609,6 +623,7 @@ public sealed class OpenSea
         }
         // Raised: the floor, rising round into the rock over a few metres, and on into mountains.
         chunk.Heights = new float[n];
+        var deep = chunk.Deep = new float[n];
         var toRock = new float[n];
         for (int k = 0; k < n; k++)
         {
@@ -616,10 +631,18 @@ public sealed class OpenSea
             bool open = s[k] < 0f;
             toRock[k] = MathF.Max(0f, -s[k]);
             float floor = Floor + 0.12f * CaveLayout.Fbm(x * 0.21f, y * 0.21f, _noise + 5);
-            float top = Top + 1.2f * CaveLayout.Fbm(x * 0.05f, y * 0.05f, _noise + 9);
+            // (Its top cut flat at the depth's band, as m6's reef: steep walls up to a cropped top, no peaks.)
+            float top = Top + 0.3f * CaveLayout.Fbm(x * 0.05f, y * 0.05f, _noise + 9);
             // (A wall between chunks, thin as it may be, stands at the reef's top: never a low strip along their edge.)
-            float hgt = floor + (top - floor) * Smooth(-0.8f, walled[k] ? 1.4f : 3f, s[k]);
-            if (!open) hgt += MountainPeak * Smooth(MountainFoot, MountainReach, s[k]) * (0.55f + 0.45f * (1f - MathF.Abs(CaveLayout.Fbm(x * 0.08f, y * 0.08f, _noise + 71))));
+            float hgt = floor + (top - floor) * Smooth(-0.8f, walled[k] ? 1.4f : 1.8f, s[k]);
+            // What is drawn there: in open water (but a grotto's), the wall falling away to the next slice's reef, faint.
+            if (open && grottos[k] >= PlaceCave + 1f)
+            {
+                float below = ReefDepth * ReefAt(new Vector2(x, y), Slice + 1);
+                float under = BelowVoid + (BelowTop - BelowVoid) * Smooth(-0.5f, 1.5f, below);
+                deep[k] = under * Smooth(0f, Fall, -s[k]);
+            }
+            else deep[k] = float.NaN;
             // (Rock always stands over her plane and water always lies under it, however thin: a wall is a wall.)
             chunk.Heights[k] = open ? MathF.Min(hgt, -0.3f) : MathF.Max(hgt, 0.3f);
         }
@@ -855,6 +878,8 @@ public sealed class OpenSea
     /// </summary>
     void PlaceKelp(Chunk chunk, (int X, int Y) key, float[] toRock, int x0, int y0, int w)
     {
+        // (No floor for it to root in: the open sea's floor is the deep below.)
+        if (NoFloor) return;
         var rng = new Rng(Mix(Seed, (ulong)(uint)key.X, (ulong)(uint)key.Y, 0x6E1F));
         bool forest = Biome == OctoShoots.Core.Run.Biome.KelpForest;
         int beds = (rng.NextFloat() < (forest ? 0.55f : 0.25f) ? 1 : 0) + (forest && rng.NextFloat() < 0.2f ? 1 : 0);
@@ -955,6 +980,9 @@ public sealed class OpenSea
     float ReefAt(Vector2 p) => ReefAt(p, Slice);
 
     float ReefAt(Vector2 p, int slice) => (float)(ReefField.Density(p.X / ReefField.Cell, p.Y / ReefField.Cell, (long)slice * ReefField.Steps, (long)ReefSeed) - _cutoff);
+
+    /// <summary>Open water has no floor (its kelp beds none): the reef is a cut of the depth's band over the deep.</summary>
+    public const bool NoFloor = true;
 
     /// <summary>The reef's seed, and this level's slice of it.</summary>
     public readonly ulong ReefSeed;

@@ -32,9 +32,11 @@ public partial class LevelView
         var flora = new List<FloraItem>();
         if (OS.GetCmdlineUserArgs().Contains("--dbg-nodecor")) return new SeaDecor(flora, new List<BiomePropView.Part>());
         var ground = DecorGround.Of(sea, c);
-        Scatter(ground, flora);
-        if (ReefLook.Painted) Gardens(ground, flora);
-        return new SeaDecor(flora, BiomePropView.Scatter(ground));
+        // (Its plants on the reef's sides alone, its things off the deep: there is no floor.)
+        var sides = ground.Keeping(p => ground.Height(p) is > -5f and < 2.2f && ground.Gradient(p).Length() > 0.9f);
+        Scatter(sides, flora);
+        if (ReefLook.Painted) Gardens(sides, flora);
+        return new SeaDecor(flora, BiomePropView.Scatter(ground.Keeping(p => ground.Height(p) > -1.5f)));
     }
 
     /// <summary>A chunk's decoration shown (once), with its chunk: its flora in the level's flora skins, its things as made.</summary>
@@ -56,7 +58,7 @@ public partial class LevelView
     {
         // (The sampler clamps both axes to one size: the longer side's, each axis clamped again to its own by Grid.)
         int size = System.Math.Max(c.Stride, c.Rows) - 1;
-        float Grid(int i, int j) => c.Heights[System.Math.Clamp(j, 0, c.Rows - 1) * c.Stride + System.Math.Clamp(i, 0, c.Stride - 1)];
+        float Grid(int i, int j) => c.Shown(c.Heights, System.Math.Clamp(j, 0, c.Rows - 1) * c.Stride + System.Math.Clamp(i, 0, c.Stride - 1));
         return SurfaceMesh(size, (x, y) => SmoothSample(Grid, x + OpenSea.Pad, y + OpenSea.Pad, size), 0, 0, (int)(c.Max.X - c.Min.X), (int)(c.Max.Y - c.Min.Y), null, new Vector2(c.Min.X, c.Min.Y));
     }
 

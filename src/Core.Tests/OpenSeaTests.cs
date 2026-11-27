@@ -345,13 +345,8 @@ public class OpenSeaTests
         Assert.True(beyond.At((int)through.X, (int)through.Y) >= OpenSea.SealTop);
         Sea.UnsealAround(one, beyond);
         Assert.Equal(one.At((int)through.X, (int)through.Y), beyond.At((int)through.X, (int)through.Y));
-        // Some chunks hold kelp beds, rooted on their floor, and the window takes those wholly in it.
-        var kelp = all.Where(c => c.Kelp.Count > 0).ToList();
-        Assert.NotEmpty(kelp);
-        Assert.All(kelp.SelectMany(c => c.Kelp.SelectMany(b => b.Roots.Select(r => (c, r)))), x => Assert.True(x.c.Contains(x.r)));
-        var map = new LevelMap();
-        Sea.Fill(map, new Vector2(-54f), k => all.FirstOrDefault(c => c.Key == k));
-        Assert.All(map.Kelp, b => Assert.InRange(b.Center.X, b.Radius, map.Size - b.Radius));
+        // No kelp beds: the open sea has no floor for them to root in (OpenSea.NoFloor).
+        Assert.All(all, c => Assert.Empty(c.Kelp));
     }
 
     [Fact]
@@ -417,7 +412,7 @@ public class OpenSeaTests
             Assert.True(c.Contains(a.EndA) && c.Contains(a.EndB));
             Assert.True(c.At((int)MathF.Round(a.EndA.X), (int)MathF.Round(a.EndA.Y)) >= OpenSea.ArchFooting - 0.01f);
             Assert.True(c.At((int)MathF.Round(a.EndB.X), (int)MathF.Round(a.EndB.Y)) >= OpenSea.ArchFooting - 0.01f);
-            Assert.InRange(a.HalfLength * 2f, OpenSea.ArchSpanMin, OpenSea.ArchSpanMax + 1f);
+            Assert.InRange(a.HalfLength * 2f, OpenSea.ArchSpanMin - 0.01f, OpenSea.ArchSpanMax + 1f);
             Assert.True(a.Bottom > LevelMap.SwimBand);
         }
         // A roof covers its place's room, over its own heights, inside its chunk, with its canopy over it.

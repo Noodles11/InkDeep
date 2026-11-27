@@ -242,8 +242,16 @@ the reef was never being called home. It was being kept.
     - a **secret room** is a grotto in a block of rock of its own (its passages and the pool round its place carved in
       it), its ways shut by seals: rounded, lumpy plugs rising to their middle (`SealLump`);
     - the rock is a function of the sea's coordinates alone, so neighbours meet without a seam; about 8.5 ms a chunk on
-      a worker. Heights: the floor, rising into the rock over
-      3 m and on into mountains 2–10 m in (`MountainPeak`).
+      a worker. Heights (0.112.0): steep walls up to a top cut
+      flat at the depth's band (as m6's reef, no peaks).
+    - **No floor** (0.112.0, `OpenSea.NoFloor`): the reef is a cut of the depth's band over the deep. What is drawn
+      under its open water (`Chunk.Deep`, drawn by `Chunk.Shown`; the sim's own heights keep their floor, so what floats
+      there, amphorae, vaults, springs, charge stones, bubbles, pearls and specks, floats over the void) is the rock's
+      walls falling away over 2.5 m past its foot, down to the next slice's reef, faint (its tops at −6.5 m, its open
+      water at −8.5 m), lost in a grained mist the ground draws by depth (`topdown_ground`). **Places stand in
+      grottos**: a shell of rock 3.5 m thick round each (its passages its ways in), with a floor of its own. No kelp
+      beds and no kelp curtains (no floor to root in); the gardens, seagrass and plants grow only on the reef's sides,
+      the biome's things only off the deep.
   - **Still apart from a template level:** no shop gates, crab's fake walls or tunnels (the chunks have none). The holes she has found keep their emblems (an arrow pointing down).
   - **The debug chunk map** (F3): the chunks round her, the one she is in, those she has visited, those made and not
     yet visited, the ways between them, each one's template and its holes.

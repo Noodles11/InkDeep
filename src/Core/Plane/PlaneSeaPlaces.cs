@@ -105,7 +105,7 @@ public sealed partial class PlaneWorld
     }
 
     /// <summary>The chance a chunk's way holds a kelp curtain (the Kelp Forest).</summary>
-    public const float SeaCurtain = 0.2f;
+    public const float SeaCurtain = OpenSea.NoFloor ? 0f : 0.2f;
     /// <summary>About how many chunks' life lies in the window at once (each chunk brings its share of a level's traps and specks).</summary>
     const float SeaChunks = 12f;
     /// <summary>The chunks (by where they lie in the sea) whose specks have come.</summary>

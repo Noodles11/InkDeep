@@ -28,6 +28,13 @@ internal sealed class DecorGround
         return new Vector2(Height(p + new Vector2(e, 0f)) - Height(p - new Vector2(e, 0f)), Height(p + new Vector2(0f, e)) - Height(p - new Vector2(0f, e))) / (2f * e);
     }
 
+    /// <summary>The same ground, with its decoration kept only where keep holds.</summary>
+    public DecorGround Keeping(Func<Vector2, bool> keep)
+    {
+        var blocked = Blocked;
+        return new DecorGround { Height = Height, Blocked = (p, m) => !keep(p) || blocked(p, m), Places = Places, Lo = Lo, Hi = Hi, Salt = Salt, Biome = Biome };
+    }
+
     public bool NearPlace(Vector2 p, float more) => Places.Exists(q => Vector2.Distance(q.At, p) < q.Radius + more);
 
     /// <summary>A level's square: inside its rim, off its shafts (and a boss level's rift), its POIs its places.</summary>
@@ -51,12 +58,14 @@ internal sealed class DecorGround
         var open = c.Unsealed ?? c.Heights;
         float At(float[] h, int x, int y) =>
             h[Math.Clamp(y - (int)c.Origin.Y, 0, c.Rows - 1) * c.Stride + Math.Clamp(x - (int)c.Origin.X, 0, c.Stride - 1)];
+        float At2(float[] h, int x, int y) =>
+            c.Shown(h, Math.Clamp(y - (int)c.Origin.Y, 0, c.Rows - 1) * c.Stride + Math.Clamp(x - (int)c.Origin.X, 0, c.Stride - 1));
         float Height(Vector2 p)
         {
             int ix = (int)MathF.Floor(p.X), iy = (int)MathF.Floor(p.Y);
             float tx = p.X - ix, ty = p.Y - iy;
-            float a = At(open, ix, iy) + (At(open, ix + 1, iy) - At(open, ix, iy)) * tx;
-            float b = At(open, ix, iy + 1) + (At(open, ix + 1, iy + 1) - At(open, ix, iy + 1)) * tx;
+            float a = At2(open, ix, iy) + (At2(open, ix + 1, iy) - At2(open, ix, iy)) * tx;
+            float b = At2(open, ix, iy + 1) + (At2(open, ix + 1, iy + 1) - At2(open, ix, iy + 1)) * tx;
             return a + (b - a) * ty;
         }
         bool Wall(Vector2 p)
