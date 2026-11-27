@@ -96,11 +96,10 @@ void fragment() {
 	// The caustics ride to light() in BACKLIGHT (this shader does its own lighting, so nothing else reads it).
 	// (And how much the showcase shows it as it is, in .y: lit plainly there, not in the drawn look's steps.)
 	// (.z: the see floor, lit as the open floor is, out of the rock's shadow over it.)
-	// The deep under an open level's water (OpenSea.Deep): the next slice's reef, lost in a grained mist.
+	// The deep under an open level's water (OpenSea.Deep): the next slice's reef, fading into the clear deep water.
 	float mist = smoothstep(-1.4, -6.0, world.y);
-	float grain = fract(sin(dot(floor(FRAGCOORD.xy * 0.5), vec2(12.9898, 78.233))) * 43758.5453);
 	s.albedo = mix(s.albedo, reef_water_deep * 0.6, mist * 0.85);
-	s.emission = mix(s.emission, reef_water_deep * (0.3 + 0.25 * grain), mist * 0.8);
+	s.emission = mix(s.emission, reef_water_deep * 0.4, mist * 0.8);
 	s.caustic *= 1.0 - mist;
 	BACKLIGHT = vec3(s.caustic * 1.5, reef_art == 7 ? 0.0 : show, see_floor);
 	ALBEDO = s.albedo;

@@ -248,7 +248,7 @@ the reef was never being called home. It was being kept.
       under its open water (`Chunk.Deep`, drawn by `Chunk.Shown`; the sim's own heights keep their floor, so what floats
       there, amphorae, vaults, springs, charge stones, bubbles, pearls and specks, floats over the void) is the rock's
       walls falling away over 2.5 m past its foot, down to the next slice's reef, faint (its tops at −6.5 m, its open
-      water at −8.5 m), lost in a grained mist the ground draws by depth (`topdown_ground`). **Places stand in
+      water at −8.5 m), fading into the deep water by depth, clear (no grain, 0.112.1) (`topdown_ground`). **Places stand in
       grottos**: a shell of rock 3.5 m thick round each (its passages its ways in), with a floor of its own. No kelp
       beds and no kelp curtains (no floor to root in); the gardens, seagrass and plants grow only on the reef's sides,
       the biome's things only off the deep.
@@ -546,7 +546,8 @@ the tests of the dive still test the dive.
   drawn in nine tones of brightness, the steps between them an ordered 8 × 8 Bayer dither fixed to the world (0.05 m a
   cell, so it never crawls as the camera moves), blended in at 75%, its hue kept so the biome's tint never speckles;
   the washes' soft edges dither too, in place of the dots (`topdown_post`'s `dither`, `dither_scope` 2, `bayer8`,
-  `dither_world`; `CameraRig.SetDither`). `--no-dither` turns it off, `--dither-rock` and `--dither-water` narrow it,
+  `dither_world`; `CameraRig.SetDither`). Since 0.112.1 only the rock and what stands on it are dithered
+  (`dither_scope` 0), so the water reads clear; `--no-dither` turns it off, `--dither-water` and `--dither-all` widen it,
   to compare. Clementine, her shots and the HUD are drawn after the pass and stay clean. **Brush lines** in ink: the caves' outline
   where the rock rises through her plane (a fine pen's, about a pixel wide since 0.101.0, its weight barely wavering,
   fixed to the rock so it never crawls, with dry-brush gaps), a lighter floor contour a few metres down, and a line round whatever lies at her plane. In **her
@@ -554,7 +555,7 @@ the tests of the dive still test the dive.
   in **coral and magenta light**; only the rock's is (the terrain's height from the sun's map tells it apart): a
   creature or a boss in her light keeps its ink line, never a neon one. Her glow in the water is a **sunset**: white at
   her, gold, hot coral, a magenta rim at the edge of her reach. The **paper's grain** (a fine tooth, fibres, a sheet's
-  unevenness) lies over the whole picture, her included, at 7% (`Fisheye.InkGrain`). This uses magenta as the warm end
+  unevenness; `Fisheye.InkGrain`) is off since 0.112.1, so the water reads clear (`--grain` lays it again). This uses magenta as the warm end
   of her light, the accent CROSSOVER.md §12 allows on this branch. Not done: her bell's own colours, the cyan of the
   deep biomes' machines, and the interface's ink frames.
 - **Step 7, first part (0.56.0), the route, the first branch, bosses and rosters by biome** (CROSSOVER.md §8–10):

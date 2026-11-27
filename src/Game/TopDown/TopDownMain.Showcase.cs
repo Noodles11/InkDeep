@@ -43,12 +43,13 @@ public partial class TopDownMain
         _camera.SetInk(InkLook);
         // (The world dithered, topdown_post's dither: --no-dither leaves it as the washes and halftone alone.)
         var args = OS.GetCmdlineUserArgs();
-        // (Everything dithered; --dither-rock or --dither-water narrow it, for comparison.)
-        _camera.SetDither(!args.Contains("--no-dither"), args.Contains("--dither-rock") ? 0 : args.Contains("--dither-water") ? 1 : 2);
+        // (The rock and what stands on it dithered, the water clear; --dither-water or --dither-all widen it, for comparison.)
+        _camera.SetDither(!args.Contains("--no-dither"), args.Contains("--dither-all") ? 2 : args.Contains("--dither-water") ? 1 : 0);
         // (Its biome's ink: the muted reef's colour and pattern.)
         _camera.SetInkBiome(_map.Templated ? _map.Biome : OctoShoots.Core.Run.Biome.SunlitReef);
         _camera.SetShotLight(LightMemory.ShotSpread, LightMemory.ShotShown);
-        _fisheye.SetGrain(InkLook);
+        // (No paper grain over the picture, so the water reads clear: --grain lays it again.)
+        _fisheye.SetGrain(InkLook && args.Contains("--grain"));
         ShowcaseOn = _showcase;
         _wake = _showcase ? LeaksSealedShare : 0f;
         _waveRadius = 0f;
