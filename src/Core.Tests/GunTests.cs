@@ -72,7 +72,9 @@ public class GunTests
         var w = World(gun: true);
         var aim = OpenWay(w);
         FireOne(w, aim);
-        Assert.True(Vector2.Dot(w.Player.Velocity, aim) < -1f, $"her velocity {w.Player.Velocity} after a shot along {aim}");
+        // (Barely: a touch back, never more than RecoilMost however strong the volley.)
+        float back = -Vector2.Dot(w.Player.Velocity, aim);
+        Assert.True(back > 0.05f && back <= GunTuning.RecoilMost + 1e-3f, $"her velocity {w.Player.Velocity} after a shot along {aim}");
         var still = World(gun: false);
         FireOne(still, aim);
         Assert.True(Vector2.Dot(still.Player.Velocity, aim) > -0.5f, "a light bubble kicks her back too");

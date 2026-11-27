@@ -20,8 +20,11 @@ public static class GunTuning
 {
     /// <summary>A shot's speed and range against the light bubbles' (ShotSpeed, her throw reach).</summary>
     public const float Speed = 2.3f, Range = 1.6f;
-    /// <summary>Its shove on a creature (× the bubbles' KnockFor), and its kick back on her (m/s, a plain shot).</summary>
-    public const float Knock = 4f, Recoil = 2.6f;
+    /// <summary>
+    /// Its shove on a creature (× the bubbles' KnockFor), its kick back on her (m/s, a plain shot), and the most any
+    /// volley kicks her (barely felt, however strong it is).
+    /// </summary>
+    public const float Knock = 4f, Recoil = 0.2f, RecoilMost = 0.5f;
     public const float Scatter = 4f, Jitter = 0.12f, ShotgunRange = 0.55f, ShotgunKick = 2.2f;
     public const float RifleBoost = 0.8f, RifleKnock = 2f, RifleKick = 2.5f;
     public const float MachineKick = 0.35f;
@@ -66,6 +69,6 @@ public sealed partial class PlaneWorld
             s.Lingers = false;
         }
         float kick = GunTuning.Recoil * (shotgun ? GunTuning.ShotgunKick : 1f) * (1f + GunTuning.RifleKick * charge) * (machine ? GunTuning.MachineKick : 1f);
-        Player.Velocity -= aim * kick;
+        Player.Velocity -= aim * MathF.Min(kick, GunTuning.RecoilMost);
     }
 }

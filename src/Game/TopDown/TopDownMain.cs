@@ -3023,12 +3023,8 @@ public partial class TopDownMain : Node3D
                     // Her shots leaving her: a slice of shots.mp3 for each projectile of the volley (Sfx.PlayShots).
                     _sfx.PlayShots(Mathf.Max(1, Mathf.RoundToInt(e.Size)));
                     ShotKick(_world.LastVolleyDamage / PlaneCombatTuning.ShotDamage);
-                    // A gun's shot (PlaneGun.cs): a flash of her light at the muzzle and the view kicked a touch.
-                    if (_world.Options.Gun)
-                    {
-                        _combat.LightBurst(_world.HerOrigin + e.Direction * 0.7f, 0.35f + 0.08f * e.Size);
-                        if (!_view.ReducedMotion) _camera.Shake(Mathf.Min(0.03f + 0.012f * e.Size, 0.09f));
-                    }
+                    // A gun's shot (PlaneGun.cs): the view kicked a touch (no sparks sprayed from her).
+                    if (_world.Options.Gun && !_view.ReducedMotion) _camera.Shake(Mathf.Min(0.03f + 0.012f * e.Size, 0.09f));
                 }
                 else if (e.Type is PlaneEventType.MobHit or PlaneEventType.BossHit) _damage.Show(e);
                 else if (e.Type == PlaneEventType.ShotPopped) _combat.Pop(e.Position, e.Size * 1.7f, e.Direction);
