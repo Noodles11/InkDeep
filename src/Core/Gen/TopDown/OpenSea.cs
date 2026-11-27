@@ -16,7 +16,7 @@ namespace OctoShoots.Core.Gen.TopDown;
 /// chunks are joined (meeting in open water, their one way on a side they share: WaySide) when either takes the other as
 /// its parent (each chunk but the one holding cell (0, 0) has one: a neighbour nearer that cell, so every chunk reaches
 /// it and has a way out), or besides where their way lies in open water (ChunkLink). The sea is open but for its own
-/// reefs (ReefAt), worn by it so the biggest stand (Wear), the fillers' rock and the walls between chunks not joined;
+/// reefs (ReefAt: ReefField, the Reef Survey prototype's field), the fillers' rock and the walls between chunks not joined;
 /// each chunk's passages (Plan) cut through any of it, so its ways always meet (RockAt: a function of the sea's own
 /// coordinates, so a chunk is the same from wherever it is asked and neighbours meet without a seam). Its places come
 /// by rules (PlaceRules), some in rooms drawn by hand (AreaTemplates).
@@ -132,6 +132,7 @@ public sealed class OpenSea
         Biome = biome;
         _shift = (int)(Mix(seed, 0x5EA) % 4);
         _noise = (uint)(Mix(seed, 0xE40DE) >> 40);
+        _cutoff = ReefField.Cutoff(ReefField.Calibration((long)seed), RockFraction);
         float a = Mix(seed, 0x1A12) % 3600 / 3600f * MathF.Tau;
         Lair = ChunkOfCell(((int)MathF.Round(MathF.Cos(a) * LairCells), (int)MathF.Round(MathF.Sin(a) * LairCells)));
     }
@@ -215,7 +216,7 @@ public sealed class OpenSea
         if (Parent(a) == b || Parent(b) == a) return true;
         var (lo, hi) = a.CompareTo(b) < 0 ? (a, b) : (b, a);
         // (Now and then besides: mostly where their way lies in open water, seldom through a reef.)
-        return Unit(Mix(Seed, (ulong)(uint)lo.X, (ulong)(uint)lo.Y, (ulong)(uint)hi.X, (ulong)(uint)hi.Y)) < ChunkLink * (1f - Smooth(ReefLevel - 0.15f, ReefLevel + 0.15f, WayReef(lo, hi)));
+        return Unit(Mix(Seed, (ulong)(uint)lo.X, (ulong)(uint)lo.Y, (ulong)(uint)hi.X, (ulong)(uint)hi.Y)) < ChunkLink * (1f - Smooth(0.1f, 0.25f, WayReef(lo, hi)));
     }
 
     /// <summary>How much of a chunk is solid rock over its template: none, a quarter (half a cell), a half (a cell), or all of it.</summary>
@@ -233,8 +234,8 @@ public sealed class OpenSea
     public Filler FillOf((int X, int Y) key) => Fill(key).Kind;
 
     /// <summary>
-    /// A chunk's filler and the cell it fills: a half fills a cell with one way out at most (its rock opened from it to
-    /// the chunk's middle), a quarter the far half of a cell with no way out at its end.
+    /// A chunk's filler and the cell it fills: a half fills one of its cells, a quarter that cell's far half; its passages
+    /// run on through the rock as canyons.
     /// </summary>
     (Filler Kind, int Cell) Fill((int X, int Y) key) => _fills.TryGetValue(key, out var hit) ? hit : _fills.GetOrAdd(key, k =>
     {
@@ -243,29 +244,9 @@ public sealed class OpenSea
         float u = Unit(Mix(Seed, (ulong)(uint)k.X, (ulong)(uint)k.Y, 0xF111));
         if (u < FullChance) return Neighbours(k).Any(n => Parent(n) == k) ? none : (Filler.Full, 0);
         if (u >= FullChance + HalfChance + QuarterChance) return none;
-        var cells = CellsOf(k);
-        bool Out((int X, int Y) cell, int dx, int dy)
-        {
-            var n = ChunkOfCell((cell.X + dx, cell.Y + dy));
-            return n != k && Joined(k, n);
-        }
+        // (Either cell, by its seed: its ways run on through the rock as canyons.)
         int first = (int)(Mix(Seed, (ulong)(uint)k.X, (ulong)(uint)k.Y, 0xF112) & 1);
-        for (int t = 0; t < 2; t++)
-        {
-            int c = (first + t) % 2;
-            var cell = cells[c];
-            if (u < FullChance + HalfChance)
-            {
-                if (Sides.Count(s => Out(cell, s.DX, s.DY)) <= 1) return (Filler.Half, c);
-            }
-            else
-            {
-                // (Its end: the side away from its other cell.)
-                var (dx, dy) = Lying(k) ? (c == 0 ? -1 : 1, 0) : (0, c == 0 ? -1 : 1);
-                if (!Out(cell, dx, dy)) return (Filler.Quarter, c);
-            }
-        }
-        return none;
+        return (u < FullChance + HalfChance ? Filler.Half : Filler.Quarter, first);
     });
 
     /// <summary>
@@ -428,7 +409,7 @@ public sealed class OpenSea
             if (plan.Stamp is { } st && Vector2.DistanceSquared(q, st.At) < 49f) stamp = st;
         }
         // (The sea's own reefs, broad and lying anywhere, whatever the chunks: never over a place or a hole.)
-        float s = ReefDepth * (ReefAt(q) - ReefLevel) + ReefRough * CaveLayout.Fbm(q.X * 0.08f, q.Y * 0.08f, _noise + 103) + rough;
+        float s = ReefDepth * ReefAt(p);
         s = SMin(s, clear - PlaceCave - 1f + rough, Blend);
         s = MathF.Max(s, solid + rough * 0.5f);
         if (stamp is { } at)
@@ -440,8 +421,12 @@ public sealed class OpenSea
         return SMin(s, passage, Blend);
     }
 
-    /// <summary>The sea's own reefs: how steeply they rise (metres a unit of their noise), its scale, the share of it under them, and their rough edge.</summary>
-    const float ReefDepth = 35f, ReefScale = 0.022f, ReefLevel = 0.15f, ReefRough = 1.5f;
+    /// <summary>
+    /// The sea's own reefs (ReefField, the Reef Survey prototype's field): how much of the sea is rock (over many seeds),
+    /// and how steeply it rises (metres a unit of the field past its cutoff: about a metre a metre in from its edge).
+    /// </summary>
+    const double RockFraction = 0.34;
+    const float ReefDepth = 48f;
     /// <summary>How far a filler's rock bulges past its square at most (metres).</summary>
     const float SolidBulge = 4f;
 
@@ -525,17 +510,6 @@ public sealed class OpenSea
         + new Vector2(CaveLayout.Fbm(x * WarpFineScale, y * WarpFineScale, _noise + 55), CaveLayout.Fbm(x * WarpFineScale, y * WarpFineScale, _noise + 57)) * WarpFine;
 
     /// <summary>
-    /// How much the sea wears the reef away (metres at most, an opening's reach: a reef must stand that far in from the
-    /// water somewhere to stay), how far past that it is read (so it is the same from any chunk), and the scale of its
-    /// wander: heavy over most of the sea, light here and there (where a small reef may stand).
-    /// </summary>
-    const float WearMost = 4.5f, WearCap = 2.5f, WearScale = 0.035f;
-    const int Open = 8;
-
-    float Wear(int x, int y) =>
-        WearMost * Smooth(-0.45f, 0.2f, CaveLayout.Fbm(x * WearScale, y * WearScale, _noise + 91));
-
-    /// <summary>
     /// The rock rising on past its foot into mountains: up to MountainPeak higher, from MountainFoot to MountainReach metres
     /// in from the water, ridged.
     /// </summary>
@@ -600,41 +574,19 @@ public sealed class OpenSea
         var (min, max) = RectOf(key);
         var chunk = new Chunk { Key = key, Min = min, Max = max, Origin = min - new Vector2(Pad), Stride = (int)(max.X - min.X) + 2 * Pad + 1, Rows = (int)(max.Y - min.Y) + 2 * Pad + 1 };
         int w = chunk.Stride, h = chunk.Rows, n = w * h, x0 = (int)chunk.Origin.X, y0 = (int)chunk.Origin.Y;
-        // The rock round every point, from the skeletons reaching it (its own and its neighbours'), read Open past its
-        // padding: what the sea wears away of it is judged by how big a reef it is.
-        int bw = w + 2 * Open, bh = h + 2 * Open, bn = bw * bh, bx = x0 - Open, by = y0 - Open;
-        var plans = PlansNear(new Vector2(bx, by) - new Vector2(WarpReach + WarpFine), new Vector2(bx + bw, by + bh) + new Vector2(WarpReach + WarpFine));
-        var all = new float[bn];
-        var wear = new float[bn];
-        var walls = new bool[bn];
-        var core = new bool[bn];
-        var closedAt = new float[bn];
-        var passages = new float[bn];
-        for (int j = 0; j < bh; j++)
-        for (int i = 0; i < bw; i++)
-        {
-            int k = j * bw + i, x = bx + i, y = by + j;
-            all[k] = RockAt(x, y, plans, out walls[k], out closedAt[k], out passages[k]);
-            wear[k] = Wear(x, y);
-            core[k] = all[k] >= wear[k];
-        }
-        // Worn by the sea: rock stands only within its wear of rock that far in from the water (an opening: a reef too
-        // small for it is gone, a bigger one keeps its shape, rounded), so the biggest reefs stand, fewer of the middling,
-        // now and then a small one (where the sea's wear is light).
-        var toCore = Distances(core, bw, bh, true);
+        // The rock round every point, from the skeletons reaching it (its own and its neighbours').
+        var plans = PlansNear(chunk.Origin - new Vector2(WarpReach + WarpFine), chunk.Origin + new Vector2(w, h) + new Vector2(WarpReach + WarpFine));
         var s = new float[n];
         var walled = new bool[n];
         for (int j = 0; j < h; j++)
         for (int i = 0; i < w; i++)
         {
-            int k = (j + Open) * bw + i + Open;
-            float d = MathF.Min(toCore[k], WearMost + WearCap);
-            s[j * w + i] = d > 0f ? MathF.Min(all[k], wear[k] - d) : all[k];
+            int k = j * w + i;
+            float rock = RockAt(x0 + i, y0 + j, plans, out walled[k], out float closed, out float passage);
             // (Then the walls between chunks not joined: never water near one, its middle always rock; but the chunk's
             // passages run on through a wall's swell, so it never shuts one.)
-            s[j * w + i] = MathF.Min(MathF.Max(s[j * w + i], WallReef(x0 + i, y0 + j) - closedAt[k]), MathF.Max(passages[k], WallClear - closedAt[k]));
-            walled[j * w + i] = walls[k];
-            if (walls[k]) s[j * w + i] = MathF.Max(s[j * w + i], 0.6f);
+            s[k] = MathF.Min(MathF.Max(rock, WallReef(x0 + i, y0 + j) - closed), MathF.Max(passage, WallClear - closed));
+            if (walled[k]) s[k] = MathF.Max(s[k], 0.6f);
         }
         // The lair: its hole where the water is deepest (its pool at the chunk's middle).
         Vector2? lair = null;
@@ -993,8 +945,10 @@ public sealed class OpenSea
         return WaySide(a, b) == (cell, dx, dy);
     }
 
-    /// <summary>The sea's reefs' broad noise at a point (above ReefLevel, a reef stands).</summary>
-    float ReefAt(Vector2 p) => CaveLayout.Fbm(p.X * ReefScale, p.Y * ReefScale, _noise + 101);
+    /// <summary>The sea's reef field at a point (sea metres), less its cutoff: above 0, a reef stands.</summary>
+    float ReefAt(Vector2 p) => (float)(ReefField.Density(p.X / ReefField.Cell, p.Y / ReefField.Cell, 0, (long)Seed) - _cutoff);
+
+    readonly double _cutoff;
 
     /// <summary>How far a way's gap in a wall reaches either side of its middle (metres).</summary>
     const float WayGap = 4f;

@@ -211,27 +211,27 @@ the reef was never being called home. It was being kept.
     reef; and a chunk's ground is coloured in sea metres with no rim.
   - **Open sea and reefs** (0.106.0, 0.107.0: `OpenSea.Plan`, `RockAt`): the sea is open (about two thirds of it
     water) but for its reefs, and every chunk's ways always meet:
-    - the **sea's own reefs** (`ReefAt`): where a broad noise of the sea's own (`ReefScale`, about 45 m across) passes
-      `ReefLevel`, rock rises (`ReefDepth`: about a metre a metre in from its edge), roughened at its edge (`ReefRough`,
-      `Rough`, `Scallop`), lying anywhere whatever the chunks;
-    - **worn by the sea** (`Wear`): rock stands only within its wear of rock that far in from the water (an opening, up
-      to 4.5 m, its reach wandering over the sea): the biggest reefs stand (rounded), fewer of the middling, now and
-      then a small one where the wear is light;
+    - the **sea's own reefs** (0.108.0, `ReefField`, the Reef Survey prototype's field, maps/reef_field.gd, ported
+      to the digit): one seeded density over the whole sea (2 m cells): coarse shelf noise for the reefs' footprint,
+      masses, lobes and detail, all bent by a slow domain warp; rock past a cutoff read off the seed's own sample of it
+      (`Calibration`, `Cutoff`) for a share of rock over many seeds (`OpenSea.RockFraction`, 0.34), rising about a metre
+      a metre in from its edge (`ReefDepth`). (The prototype's marching-tetrahedra mesher, depth bands, atlas and POI
+      quotas are not taken: the game draws its heights as before, and its places keep their rules.)
     - each chunk's **skeleton** (`Plan`): from each of its ways a passage straight in and on to its meeting point (where
       the reef is lowest of a few places in it; its middle for a hole or the lair), and on to its place; every passage
       bowed and meandering (`Meander`), 3.4–5 m wide, cutting through any reef in its way (and through a wall's swell);
       no reef over a place or a hole (a pool 5.5 m round it);
-    - **walls between chunks** not joined (and round a secret room): put back after the wear, lumpy (`WallReef`: 1.5–
-      4.5 m from where they meet, round at their ends), their middle always rock; mostly within the reefs, as the
-      chunks join wherever their way lies in open water;
+    - **walls between chunks** not joined (and round a secret room): lumpy (`WallReef`: 1.5–4.5 m from where they
+      meet, round at their ends), their middle always rock; two chunks are joined unless their way would lie deep in a
+      reef, so a wall stands within the reefs;
     - **filler chunks** (`OpenSea.FillOf`, never her first chunk or those round it, the lair or a chunk with a place):
       about one chunk in seven no other takes as its parent is **filled whole** (a block of rock, joined to none,
-      bulging lumpily past its square: `SolidBulge`); a **half**'s cell with one way out at most is rock, its way running
-      on through it as a canyon; a **quarter**'s far half of a cell with no way out at its end;
+      bulging lumpily past its square: `SolidBulge`); a **half** has one of its cells rock, a **quarter** that cell's far
+      half, their passages running on through it as canyons;
     - a **secret room** is a grotto in a block of rock of its own (its passages and the pool round its place carved in
       it), its ways shut by seals: rounded, lumpy plugs rising to their middle (`SealLump`);
-    - the rock is a function of the sea's coordinates alone (read 8 m past a chunk's padding, `Open`, for the wear), so
-      neighbours meet without a seam; about 13 ms a chunk on a worker. Heights: the floor, rising into the rock over
+    - the rock is a function of the sea's coordinates alone, so neighbours meet without a seam; about 8.5 ms a chunk on
+      a worker. Heights: the floor, rising into the rock over
       3 m and on into mountains 2–10 m in (`MountainPeak`).
   - **Still apart from a template level:** no shop gates, crab's fake walls or tunnels (the chunks have none). The holes she has found keep their emblems (an arrow pointing down).
   - **The debug chunk map** (F3): the chunks round her, the one she is in, those she has visited, those made and not
