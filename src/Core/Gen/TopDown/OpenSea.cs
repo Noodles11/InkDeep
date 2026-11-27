@@ -126,13 +126,19 @@ public sealed class OpenSea
     readonly uint _noise;
     readonly ConcurrentDictionary<(int X, int Y), (int X, int Y)?> _parents = new();
 
-    public OpenSea(ulong seed, OctoShoots.Core.Run.Biome biome)
+    /// <param name="reef">
+    /// The reef's own seed (the run's: every level's reef one volume, and their chunks on one grid), its own seed if none.
+    /// </param>
+    /// <param name="slice">Which slice of that volume this level's reef is (ReefField's y, a level's step down each).</param>
+    public OpenSea(ulong seed, OctoShoots.Core.Run.Biome biome, ulong? reef = null, int slice = 0)
     {
         Seed = seed;
         Biome = biome;
-        _shift = (int)(Mix(seed, 0x5EA) % 4);
+        ReefSeed = reef ?? seed;
+        Slice = slice;
+        _shift = (int)(Mix(ReefSeed, 0x5EA) % 4);
         _noise = (uint)(Mix(seed, 0xE40DE) >> 40);
-        _cutoff = ReefField.Cutoff(ReefField.Calibration((long)seed), RockFraction);
+        _cutoff = ReefField.Cutoff(ReefField.Calibration((long)ReefSeed), RockFraction);
         float a = Mix(seed, 0x1A12) % 3600 / 3600f * MathF.Tau;
         Lair = ChunkOfCell(((int)MathF.Round(MathF.Cos(a) * LairCells), (int)MathF.Round(MathF.Sin(a) * LairCells)));
     }
@@ -946,7 +952,16 @@ public sealed class OpenSea
     }
 
     /// <summary>The sea's reef field at a point (sea metres), less its cutoff: above 0, a reef stands.</summary>
-    float ReefAt(Vector2 p) => (float)(ReefField.Density(p.X / ReefField.Cell, p.Y / ReefField.Cell, 0, (long)Seed) - _cutoff);
+    float ReefAt(Vector2 p) => ReefAt(p, Slice);
+
+    float ReefAt(Vector2 p, int slice) => (float)(ReefField.Density(p.X / ReefField.Cell, p.Y / ReefField.Cell, (long)slice * ReefField.Steps, (long)ReefSeed) - _cutoff);
+
+    /// <summary>The reef's seed, and this level's slice of it.</summary>
+    public readonly ulong ReefSeed;
+    public readonly int Slice;
+
+    /// <summary>Whether the next slice down is open water under a point (sea metres), by the reef alone: she may dive there.</summary>
+    public bool OpenBelow(Vector2 p) => ReefAt(p, Slice + 1) < -0.05f;
 
     readonly double _cutoff;
 

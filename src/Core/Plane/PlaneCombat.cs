@@ -315,7 +315,12 @@ public sealed partial class PlaneWorld
     /// She may dive now (DESIGN-TOPDOWN §4.6): over a hole that is open (its leak sealed), and no battle on. On a template
     /// level (docs/proposals/CROSSOVER.md §3): over any of its holes, at any time.
     /// </summary>
-    public bool CanDive => Map.DiveAnywhere ? OverShaft && !Defeated : OverShaft && HoleOpen(HoleUnder) && !InBattle && !Defeated;
+    public bool CanDive => Map.DiveAnywhere ? (OverShaft || DiveHere?.Invoke(Player.Position) == true) && !Defeated : OverShaft && HoleOpen(HoleUnder) && !InBattle && !Defeated;
+
+    /// <summary>
+    /// Where she may dive besides a hole (an open level: anywhere the next slice of its reef is water under her), or null.
+    /// </summary>
+    public Func<Vector2, bool>? DiveHere { get; set; }
 
     /// <summary>Menace as the sim applies it (DESIGN-TOPDOWN §6.2), capped so later loops stay playable.</summary>
     public float Menace => MathF.Min(Map.Menace, 3f);

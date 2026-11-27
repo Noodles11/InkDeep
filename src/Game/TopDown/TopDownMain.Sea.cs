@@ -32,21 +32,29 @@ public partial class TopDownMain
 
     /// <summary>Whether a level is an open one: a crossover template level but a boss's.</summary>
     static bool OpenLevel(SeedCode seed, LevelId id) =>
-        !_dbgClosed && Crossover.On && !id.Haven && LevelPlan.For(seed, id, crossover: true) is { Templated: true, HasBoss: false };
+        !_dbgClosed && Crossover.On && !id.Haven && LevelPlan.For(seed, id, crossover: true) is var plan && (plan is { Templated: true, HasBoss: false } || plan.Rift);
+
+    /// <summary>
+    /// Which slice of the run's one reef a level is (ReefField's y): one step down for each level from the run's start,
+    /// so a level's reef is the one above's, a step deeper.
+    /// </summary>
+    static int SliceOf(LevelId id) =>
+        (id.Cycle - 1) * 1000 + (id.Depth <= LevelPlan.Tutorial ? 0 : LevelStocking.TutorialLevels + (id.Depth - LevelPlan.Tutorial - 1) * LevelStocking.LevelsPerDepth) + id.Level;
 
     /// <summary>
     /// An open level made: its sea (seeded by the run and the level), the chunk of her start and those round it, and
     /// the sim's window round her start. Pure: any thread.
     /// </summary>
-    static LevelShape SeaShape(SeedCode seed, LevelId id)
+    static LevelShape SeaShape(SeedCode seed, LevelId id, System.Numerics.Vector2? at = null, IEnumerable<(int X, int Y)>? also = null)
     {
         var plan = LevelPlan.For(seed, id, crossover: true);
-        var sea = new OpenSea(new RunStreams(seed).TopDown(id, 0, "open sea").NextU64(), plan.Biome);
-        var home = sea.ChunkOfCell((0, 0));
-        var chunks = Around(sea, home).AsParallel().Select(k => BuildSeaChunk(sea, k)).ToList();
+        // (Its reef the run's one volume, this level's slice of it: dived into at a spot, the level below lies under it.)
+        var sea = new OpenSea(new RunStreams(seed).TopDown(id, 0, "open sea").NextU64(), plan.Biome, reef: seed.Value, slice: SliceOf(id));
+        var middle = at ?? new System.Numerics.Vector2(OpenSea.Cell / 2f);
+        var home = sea.ChunkAt(middle);
+        var chunks = Around(sea, home).Concat(also ?? Enumerable.Empty<(int X, int Y)>()).Distinct().AsParallel().Select(k => BuildSeaChunk(sea, k)).ToList();
         var built = chunks.ToDictionary(c => c.Item1.Key, c => c.Item1);
-        // Her start: the open water nearest the middle of the first cell.
-        var middle = new System.Numerics.Vector2(OpenSea.Cell / 2f);
+        // Her start: the open water nearest where she dived (or the middle of the first cell).
         var start = middle;
         float best = float.MaxValue;
         var first = built[home];

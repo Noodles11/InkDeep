@@ -20,7 +20,16 @@ uniform vec3 door_size = vec3(4.5, 1.7, 2.8);
 varying vec3 world;
 varying vec3 world_normal;
 
+// The dive's reef slide (LevelView.MorphSea): an open level's chunk morphing into the next slice's (CUSTOM0: its
+// height and normal there, CUSTOM1: its colour).
+uniform float slide = 0.0;
+
 void vertex() {
+	if (slide > 0.0) {
+		VERTEX.y = mix(VERTEX.y, CUSTOM0.x, slide);
+		NORMAL = normalize(mix(NORMAL, CUSTOM0.yzw, slide));
+		COLOR = mix(COLOR, CUSTOM1, slide);
+	}
 	world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 }

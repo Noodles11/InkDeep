@@ -1751,6 +1751,8 @@ public partial class TopDownMain : Node3D
         EnterSea();
         _world = new PlaneWorld(_map, _tuning, _run, InDiveCave ? DiveCaveOptions(_map) : Sea is not null ? SeaOptions() : DebugBoss() ?? DiveBoss());
         AddSeaPlaces();
+        // On an open level whose way on is another (the next slice of its reef), she may dive anywhere that is water under her.
+        if (Sea is { } openSea && Slides(DestinationOf(-1))) _world.DiveHere = p => openSea.OpenBelow(p + _seaW);
         // (Her light as set by hand in the F1 menu, if it is.)
         _world.ManualLight = _manualLight;
         if (_dbgDiveClock > 0f) _world.DebugClockTo(_dbgDiveClock);
@@ -2156,7 +2158,7 @@ public partial class TopDownMain : Node3D
     /// The level below is ready: shown under this one, its start right under the hole and a level's drop down, drawn only
     /// through the shaft (under a boss level's Crack, the Crack's glow fills it until the boss is freed).
     /// </summary>
-    void ShowBelow(LevelShape shape, int at)
+    void ShowBelow(LevelShape shape, int at, bool slide = false)
     {
         _belowHole = at;
         _belowShape = shape;
@@ -2164,11 +2166,24 @@ public partial class TopDownMain : Node3D
         _below = new LevelView();
         AddChild(_below);
         _below.Show(shape, below: true);
-        var hole = HoleCenter(at);
-        var start = shape.Map.Start.Position;
-        _belowOffset = new Vector3(hole.X - start.X, -LevelMap.LevelDrop, hole.Y - start.Y);
-        _below.Place(_belowOffset, _origin + new Vector2(_belowOffset.X, _belowOffset.Z));
-        _below.SetPortal(new Vector2(hole.X, hole.Y), BelowPortal, 2);
+        if (slide)
+        {
+            // The next slice of the same reef, under this one in the sea's own coordinates: hidden while this level's reef
+            // slides into its shape, then it takes over where it stands.
+            var shift = shape.SeaOrigin - _seaW;
+            _belowOffset = new Vector3(shift.X, 0f, shift.Y);
+            _below.Place(_belowOffset, _origin + new Vector2(shift.X, shift.Y));
+            _below.Visible = false;
+            _level.MorphSea(shape);
+        }
+        else
+        {
+            var hole = HoleCenter(at);
+            var start = shape.Map.Start.Position;
+            _belowOffset = new Vector3(hole.X - start.X, -LevelMap.LevelDrop, hole.Y - start.Y);
+            _below.Place(_belowOffset, _origin + new Vector2(_belowOffset.X, _belowOffset.Z));
+            _below.SetPortal(new Vector2(hole.X, hole.Y), BelowPortal, 2);
+        }
         // Its corruption, laid out off the main thread: the floor's ink for the dive, the shards for when she lands.
         if (PlaneOptions.Default.Corruption)
         {
@@ -3413,9 +3428,11 @@ public partial class TopDownMain : Node3D
         _belowShaded = false;
         _diveTime = 0f;
         _diveFrom = _world.Player.Position;
-        // Down the hole she is over (the first, if she is somehow over none).
-        _diveHole = Math.Max(0, _world.HoleUnder);
+        // Down the hole she is over (the first, if she is somehow over none; on an open level, anywhere: none).
+        _diveHole = Sea is not null ? _world.HoleUnder : Math.Max(0, _world.HoleUnder);
         var next = _diveTo = DestinationOf(_diveHole);
+        _sliding = Slides(next);
+        if (_sliding) BeginSlide(next);
         _lookFrom = _id.Haven ? ReefLook.Bay : ReefLook.Of(_id);
         _lookTo = next.Haven ? ReefLook.Bay : ReefLook.Of(next);
         _bell.Kick();
@@ -3440,6 +3457,11 @@ public partial class TopDownMain : Node3D
     /// </summary>
     void StepDive(float dt)
     {
+        if (_sliding)
+        {
+            StepSlide(dt);
+            return;
+        }
         _diveTime += dt;
         // The level below whole before she sinks (docs/DIVE.md): made, its corruption laid, its sun's shade cast. Till
         // then she holds at the lip; so it never shows lit and is then covered in shade as she arrives.
@@ -3508,9 +3530,12 @@ public partial class TopDownMain : Node3D
     {
         var offset = _belowOffset;
         var shift = -offset;
-        var arrived = _diveFrom - new System.Numerics.Vector2(offset.X, offset.Z);
+        // (After a slide she is where she dived, in the level below's own water nearest it.)
+        var arrived = _sliding ? _belowMap!.Start.Position : _diveFrom - new System.Numerics.Vector2(offset.X, offset.Z);
+        _sliding = false;
         _level.QueueFree();
         _level = _below!;
+        _level.Visible = true;
         _below = null;
         var map = _belowMap!;
         _belowMap = null;
@@ -4544,7 +4569,7 @@ public partial class TopDownMain : Node3D
                 if (System.Numerics.Vector2.Distance(_route[i], pos) < System.Numerics.Vector2.Distance(_route[_routeProgress], pos)) _routeProgress = i;
             var to = _route[Math.Min(_route.Count - 1, _routeProgress + 2)] - pos;
             if (to.Length() > 0.3f) input.Move = System.Numerics.Vector2.Normalize(to);
-            input.Dive = _autoDive && _world.CanDive;
+            input.Dive = _autoDive && _world.CanDive && (!_dbgLair || _world.OverShaft);
             // (Verification, --dbg-dashes: a dash every 1.5 s along her way.)
             if (_dbgDashes && (_dashEvery -= (float)PlaneWorld.Dt) <= 0f)
             {
@@ -4563,7 +4588,7 @@ public partial class TopDownMain : Node3D
         input.DashHeld = dash;
         _dashLatched = dash;
         bool dive = Input.IsActionPressed(InputSetup.Dive);
-        input.Dive = dive && !_diveLatched || _autoDive && _world.CanDive;
+        input.Dive = dive && !_diveLatched || _autoDive && _world.CanDive && (!_dbgLair || _world.OverShaft);
         _diveLatched = dive;
         // (Her glow's toggle: only where she has a glow, PlaneOptions.Glow.)
         bool glow = _world.Options.Glow && InputMap.HasAction(InputSetup.Glow) && Input.IsActionPressed(InputSetup.Glow);

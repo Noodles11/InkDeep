@@ -43,10 +43,17 @@ public partial class TopDownMain
     LevelId DestinationOf(int hole) =>
         hole >= 0 && hole < _map.Holes.Count && _map.Holes[hole].To != default ? _map.Holes[hole].To
         // (An open level's lair: down into its depth's boss arena.)
-        : hole >= 0 && hole < _map.Holes.Count && _map.Holes[hole].Kind == ReefKind.Boss
+        // (On the tutorial's rift, an open level that is its depth's last, it leads on, as the Crack did.)
+        : hole >= 0 && hole < _map.Holes.Count && _map.Holes[hole].Kind == ReefKind.Boss && _id.Level != LevelPlan.BossLevel(_seed, _id.Cycle, _id.Depth)
             ? DiveGraph.Of(_seed).Row(_id.Cycle, _id.Depth, LevelPlan.BossLevel(_seed, _id.Cycle, _id.Depth))[0].Id with { Branch = _id.Branch }
         // (The crossover's way on keeps her branch: Biomes.)
         : Crossover.On && !_id.IsTutorial ? Biomes.Exits(_seed, _id)[0] : DiveGraph.Of(_seed).ExitsOf(_id)[0];
+
+    /// <summary>
+    /// Whether a dive to there slides (an open level onto an open level: the next slice of the same reef, under where she
+    /// dives; its level below made at the dive, round that spot, not ahead under a hole).
+    /// </summary>
+    bool Slides(LevelId to) => Sea is not null && OpenLevel(_seed, to);
 
     /// <summary>How far round the hole she is nearest the level below shows through, before she dives (metres).</summary>
     const float BelowPortal = 14f;
@@ -78,7 +85,7 @@ public partial class TopDownMain
         foreach (int i in Enumerable.Range(0, HoleCount).OrderBy(i => System.Numerics.Vector2.Distance(her, HoleCenter(i))))
         {
             var to = DestinationOf(i);
-            if (_holeShapes.ContainsKey(to)) continue;
+            if (_holeShapes.ContainsKey(to) || Slides(to)) continue;
             _holeShapes[to] = Shape(to, background: true);
             return;
         }
@@ -95,7 +102,7 @@ public partial class TopDownMain
         // A template level shows the level below only once she dives, under where she is (it has no hole to show it through).
         if (_map.Templated && !_map.HasBoss && _diveHole < 0) return;
         int want = _diveHole >= 0 ? _diveHole : NearestHole();
-        if (want == _belowHole) return;
+        if (want == _belowHole || _sliding || Slides(DestinationOf(want))) return;
         if (_belowHole >= 0 && _diveHole < 0
             && System.Numerics.Vector2.Distance(_world.Player.Position, HoleCenter(want)) + HoleSwitch > System.Numerics.Vector2.Distance(_world.Player.Position, HoleCenter(_belowHole)))
             return;

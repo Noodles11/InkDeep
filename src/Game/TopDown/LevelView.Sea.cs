@@ -76,6 +76,53 @@ public partial class LevelView
 
     public bool HasSeaChunk((int X, int Y) k) => _seaShown.Contains(k);
 
+    /// <summary>The chunks of the sea it shows.</summary>
+    public IEnumerable<(int X, int Y)> SeaShown => _seaShown;
+
+    /// <summary>A chunk mesh's second shape (CUSTOM0: height and normal, CUSTOM1: colour), what the ground's slide morphs it to.</summary>
+    static readonly Mesh.ArrayFormat MorphFormat = (Mesh.ArrayFormat)(((long)Mesh.ArrayCustomFormat.RgbaFloat << (int)Mesh.ArrayFormat.FormatCustom0Shift)
+        | ((long)Mesh.ArrayCustomFormat.RgbaFloat << (int)Mesh.ArrayFormat.FormatCustom1Shift));
+
+    /// <summary>
+    /// The dive's reef slide: each chunk it shows given the next slice's shape of it (the level below's same chunk: the
+    /// same vertices, so the slide ends on exactly its ground), to morph into with SetSlide; what does not morph (its
+    /// decoration, arches and roofs) goes.
+    /// </summary>
+    public void MorphSea(LevelShape below)
+    {
+        if (_seaRoot is null) return;
+        var to = below.SeaChunks.Where(c => c.Ground is not null).ToDictionary(c => c.Chunk.Key, c => c.Ground!);
+        foreach (var child in _seaRoot.GetChildren())
+            if (child is Node3D node && !(node is MeshInstance3D m && _seaMeshes.ContainsValue(m))) node.Visible = false;
+        foreach (var (key, view) in _seaMeshes)
+        {
+            if (view.Mesh is not ArrayMesh mesh || mesh.GetSurfaceCount() == 0) continue;
+            var arrays = mesh.SurfaceGetArrays(0);
+            var verts = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+            var normals = arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();
+            var colors = arrays[(int)Mesh.ArrayType.Color].AsColorArray();
+            bool has = to.TryGetValue(key, out var target) && target.Vertices.Length == verts.Length;
+            var shape = new float[verts.Length * 4];
+            var tint = new float[verts.Length * 4];
+            for (int i = 0; i < verts.Length; i++)
+            {
+                float y = has ? target!.Vertices[i].Y : verts[i].Y;
+                var n = has ? target!.Normals[i] : normals[i];
+                var c = has ? target!.Colors[i] : colors[i];
+                (shape[i * 4], shape[i * 4 + 1], shape[i * 4 + 2], shape[i * 4 + 3]) = (y, n.X, n.Y, n.Z);
+                (tint[i * 4], tint[i * 4 + 1], tint[i * 4 + 2], tint[i * 4 + 3]) = (c.R, c.G, c.B, c.A);
+            }
+            arrays[(int)Mesh.ArrayType.Custom0] = shape;
+            arrays[(int)Mesh.ArrayType.Custom1] = tint;
+            var morph = new ArrayMesh();
+            morph.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays, null, null, MorphFormat);
+            view.Mesh = morph;
+        }
+    }
+
+    /// <summary>How far its reef has slid into the next slice's (0 its own, 1 the level below's).</summary>
+    public void SetSlide(float t) => _ground.SetShaderParameter(OctoShoots.Game.Fx.SN.Of("slide"), t);
+
     /// <summary>A chunk of the sea shown (once; <paramref name="again"/>: drawn afresh, its heights changed).</summary>
     public void ShowSeaChunk(OpenSea.Chunk c, LevelShape.Surface? ground, bool again = false)
     {

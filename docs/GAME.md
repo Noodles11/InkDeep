@@ -156,6 +156,17 @@ the reef was never being called home. It was being kept.
     sun's shade is cast again for it off the main thread, read from where it lies till then by everything that reads it
     (the ink's relief and rock rims too, 0.96.1: they had read it a cell off, a flicker as she crossed into a chunk),
     and her light's afterimage moves with the window.
+  - **One reef, sliced; the reef slide** (0.110.0): every open level is the next slice of the run's one reef (`OpenSea`
+    takes the run's seed for its reef and its chunks' grid, and its level's `Slice`: a step down for every level from
+    the run's start, `TopDownMain.SliceOf`), so the reef under her is the one above's, a step deeper. On an open level
+    whose way on is another she may **dive anywhere the next slice is water under her** (`PlaneWorld.DiveHere`,
+    `OpenSea.OpenBelow`), or down any of its holes; the level below is made round that spot (and every chunk then on
+    the screen) and she lands straight under it. The dive is the prototype's **reef slide** (`TopDownMain.Slide.cs`):
+    she gathers, then over 0.9 s this level's reef morphs where it stands into the next slice's shape (each chunk mesh
+    carries the level below's height, normal and colour at its vertices, `LevelView.MorphSea`; `topdown_ground`'s
+    `slide` blends them), its life, decoration, arches and roofs fading, and the level below takes over exactly there.
+    A dive into the lair (to the depth's boss arena) and out of an arena keeps the iris. The tutorial's rift is an
+    open level too (since 0.110.0): its holes and its lair lead on into the first real depth, as the Crack did.
   - **Its lair** (0.98.0, `OpenSea.Lair`): every open level has one way to its boss, a hole down in a chunk five cells
     from her start (in a direction of the sea's own) that holds no other place, in a pool at the chunk's middle.
     It leads into the depth's boss arena (its last level, as before: the boss is met there alone), so
