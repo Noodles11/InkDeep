@@ -849,6 +849,8 @@ public partial class TitleMain : Node3D
             // (its own full-rect anchors fill the page; a size set here would only be overridden).
             card.Modulate = new Color(1f, 1f, 1f, 0f);
             card.CreateTween().TweenProperty(card, "modulate:a", 1f, Reduced ? 0.01f : 0.35f).SetDelay(Reduced ? 0f : 0.15f);
+            // (The menu's words go while they are open: the slots and their cards stand where the words were.)
+            _ring.CreateTween().TweenProperty(_ring, "modulate:a", 0f, Reduced ? 0.01f : 0.25f);
         }
         else
         {
@@ -895,6 +897,7 @@ public partial class TitleMain : Node3D
         if (instant) card.QueueFree();
         else if (card is JellyCard)
         {
+            if (!_launching) _ring.CreateTween().TweenProperty(_ring, "modulate:a", 1f, Reduced ? 0.01f : 0.35f);
             var fade = card.CreateTween();
             fade.TweenProperty(card, "modulate:a", 0f, Reduced ? 0.01f : 0.25f);
             fade.TweenCallback(Callable.From(card.QueueFree));
