@@ -13,6 +13,7 @@ namespace OctoShoots.Game.TopDown;
 /// At its top a bubble of light, its specks swirling inside, as many as the energy she has left to lay (the number
 /// beside it). Below, every characteristic she can grow, each with its bar: a click sends a speck's worth (one, or what
 /// is left) flying out of the bubble into its bar, the bar filling and its number climbing as the specks arrive.
+/// A row held (the mouse or A) takes her energy as long as it is held, and what is laid stays laid when it is let go.
 /// Reset sends what is not yet kept back into the bubble; Mutate keeps it, for good (PlaneWorld.Grow), and the energy is
 /// spent. Leaving it unkept is a reset.
 /// </summary>
@@ -132,7 +133,7 @@ public partial class GrowthMenu : Control
         row.Value.HorizontalAlignment = HorizontalAlignment.Right;
         row.Value.VerticalAlignment = VerticalAlignment.Center;
         inner.AddChild(row.Value);
-        row.Button.Pressed += () => Lay(row);
+        // (Held, by the mouse or A, it lays her energy on it as long as it is held: _Process.)
         _rows.Add(row);
         return row.Button;
     }
@@ -177,19 +178,27 @@ public partial class GrowthMenu : Control
     public void LayOn(GrowthStat stat)
     {
         foreach (var r in _rows)
-            if (r.Stat == stat) Lay(r);
+            if (r.Stat == stat) Lay(r, 1f);
     }
 
-    /// <summary>A speck's worth (one, or what is left) sent flying from the bubble into a characteristic's bar.</summary>
-    void Lay(Row row)
+    /// <summary>How fast her energy flows into a characteristic while its row is held (a speck a second), and in what steps.</summary>
+    const float FlowRate = 2f, FlowStep = 0.15f;
+    float _flow;
+
+    /// <summary>Its row held: by the mouse, or (focused) by A or Enter.</summary>
+    static bool Held(Row row) => !row.Button.Disabled && (row.Button.IsPressed()
+        || row.Button.HasFocus() && (Input.IsActionPressed(InputSetup.MenuAccept) || Input.IsActionPressed("ui_accept")));
+
+    /// <summary>Some of what is left (amount, or all there is) sent flying from the bubble into a characteristic's bar.</summary>
+    void Lay(Row row, float amount)
     {
-        float step = MathF.Min(1f, Left);
+        float step = MathF.Min(amount, Left);
         if (step <= 1e-4f) return;
         row.Laid += step;
         _bubble.Amount = Left;
         var from = _bubble.GlobalPosition + _bubble.Size * 0.5f;
         var to = row.Bar.GlobalPosition + new Vector2(row.Bar.Size.X * Fill(row.Kept + row.Arrived + step), row.Bar.Size.Y * 0.5f);
-        int motes = Math.Max(3, (int)(step * 6f));
+        int motes = Math.Max(1, (int)(step * 6f));
         for (int i = 0; i < motes; i++)
         {
             float share = step / motes;
@@ -267,6 +276,17 @@ public partial class GrowthMenu : Control
         _panel.Position = new Vector2(size.X - Width * e, 0f);
         _panel.Size = new Vector2(Width, size.Y);
         _shade.Color = new Color(0.01f, 0.03f, 0.05f, 0.45f * e);
+        // Held, a row takes her energy as long as it is held, a little at a time; let go, what is laid stays laid.
+        if (_opening && _rows.FirstOrDefault(Held) is { } held)
+        {
+            _flow += dt * FlowRate;
+            if (_flow >= FlowStep)
+            {
+                Lay(held, _flow);
+                _flow = 0f;
+            }
+        }
+        else _flow = 0f;
         if (!_opening || !InputSetup.UsingPad) return;
         float scroll = Input.GetAxis(InputSetup.AimUp, InputSetup.AimDown);
         if (Mathf.Abs(scroll) > 0.2f) _scroll.ScrollVertical += Mathf.RoundToInt(scroll * ScrollSpeed * dt);

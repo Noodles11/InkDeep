@@ -330,8 +330,9 @@ emptied, it is freed, leaving a core of light.
       level short of a boss's now has one.
   - **The upgrade drawer** (`GrowthMenu`) slides in when she swims into a spring with energy to lay:
     - At its top a bubble of light, its specks swirling inside as many as the energy left, the number beside it.
-    - Below, every characteristic with its bar. A click sends a speck's worth (one, or what is left) flying from the
-      bubble into the bar; the bar fills and its number climbs (gold until it is kept) as the specks arrive.
+    - Below, every characteristic with its bar. Held (the mouse, or A or Enter on it), its row takes her energy as long
+      as it is held (two specks a second, flying from the bubble into the bar in small steps; since 0.112.2), and what is
+      laid stays laid when it is let go; the bar fills and its number climbs (gold until it is kept) as the specks arrive.
     - **Reset** sends what is not kept back into the bubble. **Mutate** keeps it, and the energy is spent. Leaving
       unkept is a reset.
   - Her energy and growth are saved with her dive and with her jelly, as her skills are.

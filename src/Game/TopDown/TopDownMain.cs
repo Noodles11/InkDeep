@@ -286,6 +286,8 @@ public partial class TopDownMain : Node3D
     bool _diving, _diveLatched, _activeLatched, _glowLatched;
     /// <summary>Her beam, on or off (InputSetup.Beam toggles it; it stays as it is left), and its button's latch.</summary>
     bool _beamOn, _beamLatched;
+    /// <summary>On an open level whose way on is another (the next slice of its reef): she may dive anywhere that is water under her.</summary>
+    bool _diveAnywhere;
     /// <summary>How fast she must swim for her swimming to be heard (m/s).</summary>
     const float MovingSound = 0.6f;
     float _diveTime;
@@ -1752,7 +1754,7 @@ public partial class TopDownMain : Node3D
         _world = new PlaneWorld(_map, _tuning, _run, InDiveCave ? DiveCaveOptions(_map) : Sea is not null ? SeaOptions() : DebugBoss() ?? DiveBoss());
         AddSeaPlaces();
         // On an open level whose way on is another (the next slice of its reef), she may dive anywhere that is water under her.
-        if (Sea is { } openSea && Slides(DestinationOf(-1))) _world.DiveHere = p => openSea.OpenBelow(p + _seaW);
+        _diveAnywhere = Sea is not null && Slides(DestinationOf(-1));
         // (Her light as set by hand in the F1 menu, if it is.)
         _world.ManualLight = _manualLight;
         if (_dbgDiveClock > 0f) _world.DebugClockTo(_dbgDiveClock);
@@ -2746,6 +2748,7 @@ public partial class TopDownMain : Node3D
         if (held) _accumulator = 0;
         int steps = 0;
         bool dived = false;
+        _world.OpenBelow = _diveAnywhere && Sea is { } openSea && openSea.OpenBelow(_world.Player.Position + _seaW);
         while (_accumulator >= PlaneWorld.Dt && steps < 8 && !dived)
         {
             float hpBefore = _world.Player.Hp;
