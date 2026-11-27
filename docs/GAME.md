@@ -366,8 +366,9 @@ emptied, it is freed, leaving a core of light.
 
 - **Experience** (DESIGN-TOPDOWN §2.6) comes from setting things right: cleansing a level's corruption (a step every
   tenth), freeing fish, freeing bosses. Each level is a **skill point**, laid on one of her modifiers in the pause menu.
-- **Her look**: a new jelly is made on the title's jelly card (`LookForm`): her name and the shape of her four gonads
-  (`JellyLook`); the shape can be changed at the haven's mirror, once Kip is home. **Her colours are not picked
+- **Her look**: a new save is made on the title's jelly card (`LookForm`): no name to give (since 0.111.0 every save is
+  Clementine's, its card named by its place, "Save 1" to "Save 3", and showing where her dive stands: its depth and
+  its time so far, or the depth the next begins at), only the shape of her four gonads (`JellyLook`); the shape can be changed at the haven's mirror, once Kip is home. **Her colours are not picked
   (0.76.0):** every jelly's colours follow her light, as her beam and her shots do (`HerColor.FollowLight`, each frame
   from `PlaneWorld.HerSpectrum`: her colour words, or her light set by hand in the F1 menu). Her light is the
   spectrum's colour; her bell and arms a deeper, richer shade of its hue; her tentacle tips a paler one; her glow and

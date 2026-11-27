@@ -14,9 +14,11 @@ namespace OctoShoots.Game.Title;
 /// side in the title's sea: the title draws each jelly as herself, floating where her slot is (TitleMain.SyncSlots,
 /// a BellView wearing her look), and this lays out what goes with them — a card under each with her details, and over an
 /// empty slot a round, see-through (+) button. The slot chosen lights up (its jelly shines; the others are switched off
-/// like lamps) and its card holds Dive (her dive, continued or begun, docs/DIVE.md) and Delete (asked twice). The (+) makes a new jelly: one
-/// swims into that slot wearing the form under her as it is set — her name (unique here), the shape of her gonads, and
-/// her glow, arm and tentacle-tip colours — and Dive wakes her. With every slot taken, one must be deleted first.
+/// like lamps) and its card holds Dive (her dive, continued or begun, docs/DIVE.md) and Delete (asked twice). Each card
+/// names its save by its place (no name of her own to give) and shows where her dive stands: its depth and its time.
+/// The (+) makes a new save: Clementine swims into that slot wearing the form under her as it is set — the shape of
+/// her gonads, and her glow, arm and tentacle-tip colours — and Dive wakes her. With every slot taken, one must be
+/// deleted first.
 /// </summary>
 public partial class JellyCard : Control
 {
@@ -38,7 +40,7 @@ public partial class JellyCard : Control
     Label _full = null!;
     Button _back = null!;
     VBoxContainer _form = null!;
-    LineEdit _name = null!;
+    Button _makeDive = null!;
     LookForm _look = null!;
     Label _problem = null!;
     /// <summary>The slot whose Delete was pressed once (−1: none): pressed again, she is gone.</summary>
@@ -93,22 +95,16 @@ public partial class JellyCard : Control
         grid.AddThemeConstantOverride("h_separation", 12);
         grid.AddThemeConstantOverride("v_separation", 8);
         _form.AddChild(grid);
-        grid.AddChild(RowLabel("Name"));
-        _name = DrawerStyle.Field("Her name", size: 17);
-        _name.MaxLength = JellyNames.MaxLength;
-        _name.CustomMinimumSize = new Vector2(170f, 0f);
-        _name.TextChanged += _ => _problem.Text = "";
-        grid.AddChild(_name);
         _look = new LookForm(grid, RowLabel, new JellyLook());
         _problem = DrawerStyle.Line("", DrawerStyle.Gold, 14);
         _form.AddChild(_problem);
         var go = new HBoxContainer();
         go.AddThemeConstantOverride("separation", 8);
         _form.AddChild(go);
-        var dive = DrawerStyle.Button("Dive");
-        dive.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        dive.Pressed += Make;
-        go.AddChild(dive);
+        _makeDive = DrawerStyle.Button("Dive");
+        _makeDive.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        _makeDive.Pressed += Make;
+        go.AddChild(_makeDive);
         var cancel = DrawerStyle.Button("Back");
         cancel.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         cancel.Pressed += () => Back();
@@ -182,7 +178,7 @@ public partial class JellyCard : Control
             StyleHit(c.Hit, empty: !taken && Making != i);
             if (Making == i)
             {
-                c.Box.AddChild(Centred(DrawerStyle.Line("A new jelly of the bloom", DrawerStyle.Gold, 18)));
+                c.Box.AddChild(Centred(DrawerStyle.Line($"Save {i + 1} · new", DrawerStyle.Gold, 18)));
                 c.Box.AddChild(_form);
                 c.Buttons = null;
                 continue;
@@ -190,17 +186,17 @@ public partial class JellyCard : Control
             if (!taken)
             {
                 c.Box.AddChild(Centred(DrawerStyle.Line("Empty slot", DrawerStyle.Soft, 19)));
-                c.Box.AddChild(Centred(DrawerStyle.Line("Press + for a new jelly", DrawerStyle.Soft, 14)));
+                c.Box.AddChild(Centred(DrawerStyle.Line("Press + for a new save", DrawerStyle.Soft, 14)));
                 c.Buttons = null;
                 continue;
             }
             var j = save.Jellies[i];
-            c.Box.AddChild(Centred(DrawerStyle.Line(j.Name, DrawerStyle.Text, 22)));
+            c.Box.AddChild(Centred(DrawerStyle.Line($"Save {i + 1}", DrawerStyle.Text, 22)));
             if (i == save.Chosen) c.Box.AddChild(Centred(DrawerStyle.Line("played last", DrawerStyle.Gold, 13)));
             c.Box.AddChild(Centred(DrawerStyle.Line($"Level {j.Level}", DrawerStyle.Soft, 15)));
             c.Box.AddChild(Centred(DrawerStyle.Line($"{j.Shells} shells · {j.Passives.Count} pearls banked", DrawerStyle.Soft, 15)));
-            // Where her dive stands (docs/DIVE.md §1), or that the next one is new.
-            c.Box.AddChild(Centred(DrawerStyle.Line(j.Dive is { } dive ? $"Diving · {dive.Where}" : $"Dive {j.Dives + 1} to begin", DrawerStyle.Soft, 15)));
+            // Where her dive stands (docs/DIVE.md §1): its depth and its time so far, or where the next one begins.
+            c.Box.AddChild(Centred(DrawerStyle.Line(Standing(j), DrawerStyle.Text, 16)));
             c.Box.AddChild(Centred(DrawerStyle.Line(Played(j), DrawerStyle.Soft, 13)));
             var buttons = new VBoxContainer();
             buttons.AddThemeConstantOverride("separation", 4);
@@ -285,11 +281,10 @@ public partial class JellyCard : Control
     {
         Making = Math.Min(slot, GameSave.Current.Jellies.Count);
         Selected = Making;
-        _name.Text = "";
         _problem.Text = "";
         _look.Set(new JellyLook(), quiet: true);
         Rebuild();
-        Callable.From(() => _name.GrabFocus()).CallDeferred();
+        Callable.From(() => _makeDive.GrabFocus()).CallDeferred();
     }
 
     /// <summary>Esc, B or Back: out of the form back to the slots (true), or nothing to do here (false: it closes).</summary>
@@ -317,7 +312,7 @@ public partial class JellyCard : Control
         if (_deleting != index)
         {
             _deleting = index;
-            button.Text = $"Sure? Delete {GameSave.Current.Jellies[index].Name}";
+            button.Text = $"Sure? Delete save {index + 1}";
             return;
         }
         _deleting = -1;
@@ -343,15 +338,10 @@ public partial class JellyCard : Control
             _problem.Text = "Every slot is taken";
             return;
         }
-        if (JellyNames.Problem(_name.Text, save.Jellies) is { } problem)
-        {
-            _problem.Text = problem;
-            _name.GrabFocus();
-            return;
-        }
         var jelly = new Jelly
         {
-            Name = _name.Text.Trim(),
+            // (No name to give: every save is Clementine's.)
+            Name = "Clementine",
             Look = _look.Look,
             Seed = SeedCode.NewRandom().ToString(),
             Made = DateTime.Now.ToString("s", CultureInfo.InvariantCulture),
@@ -368,12 +358,21 @@ public partial class JellyCard : Control
     {
         if (Making >= 0)
         {
-            _name.GrabFocus();
+            _makeDive.GrabFocus();
             return;
         }
         var c = _columns[Selected];
         if (Selected < GameSave.Current.Jellies.Count) c.Dive.GrabFocus();
         else c.Hit.GrabFocus();
+    }
+
+    /// <summary>Her dive's depth and its time so far; between dives, the depth the next begins at.</summary>
+    static string Standing(Jelly j)
+    {
+        if (j.Dive is { } dive)
+            return $"Depth {new OctoShoots.Core.Gen.TopDown.LevelId(dive.Cycle, dive.Depth, dive.Level).ShownDepth} · {TitleStyle.Hours(dive.Elapsed)}";
+        var start = j.Tutored ? OctoShoots.Core.Gen.TopDown.LevelId.FirstRun : OctoShoots.Core.Gen.TopDown.LevelId.First;
+        return $"Depth {start.ShownDepth} · new dive";
     }
 
     static string Played(Jelly j) =>
