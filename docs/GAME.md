@@ -58,7 +58,7 @@ the reef was never being called home. It was being kept.
   - her **aura**, always on round her: it shows the corrupted near her and seals a leak she stays close to. **Not in
     the crossover** (since 0.57.0, `PlaneOptions.Glow`): no glow round her, her bell casts no light; her beam is her light;
   - her **beam**, a flashlight cone along her aim, **turned on and off** (since 0.65.0: the right bumper or Ctrl, with
-    the lamp's pull-chain sound the glow's toggle had; it stays as it is left, apart from her shots): it burns the corrupted, dazzles them, seals
+    its own switch sounds since 0.109.0, `light_on`/`light_off`; it stays as it is left, apart from her shots): it burns the corrupted, dazzles them, seals
     leaks, opens seals, clears ink and ash, charges stones and opens bosses, by how much of its light reaches. It is a
     real light: rock, the seabed and every creature's body stop it and cast shadows (VISUAL-SHOWCASE). In the
     crossover it is mostly a light to see by: it shows what the glow showed (the creatures in the dark, what a bubble
@@ -831,6 +831,17 @@ the tests of the dive still test the dive.
     by the creature's full health (0.88.0, `Sfx.DownPitch`, from the defeat event's `Health`): a basic murkling's at its
     own pitch, three semitones lower each time the health doubles and higher for smaller ones (×0.5 to ×1.6); the
     biggest defeated that step sets it.
+    **The sea's own sounds** (0.109.0), mastered to one loudness so each plays at 0 dB (events at −21 LUFS, like the
+    recorded hits once their own volume is taken; her beam's switch −24; the danger loop −24 at full; her swimming −28;
+    the background −30, its swells evened out): the **background** (`bg_ambient.ogg`) loops always, from the title on
+    (`MusicManager`, on the master bus, outside the water's muffle); **her swimming** (`moving_ambient.ogg`,
+    `Sfx.Moving`) loops while she swims (over 0.6 m/s), from a random place in it each time she sets off, swelling in
+    over a quarter second and dying away over 0.4 s; **the danger** (`danger_increase.ogg`, `Sfx.Danger`) loops from
+    the first exclamation mark, louder with each (a quarter at the first, full at the most), following them over a few
+    seconds and fading out once the danger clears (and while paused, dying or diving); a clam opening on its pearl
+    (`pearl_nearby.ogg`, `Sfx.PlayPearl`, with its knock of shell); her end (`fail_trumpet.ogg`, `Sfx.PlayFail`, as
+    she begins to die); her beam switched on and off (`light_on.ogg`, `light_off.ogg`, `Sfx.PlayLight`, in place of the
+    pull-chain, which her glow keeps); and `spooky.ogg` (`Sfx.PlaySpooky`) ready for spooky moments, not played yet.
   - **Its title menu** (`TitleMain`, `TitleMain.Phases`, `MenuSpray`): it opens out of the whitening gonad loader onto
     Clementine in open water with fish. Her beam lights the items, the chosen one dissolves, her push wave clears the
     rest, and Play dives to her jellies.

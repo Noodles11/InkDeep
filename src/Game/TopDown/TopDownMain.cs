@@ -286,6 +286,8 @@ public partial class TopDownMain : Node3D
     bool _diving, _diveLatched, _activeLatched, _glowLatched;
     /// <summary>Her beam, on or off (InputSetup.Beam toggles it; it stays as it is left), and its button's latch.</summary>
     bool _beamOn, _beamLatched;
+    /// <summary>How fast she must swim for her swimming to be heard (m/s).</summary>
+    const float MovingSound = 0.6f;
     float _diveTime;
     System.Numerics.Vector2 _diveFrom;
     ReefLook _lookFrom = ReefLook.Shallows, _lookTo = ReefLook.Shallows;
@@ -2565,7 +2567,14 @@ public partial class TopDownMain : Node3D
     public override void _Process(double delta)
     {
         // Her beam's fire roars while it burns a creature (not while paused, dying or diving).
-        if (_sfx is not null && _world is not null) _sfx.Burning(_world.BeamBurns && !Paused && !_world.Defeated && !_diving, (float)delta);
+        if (_sfx is not null && _world is not null)
+        {
+            _sfx.Burning(_world.BeamBurns && !Paused && !_world.Defeated && !_diving, (float)delta);
+            // Her swimming while she moves; the danger loop louder with every exclamation mark, fading out once it clears.
+            bool live = !Paused && !_world.Defeated && !_diving;
+            _sfx.Moving(live && _world.Player.Velocity.LengthSquared() > MovingSound * MovingSound, (float)delta);
+            _sfx.Danger(live ? _world.Danger / (float)(DangerTuning.Steps - 1) : 0f, (float)delta);
+        }
         if (!_perf)
         {
             ProcessFrame(delta);
@@ -2878,6 +2887,7 @@ public partial class TopDownMain : Node3D
                 {
                     // Light on a shut clam: its valve swings open (ClamRoomView), with a low knock of shell.
                     _sfx.PlayAt("snap", new Vector3(e.Position.X, LevelMap.SwimBand, e.Position.Y), -12f);
+                    _sfx.PlayPearl();
                 }
                 else if (e.Type == PlaneEventType.Necklace)
                 {
@@ -4574,7 +4584,7 @@ public partial class TopDownMain : Node3D
         if (toggle && !_beamLatched && !_world.Defeated)
         {
             _beamOn = !_beamOn;
-            _sfx.PlayPitched("lamp_switch", _beamOn ? 1.05f : 0.92f, -4f);
+            _sfx.PlayLight(_beamOn);
         }
         _beamLatched = toggle;
         input.Beam = _beamOn;

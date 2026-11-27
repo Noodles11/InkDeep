@@ -26,6 +26,7 @@ public partial class TopDownMain
     {
         _dying = true;
         _released = false;
+        _sfx.PlayFail();
         _dyingTime = 0f;
         _accumulator = 0;
         _hud.Diving = true;

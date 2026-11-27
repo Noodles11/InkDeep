@@ -48,6 +48,20 @@ public partial class Sfx : Node
     readonly List<(AudioStreamPlayer Player, Tween? Tween)> _shotPlayers = new();
     int _nextShot;
 
+    /// <summary>
+    /// The sea's own sounds (audio/sfx, mastered to one loudness, so each plays at 0 dB: events at -21 LUFS like the
+    /// recorded hits, her beam's switch -24, the danger loop -24 at full, her swimming -28, the background -30): her
+    /// swimming (a loop, from a random place each time she sets off), the danger rising (a loop, louder with every
+    /// exclamation mark), something spooky, a clam opening on its pearl, her end (a trumpet), her beam on and off.
+    /// </summary>
+    const string MovingPath = "res://audio/sfx/moving_ambient.ogg", DangerPath = "res://audio/sfx/danger_increase.ogg", SpookyPath = "res://audio/sfx/spooky.ogg",
+        PearlPath = "res://audio/sfx/pearl_nearby.ogg", FailPath = "res://audio/sfx/fail_trumpet.ogg", LightOnPath = "res://audio/sfx/light_on.ogg", LightOffPath = "res://audio/sfx/light_off.ogg";
+    /// <summary>How fast her swimming swells in and dies away, and the danger loop follows its level up and fades out (per second, of its 0..1).</summary>
+    const float MovingIn = 4f, MovingOut = 2.5f, DangerRise = 0.3f, DangerFall = 0.3f;
+    AudioStream? _spooky, _pearl, _fail, _lightOn, _lightOff;
+    AudioStreamPlayer? _movingPlayer, _dangerPlayer;
+    float _movingOn, _dangerOn;
+
     /// <summary>The beam's fire: its loudness at full (dB), and how fast it swells in and dies away (per second, of its 0..1).</summary>
     const float FireDb = -6f, FireIn = 6f, FireOut = 3f;
 
@@ -115,6 +129,22 @@ public partial class Sfx : Node
             _firePlayer = new AudioStreamPlayer { Bus = Bus, Stream = _fire, VolumeDb = -80f };
             AddChild(_firePlayer);
         }
+        AudioStream? Sound(string path) => ResourceLoader.Exists(path) ? GD.Load<AudioStream>(path) : null;
+        AudioStreamPlayer? Looping(string path)
+        {
+            if (Sound(path) is not AudioStreamOggVorbis loop) return null;
+            loop.Loop = true;
+            var p = new AudioStreamPlayer { Bus = Bus, Stream = loop, VolumeDb = -80f };
+            AddChild(p);
+            return p;
+        }
+        _movingPlayer = Looping(MovingPath);
+        _dangerPlayer = Looping(DangerPath);
+        _spooky = Sound(SpookyPath);
+        _pearl = Sound(PearlPath);
+        _fail = Sound(FailPath);
+        _lightOn = Sound(LightOnPath);
+        _lightOff = Sound(LightOffPath);
         for (int i = 0; i < 8; i++)
         {
             var p = new AudioStreamPlayer { Bus = Bus };
@@ -347,6 +377,38 @@ public partial class Sfx : Node
         }
         if (!_firePlayer.Playing) _firePlayer.Play();
         _firePlayer.VolumeDb = FireDb + Mathf.LinearToDb(_fireOn);
+    }
+
+    /// <summary>Her swimming: heard while she moves (on), from a random place in it each time she sets off.</summary>
+    public void Moving(bool on, float dt) => Fade(_movingPlayer, ref _movingOn, on ? 1f : 0f, dt * (on ? MovingIn : MovingOut), randomStart: true);
+
+    /// <summary>The danger rising: its level (0 none ... 1 at the most exclamation marks), followed gradually; at 0 it fades out.</summary>
+    public void Danger(float level, float dt) => Fade(_dangerPlayer, ref _dangerOn, level, dt * (level > _dangerOn ? DangerRise : DangerFall), randomStart: false);
+
+    /// <summary>Something spooky (an ambush sprung, say).</summary>
+    public void PlaySpooky() { if (_spooky is not null) PlayRecorded(_spooky, 0f, 1f); }
+
+    /// <summary>A clam opening on its pearl.</summary>
+    public void PlayPearl() { if (_pearl is not null) PlayRecorded(_pearl, 0f, 1f); }
+
+    /// <summary>Her end: a fail trumpet, once.</summary>
+    public void PlayFail() { if (_fail is not null) PlayRecorded(_fail, 0f, 1f); }
+
+    /// <summary>Her beam switched on or off.</summary>
+    public void PlayLight(bool on) { if ((on ? _lightOn : _lightOff) is { } s) PlayRecorded(s, 0f, 1f); }
+
+    /// <summary>A loop eased toward its level (0..1, as loudness), started (from a random place, if asked) and stopped as it comes and goes.</summary>
+    static void Fade(AudioStreamPlayer? player, ref float level, float target, float step, bool randomStart)
+    {
+        if (player is null) return;
+        level = Mathf.MoveToward(level, target, step);
+        if (level <= 0.001f)
+        {
+            if (player.Playing) player.Stop();
+            return;
+        }
+        if (!player.Playing) player.Play(randomStart ? (float)(Random.Shared.NextDouble() * player.Stream.GetLength()) : 0f);
+        player.VolumeDb = Mathf.LinearToDb(level);
     }
 
     void PlayRecorded(AudioStream stream, float volumeDb, float pitch)

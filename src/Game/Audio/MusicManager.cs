@@ -38,6 +38,7 @@ public partial class MusicManager : Node
     const string BusMusic = "Music", BusTheme = "MTheme", BusDark = "MDark", BusEerie = "MEerie", BusCombat = "MCombat";
     const float SilenceDb = -60f;
     const string Folder = "res://audio/";
+    const string AmbientPath = "res://audio/sfx/bg_ambient.ogg";
 
     AudioStreamPlayer _theme = null!, _dark = null!, _eerie = null!, _combat = null!;
     float _corruptionTarget, _corruptionCurrent;
@@ -60,6 +61,14 @@ public partial class MusicManager : Node
         _combat = MakePlayer(Stem("combat"), BusCombat);
         if (SoundtrackOn) StartAllStems();
         AudioServer.SetBusMute(AudioServer.GetBusIndex(BusMusic), !SoundtrackOn);
+        // The sea's background, always, from the title on (audio/sfx/bg_ambient.ogg, mastered at -30 LUFS: under everything).
+        if (ResourceLoader.Exists(AmbientPath) && GD.Load<AudioStream>(AmbientPath) is AudioStreamOggVorbis ambient)
+        {
+            ambient.Loop = true;
+            var player = new AudioStreamPlayer { Stream = ambient, Bus = "Master" };
+            AddChild(player);
+            player.Play();
+        }
         static string Of(AudioStreamPlayer p) => p.Stream is null ? "none" : $"{p.Stream.ResourcePath.GetFile()} ({p.Stream.GetLength():0} s)";
         GD.Print($"Music: theme {Of(_theme)}, dark {Of(_dark)}, eerie {Of(_eerie)}, combat {Of(_combat)}; playing {_theme.Playing}");
     }
